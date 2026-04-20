@@ -1,13 +1,14 @@
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 
-from core.models import Content, Entity, IngestionRun, ReviewQueue, SkillResult, Tenant, TenantConfig, UserFeedback
+from core.models import Content, Entity, IngestionRun, ReviewQueue, SkillResult, SourceConfig, Tenant, TenantConfig, UserFeedback
 from core.serializers import (
     ContentSerializer,
     EntitySerializer,
     IngestionRunSerializer,
     ReviewQueueSerializer,
     SkillResultSerializer,
+    SourceConfigSerializer,
     TenantConfigSerializer,
     TenantSerializer,
     UserFeedbackSerializer,
@@ -83,6 +84,11 @@ class UserFeedbackViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
 class IngestionRunViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = IngestionRunSerializer
     queryset = IngestionRun.objects.select_related("tenant")
+
+
+class SourceConfigViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
+    serializer_class = SourceConfigSerializer
+    queryset = SourceConfig.objects.select_related("tenant")
 
 
 class ReviewQueueViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):

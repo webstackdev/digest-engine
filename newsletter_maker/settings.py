@@ -39,6 +39,9 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
+REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
+REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "newsletter-maker/0.1")
 
 
 INSTALLED_APPS = [
@@ -128,6 +131,12 @@ CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 270
+CELERY_BEAT_SCHEDULE = {
+    "run-all-source-ingestions-every-6-hours": {
+        "task": "core.tasks.run_all_ingestions",
+        "schedule": 60 * 60 * 6,
+    },
+}
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True

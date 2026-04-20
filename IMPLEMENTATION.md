@@ -206,8 +206,6 @@ class SourceConfig(models.Model):
 
 **Definition of done:** RSS plugin ingests from a real feed. Reddit plugin ingests from a real subreddit. `IngestionRun` records log success/failure. Health checks return correct status.
 
----
-
 ### WP4: Embeddings + Qdrant Integration
 
 Compute embeddings for all ingested content and store them in Qdrant for similarity search.

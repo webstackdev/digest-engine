@@ -20,6 +20,11 @@ class FeedbackType(models.TextChoices):
 	DOWNVOTE = "downvote", "Downvote"
 
 
+class SourcePluginName(models.TextChoices):
+	RSS = "rss", "RSS"
+	REDDIT = "reddit", "Reddit"
+
+
 class RunStatus(models.TextChoices):
 	RUNNING = "running", "Running"
 	SUCCESS = "success", "Success"
@@ -159,6 +164,23 @@ class UserFeedback(models.Model):
 
 	def __str__(self) -> str:
 		return f"{self.feedback_type} by {self.user}"
+
+
+class SourceConfig(models.Model):
+	tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="source_configs")
+	plugin_name = models.CharField(max_length=64, choices=SourcePluginName.choices)
+	config = models.JSONField(default=dict)
+	is_active = models.BooleanField(default=True)
+	last_fetched_at = models.DateTimeField(null=True, blank=True)
+
+	class Meta:
+		ordering = ["plugin_name", "id"]
+		indexes = [
+			models.Index(fields=["tenant", "plugin_name", "is_active"]),
+		]
+
+	def __str__(self) -> str:
+		return f"{self.plugin_name} source for {self.tenant.name}"
 
 
 class IngestionRun(models.Model):
