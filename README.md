@@ -32,7 +32,7 @@ The skill format is model-agnostic. The same skill definitions work with Claude,
 
 Skills are composed into workflows by LangGraph, which provides what skills alone can't: deterministic routing, state persistence, conditional edges, and human-in-the-loop checkpoints. If the ingestion pipeline fails at step 3 of 5, it resumes from that checkpoint rather than reprocessing from scratch.
 
-The orchestrator handles multi-model routing — Claude Sonnet for high-value generation (summarization, theme detection), local/cheap models for high-volume commodity tasks (classification, relevance scoring), and embeddings for operations that don't need an LLM at all (deduplication, similarity search).
+The orchestrator handles multi-model routing — each skill uses a model chosen for the task (Qwen for structured extraction and dev-time grounding, Gemma for clean summarization prose, DeepSeek for cross-document reasoning, Command R+ for production RAG scoring). During development, all models are accessed via OpenRouter as a unified API gateway at ~$2.30/month. In production, every selected model is self-hostable via Ollama for zero marginal LLM cost.
 
 ### Non-Technical User Composability
 
@@ -61,7 +61,7 @@ The system is designed for graceful failure, not silent corruption. Unparseable 
 
 **Backend:** Django + DRF · Celery + Redis · PostgreSQL · Qdrant (vector DB)
 
-**AI Pipeline:** LangGraph · Claude Skills format · Multi-model (Claude Sonnet, Haiku, Ollama) · Sentence embeddings
+**AI Pipeline:** LangGraph · Claude Skills format · Multi-model via OpenRouter (Llama 3.1, Gemma 3, DeepSeek V3, Qwen 2.5; Command R+ for production) · Ollama for self-hosting · Sentence embeddings
 
 **Frontend:** React · Designed for non-technical editors
 
@@ -79,5 +79,6 @@ The system is designed for graceful failure, not silent corruption. Unparseable 
 ## Project Documentation
 
 - [PLANNING.md](PLANNING.md) — Full architecture decisions, data model, and feedback loop design
+- [VENDOR.md](VENDOR.md) — Per-skill model selection, rationale, and API pricing
 - [GENRES.md](GENRES.md) — Newsletter format types and layout templates
 - [IMPLEMENTATION.md](IMPLEMENTATION.md) — Additional implementation notes

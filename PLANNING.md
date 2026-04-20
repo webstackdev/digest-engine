@@ -222,7 +222,24 @@ Agree with the principle of keeping third-party API costs minimal and preferring
 - Mastodon API: Free
 - Reddit API: Free (within rate limits)
 - RSS parsing: Free (self-hosted)
-- LLM calls (for content analysis, summarization, classification): Variable — use local models via Ollama (free) for high-volume commodity tasks (classification, relevance scoring), Claude Sonnet for high-value generation tasks (summarization, theme detection, newsletter extraction). See Multi-Model Strategy in the AI Pipeline section. Estimated cost with this split: $20-30/month for Claude API calls.
+- LLM calls (for content analysis, summarization, classification): Variable — see Multi-Model Strategy in the AI Pipeline section and [VENDOR.md](VENDOR.md) for per-skill model selection and pricing.
+
+**Development API strategy: OpenRouter.** During development, all LLM calls go through [OpenRouter](https://openrouter.ai/) as a unified API gateway. This provides access to all target models (Llama, Command R+, Gemma, DeepSeek, Qwen) through a single API key and billing account, with pay-as-you-go pricing. No need to manage separate vendor accounts during development. The skill interface is endpoint-agnostic — when transitioning to self-hosted Ollama for production, only the base URL and model identifier change in config.
+
+**Estimated development costs via OpenRouter** (based on ~2,000 articles/month ingestion for one tenant):
+
+| Skill | Model | Est. monthly calls | Est. cost |
+|-------|-------|--------------------|-----------|
+| Content Classification | Llama 3.1 70B | 2,000 | ~$1.60 |
+| Relevance Scoring | Embeddings primary, Command R+ for borderline | ~200 LLM calls | ~$2.50 |
+| Deduplication | Embeddings primary, Command R+ for borderline | ~100 LLM calls | ~$1.25 |
+| Summarization | Gemma 3 27B | ~800 (relevant items) | ~$0.20 |
+| Theme Detection | DeepSeek V3.2 | ~30 (daily) | ~$0.20 |
+| Newsletter Extraction | Qwen 2.5 72B | ~60 (newsletters) | ~$0.03 |
+| Entity Extraction | Qwen 2.5 72B | ~200 | ~$0.10 |
+| **Total** | | | **~$6/month** |
+
+This is dramatically lower than the original $20-30/month estimate because every skill now uses a cost-optimized model rather than defaulting to Claude Sonnet. The embeddings-first approach for relevance scoring and deduplication is critical — without it, Command R+ at $10/M output tokens would dominate the budget.
 
 ## AI Pipeline: Composable Skills Architecture
 
@@ -253,19 +270,24 @@ Design each Skill with a model-agnostic interface:
 - The **model** is a configuration parameter, not hardcoded
 - LangGraph's multi-model routing allows different nodes to use different models
 
-**Recommended model allocation:**
+**Recommended model allocation** (see [VENDOR.md](VENDOR.md) for detailed rationale and API pricing):
 
-| Skill | Volume | Complexity | Recommended Model |
-|-------|--------|------------|-------------------|
-| Content Classification | High | Low | Local model (Ollama + Mistral/Llama) or Claude Haiku |
-| Relevance Scoring | High | Medium | Embeddings (see below) + local model for explanations |
-| Deduplication | High | Low | Embeddings-based (no LLM needed for primary check) |
-| Summarization | Medium | High | Claude Sonnet |
-| Theme Detection | Low (daily) | High | Claude Sonnet |
-| Newsletter Extraction | Low | High | Claude Sonnet |
-| Entity Extraction | Low | Medium | Claude Haiku or local model |
+| Skill | Volume | Complexity | Dev Model (via OpenRouter) | Production Model (Ollama) | Why This Model |
+|-------|--------|------------|---------------------------|--------------------------|----------------|
+| Content Classification | High | Low | Llama 3.1 70B ($0.40/$0.40/M) | Llama 3.1 70B | Best instruction following for nuanced categories |
+| Relevance Scoring | High | Medium | Embeddings primary; Qwen 2.5 72B for borderline ($0.12/$0.39/M) | Embeddings primary; Command R+ 104B | Dev: Qwen adequate for grounding. Prod: Command R+ purpose-built for RAG citation |
+| Deduplication | High | Low | Embeddings primary; Qwen 2.5 72B for borderline | Embeddings primary; Command R+ 104B | Dev: Qwen adequate for comparison. Prod: Command R+ cross-referencing training |
+| Summarization | Medium | High | Gemma 3 27B ($0.08/$0.16/M) | Gemma 3 27B | Clean, non-"AI-sounding" prose; fast at 27B |
+| Theme Detection | Low (daily) | High | DeepSeek V3.2 ($0.26/$0.42/M) | DeepSeek V3 | Strong cross-document reasoning for pattern detection |
+| Newsletter Extraction | Low | High | Qwen 2.5 72B ($0.12/$0.39/M) | Qwen 2.5 72B | Best structured output / JSON reliability |
+| Entity Extraction | Low | Medium | Qwen 2.5 72B ($0.12/$0.39/M) | Qwen 2.5 72B | Accurate entity identification, low hallucination |
 
-This keeps expensive Claude Sonnet calls to the high-value, low-volume tasks where quality matters most. High-volume commodity tasks use embeddings or local models.
+**Key cost control principles:**
+- Embeddings handle the primary workload for relevance scoring and deduplication. LLM calls only happen for borderline cases and explanations — during development these use Qwen 2.5 72B; in production, Command R+ 104B (self-hosted) provides superior RAG grounding at zero marginal cost.
+- Summarization uses Gemma 3 27B instead of Claude Sonnet — 37x cheaper on input tokens. Quality validation via eval harness is a priority since summaries are the most user-facing output.
+- All selected models are self-hostable via Ollama, providing a path to zero marginal LLM cost in production. Command R+ at 104B is the heaviest; the others fit comfortably on consumer GPU hardware.
+- OpenRouter serves as the unified API gateway during development (single key, single billing), with a config-only switch to Ollama endpoints for production.
+- During development, Qwen 2.5 72B substitutes for Command R+ in relevance scoring and deduplication to keep API costs minimal (~$2.30/month vs ~$6/month). The eval harness will validate whether Command R+'s specialized RAG grounding produces meaningfully better results before committing to its higher self-hosting requirements.
 
 ### Embeddings: The Cost-Efficient Foundation
 
@@ -631,4 +653,5 @@ The Docker Compose setup naturally translates to Kubernetes manifests or a Helm 
 - See [GENRES.md](GENRES.md) for newsletter format types and layout templates
 - See [IMPLEMENTATION.md](IMPLEMENTATION.md) for additional implementation notes
 - See [LLM.md](LLM.md) for research on Claude Skills architecture, LangGraph integration, and multi-model considerations
+- See [VENDOR.md](VENDOR.md) for per-skill model selection, rationale, and API pricing via OpenRouter
 
