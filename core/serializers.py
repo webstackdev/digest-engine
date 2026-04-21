@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from core.models import Content, Entity, IngestionRun, ReviewQueue, SkillResult, Tenant, TenantConfig, UserFeedback
+from core.models import Content, Entity, IngestionRun, ReviewQueue, SkillResult, SourceConfig, Tenant, TenantConfig, UserFeedback
+from core.plugins import validate_plugin_config
 
 
 class TenantScopedSerializerMixin:
@@ -157,6 +158,23 @@ class IngestionRunSerializer(TenantScopedSerializerMixin, serializers.ModelSeria
             "error_message",
         ]
         read_only_fields = ["id", "tenant", "started_at"]
+
+
+class SourceConfigSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = SourceConfig
+        fields = ["id", "tenant", "plugin_name", "config", "is_active", "last_fetched_at"]
+        read_only_fields = ["id", "tenant", "last_fetched_at"]
+
+    def validate(self, attrs):
+        plugin_name = attrs.get("plugin_name") or getattr(self.instance, "plugin_name", None)
+        config = attrs.get("config") or getattr(self.instance, "config", {})
+        if plugin_name:
+            try:
+                attrs["config"] = validate_plugin_config(plugin_name, config)
+            except ValueError as exc:
+                raise serializers.ValidationError({"config": str(exc)}) from exc
+        return attrs
 
 
 class ReviewQueueSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):

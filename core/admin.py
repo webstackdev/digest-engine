@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from core.models import Content, Entity, IngestionRun, ReviewQueue, SkillResult, Tenant, TenantConfig, UserFeedback
+from core.models import Content, Entity, IngestionRun, ReviewQueue, SkillResult, SourceConfig, Tenant, TenantConfig, UserFeedback
 
 
 @admin.register(Tenant)
@@ -45,6 +45,12 @@ class UserFeedbackAdmin(admin.ModelAdmin):
 class IngestionRunAdmin(admin.ModelAdmin):
 	list_display = ("plugin_name", "tenant", "status", "items_fetched", "items_ingested", "started_at")
 	list_filter = ("plugin_name", "status", "tenant")
+
+
+@admin.register(SourceConfig)
+class SourceConfigAdmin(admin.ModelAdmin):
+	list_display = ("plugin_name", "tenant", "is_active", "last_fetched_at")
+	list_filter = ("plugin_name", "is_active", "tenant")
 
 
 @admin.register(ReviewQueue)

@@ -7,6 +7,7 @@ from core.api import (
     IngestionRunViewSet,
     ReviewQueueViewSet,
     SkillResultViewSet,
+    SourceConfigViewSet,
     TenantConfigViewSet,
     TenantViewSet,
     UserFeedbackViewSet,
@@ -42,6 +43,10 @@ ingestion_run_list = IngestionRunViewSet.as_view({"get": "list", "post": "create
 ingestion_run_detail = IngestionRunViewSet.as_view(
     {"get": "retrieve", "put": "update", "patch": "partial_update", "delete": "destroy"}
 )
+source_config_list = SourceConfigViewSet.as_view({"get": "list", "post": "create"})
+source_config_detail = SourceConfigViewSet.as_view(
+    {"get": "retrieve", "put": "update", "patch": "partial_update", "delete": "destroy"}
+)
 review_queue_list = ReviewQueueViewSet.as_view({"get": "list", "post": "create"})
 review_queue_detail = ReviewQueueViewSet.as_view(
     {"get": "retrieve", "put": "update", "patch": "partial_update", "delete": "destroy"}
@@ -64,6 +69,12 @@ urlpatterns = [
         "tenants/<int:tenant_id>/ingestion-runs/<int:pk>/",
         ingestion_run_detail,
         name="tenant-ingestion-run-detail",
+    ),
+    path("tenants/<int:tenant_id>/source-configs/", source_config_list, name="tenant-source-config-list"),
+    path(
+        "tenants/<int:tenant_id>/source-configs/<int:pk>/",
+        source_config_detail,
+        name="tenant-source-config-detail",
     ),
     path("tenants/<int:tenant_id>/review-queue/", review_queue_list, name="tenant-review-queue-list"),
     path(

@@ -7,6 +7,7 @@
     "HNSW",
     "isready",
     "libpq",
+    "mday",
     "noinput",
     "nomic",
     "PRAW",
