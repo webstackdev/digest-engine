@@ -177,3 +177,9 @@ For the default local bootstrap, `.env` also seeds an `admin` superuser in the c
 - [VENDOR.md](docs/VENDOR.md) - Per-skill model selection, rationale, and API pricing
 - [GENRES.md](docs/GENRES.md) - Newsletter format types and layout templates
 - [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) - Additional implementation notes
+
+## License
+
+This repository is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE).
+
+Based on the current direct dependencies, AGPL is a reasonable fit: the packages in use are permissive or LGPL-compatible licenses such as BSD, MIT, Apache-2.0, and LGPLv3. That said, this is a practical compatibility check, not legal advice, so review it with counsel if you need a formal licensing opinion.
