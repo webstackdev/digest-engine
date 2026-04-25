@@ -95,8 +95,6 @@ def test_run_ingestion_skips_duplicate_urls(source_plugin_context, mocker):
 def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, mocker):
     upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
     reddit_mock = mocker.patch("core.plugins.reddit.praw.Reddit")
-    mocker.patch("core.plugins.reddit.settings.REDDIT_CLIENT_SECRET", new="secret")
-    mocker.patch("core.plugins.reddit.settings.REDDIT_CLIENT_ID", new="client")
     source_config = SourceConfig.objects.create(
             tenant=source_plugin_context.tenant,
             plugin_name=SourcePluginName.REDDIT,

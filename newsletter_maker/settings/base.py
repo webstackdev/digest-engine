@@ -1,13 +1,16 @@
 import os
 from pathlib import Path
+import sys
 
 import dj_database_url
 from dotenv import load_dotenv
 
-
-load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+if "pytest" in sys.modules:
+    load_dotenv(BASE_DIR / ".env.test", override=True)
+
+load_dotenv(BASE_DIR / ".env")
 
 # Helpers: environment variables always arrive as strings. These helpers coerce
 # common boolean and comma-separated list values into the Python types Django
@@ -48,6 +51,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "import_export",
     "rest_framework",
 ]
 

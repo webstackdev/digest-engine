@@ -360,42 +360,6 @@ Would you like to see how the **Serializers** use that `context["tenant"]` we ad
 
 ## Improving Tests
 
-### Console Capture
-
-Using `capsys` from pytest and pytest-mock cleans up testing console output.
-
-Before:
-
-```python
-@patch("core.management.commands.embedding_smoke.upsert_content_embedding", return_value="embedding-123")
-def test_embedding_smoke_command_can_upsert_content(self, upsert_mock):
-    with patch("sys.stdout") as stdout_mock:
-        call_command("embedding_smoke", content_id=self.content.id)
-    upsert_mock.assert_called_once()     written_output = "".join(call.args[0] for call in stdout_mock.write.call_args_list if call.args)
-    self.assertIn("embedding-123", written_output)
-```
-
-After:
-
-```python
-def test_embedding_smoke_command_can_upsert_content(mocker, capsys, db):
-    # 1. Patch the embedding function
-    mock_upsert = mocker.patch(
-        "core.management.commands.embedding_smoke.upsert_content_embedding", 
-        return_value="embedding-123"
-    )
-
-    # 2. Run the command (no 'with' block needed)
-    call_command("embedding_smoke", content_id=1)
-
-    # 3. Use capsys to read the output
-    captured = capsys.readouterr()
-    
-    # 4. Assertions
-    mock_upsert.assert_called_once()
-    assert "embedding-123" in captured.out
-```
-
 ## Test Env Vars
 
 `pytest-django` lets you do this to override Django settings, before:

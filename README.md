@@ -107,6 +107,18 @@ python3 -m pip install -r requirements.txt
 
 For host-based development without Docker, install `requirements.txt`, then use `python3 manage.py migrate` and `python3 manage.py runserver`. The default `.env.example` is host-safe; Docker Compose overrides the service URLs inside containers.
 
+### Testing
+
+Run the test suite with:
+
+```bash
+just test
+```
+
+Pytest auto-loads `.env.test` during test startup. That file is intentionally checked in and only contains non-sensitive placeholder values used by tests, such as fake API keys, fake Reddit credentials, and localhost service URLs.
+
+Use `.env.test` for stable dummy values that make tests deterministic. Do not put real secrets in it. Real local or production secrets belong in `.env`, which remains ignored.
+
 ### Embedding Backends
 
 The embedding layer is provider-based. Configure it with `EMBEDDING_PROVIDER` and `EMBEDDING_MODEL`:

@@ -6,7 +6,6 @@ __pycache__/
 .venv/
 venv/
 .env
-.env.test
 celerybeat-schedule*
 db.sqlite3
 staticfiles/

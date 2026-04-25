@@ -120,7 +120,6 @@ def test_get_embedding_provider_uses_openrouter_backend(settings):
 def test_ollama_embedding_provider_calls_embed_endpoint(settings, mocker):
     settings.EMBEDDING_PROVIDER = "ollama"
     settings.EMBEDDING_MODEL = "nomic-embed-text"
-    settings.OLLAMA_URL = "http://ollama:11434"
     post_mock = mocker.patch("core.embeddings.httpx.post")
     post_mock.return_value = SimpleNamespace(status_code=200, json=lambda: {"embeddings": [[0.3, 0.4]]}, raise_for_status=lambda: None)
 
@@ -132,9 +131,6 @@ def test_ollama_embedding_provider_calls_embed_endpoint(settings, mocker):
 def test_openrouter_embedding_provider_calls_embeddings_endpoint(settings, mocker):
     settings.EMBEDDING_PROVIDER = "openrouter"
     settings.EMBEDDING_MODEL = "openai/text-embedding-3-small"
-    settings.OPENROUTER_API_KEY = "test-key"
-    settings.OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
-    settings.OPENROUTER_APP_NAME = "newsletter-maker"
     post_mock = mocker.patch("core.embeddings.httpx.post")
     post_mock.return_value = SimpleNamespace(
         json=lambda: {"data": [{"embedding": [0.5, 0.6]}]},
