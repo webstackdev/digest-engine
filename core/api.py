@@ -34,7 +34,6 @@ from core.serializers import (
     UserFeedbackSerializer,
 )
 
-
 TENANT_ID_PARAMETER = OpenApiParameter(
     name="tenant_id",
     type=int,
@@ -225,7 +224,7 @@ def build_crud_action_overrides(
     create_examples: list[OpenApiExample] | None = None,
     create_response_examples: list[OpenApiExample] | None = None,
 ):
-    overrides = {
+    overrides: dict[str, dict[str, Any]] = {
         "list": {
             "responses": {
                 200: build_success_response(
