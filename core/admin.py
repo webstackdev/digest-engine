@@ -14,6 +14,7 @@ from core.models import (
   TenantConfig,
   UserFeedback,
 )
+from core.tasks import process_content
 
 
 @admin.register(Tenant)
@@ -61,11 +62,32 @@ class EntityAdmin(admin.ModelAdmin):
       )
 
 
+class HighValueFilter(admin.SimpleListFilter):
+    title = 'Content Value'
+    parameter_name = 'value_tier'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('high_value', '🔥 High Value (Score > 80 & Reference)'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'high_value':
+            return queryset.filter(relevance_score__gt=80, is_reference=True)
+        return queryset
+
+
 @admin.register(Content)
 class ContentAdmin(admin.ModelAdmin):
+    # Core view settings
     list_display = ("title", "tenant", "display_relevance", "source_plugin", "is_reference", "is_active")
     list_editable = ("is_reference", "is_active")
-    list_filter = (("tenant", admin.RelatedOnlyFieldListFilter), "source_plugin", "is_reference", "is_active")
+    list_filter = (
+        HighValueFilter,
+        ("tenant", admin.RelatedOnlyFieldListFilter),
+        "source_plugin",
+        "is_active"
+    )
     search_fields = ("title", "author", "url")
     actions = ["generate_newsletter_ideas"]
 
@@ -77,26 +99,37 @@ class ContentAdmin(admin.ModelAdmin):
         return format_html('<b style="color: {};">{}%</b>', color, obj.relevance_score)
 
     def changelist_view(self, request, extra_context=None):
-        response = super().changelist_view(request, extra_context=extra_context)
-        try:
-            qs = response.context_data['cl'].queryset
-        except (AttributeError, KeyError):
-            return response
+        queryset = self.get_queryset(request)
+        metrics = queryset.aggregate(avg_score=Avg('relevance_score'))
 
-        metrics = qs.aggregate(avg_score=Avg('relevance_score'))
-        response.context_data['summary_stats'] = {
-            'avg_relevance': metrics['avg_score'] or 0,
-            'total_count': qs.count(),
-        }
-        return response
+        extra_context = extra_context or {}
+        extra_context["dashboard_stats"] = [
+            {
+                "title": "Avg Relevance",
+                "value": f"{metrics['avg_score'] or 0:.1f}%",
+                "icon": "insights",
+                "color": "success" if (metrics['avg_score'] or 0) > 70 else "warning",
+            },
+            {
+                "title": "Total Filtered",
+                "value": queryset.count(),
+                "icon": "inventory_2",
+            },
+        ]
+
+        return super().changelist_view(request, extra_context=extra_context)
 
     @admin.action(description="Generate Ideas for Newsletter")
     def generate_newsletter_ideas(self, request, queryset):
-        """
-        Custom action to trigger the LangGraph pipeline for selected content.
-        """
-        count = queryset.count()
-        self.message_user(request, f"Successfully triggered pipeline for {count} items.", messages.SUCCESS)
+        content_ids = list(queryset.values_list("id", flat=True))
+        for content_id in content_ids:
+            process_content.delay(content_id)
+        self.message_user(
+            request,
+            f"Successfully queued the pipeline for {len(content_ids)} items.",
+            messages.SUCCESS,
+        )
+
 
 
 @admin.register(SkillResult)
