@@ -6,3 +6,30 @@ force_grid_wrap = 2
 # Modern standards (matches 'Black' formatter style)
 include_trailing_comma = true
 use_parentheses = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+extend-exclude = ["core/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["core", "newsletter_maker"]
+
+[tool.djlint]
+profile = "django"
+indent = 4
+max_line_length = 120
+
+[tool.mypy]
+python_version = "3.13"
+plugins = ["mypy_django_plugin.main"]
+files = ["manage.py", "core", "newsletter_maker", "tests"]
+exclude = ["core/migrations/"]
+ignore_missing_imports = true
+
+[tool.django-stubs]
+django_settings_module = "newsletter_maker.settings"

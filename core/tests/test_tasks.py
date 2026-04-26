@@ -6,7 +6,6 @@ import pytest
 from core.models import Content, Entity, IngestionRun, RunStatus, SourceConfig, SourcePluginName, Tenant
 from core.tasks import run_all_ingestions, run_ingestion
 
-
 pytestmark = pytest.mark.django_db
 
 

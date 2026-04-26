@@ -1,3 +1,5 @@
+from typing import Any
+
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 
@@ -10,7 +12,7 @@ from core.models import (
     SourceConfig,
     Tenant,
     TenantConfig,
-    UserFeedback
+    UserFeedback,
 )
 from core.serializers import (
     ContentSerializer,
@@ -26,7 +28,7 @@ from core.serializers import (
 
 
 class TenantOwnedQuerysetMixin:
-    queryset = None
+    queryset: Any = None
 
     def get_tenant(self):
         tenant_id = self.kwargs.get("tenant_id")

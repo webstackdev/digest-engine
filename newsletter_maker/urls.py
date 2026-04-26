@@ -3,6 +3,7 @@ from django.shortcuts import redirect
 from django.urls import include, path
 from django.views.generic.base import RedirectView
 
+
 def root_redirect_view(request):
     return redirect("/admin/")
 

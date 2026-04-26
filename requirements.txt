@@ -5,6 +5,7 @@ dj-database-url==3.1.2
 django-import-export==4.4.0
 django-stubs-ext==6.0.3
 django-stubs==6.0.3
+django-unfold==0.90.0
 Django==6.0.4
 djangorestframework==3.17.1
 djlint==1.36.4

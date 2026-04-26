@@ -8,7 +8,6 @@ from core.embeddings import upsert_content_embedding
 from core.models import Content, IngestionRun, RunStatus, SourceConfig
 from core.plugins import get_plugin_for_source_config
 
-
 logger = logging.getLogger(__name__)
 
 

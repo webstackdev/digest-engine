@@ -35,7 +35,7 @@ def _check_database() -> bool:
 
 def _check_qdrant() -> bool:
     try:
-        client = QdrantClient(url=settings.QDRANT_URL, timeout=2.0)
+        client = QdrantClient(url=settings.QDRANT_URL, timeout=2)
         client.get_collections()
     except Exception:
         return False

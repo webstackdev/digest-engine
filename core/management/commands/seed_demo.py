@@ -10,7 +10,6 @@ from django.utils import timezone
 from core.embeddings import upsert_content_embedding
 from core.models import Content, SourcePluginName, Tenant, TenantConfig
 
-
 REFERENCE_ARTICLES = [
     {
         "url": "https://example.com/reference/platform-engineering-golden-paths",

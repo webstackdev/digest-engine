@@ -654,4 +654,3 @@ The Docker Compose setup naturally translates to Kubernetes manifests or a Helm 
 - See [IMPLEMENTATION.md](IMPLEMENTATION.md) for additional implementation notes
 - See [LLM.md](LLM.md) for research on Claude Skills architecture, LangGraph integration, and multi-model considerations
 - See [VENDOR.md](VENDOR.md) for per-skill model selection, rationale, and API pricing via OpenRouter
-

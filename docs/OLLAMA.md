@@ -25,7 +25,7 @@ Ollama is an open-source tool designed to run Large Language Models (LLMs) like 
 
 ## Quant
 
-The "B" refers to number of parameters in billions. A larger model at low quantization usually beats a small model at high quantization. For example, a **Llama 70B** compressed to **4-bit (Q4)** will almost always be much smarter than a **Llama 8B** running at "perfect" **16-bit (FP16)**, even though they might take up similar amounts of RAM. The jump in "intelligence" from a high-quality 8-bit (Q8) version to the full 16-bit version is mathematically measurable but practically invisible to a human user. 
+The "B" refers to number of parameters in billions. A larger model at low quantization usually beats a small model at high quantization. For example, a **Llama 70B** compressed to **4-bit (Q4)** will almost always be much smarter than a **Llama 8B** running at "perfect" **16-bit (FP16)**, even though they might take up similar amounts of RAM. The jump in "intelligence" from a high-quality 8-bit (Q8) version to the full 16-bit version is mathematically measurable but practically invisible to a human user.
 
 - **FP16 (16-bit):** The "original" high-quality version. It uses 2 bytes per number. A 7B model takes ~14GB of RAM.
 - **Q8 (8-bit):** Uses 1 byte per number. This is almost indistinguishable from the original in quality but cuts the RAM requirement in half (~7GB for a 7B model).

@@ -3,7 +3,22 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from core.models import Content, Entity, FeedbackType, IngestionRun, ReviewQueue, ReviewReason, RunStatus, SkillResult, SkillStatus, SourceConfig, SourcePluginName, Tenant, TenantConfig, UserFeedback
+from core.models import (
+    Content,
+    Entity,
+    FeedbackType,
+    IngestionRun,
+    ReviewQueue,
+    ReviewReason,
+    RunStatus,
+    SkillResult,
+    SkillStatus,
+    SourceConfig,
+    SourcePluginName,
+    Tenant,
+    TenantConfig,
+    UserFeedback,
+)
 
 
 class TenantScopedApiTests(APITestCase):

@@ -10,5 +10,4 @@ celerybeat-schedule*
 db.sqlite3
 staticfiles/
 
-docs/LLM.md
-docs/VENDOR.md
+docs/

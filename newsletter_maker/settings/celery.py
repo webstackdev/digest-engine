@@ -2,7 +2,6 @@ import os
 
 from .base import env_bool
 
-
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
 # Celery: these settings point workers at Redis and keep the recurring

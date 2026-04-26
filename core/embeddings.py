@@ -2,13 +2,21 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from functools import lru_cache
+from typing import Any, cast
 from uuid import uuid4
 
+import httpx
 from django.conf import settings
 from django.utils.dateparse import parse_datetime
-import httpx
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, FieldCondition, Filter, MatchValue, PointStruct, VectorParams
+from qdrant_client.models import (
+  Distance,
+  FieldCondition,
+  Filter,
+  MatchValue,
+  PointStruct,
+  VectorParams,
+)
 from sentence_transformers import SentenceTransformer
 
 from core.models import Content
@@ -89,7 +97,7 @@ def collection_name_for_tenant(tenant_id: int) -> str:
 
 @lru_cache(maxsize=1)
 def get_qdrant_client() -> QdrantClient:
-    return QdrantClient(url=settings.QDRANT_URL, timeout=10.0)
+    return QdrantClient(url=settings.QDRANT_URL, timeout=10)
 
 
 @lru_cache(maxsize=1)
@@ -153,7 +161,8 @@ def search_similar(
     if not tenant_collection_exists(tenant_id):
         return []
     query_filter = build_search_filter(is_reference=is_reference, exclude_content_id=exclude_content_id)
-    return get_qdrant_client().search(
+    client = cast(Any, get_qdrant_client())
+    return client.search(
         collection_name=collection_name_for_tenant(tenant_id),
         query_vector=query_vector,
         limit=limit,
@@ -220,7 +229,7 @@ def serialize_published_date(value) -> str:
     return str(value)
 
 
-def build_search_filter(*, is_reference: bool | None = None, exclude_content_id: int | None = None):
+def build_search_filter(*, is_reference: bool | None = None, exclude_content_id: int | None = None) -> Filter | None:
     conditions = []
     if is_reference is not None:
         conditions.append(FieldCondition(key="is_reference", match=MatchValue(value=is_reference)))
@@ -228,4 +237,9 @@ def build_search_filter(*, is_reference: bool | None = None, exclude_content_id:
         conditions.append(FieldCondition(key="content_id", match=MatchValue(value=exclude_content_id)))
     if not conditions:
         return None
-    return Filter(must=conditions if exclude_content_id is None else conditions[:-1], must_not=conditions[-1:] if exclude_content_id is not None else None)
+    must_conditions = conditions if exclude_content_id is None else conditions[:-1]
+    must_not_conditions = conditions[-1:] if exclude_content_id is not None else None
+    return Filter(
+        must=cast(Any, must_conditions),
+        must_not=cast(Any, must_not_conditions),
+    )

@@ -1,12 +1,17 @@
 from types import SimpleNamespace
 
-from django.core.management import call_command
 import pytest
+from django.core.management import call_command
 
 from core import embeddings
-from core.embeddings import get_embedding_provider, get_reference_similarity, search_similar, search_similar_content, upsert_content_embedding
+from core.embeddings import (
+    get_embedding_provider,
+    get_reference_similarity,
+    search_similar,
+    search_similar_content,
+    upsert_content_embedding,
+)
 from core.models import Content, SourcePluginName, Tenant
-
 
 pytestmark = pytest.mark.django_db
 

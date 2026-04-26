@@ -3,7 +3,6 @@ import os
 
 import structlog
 
-
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 # Structlog: application logs are rendered as JSON so log aggregation systems

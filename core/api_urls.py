@@ -13,7 +13,6 @@ from core.api import (
     UserFeedbackViewSet,
 )
 
-
 app_name = "api"
 
 router = DefaultRouter()

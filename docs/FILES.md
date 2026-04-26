@@ -120,7 +120,7 @@ To enhance your Swagger UI with clear descriptions and examples, you use decorat
 
 **Documenting ViewSet Actions**
 
-Because your `ViewSets` (like `TenantViewSet`) provide multiple actions (list, create, etc.) in one class, you use the `@extend_schema_view` decorator to target each action individually. 
+Because your `ViewSets` (like `TenantViewSet`) provide multiple actions (list, create, etc.) in one class, you use the `@extend_schema_view` decorator to target each action individually.
 
 **Example for your `TenantViewSet` in `api.py`:**
 
@@ -162,9 +162,9 @@ from drf_spectacular.utils import OpenApiParameter
 @extend_schema(
     parameters=[
         OpenApiParameter(
-            name='tenant_id', 
-            type=int, 
-            location=OpenApiParameter.PATH, 
+            name='tenant_id',
+            type=int,
+            location=OpenApiParameter.PATH,
             description='The unique ID of the parent tenant'
         ),
     ],
@@ -182,7 +182,7 @@ If you want a simpler approach, `drf-spectacular` automatically picks up standar
 def create(self, request, *args, **kwargs):
     """
     Create a new newsletter source configuration.
-    
+
     This endpoint validates the RSS/Atom feed URL before saving.
     """
     return super().create(request, *args, **kwargs)
@@ -221,10 +221,10 @@ class EntityViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Captures 'tenant_id' from the URL we defined earlier
         tenant_id = self.kwargs.get("tenant_id")
-        
+
         # This will raise a 404 if the tenant doesn't exist
         tenant = get_object_or_404(Tenant, id=tenant_id)
-        
+
         # If tenant exists, return only their entities
         return Entity.objects.filter(tenant=tenant)
 ```
@@ -262,7 +262,7 @@ def list(self, request, *args, **kwargs):
 - **Explicit Docs**: By defining `responses={404: ...}`, a new red "404" row appears in your Swagger UI, telling API consumers exactly what to expect if they use an invalid `tenant_id`.
 - **Cleaner Logs**: Since `get_object_or_404` is a standard exception, your **Structlog** [turn 17] will capture it correctly without extra boilerplate code.
 
-Using the drf-standardized-errors package is the professional way to clean up your API's error responses and automatically document them in Swagger. It replaces Django REST Framework's default, sometimes inconsistent error formats with a single, structured JSON format. 
+Using the drf-standardized-errors package is the professional way to clean up your API's error responses and automatically document them in Swagger. It replaces Django REST Framework's default, sometimes inconsistent error formats with a single, structured JSON format.
 
 **1. Install and Configure**
 
@@ -358,45 +358,11 @@ This is **very high-quality Django code**. It uses the "Don't Repeat Yourself" (
 
 Would you like to see how the **Serializers** use that `context["tenant"]` we added in the Mixin?**
 
-## Improving Tests
+## GitHub Branch Checks
 
-## Test Env Vars
+GitHub required checks are configured in branch protection or rulesets, not in workflow YAML alone. After you push this, set these checks as required in GitHub:
 
-`pytest-django` lets you do this to override Django settings, before:
-
-```python
-@override_settings(
-    EMBEDDING_PROVIDER="openrouter",
-    EMBEDDING_MODEL="openai/text-embedding-3-small",
-    OPENROUTER_API_KEY="test-key",
-    OPENROUTER_API_BASE="https://openrouter.ai/api/v1",
-    OPENROUTER_APP_NAME="newsletter-maker",
-)
-@patch("core.embeddings.httpx.post")
-def test_openrouter_embedding_provider_calls_embeddings_endpoint(self, post_mock):
-    post_mock.return_value = SimpleNamespace(
-        json=lambda: {"data": [{"embedding": [0.5, 0.6]}]},
-        raise_for_status=lambda: None,
-    )
-
-    vector = embeddings.embed_text("api text")
-
-    self.assertEqual(vector, [0.5, 0.6])
-    self.assertIn("/embeddings", post_mock.call_args.args[0])
-    self.assertEqual(post_mock.call_args.kwargs["headers"]["Authorization"], "Bearer test-key")
-```
-
-Use a `.env.test` file, with a `conftest.py` file in the project root:
-
-```python
-# conftest.py
-import os
-from dotenv import load_dotenv
-
-def pytest_configure():
-    """
-    This runs before any tests (and before Django setup).
-    It loads the .env.test file into the environment.
-    """
-    load_dotenv(".env.test")
-```
+- Validate Branch Name
+- Enforce PR Target
+- Run test suite
+- Run lint suite

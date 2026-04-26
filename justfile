@@ -51,9 +51,12 @@ changepassword username:
 
 lint:
     if [ ! -f .env ]; then cp .env.example .env; fi
-    hadolint --ignore DL3008 --ignore DL3013 docker/web/Dockerfile
-    docker buildx build --check --file docker/web/Dockerfile . >/dev/null
-    python3 -m compileall manage.py core newsletter_maker
+    ruff check manage.py core newsletter_maker tests
+    djlint core/templates --check
+    python3 -m mypy manage.py core newsletter_maker tests
+    pre-commit run --all-files check-yaml
+    pre-commit run --all-files end-of-file-fixer
+    pre-commit run --all-files trailing-whitespace
     python3 manage.py check
 
 test:

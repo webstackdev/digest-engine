@@ -1,7 +1,8 @@
 import os
-from pathlib import Path
 import sys
-
+from pathlib import Path
+from django.utils.translation import gettext_lazy as _
+from django.templatetags.static import static
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -44,8 +45,11 @@ REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
 REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "newsletter-maker/0.1")
 
 INSTALLED_APPS = [
-    "core",
+    "unfold",  # Must be first
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
     "django.contrib.admin",
+    "core",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -125,3 +129,21 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Unfold Admin Template
+UNFOLD = {
+    "SITE_TITLE": _("Newsletter Maker"),
+    "SITE_HEADER": _("Newsletter Maker"),
+    "SITE_SUBHEADER": _("Administration"),
+    "DASHBOARD_CALLBACK": "core.utils.dashboard_callback",
+    "SITE_FAVICONS": [
+        {
+            "rel": "icon",
+            "sizes": "32x32",
+            "type": "image/x-icon",
+            "href": lambda request: static("core/favicon.ico"),
+        },
+    ],
+    "SITE_ICON": lambda request: static("core/logo.svg"),
+    "SITE_SYMBOL": "newsletter",
+}

@@ -4,6 +4,7 @@
     "buildx",
     "cfgv",
     "djlint",
+    "FAVICONS",
     "gunicorn",
     "healthz",
     "HNSW",

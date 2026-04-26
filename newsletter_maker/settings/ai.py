@@ -2,7 +2,6 @@ import os
 
 from .base import env_bool
 
-
 QDRANT_URL = os.getenv("QDRANT_URL", "http://qdrant:6333")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 OPENROUTER_API_BASE = os.getenv("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1")

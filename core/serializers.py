@@ -1,6 +1,16 @@
 from rest_framework import serializers
 
-from core.models import Content, Entity, IngestionRun, ReviewQueue, SkillResult, SourceConfig, Tenant, TenantConfig, UserFeedback
+from core.models import (
+    Content,
+    Entity,
+    IngestionRun,
+    ReviewQueue,
+    SkillResult,
+    SourceConfig,
+    Tenant,
+    TenantConfig,
+    UserFeedback,
+)
 from core.plugins import validate_plugin_config
 
 
