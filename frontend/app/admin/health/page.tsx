@@ -1,16 +1,16 @@
-import { AppShell } from "@/components/app-shell";
-import { StatusBadge } from "@/components/status-badge";
+import { AppShell } from "@/components/app-shell"
+import { StatusBadge } from "@/components/status-badge"
 import {
   getTenantIngestionRuns,
   getTenants,
   getTenantSourceConfigs,
-} from "@/lib/api";
-import type { HealthStatus } from "@/lib/types";
-import { formatDate, healthTone, selectTenant } from "@/lib/view-helpers";
+} from "@/lib/api"
+import type { HealthStatus } from "@/lib/types"
+import { formatDate, healthTone, selectTenant } from "@/lib/view-helpers"
 
 type HealthPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
 
 function deriveSourceStatus(
   isActive: boolean,
@@ -18,24 +18,24 @@ function deriveSourceStatus(
   lastFetchedAt: string | null,
 ): HealthStatus {
   if (!isActive) {
-    return "idle";
+    return "idle"
   }
   if (latestRunStatus === "failed") {
-    return "failing";
+    return "failing"
   }
   if (latestRunStatus === "running") {
-    return "degraded";
+    return "degraded"
   }
   if (!lastFetchedAt) {
-    return "degraded";
+    return "degraded"
   }
-  return "healthy";
+  return "healthy"
 }
 
 export default async function HealthPage({ searchParams }: HealthPageProps) {
-  const resolvedSearchParams = await searchParams;
-  const tenants = await getTenants();
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams);
+  const resolvedSearchParams = await searchParams
+  const tenants = await getTenants()
+  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
 
   if (!selectedTenant) {
     return (
@@ -49,18 +49,18 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
           Create a tenant first in Django admin.
         </div>
       </AppShell>
-    );
+    )
   }
 
   const [sourceConfigs, ingestionRuns] = await Promise.all([
     getTenantSourceConfigs(selectedTenant.id),
     getTenantIngestionRuns(selectedTenant.id),
-  ]);
+  ])
 
-  const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>();
+  const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
   for (const ingestionRun of ingestionRuns) {
     if (!latestRunByPlugin.has(ingestionRun.plugin_name)) {
-      latestRunByPlugin.set(ingestionRun.plugin_name, ingestionRun);
+      latestRunByPlugin.set(ingestionRun.plugin_name, ingestionRun)
     }
   }
 
@@ -95,12 +95,12 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
             ) : null}
             {sourceConfigs.map((sourceConfig) => {
               const latestRun =
-                latestRunByPlugin.get(sourceConfig.plugin_name) ?? null;
+                latestRunByPlugin.get(sourceConfig.plugin_name) ?? null
               const status = deriveSourceStatus(
                 sourceConfig.is_active,
                 latestRun?.status ?? null,
                 sourceConfig.last_fetched_at,
-              );
+              )
               return (
                 <tr key={sourceConfig.id}>
                   <td>
@@ -130,11 +130,11 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                   </td>
                   <td>{latestRun?.error_message || "-"}</td>
                 </tr>
-              );
+              )
             })}
           </tbody>
         </table>
       </section>
     </AppShell>
-  );
+  )
 }

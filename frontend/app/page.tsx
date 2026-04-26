@@ -1,7 +1,7 @@
-import Link from "next/link";
+import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell";
-import { StatusBadge } from "@/components/status-badge";
+import { AppShell } from "@/components/app-shell"
+import { StatusBadge } from "@/components/status-badge"
 import {
   getTenantContents,
   getTenantEntities,
@@ -9,7 +9,7 @@ import {
   getTenantReviewQueue,
   getTenants,
   getTenantSourceConfigs,
-} from "@/lib/api";
+} from "@/lib/api"
 import {
   formatDate,
   formatScore,
@@ -18,16 +18,16 @@ import {
   getSuccessMessage,
   selectTenant,
   truncateText,
-} from "@/lib/view-helpers";
+} from "@/lib/view-helpers"
 
 type HomePageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const resolvedSearchParams = await searchParams;
-  const tenants = await getTenants();
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams);
+  const resolvedSearchParams = await searchParams
+  const tenants = await getTenants()
+  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
 
   if (!selectedTenant) {
     return (
@@ -41,16 +41,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           No tenants are available for the configured API user.
         </div>
       </AppShell>
-    );
+    )
   }
 
-  const view = getSearchParam(resolvedSearchParams, "view") || "content";
-  const contentTypeFilter = getSearchParam(resolvedSearchParams, "contentType");
-  const sourceFilter = getSearchParam(resolvedSearchParams, "source");
+  const view = getSearchParam(resolvedSearchParams, "view") || "content"
+  const contentTypeFilter = getSearchParam(resolvedSearchParams, "contentType")
+  const sourceFilter = getSearchParam(resolvedSearchParams, "source")
   const daysFilter = Number.parseInt(
     getSearchParam(resolvedSearchParams, "days") || "30",
     10,
-  );
+  )
 
   const [contents, reviewQueue, entities, sourceConfigs, feedback] =
     await Promise.all([
@@ -59,13 +59,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       getTenantEntities(selectedTenant.id),
       getTenantSourceConfigs(selectedTenant.id),
       getTenantFeedback(selectedTenant.id),
-    ]);
+    ])
 
-  const activeContents = contents.filter((content) => content.is_active);
-  const thresholdDate = new Date();
+  const activeContents = contents.filter((content) => content.is_active)
+  const thresholdDate = new Date()
   thresholdDate.setDate(
     thresholdDate.getDate() - (Number.isNaN(daysFilter) ? 30 : daysFilter),
-  );
+  )
 
   const filteredContents = activeContents
     .filter(
@@ -78,34 +78,34 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     .filter((content) => new Date(content.published_date) >= thresholdDate)
     .sort((left, right) => {
       const relevanceDelta =
-        (right.relevance_score ?? -1) - (left.relevance_score ?? -1);
+        (right.relevance_score ?? -1) - (left.relevance_score ?? -1)
       if (relevanceDelta !== 0) {
-        return relevanceDelta;
+        return relevanceDelta
       }
       return (
         new Date(right.published_date).getTime() -
         new Date(left.published_date).getTime()
-      );
-    });
+      )
+    })
 
-  const contentMap = new Map(contents.map((content) => [content.id, content]));
-  const pendingReviewItems = reviewQueue.filter((item) => !item.resolved);
+  const contentMap = new Map(contents.map((content) => [content.id, content]))
+  const pendingReviewItems = reviewQueue.filter((item) => !item.resolved)
   const contentTypes = Array.from(
     new Set(
       activeContents.map((content) => content.content_type).filter(Boolean),
     ),
-  ).sort();
+  ).sort()
   const sources = Array.from(
     new Set(activeContents.map((content) => content.source_plugin)),
-  ).sort();
+  ).sort()
   const positiveFeedback = feedback.filter(
     (item) => item.feedback_type === "upvote",
-  ).length;
+  ).length
   const negativeFeedback = feedback.filter(
     (item) => item.feedback_type === "downvote",
-  ).length;
-  const errorMessage = getErrorMessage(resolvedSearchParams);
-  const successMessage = getSuccessMessage(resolvedSearchParams);
+  ).length
+  const errorMessage = getErrorMessage(resolvedSearchParams)
+  const successMessage = getSuccessMessage(resolvedSearchParams)
 
   return (
     <AppShell
@@ -229,7 +229,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </tr>
               ) : null}
               {pendingReviewItems.map((item) => {
-                const content = contentMap.get(item.content);
+                const content = contentMap.get(item.content)
                 return (
                   <tr key={item.id}>
                     <td>
@@ -293,7 +293,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                       </div>
                     </td>
                   </tr>
-                );
+                )
               })}
             </tbody>
           </table>
@@ -418,5 +418,5 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </section>
       )}
     </AppShell>
-  );
+  )
 }

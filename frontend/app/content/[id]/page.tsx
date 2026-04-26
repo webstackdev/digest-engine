@@ -1,26 +1,26 @@
-import Link from "next/link";
+import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell";
-import { StatusBadge } from "@/components/status-badge";
+import { AppShell } from "@/components/app-shell"
+import { StatusBadge } from "@/components/status-badge"
 import {
   getTenantContent,
   getTenantFeedback,
   getTenantReviewQueue,
   getTenants,
   getTenantSkillResults,
-} from "@/lib/api";
+} from "@/lib/api"
 import {
   formatDate,
   formatScore,
   getErrorMessage,
   getSuccessMessage,
   selectTenant,
-} from "@/lib/view-helpers";
+} from "@/lib/view-helpers"
 
 type ContentDetailPageProps = {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+  params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
 
 export default async function ContentDetailPage({
   params,
@@ -29,9 +29,9 @@ export default async function ContentDetailPage({
   const [{ id }, resolvedSearchParams] = await Promise.all([
     params,
     searchParams,
-  ]);
-  const tenants = await getTenants();
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams);
+  ])
+  const tenants = await getTenants()
+  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
 
   if (!selectedTenant) {
     return (
@@ -45,32 +45,30 @@ export default async function ContentDetailPage({
           Create a tenant first in Django admin.
         </div>
       </AppShell>
-    );
+    )
   }
 
-  const contentId = Number.parseInt(id, 10);
+  const contentId = Number.parseInt(id, 10)
   const [content, skillResults, reviewQueue, feedback] = await Promise.all([
     getTenantContent(selectedTenant.id, contentId),
     getTenantSkillResults(selectedTenant.id),
     getTenantReviewQueue(selectedTenant.id),
     getTenantFeedback(selectedTenant.id),
-  ]);
-  const errorMessage = getErrorMessage(resolvedSearchParams);
-  const successMessage = getSuccessMessage(resolvedSearchParams);
+  ])
+  const errorMessage = getErrorMessage(resolvedSearchParams)
+  const successMessage = getSuccessMessage(resolvedSearchParams)
   const contentSkillResults = skillResults.filter(
     (item) => item.content === content.id,
-  );
-  const reviewItems = reviewQueue.filter((item) => item.content === content.id);
-  const contentFeedback = feedback.filter(
-    (item) => item.content === content.id,
-  );
+  )
+  const reviewItems = reviewQueue.filter((item) => item.content === content.id)
+  const contentFeedback = feedback.filter((item) => item.content === content.id)
   const upvotes = contentFeedback.filter(
     (item) => item.feedback_type === "upvote",
-  ).length;
+  ).length
   const downvotes = contentFeedback.filter(
     (item) => item.feedback_type === "downvote",
-  ).length;
-  const canSummarize = (content.relevance_score ?? 0) >= 0.7;
+  ).length
+  const canSummarize = (content.relevance_score ?? 0) >= 0.7
 
   return (
     <AppShell
@@ -296,5 +294,5 @@ export default async function ContentDetailPage({
         </aside>
       </section>
     </AppShell>
-  );
+  )
 }

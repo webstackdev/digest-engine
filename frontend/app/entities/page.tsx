@@ -1,23 +1,23 @@
-import { AppShell } from "@/components/app-shell";
-import { StatusBadge } from "@/components/status-badge";
-import { getTenantEntities, getTenants } from "@/lib/api";
+import { AppShell } from "@/components/app-shell"
+import { StatusBadge } from "@/components/status-badge"
+import { getTenantEntities, getTenants } from "@/lib/api"
 import {
   formatDate,
   getErrorMessage,
   getSuccessMessage,
   selectTenant,
-} from "@/lib/view-helpers";
+} from "@/lib/view-helpers"
 
 type EntitiesPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
 
 export default async function EntitiesPage({
   searchParams,
 }: EntitiesPageProps) {
-  const resolvedSearchParams = await searchParams;
-  const tenants = await getTenants();
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams);
+  const resolvedSearchParams = await searchParams
+  const tenants = await getTenants()
+  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
 
   if (!selectedTenant) {
     return (
@@ -31,12 +31,12 @@ export default async function EntitiesPage({
           Create a tenant first in Django admin.
         </div>
       </AppShell>
-    );
+    )
   }
 
-  const entities = await getTenantEntities(selectedTenant.id);
-  const errorMessage = getErrorMessage(resolvedSearchParams);
-  const successMessage = getSuccessMessage(resolvedSearchParams);
+  const entities = await getTenantEntities(selectedTenant.id)
+  const errorMessage = getErrorMessage(resolvedSearchParams)
+  const successMessage = getSuccessMessage(resolvedSearchParams)
 
   return (
     <AppShell
@@ -239,5 +239,5 @@ export default async function EntitiesPage({
         </div>
       </section>
     </AppShell>
-  );
+  )
 }

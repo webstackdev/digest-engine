@@ -1,15 +1,15 @@
-import Link from "next/link";
-import type { ReactNode } from "react";
+import Link from "next/link"
+import type { ReactNode } from "react"
 
-import type { Tenant } from "@/lib/types";
+import type { Tenant } from "@/lib/types"
 
 type AppShellProps = {
-  title: string;
-  description: string;
-  tenants: Tenant[];
-  selectedTenantId: number | null;
-  children: ReactNode;
-};
+  title: string
+  description: string
+  tenants: Tenant[]
+  selectedTenantId: number | null
+  children: ReactNode
+}
 
 export function AppShell({
   title,
@@ -18,7 +18,7 @@ export function AppShell({
   selectedTenantId,
   children,
 }: AppShellProps) {
-  const tenantQuery = selectedTenantId ? `?tenant=${selectedTenantId}` : "";
+  const tenantQuery = selectedTenantId ? `?tenant=${selectedTenantId}` : ""
 
   return (
     <div className="app-shell">
@@ -43,7 +43,7 @@ export function AppShell({
           <p className="eyebrow">Tenant</p>
           <div className="tenant-list">
             {tenants.map((tenant) => {
-              const isActive = tenant.id === selectedTenantId;
+              const isActive = tenant.id === selectedTenantId
               return (
                 <Link
                   key={tenant.id}
@@ -55,7 +55,7 @@ export function AppShell({
                   <span>{tenant.name}</span>
                   <small>{tenant.topic_description}</small>
                 </Link>
-              );
+              )
             })}
           </div>
         </section>
@@ -72,5 +72,5 @@ export function AppShell({
         {children}
       </main>
     </div>
-  );
+  )
 }

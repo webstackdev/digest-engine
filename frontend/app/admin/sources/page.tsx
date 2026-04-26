@@ -1,25 +1,25 @@
-import { AppShell } from "@/components/app-shell";
-import { StatusBadge } from "@/components/status-badge";
+import { AppShell } from "@/components/app-shell"
+import { StatusBadge } from "@/components/status-badge"
 import {
   getTenantIngestionRuns,
   getTenants,
   getTenantSourceConfigs,
-} from "@/lib/api";
+} from "@/lib/api"
 import {
   formatDate,
   getErrorMessage,
   getSuccessMessage,
   selectTenant,
-} from "@/lib/view-helpers";
+} from "@/lib/view-helpers"
 
 type SourcesPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
 
 export default async function SourcesPage({ searchParams }: SourcesPageProps) {
-  const resolvedSearchParams = await searchParams;
-  const tenants = await getTenants();
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams);
+  const resolvedSearchParams = await searchParams
+  const tenants = await getTenants()
+  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
 
   if (!selectedTenant) {
     return (
@@ -33,22 +33,22 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
           Create a tenant first in Django admin.
         </div>
       </AppShell>
-    );
+    )
   }
 
   const [sourceConfigs, ingestionRuns] = await Promise.all([
     getTenantSourceConfigs(selectedTenant.id),
     getTenantIngestionRuns(selectedTenant.id),
-  ]);
-  const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>();
+  ])
+  const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
   for (const ingestionRun of ingestionRuns) {
     if (!latestRunByPlugin.has(ingestionRun.plugin_name)) {
-      latestRunByPlugin.set(ingestionRun.plugin_name, ingestionRun);
+      latestRunByPlugin.set(ingestionRun.plugin_name, ingestionRun)
     }
   }
 
-  const errorMessage = getErrorMessage(resolvedSearchParams);
-  const successMessage = getSuccessMessage(resolvedSearchParams);
+  const errorMessage = getErrorMessage(resolvedSearchParams)
+  const successMessage = getSuccessMessage(resolvedSearchParams)
 
   return (
     <AppShell
@@ -111,7 +111,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
           ) : null}
           {sourceConfigs.map((sourceConfig) => {
             const latestRun =
-              latestRunByPlugin.get(sourceConfig.plugin_name) ?? null;
+              latestRunByPlugin.get(sourceConfig.plugin_name) ?? null
             return (
               <article key={sourceConfig.id} className="content-card stack">
                 <div className="content-card__header">
@@ -186,10 +186,10 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                   </button>
                 </form>
               </article>
-            );
+            )
           })}
         </div>
       </section>
     </AppShell>
-  );
+  )
 }
