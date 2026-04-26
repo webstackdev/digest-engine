@@ -38,6 +38,9 @@ frontend-format:
 frontend-format-check:
     cd frontend && npm run format:check
 
+frontend-test:
+    cd frontend && npm run test:run
+
 up:
     if [ ! -f .env ]; then cp .env.example .env; fi
     {{compose}} up
