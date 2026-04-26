@@ -99,4 +99,8 @@ export type UserFeedback = {
 
 export type HealthStatus = "healthy" | "degraded" | "failing" | "idle";
 
-export type ContentSkillName = "content_classification" | "relevance_scoring" | "summarization" | "find_related";
+export type ContentSkillName =
+  | "content_classification"
+  | "relevance_scoring"
+  | "summarization"
+  | "find_related";

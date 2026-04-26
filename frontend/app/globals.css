@@ -22,8 +22,16 @@
 html {
   min-height: 100%;
   background:
-    radial-gradient(circle at top left, rgba(21, 111, 104, 0.14), transparent 38%),
-    radial-gradient(circle at top right, rgba(194, 122, 44, 0.14), transparent 28%),
+    radial-gradient(
+      circle at top left,
+      rgba(21, 111, 104, 0.14),
+      transparent 38%
+    ),
+    radial-gradient(
+      circle at top right,
+      rgba(194, 122, 44, 0.14),
+      transparent 28%
+    ),
     linear-gradient(180deg, #f6f1e9 0%, #efe6da 100%);
 }
 
@@ -106,7 +114,10 @@ textarea {
   border: 1px solid rgba(247, 240, 231, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.03);
-  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+  transition:
+    transform 120ms ease,
+    border-color 120ms ease,
+    background 120ms ease;
 }
 
 .sidebar-nav a:hover,
@@ -127,7 +138,11 @@ textarea {
 
 .tenant-link--active {
   border-color: rgba(240, 205, 131, 0.46);
-  background: linear-gradient(180deg, rgba(194, 122, 44, 0.18), rgba(255, 255, 255, 0.03));
+  background: linear-gradient(
+    180deg,
+    rgba(194, 122, 44, 0.18),
+    rgba(255, 255, 255, 0.03)
+  );
 }
 
 .app-main {

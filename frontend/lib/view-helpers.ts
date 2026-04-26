@@ -15,8 +15,13 @@ export function selectTenant(tenants: Tenant[], searchParams: SearchParams) {
     return null;
   }
 
-  const requestedTenantId = Number.parseInt(getSearchParam(searchParams, "tenant"), 10);
-  const selectedTenant = tenants.find((tenant) => tenant.id === requestedTenantId);
+  const requestedTenantId = Number.parseInt(
+    getSearchParam(searchParams, "tenant"),
+    10,
+  );
+  const selectedTenant = tenants.find(
+    (tenant) => tenant.id === requestedTenantId,
+  );
   return selectedTenant ?? tenants[0];
 }
 

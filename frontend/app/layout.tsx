@@ -1,8 +1,8 @@
-import type { ReactNode } from "react";
+import "./globals.css";
+
 import type { Metadata } from "next";
 import { Fraunces, Space_Grotesk } from "next/font/google";
-
-import "./globals.css";
+import type { ReactNode } from "react";
 
 const display = Fraunces({
   variable: "--font-display",
@@ -19,7 +19,9 @@ export const metadata: Metadata = {
   description: "Minimal dashboard for reviewing ingested newsletter content.",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
       <body className={`${display.variable} ${body.variable}`}>{children}</body>

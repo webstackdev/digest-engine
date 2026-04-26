@@ -1,6 +1,5 @@
-import type { ReactNode } from "react";
-
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import type { Tenant } from "@/lib/types";
 
@@ -12,7 +11,13 @@ type AppShellProps = {
   children: ReactNode;
 };
 
-export function AppShell({ title, description, tenants, selectedTenantId, children }: AppShellProps) {
+export function AppShell({
+  title,
+  description,
+  tenants,
+  selectedTenantId,
+  children,
+}: AppShellProps) {
   const tenantQuery = selectedTenantId ? `?tenant=${selectedTenantId}` : "";
 
   return (
@@ -22,7 +27,8 @@ export function AppShell({ title, description, tenants, selectedTenantId, childr
           <p className="eyebrow">Newsletter Maker</p>
           <h1>Editor cockpit</h1>
           <p className="sidebar-copy">
-            A compact review surface for relevance-ranked content, review work, and source health.
+            A compact review surface for relevance-ranked content, review work,
+            and source health.
           </p>
         </div>
 
@@ -42,7 +48,9 @@ export function AppShell({ title, description, tenants, selectedTenantId, childr
                 <Link
                   key={tenant.id}
                   href={`/?tenant=${tenant.id}`}
-                  className={isActive ? "tenant-link tenant-link--active" : "tenant-link"}
+                  className={
+                    isActive ? "tenant-link tenant-link--active" : "tenant-link"
+                  }
                 >
                   <span>{tenant.name}</span>
                   <small>{tenant.topic_description}</small>
