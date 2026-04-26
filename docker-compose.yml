@@ -8,7 +8,6 @@ x-app-common: &app-common
     - .env
   volumes:
     - .:/app
-    - static_data:/app/staticfiles
 
 x-shared-env: &shared-env
   DATABASE_URL: postgresql://newsletter:newsletter@postgres:5432/newsletter_maker
@@ -98,10 +97,8 @@ services:
       - "8080:80"
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - static_data:/var/www/static:ro
 
 volumes:
   postgres_data:
   redis_data:
   qdrant_data:
-  static_data:
