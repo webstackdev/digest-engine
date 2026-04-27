@@ -107,12 +107,13 @@ class ContentAdmin(admin.ModelAdmin):
 
     @admin.display(description="Preview")
     def preview_content(self, obj):
-        """Adds a 'Quick Look' icon that shows the description in an Unfold modal."""
-        if not obj.description:
+        """Adds a quick preview based on the stored content text."""
+        preview_text = (obj.content_text or "").strip()
+        if not preview_text:
             return "-"
         return format_html(
             '<span title="{}" style="cursor:pointer;">🔍 View</span>',
-            obj.description[:500]
+            preview_text[:500]
         )
 
     @admin.display(description="AI Trace")

@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.contrib.admin.sites import AdminSite
 from django.utils import timezone
 
-from core.admin import ReviewQueueAdmin, SourceConfigAdmin
+from core.admin import ContentAdmin, ReviewQueueAdmin, SourceConfigAdmin
 from core.models import Content, ReviewQueue, ReviewReason, SourceConfig, SourcePluginName, Tenant
 
 pytestmark = pytest.mark.django_db
@@ -104,3 +104,35 @@ def test_review_queue_changelist_view_builds_dashboard_stats(source_admin_contex
     super_changelist_view.assert_called_once()
     assert response["dashboard_stats"][0]["value"] == 1
     assert response["dashboard_stats"][1]["value"] == "42%"
+
+
+def test_content_preview_uses_content_text(source_admin_context):
+    content = Content.objects.create(
+        tenant=source_admin_context.tenant,
+        url="https://example.com/admin-preview",
+        title="Admin Preview",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="A short preview from the content body.",
+    )
+    admin_instance = ContentAdmin(Content, AdminSite())
+
+    preview = admin_instance.preview_content(content)
+
+    assert 'title="A short preview from the content body."' in preview
+
+
+def test_content_preview_returns_dash_when_content_text_blank(source_admin_context):
+    content = Content.objects.create(
+        tenant=source_admin_context.tenant,
+        url="https://example.com/admin-preview-empty",
+        title="Admin Preview Empty",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="   ",
+    )
+    admin_instance = ContentAdmin(Content, AdminSite())
+
+    assert admin_instance.preview_content(content) == "-"
