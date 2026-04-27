@@ -12,12 +12,6 @@ type HealthPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-const panelClass =
-  "rounded-3xl border border-[#1f2b27]/12 bg-[rgba(255,250,244,0.86)] p-5 shadow-[0_24px_60px_rgba(35,30,22,0.12)] backdrop-blur-xl"
-const emptyStateClass =
-  "rounded-[18px] bg-[#1f2b27]/6 px-4 py-4 text-sm leading-6 text-[#5d6d67]"
-const metaRowClass = "mt-2 flex flex-wrap gap-2 text-sm text-[#5d6d67]"
-
 function deriveSourceStatus(
   isActive: boolean,
   latestRunStatus: string | null,
@@ -51,7 +45,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <div className={emptyStateClass}>
+        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -77,11 +71,11 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
       projects={projects}
       selectedProjectId={selectedProject.id}
     >
-      <section className={`${panelClass} overflow-hidden`}>
+      <section className="overflow-hidden rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-[#1f2b27]/12 text-sm text-[#5d6d67]">
+              <tr className="border-b border-ink/12 text-sm text-muted">
                 <th className="px-3 py-4 font-medium">Source</th>
                 <th className="px-3 py-4 font-medium">Status</th>
                 <th className="px-3 py-4 font-medium">Last fetch</th>
@@ -94,7 +88,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
               {sourceConfigs.length === 0 ? (
                 <tr>
                   <td className="px-3 py-4" colSpan={6}>
-                    <div className={emptyStateClass}>
+                    <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
                       No source configurations exist for this project yet.
                     </div>
                   </td>
@@ -111,13 +105,13 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                 return (
                   <tr
                     key={sourceConfig.id}
-                    className="border-b border-[#1f2b27]/12 align-top last:border-b-0"
+                    className="border-b border-ink/12 align-top last:border-b-0"
                   >
                     <td className="px-3 py-4">
-                      <strong className="font-medium text-[#1f2b27]">
+                      <strong className="font-medium text-ink">
                         {sourceConfig.plugin_name}
                       </strong>
-                      <div className={metaRowClass}>
+                      <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
                         <span>Config #{sourceConfig.id}</span>
                         <span>
                           {sourceConfig.is_active ? "active" : "disabled"}
@@ -129,20 +123,20 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                         {status}
                       </StatusBadge>
                     </td>
-                    <td className="px-3 py-4 text-sm text-[#1f2b27]">
+                    <td className="px-3 py-4 text-sm text-ink">
                       {formatDate(sourceConfig.last_fetched_at)}
                     </td>
-                    <td className="px-3 py-4 text-sm text-[#1f2b27]">
+                    <td className="px-3 py-4 text-sm text-ink">
                       {latestRun
                         ? `${latestRun.status} at ${formatDate(latestRun.started_at)}`
                         : "No runs yet"}
                     </td>
-                    <td className="px-3 py-4 text-sm text-[#1f2b27]">
+                    <td className="px-3 py-4 text-sm text-ink">
                       {latestRun
                         ? `${latestRun.items_ingested}/${latestRun.items_fetched}`
                         : "0/0"}
                     </td>
-                    <td className="px-3 py-4 text-sm text-[#1f2b27]">
+                    <td className="px-3 py-4 text-sm text-ink">
                       {latestRun?.error_message || "-"}
                     </td>
                   </tr>

@@ -16,21 +16,6 @@ type SourcesPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-const panelClass =
-  "rounded-3xl border border-[#1f2b27]/12 bg-[rgba(255,250,244,0.86)] p-5 shadow-[0_24px_60px_rgba(35,30,22,0.12)] backdrop-blur-xl"
-const eyebrowClass = "m-0 text-[0.78rem] uppercase tracking-[0.12em] opacity-70"
-const emptyStateClass =
-  "rounded-[18px] bg-[#1f2b27]/6 px-4 py-4 text-sm leading-6 text-[#5d6d67]"
-const errorBannerClass =
-  "rounded-[18px] bg-[#c55f4d]/14 px-4 py-4 text-sm leading-6 text-[#7c3023]"
-const metaRowClass = "flex flex-wrap gap-2 text-sm text-[#5d6d67]"
-const inputClass =
-  "w-full rounded-2xl border border-[#1f2b27]/12 bg-white/70 px-4 py-3 text-[#1f2b27] outline-none transition focus:border-[#156f68]/40 focus:ring-2 focus:ring-[#156f68]/15"
-const labelClass = "grid gap-2"
-const labelTextClass = "text-sm font-medium text-[#1f2b27]"
-const primaryButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#156f68,#1d8d83)] px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-
 export default async function SourcesPage({ searchParams }: SourcesPageProps) {
   const resolvedSearchParams = await searchParams
   const projects = await getProjects()
@@ -44,7 +29,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <div className={emptyStateClass}>
+        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -73,15 +58,15 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <div className={errorBannerClass}>{errorMessage}</div>
+        <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className={emptyStateClass}>{successMessage}</div>
+        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
-        <article className={`${panelClass} space-y-4`}>
-          <p className={eyebrowClass}>Add source</p>
+        <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Add source</p>
           <form
             className="space-y-4"
             action="/api/source-configs"
@@ -93,10 +78,10 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
               name="redirectTo"
               value={`/admin/sources?project=${selectedProject.id}`}
             />
-            <label className={labelClass}>
-              <span className={labelTextClass}>Plugin</span>
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-ink">Plugin</span>
               <select
-                className={inputClass}
+                className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                 name="plugin_name"
                 defaultValue="rss"
               >
@@ -104,10 +89,10 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                 <option value="reddit">Reddit</option>
               </select>
             </label>
-            <label className={labelClass}>
-              <span className={labelTextClass}>Config JSON</span>
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-ink">Config JSON</span>
               <textarea
-                className={`${inputClass} min-h-[120px] resize-y font-mono text-sm`}
+                className="min-h-[120px] w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 font-mono text-sm text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                 name="config_json"
                 defaultValue={JSON.stringify(
                   { feed_url: "https://example.com/feed.xml" },
@@ -116,10 +101,10 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                 )}
               />
             </label>
-            <label className={labelClass}>
-              <span className={labelTextClass}>Active</span>
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-ink">Active</span>
               <select
-                className={inputClass}
+                className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                 name="is_active"
                 defaultValue="true"
               >
@@ -127,7 +112,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                 <option value="false">Disabled</option>
               </select>
             </label>
-            <button className={primaryButtonClass} type="submit">
+            <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
               Create source
             </button>
           </form>
@@ -135,7 +120,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
 
         <div className="space-y-4">
           {sourceConfigs.length === 0 ? (
-            <div className={emptyStateClass}>
+            <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
               No source configurations exist for this project yet.
             </div>
           ) : null}
@@ -145,14 +130,14 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
             return (
               <article
                 key={sourceConfig.id}
-                className={`${panelClass} space-y-4`}
+                className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl"
               >
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <h3 className="font-[family:var(--font-display)] text-[1.45rem] font-bold">
+                    <h3 className="font-display text-title-md font-bold">
                       {sourceConfig.plugin_name}
                     </h3>
-                    <div className={metaRowClass}>
+                    <div className="flex flex-wrap gap-2 text-sm text-muted">
                       <span>Config #{sourceConfig.id}</span>
                       <span>
                         Last fetch {formatDate(sourceConfig.last_fetched_at)}
@@ -181,19 +166,19 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                     name="redirectTo"
                     value={`/admin/sources?project=${selectedProject.id}`}
                   />
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>Plugin</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Plugin</span>
                     <input
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="plugin_name"
                       defaultValue={sourceConfig.plugin_name}
                       readOnly
                     />
                   </label>
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>Config JSON</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Config JSON</span>
                     <textarea
-                      className={`${inputClass} min-h-[120px] resize-y font-mono text-sm`}
+                      className="min-h-[120px] w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 font-mono text-sm text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="config_json"
                       defaultValue={JSON.stringify(
                         sourceConfig.config,
@@ -202,10 +187,10 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                       )}
                     />
                   </label>
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>Active</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Active</span>
                     <select
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="is_active"
                       defaultValue={sourceConfig.is_active ? "true" : "false"}
                     >
@@ -213,13 +198,13 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                       <option value="false">Disabled</option>
                     </select>
                   </label>
-                  <div className={metaRowClass}>
+                  <div className="flex flex-wrap gap-2 text-sm text-muted">
                     <span>
                       Latest run: {latestRun ? latestRun.status : "none"}
                     </span>
                     <span>{latestRun?.error_message || "No recent error"}</span>
                   </div>
-                  <button className={primaryButtonClass} type="submit">
+                  <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                     Save source
                   </button>
                 </form>

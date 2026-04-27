@@ -24,11 +24,11 @@ type SkillActionResponse = {
 }
 
 const ghostButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full border border-[#1f2b27]/12 bg-transparent px-4 py-3 text-sm font-medium text-[#1f2b27] transition hover:bg-white/50 disabled:cursor-not-allowed disabled:opacity-50"
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50"
 const statusMessageClass =
-  "basis-full rounded-[18px] bg-[#1f2b27]/6 px-4 py-3 text-sm leading-6 text-[#5d6d67]"
+  "basis-full rounded-[18px] bg-ink/6 px-4 py-3 text-sm leading-6 text-muted"
 const errorMessageClass =
-  "basis-full rounded-[18px] bg-[#c55f4d]/14 px-4 py-3 text-sm leading-6 text-[#7c3023]"
+  "basis-full rounded-[18px] bg-danger/14 px-4 py-3 text-sm leading-6 text-danger-ink"
 
 function isPendingStatus(status: SkillResult["status"]) {
   return status === "pending" || status === "running"

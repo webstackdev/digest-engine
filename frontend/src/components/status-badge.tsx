@@ -7,10 +7,10 @@ type StatusBadgeProps = {
 
 export function StatusBadge({ tone, children }: StatusBadgeProps) {
   const toneClasses = {
-    positive: "bg-[#156f68]/15 text-[#156f68]",
-    warning: "bg-[#c27a2c]/16 text-[#c27a2c]",
-    negative: "bg-[#c55f4d]/15 text-[#c55f4d]",
-    neutral: "bg-[#1f2b27]/8 text-[#5d6d67]",
+    positive: "bg-primary/15 text-primary",
+    warning: "bg-warning/16 text-warning",
+    negative: "bg-danger/15 text-danger",
+    neutral: "bg-ink/8 text-muted",
   }
 
   return (

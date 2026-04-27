@@ -23,19 +23,6 @@ type ContentDetailPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-const panelClass =
-  "rounded-3xl border border-[#1f2b27]/12 bg-[rgba(255,250,244,0.86)] p-5 shadow-[0_24px_60px_rgba(35,30,22,0.12)] backdrop-blur-xl"
-const eyebrowClass = "m-0 text-[0.78rem] uppercase tracking-[0.12em] opacity-70"
-const emptyStateClass =
-  "rounded-[18px] bg-[#1f2b27]/6 px-4 py-4 text-sm leading-6 text-[#5d6d67]"
-const errorBannerClass =
-  "rounded-[18px] bg-[#c55f4d]/14 px-4 py-4 text-sm leading-6 text-[#7c3023]"
-const metaRowClass = "flex flex-wrap gap-2 text-sm text-[#5d6d67]"
-const primaryButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#156f68,#1d8d83)] px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-const ghostButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full border border-[#1f2b27]/12 bg-transparent px-4 py-3 text-sm font-medium text-[#1f2b27] transition hover:bg-white/50 disabled:cursor-not-allowed disabled:opacity-50"
-
 export default async function ContentDetailPage({
   params,
   searchParams,
@@ -55,7 +42,7 @@ export default async function ContentDetailPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <div className={emptyStateClass}>
+        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -101,21 +88,21 @@ export default async function ContentDetailPage({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <div className={errorBannerClass}>{errorMessage}</div>
+        <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className={emptyStateClass}>{successMessage}</div>
+        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
         <div className="space-y-4">
-          <article className={panelClass}>
+          <article className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-3">
-                <p className={eyebrowClass}>{content.source_plugin}</p>
-                <h3 className="font-[family:var(--font-display)] text-[1.45rem] font-bold">
+                <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">{content.source_plugin}</p>
+                <h3 className="font-display text-title-md font-bold">
                   {content.title}
                 </h3>
-                <div className={metaRowClass}>
+                <div className="flex flex-wrap gap-2 text-sm text-muted">
                   <span>{formatDate(content.published_date)}</span>
                   <span>{content.author || "Unknown author"}</span>
                   <span>{content.content_type || "unclassified"}</span>
@@ -132,7 +119,7 @@ export default async function ContentDetailPage({
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link
-                className={primaryButtonClass}
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                 href={content.url}
                 target="_blank"
               >
@@ -151,7 +138,7 @@ export default async function ContentDetailPage({
                   name="redirectTo"
                   value={`/content/${content.id}?project=${selectedProject.id}`}
                 />
-                <button className={primaryButtonClass} type="submit">
+                <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                   Upvote
                 </button>
               </form>
@@ -168,19 +155,19 @@ export default async function ContentDetailPage({
                   name="redirectTo"
                   value={`/content/${content.id}?project=${selectedProject.id}`}
                 />
-                <button className={ghostButtonClass} type="submit">
+                <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                   Downvote
                 </button>
               </form>
             </div>
 
-            <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-[#5d6d67] md:text-base">
+            <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-muted md:text-base">
               {content.content_text}
             </div>
           </article>
 
-          <article className={`${panelClass} space-y-4`}>
-            <p className={eyebrowClass}>Skill action bar</p>
+          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Skill action bar</p>
             <div className="flex flex-wrap items-center gap-3">
               <SkillActionBar
                 key={`${selectedProject.id}:${content.id}:${initialPendingSkills.slice().sort().join(",")}`}
@@ -201,12 +188,12 @@ export default async function ContentDetailPage({
                   name="redirectTo"
                   value={`/content/${content.id}?project=${selectedProject.id}`}
                 />
-                <button className={ghostButtonClass} type="submit">
+                <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                   Find related
                 </button>
               </form>
             </div>
-            <p className="text-sm leading-6 text-[#5d6d67]">
+            <p className="text-sm leading-6 text-muted">
               These controls create new persisted SkillResult records.
               Summarization is only available once a content item has reached a
               relevance score of at least 0.70.
@@ -214,11 +201,11 @@ export default async function ContentDetailPage({
           </article>
 
           {contentSkillResults.map((skillResult) => (
-            <article key={skillResult.id} className={`${panelClass} space-y-4`}>
+            <article key={skillResult.id} className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className={eyebrowClass}>{skillResult.skill_name}</p>
-                  <h3 className="font-[family:var(--font-display)] text-[1.45rem] font-bold">
+                  <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">{skillResult.skill_name}</p>
+                  <h3 className="font-display text-title-md font-bold">
                     {skillResult.status}
                   </h3>
                 </div>
@@ -234,17 +221,17 @@ export default async function ContentDetailPage({
                   {skillResult.model_used || "model pending"}
                 </StatusBadge>
               </div>
-              <div className={metaRowClass}>
+              <div className="flex flex-wrap gap-2 text-sm text-muted">
                 <span>Created {formatDate(skillResult.created_at)}</span>
                 <span>Latency {skillResult.latency_ms ?? 0} ms</span>
                 <span>Confidence {formatScore(skillResult.confidence)}</span>
               </div>
               {skillResult.error_message ? (
-                <div className={errorBannerClass}>
+                <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">
                   {skillResult.error_message}
                 </div>
               ) : null}
-              <pre className="overflow-auto rounded-2xl bg-[rgba(20,31,28,0.94)] p-4 text-sm text-[#f7f0e7]">
+              <pre className="overflow-auto rounded-2xl bg-sidebar/95 p-4 text-sm text-sidebar-ink">
                 {JSON.stringify(skillResult.result_data, null, 2)}
               </pre>
             </article>
@@ -252,20 +239,20 @@ export default async function ContentDetailPage({
         </div>
 
         <aside className="space-y-4">
-          <article className={panelClass}>
-            <p className={eyebrowClass}>Feedback</p>
+          <article className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Feedback</p>
             <p className="mt-1 text-3xl font-bold">
               {upvotes}/{downvotes}
             </p>
-            <p className="text-sm leading-6 text-[#5d6d67]">
+            <p className="text-sm leading-6 text-muted">
               Upvotes and downvotes recorded for this item.
             </p>
           </article>
 
-          <article className={`${panelClass} space-y-4`}>
-            <p className={eyebrowClass}>Review state</p>
+          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Review state</p>
             {reviewItems.length === 0 ? (
-              <p className="text-sm leading-6 text-[#5d6d67]">
+              <p className="text-sm leading-6 text-muted">
                 No review flags are attached to this content.
               </p>
             ) : null}
@@ -274,10 +261,10 @@ export default async function ContentDetailPage({
                 <StatusBadge tone={item.resolved ? "neutral" : "warning"}>
                   {item.reason}
                 </StatusBadge>
-                <p className="text-sm leading-6 text-[#5d6d67]">
+                <p className="text-sm leading-6 text-muted">
                   Confidence {formatScore(item.confidence)}
                 </p>
-                <p className="text-sm leading-6 text-[#5d6d67]">
+                <p className="text-sm leading-6 text-muted">
                   {item.resolved
                     ? item.resolution || "resolved"
                     : "Awaiting human resolution"}
@@ -286,16 +273,16 @@ export default async function ContentDetailPage({
             ))}
           </article>
 
-          <article className={`${panelClass} space-y-4`}>
-            <p className={eyebrowClass}>Navigate</p>
+          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Navigate</p>
             <Link
-              className={primaryButtonClass}
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               href={`/?project=${selectedProject.id}`}
             >
               Back to dashboard
             </Link>
             <Link
-              className={ghostButtonClass}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50"
               href={`/entities?project=${selectedProject.id}`}
             >
               Manage entities

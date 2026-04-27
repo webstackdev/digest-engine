@@ -22,15 +22,15 @@ export function AppShell({
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className="flex flex-col gap-8 bg-[rgba(20,31,28,0.94)] p-5 text-[#f7f0e7] md:p-8">
+      <aside className="flex flex-col gap-8 bg-sidebar/95 p-5 text-sidebar-ink md:p-8">
         <div>
-          <p className="m-0 text-[0.78rem] uppercase tracking-[0.12em] opacity-70">
+          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">
             Newsletter Maker
           </p>
-          <h1 className="mt-1 font-[family:var(--font-display)] text-[clamp(2rem,5vw,2.8rem)] font-bold leading-[0.95]">
+          <h1 className="mt-1 font-display text-display-hero font-bold leading-display">
             Editor cockpit
           </h1>
-          <p className="mt-4 text-sm leading-6 text-[rgba(247,240,231,0.74)]">
+          <p className="mt-4 text-sm leading-6 text-sidebar-muted/74">
             A compact review surface for relevance-ranked content, review work,
             and source health.
           </p>
@@ -38,25 +38,25 @@ export function AppShell({
 
         <nav className="grid gap-4">
           <Link
-            className="rounded-[18px] border border-[rgba(247,240,231,0.08)] bg-white/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
+            className="rounded-[18px] border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
             href={`/${projectQuery}`}
           >
             Dashboard
           </Link>
           <Link
-            className="rounded-[18px] border border-[rgba(247,240,231,0.08)] bg-white/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
+            className="rounded-[18px] border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
             href={`/entities${projectQuery}`}
           >
             Entities
           </Link>
           <Link
-            className="rounded-[18px] border border-[rgba(247,240,231,0.08)] bg-white/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
+            className="rounded-[18px] border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
             href={`/admin/health${projectQuery}`}
           >
             Ingestion health
           </Link>
           <Link
-            className="rounded-[18px] border border-[rgba(247,240,231,0.08)] bg-white/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
+            className="rounded-[18px] border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
             href={`/admin/sources${projectQuery}`}
           >
             Source configs
@@ -64,7 +64,7 @@ export function AppShell({
         </nav>
 
         <section>
-          <p className="m-0 text-[0.78rem] uppercase tracking-[0.12em] opacity-70">
+          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">
             Project
           </p>
           <div className="mt-4 grid gap-4">
@@ -77,12 +77,12 @@ export function AppShell({
                   href={`/?project=${project.id}`}
                   className={`grid gap-1 rounded-[18px] border px-4 py-4 transition hover:-translate-y-0.5 ${
                     isActive
-                      ? "border-[rgba(240,205,131,0.46)] bg-[linear-gradient(180deg,rgba(194,122,44,0.18),rgba(255,255,255,0.03))]"
-                      : "border-[rgba(247,240,231,0.08)] bg-white/3 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
+                      ? "border-warning-soft/46 bg-linear-to-b from-warning/18 to-sidebar-ink/3"
+                      : "border-sidebar-ink/8 bg-sidebar-ink/3 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
                   }`}
                 >
                   <span>{project.name}</span>
-                  <small className="text-[rgba(247,240,231,0.64)]">
+                  <small className="text-sidebar-muted/64">
                     {project.topic_description}
                   </small>
                 </Link>
@@ -95,14 +95,14 @@ export function AppShell({
       <main className="p-5 md:p-8">
         <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between md:gap-6">
           <div>
-            <p className="m-0 text-[0.78rem] uppercase tracking-[0.12em] opacity-70">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">
               Minimal dashboard
             </p>
-            <h2 className="font-[family:var(--font-display)] text-[clamp(2rem,4vw,3.25rem)] font-bold">
+            <h2 className="font-display text-display-page font-bold">
               {title}
             </h2>
           </div>
-          <p className="max-w-[36rem] text-sm leading-6 text-[#5d6d67] md:text-base">
+          <p className="max-w-[36rem] text-sm leading-6 text-muted md:text-base">
             {description}
           </p>
         </header>

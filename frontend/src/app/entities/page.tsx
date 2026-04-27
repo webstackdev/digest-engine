@@ -12,23 +12,6 @@ type EntitiesPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-const panelClass =
-  "rounded-3xl border border-[#1f2b27]/12 bg-[rgba(255,250,244,0.86)] p-5 shadow-[0_24px_60px_rgba(35,30,22,0.12)] backdrop-blur-xl"
-const eyebrowClass = "m-0 text-[0.78rem] uppercase tracking-[0.12em] opacity-70"
-const emptyStateClass =
-  "rounded-[18px] bg-[#1f2b27]/6 px-4 py-4 text-sm leading-6 text-[#5d6d67]"
-const errorBannerClass =
-  "rounded-[18px] bg-[#c55f4d]/14 px-4 py-4 text-sm leading-6 text-[#7c3023]"
-const metaRowClass = "flex flex-wrap gap-2 text-sm text-[#5d6d67]"
-const inputClass =
-  "w-full rounded-2xl border border-[#1f2b27]/12 bg-white/70 px-4 py-3 text-[#1f2b27] outline-none transition focus:border-[#156f68]/40 focus:ring-2 focus:ring-[#156f68]/15"
-const labelClass = "grid gap-2"
-const labelTextClass = "text-sm font-medium text-[#1f2b27]"
-const primaryButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#156f68,#1d8d83)] px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-const dangerButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#c55f4d,#da7a67)] px-4 py-3 text-sm font-medium text-white transition hover:brightness-105"
-
 export default async function EntitiesPage({
   searchParams,
 }: EntitiesPageProps) {
@@ -44,7 +27,7 @@ export default async function EntitiesPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <div className={emptyStateClass}>
+        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -63,15 +46,15 @@ export default async function EntitiesPage({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <div className={errorBannerClass}>{errorMessage}</div>
+        <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className={emptyStateClass}>{successMessage}</div>
+        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
-        <article className={`${panelClass} space-y-4`}>
-          <p className={eyebrowClass}>Create entity</p>
+        <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Create entity</p>
           <form className="space-y-4" action="/api/entities" method="POST">
             <input type="hidden" name="projectId" value={selectedProject.id} />
             <input
@@ -80,14 +63,14 @@ export default async function EntitiesPage({
               value={`/entities?project=${selectedProject.id}`}
             />
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className={labelClass}>
-                <span className={labelTextClass}>Name</span>
-                <input className={inputClass} name="name" required />
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-ink">Name</span>
+                <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="name" required />
               </label>
-              <label className={labelClass}>
-                <span className={labelTextClass}>Type</span>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-ink">Type</span>
                 <select
-                  className={inputClass}
+                  className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                   name="type"
                   defaultValue="vendor"
                 >
@@ -97,40 +80,40 @@ export default async function EntitiesPage({
                 </select>
               </label>
             </div>
-            <label className={labelClass}>
-              <span className={labelTextClass}>Description</span>
+            <label className="grid gap-2">
+              <span className="text-sm font-medium text-ink">Description</span>
               <textarea
-                className={`${inputClass} min-h-[120px] resize-y`}
+                className="min-h-[120px] w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                 name="description"
               />
             </label>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className={labelClass}>
-                <span className={labelTextClass}>Website URL</span>
-                <input className={inputClass} name="website_url" type="url" />
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-ink">Website URL</span>
+                <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="website_url" type="url" />
               </label>
-              <label className={labelClass}>
-                <span className={labelTextClass}>GitHub URL</span>
-                <input className={inputClass} name="github_url" type="url" />
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-ink">GitHub URL</span>
+                <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="github_url" type="url" />
               </label>
-              <label className={labelClass}>
-                <span className={labelTextClass}>LinkedIn URL</span>
-                <input className={inputClass} name="linkedin_url" type="url" />
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-ink">LinkedIn URL</span>
+                <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="linkedin_url" type="url" />
               </label>
-              <label className={labelClass}>
-                <span className={labelTextClass}>Bluesky handle</span>
-                <input className={inputClass} name="bluesky_handle" />
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-ink">Bluesky handle</span>
+                <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="bluesky_handle" />
               </label>
-              <label className={labelClass}>
-                <span className={labelTextClass}>Mastodon handle</span>
-                <input className={inputClass} name="mastodon_handle" />
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-ink">Mastodon handle</span>
+                <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="mastodon_handle" />
               </label>
-              <label className={labelClass}>
-                <span className={labelTextClass}>Twitter handle</span>
-                <input className={inputClass} name="twitter_handle" />
+              <label className="grid gap-2">
+                <span className="text-sm font-medium text-ink">Twitter handle</span>
+                <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="twitter_handle" />
               </label>
             </div>
-            <button className={primaryButtonClass} type="submit">
+            <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
               Create entity
             </button>
           </form>
@@ -138,18 +121,18 @@ export default async function EntitiesPage({
 
         <div className="space-y-4">
           {entities.length === 0 ? (
-            <div className={emptyStateClass}>
+            <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
               No entities exist for this project yet.
             </div>
           ) : null}
           {entities.map((entity) => (
-            <article key={entity.id} className={`${panelClass} space-y-4`}>
+            <article key={entity.id} className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <h3 className="font-[family:var(--font-display)] text-[1.45rem] font-bold">
+                  <h3 className="font-display text-title-md font-bold">
                     {entity.name}
                   </h3>
-                  <div className={metaRowClass}>
+                  <div className="flex flex-wrap gap-2 text-sm text-muted">
                     <span>{formatDate(entity.created_at)}</span>
                     <span>Authority {entity.authority_score.toFixed(2)}</span>
                   </div>
@@ -173,19 +156,19 @@ export default async function EntitiesPage({
                 />
                 <input type="hidden" name="intent" value="update" />
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>Name</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Name</span>
                     <input
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="name"
                       defaultValue={entity.name}
                       required
                     />
                   </label>
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>Type</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Type</span>
                     <select
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="type"
                       defaultValue={entity.type}
                     >
@@ -195,69 +178,69 @@ export default async function EntitiesPage({
                     </select>
                   </label>
                 </div>
-                <label className={labelClass}>
-                  <span className={labelTextClass}>Description</span>
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium text-ink">Description</span>
                   <textarea
-                    className={`${inputClass} min-h-[120px] resize-y`}
+                    className="min-h-[120px] w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                     name="description"
                     defaultValue={entity.description}
                   />
                 </label>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>Website URL</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Website URL</span>
                     <input
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="website_url"
                       type="url"
                       defaultValue={entity.website_url}
                     />
                   </label>
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>GitHub URL</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">GitHub URL</span>
                     <input
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="github_url"
                       type="url"
                       defaultValue={entity.github_url}
                     />
                   </label>
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>LinkedIn URL</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">LinkedIn URL</span>
                     <input
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="linkedin_url"
                       type="url"
                       defaultValue={entity.linkedin_url}
                     />
                   </label>
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>Bluesky handle</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Bluesky handle</span>
                     <input
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="bluesky_handle"
                       defaultValue={entity.bluesky_handle}
                     />
                   </label>
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>Mastodon handle</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Mastodon handle</span>
                     <input
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="mastodon_handle"
                       defaultValue={entity.mastodon_handle}
                     />
                   </label>
-                  <label className={labelClass}>
-                    <span className={labelTextClass}>Twitter handle</span>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Twitter handle</span>
                     <input
-                      className={inputClass}
+                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="twitter_handle"
                       defaultValue={entity.twitter_handle}
                     />
                   </label>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <button className={primaryButtonClass} type="submit">
+                  <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                     Save changes
                   </button>
                 </div>
@@ -274,7 +257,7 @@ export default async function EntitiesPage({
                   value={`/entities?project=${selectedProject.id}`}
                 />
                 <input type="hidden" name="intent" value="delete" />
-                <button className={dangerButtonClass} type="submit">
+                <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-danger to-danger-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105" type="submit">
                   Delete entity
                 </button>
               </form>
