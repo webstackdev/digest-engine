@@ -21,7 +21,7 @@ class SourcePlugin(ABC):
 
     def __init__(self, source_config):
         self.source_config = source_config
-        self.tenant = source_config.tenant
+        self.project = source_config.project
 
     @classmethod
     def validate_config(cls, config: object) -> dict:
@@ -45,7 +45,7 @@ class SourcePlugin(ABC):
         target_hostname = self._normalize_hostname(url)
         if not target_hostname:
             return None
-        for entity in self.tenant.entities.exclude(website_url=""):
+        for entity in self.project.entities.exclude(website_url=""):
             if self._normalize_hostname(entity.website_url) == target_hostname:
                 return entity
         return None

@@ -12,60 +12,60 @@ from core.models import (
   Content,
   Entity,
   IngestionRun,
+    Project,
+    ProjectConfig,
   ReviewQueue,
   SkillResult,
   SourceConfig,
-  Tenant,
-  TenantConfig,
   UserFeedback,
 )
 from core.plugins import get_plugin_for_source_config, validate_plugin_config
 from core.tasks import process_content
 
 
-@admin.register(Tenant)
-class TenantAdmin(ExportActionMixin, admin.ModelAdmin):
-  list_display = ("name", "user", "content_retention_days", "created_at")
+@admin.register(Project)
+class ProjectAdmin(ExportActionMixin, admin.ModelAdmin):
+        list_display = ("name", "group", "content_retention_days", "created_at")
 
-  # Better navigation
-  date_hierarchy = "created_at"
-  list_filter = ("created_at",)
+        # Better navigation
+        date_hierarchy = "created_at"
+        list_filter = ("created_at",)
 
-  # Faster searching
-  search_fields = ("name", "user__username", "user__email")
+        # Faster searching
+        search_fields = ("name", "group__name")
 
-  # Performance for large user lists
-  autocomplete_fields = ("user",)
+        # Performance for large user lists
+        autocomplete_fields = ("group",)
 
-  # Quick editing
-  list_editable = ("content_retention_days",)
+        # Quick editing
+        list_editable = ("content_retention_days",)
 
 
-@admin.register(TenantConfig)
-class TenantConfigAdmin(admin.ModelAdmin):
-	list_display = ("tenant", "upvote_authority_weight", "downvote_authority_weight", "authority_decay_rate")
+@admin.register(ProjectConfig)
+class ProjectConfigAdmin(admin.ModelAdmin):
+        list_display = ("project", "upvote_authority_weight", "downvote_authority_weight", "authority_decay_rate")
 
 
 @admin.register(Entity)
 class EntityAdmin(admin.ModelAdmin):
-  # Replace 'authority_score' with your new method name
-  list_display = ("name", "tenant", "type", "colored_score", "created_at")
+    # Replace 'authority_score' with your new method name
+    list_display = ("name", "project", "type", "colored_score", "created_at")
 
-  @admin.display(description="Authority Score", ordering="authority_score")
-  def colored_score(self, obj):
-      # Choose a color based on the value
-      if obj.authority_score >= 80:
-          color = "green"
-      elif obj.authority_score >= 50:
-          color = "orange"
-      else:
-          color = "red"
+    @admin.display(description="Authority Score", ordering="authority_score")
+    def colored_score(self, obj):
+        # Choose a color based on the value
+        if obj.authority_score >= 80:
+            color = "green"
+        elif obj.authority_score >= 50:
+            color = "orange"
+        else:
+            color = "red"
 
-      return format_html(
-          '<span style="color: {}; font-weight: bold;">{}</span>',
-          color,
-          obj.authority_score,
-      )
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.authority_score,
+        )
 
 
 class HighValueFilter(admin.SimpleListFilter):
@@ -91,14 +91,14 @@ class ContentAdmin(admin.ModelAdmin):
         "is_reference",
         "preview_content",
         "source_plugin",
-        "tenant",
+        "project",
         "title",
         "view_trace",
     )
     list_editable = ("is_reference", "is_active")
     list_filter = (
         HighValueFilter,
-        ("tenant", admin.RelatedOnlyFieldListFilter),
+        ("project", admin.RelatedOnlyFieldListFilter),
         "source_plugin",
         "is_active"
     )
@@ -159,7 +159,7 @@ class ContentAdmin(admin.ModelAdmin):
                 run_id=trace_id,
                 skill_name=latest_skill_result.skill_name,
                 skill_result_id=latest_skill_result.id,
-                tenant_id=obj.tenant_id,
+                project_id=obj.project_id,
                 trace_id=trace_id,
             )
 
@@ -233,13 +233,13 @@ class SkillResultAdmin(ModelAdmin):
         "model_used",
         "created_at",
     )
-    list_filter = ("status", "skill_name", "tenant", "model_used")
+    list_filter = ("status", "skill_name", "project", "model_used")
     search_fields = ("skill_name", "content__title", "model_used", "error_message")
     actions = ["retry_selected_skills"]
     readonly_fields = ("pretty_result_data", "latency_ms", "created_at", "superseded_by")
     fieldsets = (
         ("Execution Details", {
-            "fields": ("skill_name", "content", "tenant", "status", "model_used")
+            "fields": ("skill_name", "content", "project", "status", "model_used")
         }),
         ("AI Output", {
             "fields": ("pretty_result_data", "error_message"),
@@ -334,11 +334,11 @@ class UserFeedbackAdmin(ModelAdmin):
         "display_feedback",
         "get_content_title",
         "get_ai_score",
-        "tenant",
+        "project",
         "user",
         "created_at"
     )
-    list_filter = ("feedback_type", ("tenant", admin.RelatedOnlyFieldListFilter))
+    list_filter = ("feedback_type", ("project", admin.RelatedOnlyFieldListFilter))
     search_fields = ("content__title", "user__email", "user__username")
 
     @admin.display(description="Type")
@@ -387,18 +387,18 @@ class UserFeedbackAdmin(ModelAdmin):
 class IngestionRunAdmin(ModelAdmin):
     list_display = (
         "plugin_name",
-        "tenant",
+        "project",
         "display_status",
         "display_efficiency",
         "display_duration",
         "started_at",
     )
-    list_filter = ("plugin_name", "status", ("tenant", admin.RelatedOnlyFieldListFilter))
-    search_fields = ("plugin_name", "error_message", "tenant__name")
+    list_filter = ("plugin_name", "status", ("project", admin.RelatedOnlyFieldListFilter))
+    search_fields = ("plugin_name", "error_message", "project__name")
     readonly_fields = ("display_duration", "started_at", "completed_at")
     fieldsets = (
         ("Run Info", {
-            "fields": ("plugin_name", "tenant", "status")
+            "fields": ("plugin_name", "project", "status")
         }),
         ("Data Metrics", {
             "fields": ("items_fetched", "items_ingested", "display_efficiency")
@@ -468,19 +468,19 @@ class IngestionRunAdmin(ModelAdmin):
 class SourceConfigAdmin(ModelAdmin):
     list_display = (
         "plugin_name",
-        "tenant",
+        "project",
         "display_health",
         "is_active",
         "last_fetched_at",
     )
-    list_filter = ("is_active", "plugin_name", ("tenant", admin.RelatedOnlyFieldListFilter))
+    list_filter = ("is_active", "plugin_name", ("project", admin.RelatedOnlyFieldListFilter))
     list_editable = ("is_active",)
-    search_fields = ("plugin_name", "tenant__name")
+    search_fields = ("plugin_name", "project__name")
     actions = ["test_source_connection"]
     readonly_fields = ("last_fetched_at", "pretty_config")
     fieldsets = (
         ("Core Settings", {
-            "fields": ("plugin_name", "tenant", "is_active")
+            "fields": ("plugin_name", "project", "is_active")
         }),
         ("Configuration", {
             "fields": ("pretty_config", "config"),
@@ -519,7 +519,7 @@ class SourceConfigAdmin(ModelAdmin):
         healthy_sources = []
         failed_sources = []
 
-        for source_config in queryset.select_related("tenant"):
+        for source_config in queryset.select_related("project"):
             try:
                 source_config.config = validate_plugin_config(
                     source_config.plugin_name,
@@ -573,14 +573,14 @@ class SourceConfigAdmin(ModelAdmin):
 class ReviewQueueAdmin(ModelAdmin):
     list_display = (
         "get_content_title",
-        "tenant",
+        "project",
         "reason",
         "display_confidence",
         "resolved",
         "resolution",
         "created_at",
     )
-    list_filter = ("resolved", "reason", ("tenant", admin.RelatedOnlyFieldListFilter))
+    list_filter = ("resolved", "reason", ("project", admin.RelatedOnlyFieldListFilter))
     list_editable = ("resolved", "resolution")
     actions = ["mark_as_approved", "mark_as_rejected"]
 

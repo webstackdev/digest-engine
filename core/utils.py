@@ -1,11 +1,11 @@
 from django.db.models import Avg
 
-from .models import TenantConfig
+from .models import ProjectConfig
 
 
 def dashboard_callback(request, context):
-    # Calculate the average authority weight across all tenants
-    avg_weight = TenantConfig.objects.aggregate(Avg('upvote_authority_weight'))['upvote_authority_weight__avg']
+    # Calculate the average authority weight across all projects.
+    avg_weight = ProjectConfig.objects.aggregate(Avg("upvote_authority_weight"))["upvote_authority_weight__avg"]
 
     # Add it to the template context
     context.update({

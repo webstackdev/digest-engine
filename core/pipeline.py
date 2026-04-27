@@ -33,7 +33,7 @@ CONTENT_TYPES = (
 
 class PipelineState(TypedDict, total=False):
     content_id: int
-    tenant_id: int
+    project_id: int
     classification: dict[str, Any] | None
     relevance: dict[str, Any] | None
     summary: dict[str, Any] | None
@@ -66,10 +66,10 @@ def get_ingestion_graph():
 
 
 def process_content_pipeline(content_id: int) -> PipelineState:
-    content = Content.objects.select_related("tenant").get(pk=content_id)
+    content = Content.objects.select_related("project").get(pk=content_id)
     initial_state: PipelineState = {
         "content_id": content.id,
-        "tenant_id": content.tenant_id,
+        "project_id": content.project_id,
         "status": "processing",
     }
     return get_ingestion_graph().invoke(initial_state)
@@ -194,7 +194,7 @@ def run_content_classification(content: Content) -> dict[str, Any]:
 
 def run_relevance_scoring(content: Content) -> dict[str, Any]:
     vector = embed_text(build_content_embedding_text(content))
-    similarity = float(get_reference_similarity(content.tenant_id, vector))
+    similarity = float(get_reference_similarity(content.project_id, vector))
     if similarity >= settings.AI_RELEVANCE_HIGH_THRESHOLD or similarity < settings.AI_RELEVANCE_LOW_THRESHOLD:
         return {
             "relevance_score": similarity,
@@ -213,7 +213,7 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
                     "Return JSON with relevance_score between 0 and 1, explanation, and used_llm=true."
                 ),
                 user_prompt=(
-                    f"Newsletter topic: {content.tenant.topic_description}\n"
+                    f"Newsletter topic: {content.project.topic_description}\n"
                     f"Reference similarity score: {similarity:.3f}\n"
                     f"Title: {content.title}\n"
                     f"Content:\n{content.content_text[:5000]}"
@@ -236,8 +236,8 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
     return {
         "relevance_score": similarity,
         "explanation": (
-            f"Borderline reference similarity of {similarity:.2f} against the tenant baseline for "
-            f"'{content.tenant.topic_description}'."
+            f"Borderline reference similarity of {similarity:.2f} against the project baseline for "
+            f"'{content.project.topic_description}'."
         ),
         "used_llm": False,
         "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
@@ -254,7 +254,7 @@ def run_summarization(content: Content) -> dict[str, Any]:
                     "You write concise newsletter-ready summaries. Return JSON with a single key named summary."
                 ),
                 user_prompt=(
-                    f"Newsletter topic: {content.tenant.topic_description}\n"
+                    f"Newsletter topic: {content.project.topic_description}\n"
                     f"Title: {content.title}\n"
                     f"Content:\n{content.content_text[:5000]}"
                 ),
@@ -299,7 +299,7 @@ def create_pending_skill_result(content: Content, skill_name: str) -> SkillResul
 
 
 def execute_background_skill_result(skill_result_id: int, skill_name: str) -> SkillResult:
-    skill_result = SkillResult.objects.select_related("content", "content__tenant").get(pk=skill_result_id)
+    skill_result = SkillResult.objects.select_related("content", "content__project").get(pk=skill_result_id)
     if skill_result.skill_name != skill_name:
         raise ValueError(
             f"Skill result {skill_result.id} is for {skill_result.skill_name}, not {skill_name}."
@@ -523,7 +523,7 @@ def _clamp_score(value: Any) -> float:
 
 
 def _get_content(state: PipelineState) -> Content:
-    return Content.objects.select_related("tenant").get(pk=state["content_id"])
+    return Content.objects.select_related("project").get(pk=state["content_id"])
 
 
 def _upsert_review_queue_item(content: Content, *, reason: ReviewReason, confidence: float) -> ReviewQueue:
@@ -533,7 +533,7 @@ def _upsert_review_queue_item(content: Content, *, reason: ReviewReason, confide
         existing.save(update_fields=["confidence"])
         return existing
     return ReviewQueue.objects.create(
-        tenant=content.tenant,
+        project=content.project,
         content=content,
         reason=reason,
         confidence=confidence,
@@ -554,7 +554,7 @@ def _create_skill_result(
     previous = SkillResult.objects.filter(content=content, skill_name=skill_name, superseded_by__isnull=True).first()
     skill_result = SkillResult.objects.create(
         content=content,
-        tenant=content.tenant,
+        project=content.project,
         skill_name=skill_name,
         status=status,
         result_data=result_data,

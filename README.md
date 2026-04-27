@@ -4,14 +4,14 @@
 
 An AI-powered content curation platform for technically-oriented newsletters. Newsletter Maker ingests content from dozens of sources, builds authority models of people and companies in a domain, and surfaces the most relevant articles, trends, and themes for each edition — so editors spend their time writing, not searching.
 
-The system is multi-tenant: each newsletter has its own tracked entities, relevance model, and content pipeline. Designed for non-technical editors who don't know what a vector database is and don't need to.
+The system is organized into projects: each newsletter project has its own tracked entities, relevance model, and content pipeline. Projects are assigned to Django groups so editorial access can be shared cleanly. Designed for non-technical editors who don't know what a vector database is and don't need to.
 
 ## What This Does That Existing Tools Don't
 
 Tools like Feedly, UpContent, and ContentStudio handle parts of the content curation problem. Newsletter Maker combines several capabilities none of them offer:
 
 - **Authority scoring from newsletter cross-referencing.** By ingesting peer newsletters, the system builds an authority model based on who real editors actually link to — a human-curated endorsement signal no existing tool provides.
-- **Per-editor relevance training.** Upvote/downvote feedback trains a personalized relevance model per tenant. The tool learns what *you* consider valuable.
+- **Per-project relevance training.** Upvote/downvote feedback trains a personalized relevance model per project. The tool learns what each editorial project considers valuable.
 - **Unified entity model.** A person's blog, LinkedIn, Bluesky, GitHub, and conference talks are linked into a single profile with an authority score — a holistic view of who matters in a space.
 - **Competitive intelligence.** "These 3 peer newsletters all covered topic X this week, but you haven't." A natural output of newsletter ingestion that no curation tool provides.
 - **Historical trend analysis.** Not just what's trending now, but trajectories over weeks. Content is retained indefinitely for long-term pattern detection.
@@ -102,8 +102,9 @@ python3 -m pip install -r requirements.txt
 
 1. Run `just dev` to start Django, Celery, Postgres, Redis, Qdrant, and Nginx. On the first run Docker builds the app image automatically. After that, `just dev` reuses the existing image so normal restarts are fast. If `.env` is missing, the `just` command copies `.env.example` automatically.
 2. Run `just build` after changing `requirements.txt` or `docker/web/Dockerfile`.
-3. Update `.env` with non-default secrets before using the stack outside local development. The example file uses SQLite and localhost URLs so host-side `manage.py` commands work even without Docker.
-4. Open `http://localhost:8080/healthz/` for a liveness check and `http://localhost:8080/admin/` for Django admin.
+3. For a fully fresh local stack after schema changes, run `just reset-volumes` before starting the containers again. This drops the Docker-backed Postgres, Redis, and Qdrant state so regenerated migrations apply cleanly.
+4. Update `.env` with non-default secrets before using the stack outside local development. The example file uses SQLite and localhost URLs so host-side `manage.py` commands work even without Docker.
+5. Open `http://localhost:8080/healthz/` for a liveness check and `http://localhost:8080/admin/` for Django admin. Use `just seed` after the stack is up if you want the demo project and sample content.
 
 For host-based development without Docker, install `requirements.txt`, then use `python3 manage.py migrate` and `python3 manage.py runserver`. The default `.env.example` is host-safe; Docker Compose overrides the service URLs inside containers.
 
@@ -155,7 +156,7 @@ Use these commands to backfill or refresh embeddings for existing content:
 
 ```bash
 just embed-all
-just embed-tenant 1
+just embed-project 1
 python3 manage.py sync_embeddings --content-id 42
 python3 manage.py sync_embeddings --references-only
 ```

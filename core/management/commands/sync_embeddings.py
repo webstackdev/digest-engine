@@ -8,7 +8,7 @@ class Command(BaseCommand):
     help = "Backfill Qdrant embeddings for content records."
 
     def add_arguments(self, parser):
-        parser.add_argument("--tenant-id", type=int, help="Only sync content for one tenant.")
+        parser.add_argument("--project-id", type=int, help="Only sync content for one project.")
         parser.add_argument("--content-id", type=int, help="Only sync one content record.")
         parser.add_argument(
             "--references-only",
@@ -17,9 +17,9 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        queryset = Content.objects.select_related("tenant")
-        if options["tenant_id"] is not None:
-            queryset = queryset.filter(tenant_id=options["tenant_id"])
+        queryset = Content.objects.select_related("project")
+        if options["project_id"] is not None:
+            queryset = queryset.filter(project_id=options["project_id"])
         if options["content_id"] is not None:
             queryset = queryset.filter(pk=options["content_id"])
         if options["references_only"]:

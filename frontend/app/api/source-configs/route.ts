@@ -24,11 +24,11 @@ export async function POST(request: Request) {
   const redirectTo = String(formData.get("redirectTo") || "/admin/sources")
 
   try {
-    const tenantId = Number.parseInt(
-      String(formData.get("tenantId") || "0"),
+    const projectId = Number.parseInt(
+      String(formData.get("projectId") || "0"),
       10,
     )
-    await createSourceConfig(tenantId, {
+    await createSourceConfig(projectId, {
       plugin_name: String(formData.get("plugin_name") || "rss"),
       config: parseConfigJson(formData.get("config_json")),
       is_active: String(formData.get("is_active") || "true") === "true",

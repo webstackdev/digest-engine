@@ -4,21 +4,21 @@ import { getContentSkillResults } from "@/lib/api"
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
-  const tenantId = Number.parseInt(url.searchParams.get("tenantId") || "0", 10)
+  const projectId = Number.parseInt(url.searchParams.get("projectId") || "0", 10)
   const contentId = Number.parseInt(
     url.searchParams.get("contentId") || "0",
     10,
   )
 
-  if (!tenantId || !contentId) {
+  if (!projectId || !contentId) {
     return NextResponse.json(
-      { error: "tenantId and contentId are required." },
+      { error: "projectId and contentId are required." },
       { status: 400 },
     )
   }
 
   try {
-    const skillResults = await getContentSkillResults(tenantId, contentId)
+    const skillResults = await getContentSkillResults(projectId, contentId)
     return NextResponse.json(skillResults)
   } catch (error) {
     const message =

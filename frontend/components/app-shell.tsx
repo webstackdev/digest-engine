@@ -1,24 +1,24 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 
-import type { Tenant } from "@/lib/types"
+import type { Project } from "@/lib/types"
 
 type AppShellProps = {
   title: string
   description: string
-  tenants: Tenant[]
-  selectedTenantId: number | null
+  projects: Project[]
+  selectedProjectId: number | null
   children: ReactNode
 }
 
 export function AppShell({
   title,
   description,
-  tenants,
-  selectedTenantId,
+  projects,
+  selectedProjectId,
   children,
 }: AppShellProps) {
-  const tenantQuery = selectedTenantId ? `?tenant=${selectedTenantId}` : ""
+  const projectQuery = selectedProjectId ? `?project=${selectedProjectId}` : ""
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[320px_minmax(0,1fr)]">
@@ -39,25 +39,25 @@ export function AppShell({
         <nav className="grid gap-4">
           <Link
             className="rounded-[18px] border border-[rgba(247,240,231,0.08)] bg-white/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
-            href={`/${tenantQuery}`}
+            href={`/${projectQuery}`}
           >
             Dashboard
           </Link>
           <Link
             className="rounded-[18px] border border-[rgba(247,240,231,0.08)] bg-white/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
-            href={`/entities${tenantQuery}`}
+            href={`/entities${projectQuery}`}
           >
             Entities
           </Link>
           <Link
             className="rounded-[18px] border border-[rgba(247,240,231,0.08)] bg-white/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
-            href={`/admin/health${tenantQuery}`}
+            href={`/admin/health${projectQuery}`}
           >
             Ingestion health
           </Link>
           <Link
             className="rounded-[18px] border border-[rgba(247,240,231,0.08)] bg-white/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
-            href={`/admin/sources${tenantQuery}`}
+            href={`/admin/sources${projectQuery}`}
           >
             Source configs
           </Link>
@@ -65,25 +65,25 @@ export function AppShell({
 
         <section>
           <p className="m-0 text-[0.78rem] uppercase tracking-[0.12em] opacity-70">
-            Tenant
+            Project
           </p>
           <div className="mt-4 grid gap-4">
-            {tenants.map((tenant) => {
-              const isActive = tenant.id === selectedTenantId
+            {projects.map((project) => {
+              const isActive = project.id === selectedProjectId
               return (
                 <Link
                   data-active={isActive ? "true" : "false"}
-                  key={tenant.id}
-                  href={`/?tenant=${tenant.id}`}
+                  key={project.id}
+                  href={`/?project=${project.id}`}
                   className={`grid gap-1 rounded-[18px] border px-4 py-4 transition hover:-translate-y-0.5 ${
                     isActive
                       ? "border-[rgba(240,205,131,0.46)] bg-[linear-gradient(180deg,rgba(194,122,44,0.18),rgba(255,255,255,0.03))]"
                       : "border-[rgba(247,240,231,0.08)] bg-white/3 hover:border-[rgba(247,240,231,0.22)] hover:bg-white/6"
                   }`}
                 >
-                  <span>{tenant.name}</span>
+                  <span>{project.name}</span>
                   <small className="text-[rgba(247,240,231,0.64)]">
-                    {tenant.topic_description}
+                    {project.topic_description}
                   </small>
                 </Link>
               )

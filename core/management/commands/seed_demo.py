@@ -5,6 +5,7 @@ from typing import Any, cast
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -18,6 +19,8 @@ from core.models import (
     EntityType,
     FeedbackType,
     IngestionRun,
+    Project,
+    ProjectConfig,
     ReviewQueue,
     ReviewReason,
     ReviewResolution,
@@ -26,8 +29,6 @@ from core.models import (
     SkillStatus,
     SourceConfig,
     SourcePluginName,
-    Tenant,
-    TenantConfig,
     UserFeedback,
 )
 from core.pipeline import (
@@ -36,7 +37,8 @@ from core.pipeline import (
     SUMMARIZATION_SKILL_NAME,
 )
 
-DEMO_TENANT_NAME = "Platform Engineering Weekly"
+DEMO_PROJECT_NAME = "Platform Engineering Weekly"
+DEMO_GROUP_NAME = "platform-engineering-editors"
 DEMO_TOPIC_DESCRIPTION = (
     "Platform engineering, DevOps, cloud infrastructure, reliability, and "
     "developer experience."
@@ -478,40 +480,40 @@ REDDIT_TOPIC_BLUEPRINTS = [
 
 
 class Command(BaseCommand):
-    help = "Seed a deterministic demo tenant with entities, content, pipeline outputs, feedback, and ingestion history."
+    help = "Seed a deterministic demo project with entities, content, pipeline outputs, feedback, and ingestion history."
 
     def handle(self, *args, **options):
         reference_articles = self._build_reference_articles()
         sample_articles = self._build_demo_content()
 
         with transaction.atomic():
-            tenant = self._ensure_demo_tenant()
-            self._reset_demo_runtime_state(tenant)
-            entity_map = self._seed_entities(tenant)
-            source_config_count = self._seed_source_configs(tenant)
+            project = self._ensure_demo_project()
+            self._reset_demo_runtime_state(project)
+            entity_map = self._seed_entities(project)
+            source_config_count = self._seed_source_configs(project)
             reference_contents = self._seed_articles(
-                tenant,
+                project,
                 reference_articles,
                 entity_map,
                 is_reference=True,
                 source_plugin=REFERENCE_SOURCE_PLUGIN,
             )
             sample_contents = self._seed_articles(
-                tenant,
+                project,
                 sample_articles,
                 entity_map,
                 is_reference=False,
             )
             skill_result_count, review_count = self._seed_pipeline_state(
-                tenant,
+                project,
                 sample_articles,
                 sample_contents,
             )
-            feedback_count = self._seed_feedback(tenant, sample_contents)
-            ingestion_run_count = self._seed_ingestion_runs(tenant)
+            feedback_count = self._seed_feedback(project, sample_contents)
+            ingestion_run_count = self._seed_ingestion_runs(project)
             embedded_count = self._sync_embeddings(reference_contents + sample_contents)
 
-        self.stdout.write(self.style.SUCCESS(f"Seeded demo tenant: {tenant.name}"))
+        self.stdout.write(self.style.SUCCESS(f"Seeded demo project: {project.name}"))
         self.stdout.write(f"Entities: {len(entity_map)}")
         self.stdout.write(f"Source configs: {source_config_count}")
         self.stdout.write(f"Reference corpus items: {len(reference_contents)}")
@@ -526,7 +528,7 @@ class Command(BaseCommand):
             )
         )
 
-    def _ensure_demo_tenant(self) -> Tenant:
+    def _ensure_demo_project(self) -> Project:
         user_model = get_user_model()
         user, _ = user_model.objects.get_or_create(
             username="demo_editor",
@@ -534,26 +536,28 @@ class Command(BaseCommand):
         )
         user.set_password("demo-password")
         user.save(update_fields=["password"])
+        group, _ = Group.objects.get_or_create(name=DEMO_GROUP_NAME)
+        user.groups.add(group)
 
-        tenant, created = Tenant.objects.get_or_create(
-            user=user,
-            name=DEMO_TENANT_NAME,
+        project, created = Project.objects.get_or_create(
+            group=group,
+            name=DEMO_PROJECT_NAME,
             defaults={"topic_description": DEMO_TOPIC_DESCRIPTION},
         )
-        if not created and tenant.topic_description != DEMO_TOPIC_DESCRIPTION:
-            tenant.topic_description = DEMO_TOPIC_DESCRIPTION
-            tenant.save(update_fields=["topic_description"])
-        TenantConfig.objects.get_or_create(tenant=tenant)
-        return tenant
+        if not created and project.topic_description != DEMO_TOPIC_DESCRIPTION:
+            project.topic_description = DEMO_TOPIC_DESCRIPTION
+            project.save(update_fields=["topic_description"])
+        ProjectConfig.objects.get_or_create(project=project)
+        return project
 
-    def _reset_demo_runtime_state(self, tenant: Tenant) -> None:
-        SkillResult.objects.filter(tenant=tenant).delete()
-        ReviewQueue.objects.filter(tenant=tenant).delete()
-        UserFeedback.objects.filter(tenant=tenant).delete()
-        IngestionRun.objects.filter(tenant=tenant).delete()
-        SourceConfig.objects.filter(tenant=tenant).delete()
+    def _reset_demo_runtime_state(self, project: Project) -> None:
+        SkillResult.objects.filter(project=project).delete()
+        ReviewQueue.objects.filter(project=project).delete()
+        UserFeedback.objects.filter(project=project).delete()
+        IngestionRun.objects.filter(project=project).delete()
+        SourceConfig.objects.filter(project=project).delete()
 
-    def _seed_entities(self, tenant: Tenant) -> dict[str, Entity]:
+    def _seed_entities(self, project: Project) -> dict[str, Entity]:
         entities_by_name: dict[str, Entity] = {}
         for spec in ENTITY_SPECS:
             defaults = {
@@ -568,14 +572,14 @@ class Command(BaseCommand):
                 "twitter_handle": spec.get("twitter_handle", ""),
             }
             entity, _ = Entity.objects.update_or_create(
-                tenant=tenant,
+                project=project,
                 name=spec["name"],
                 defaults=defaults,
             )
             entities_by_name[entity.name] = entity
         return entities_by_name
 
-    def _seed_source_configs(self, tenant: Tenant) -> int:
+    def _seed_source_configs(self, project: Project) -> int:
         now = timezone.now()
         for spec in SOURCE_CONFIG_SPECS:
             hours_ago = cast(int | None, spec["hours_ago"])
@@ -583,7 +587,7 @@ class Command(BaseCommand):
             if hours_ago is not None:
                 last_fetched_at = now - timedelta(hours=hours_ago)
             SourceConfig.objects.create(
-                tenant=tenant,
+                project=project,
                 plugin_name=cast(str, spec["plugin_name"]),
                 config=spec["config"],
                 is_active=cast(bool, spec["is_active"]),
@@ -593,7 +597,7 @@ class Command(BaseCommand):
 
     def _seed_articles(
         self,
-        tenant: Tenant,
+        project: Project,
         articles: list[dict[str, Any]],
         entities_by_name: dict[str, Entity],
         *,
@@ -614,7 +618,7 @@ class Command(BaseCommand):
                 "is_active": True,
             }
             content, _ = Content.objects.update_or_create(
-                tenant=tenant,
+                project=project,
                 url=article["url"],
                 defaults=defaults,
             )
@@ -623,7 +627,7 @@ class Command(BaseCommand):
 
     def _seed_pipeline_state(
         self,
-        tenant: Tenant,
+        project: Project,
         article_specs: list[dict[str, Any]],
         contents: list[Content],
     ) -> tuple[int, int]:
@@ -648,7 +652,7 @@ class Command(BaseCommand):
             skill_results.append(
                 SkillResult(
                     content=content,
-                    tenant=tenant,
+                    project=project,
                     skill_name=CLASSIFICATION_SKILL_NAME,
                     status=SkillStatus.COMPLETED,
                     result_data={
@@ -664,7 +668,7 @@ class Command(BaseCommand):
             skill_results.append(
                 SkillResult(
                     content=content,
-                    tenant=tenant,
+                    project=project,
                     skill_name=RELEVANCE_SKILL_NAME,
                     status=SkillStatus.COMPLETED,
                     result_data={
@@ -685,7 +689,7 @@ class Command(BaseCommand):
                 skill_results.append(
                     SkillResult(
                         content=content,
-                        tenant=tenant,
+                        project=project,
                         skill_name=SUMMARIZATION_SKILL_NAME,
                         status=SkillStatus.COMPLETED,
                         result_data={
@@ -711,7 +715,7 @@ class Command(BaseCommand):
                 )
                 review_items.append(
                     ReviewQueue(
-                        tenant=tenant,
+                        project=project,
                         content=content,
                         reason=review_reason,
                         confidence=confidence,
@@ -728,7 +732,7 @@ class Command(BaseCommand):
         ReviewQueue.objects.bulk_create(review_items)
         return len(skill_results), len(review_items)
 
-    def _seed_feedback(self, tenant: Tenant, contents: list[Content]) -> int:
+    def _seed_feedback(self, project: Project, contents: list[Content]) -> int:
         user_model = get_user_model()
         voters = []
         for index in range(1, 7):
@@ -752,7 +756,7 @@ class Command(BaseCommand):
                 content=content,
                 user=voters[index % len(voters)],
                 defaults={
-                    "tenant": tenant,
+                    "project": project,
                     "feedback_type": FeedbackType.UPVOTE,
                 },
             )
@@ -763,7 +767,7 @@ class Command(BaseCommand):
                 content=content,
                 user=voters[(index + 2) % len(voters)],
                 defaults={
-                    "tenant": tenant,
+                    "project": project,
                     "feedback_type": FeedbackType.DOWNVOTE,
                 },
             )
@@ -771,7 +775,7 @@ class Command(BaseCommand):
 
         return feedback_count
 
-    def _seed_ingestion_runs(self, tenant: Tenant) -> int:
+    def _seed_ingestion_runs(self, project: Project) -> int:
         run_specs = [
             {
                 "plugin_name": SourcePluginName.RSS,
@@ -833,7 +837,7 @@ class Command(BaseCommand):
             started_hours_ago = cast(int, spec["started_hours_ago"])
             duration_minutes = cast(int, spec["duration_minutes"])
             run = IngestionRun.objects.create(
-                tenant=tenant,
+                project=project,
                 plugin_name=cast(str, spec["plugin_name"]),
                 status=cast(str, spec["status"]),
                 items_fetched=cast(int, spec["items_fetched"]),
@@ -1015,7 +1019,7 @@ class Command(BaseCommand):
                 "decide whether it is specific enough for platform readers."
             )
         return (
-            f"A thread in r/{subreddit} is only loosely connected to the tenant topic. "
+            f"A thread in r/{subreddit} is only loosely connected to the project topic. "
             f"{body} The conversation is interesting, but it is more peripheral than the "
             "other seeded stories."
         )

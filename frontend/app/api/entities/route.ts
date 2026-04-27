@@ -19,11 +19,11 @@ export async function POST(request: Request) {
   const redirectTo = String(formData.get("redirectTo") || "/entities")
 
   try {
-    const tenantId = Number.parseInt(
-      String(formData.get("tenantId") || "0"),
+    const projectId = Number.parseInt(
+      String(formData.get("projectId") || "0"),
       10,
     )
-    await createEntity(tenantId, {
+    await createEntity(projectId, {
       name: String(formData.get("name") || ""),
       type: String(formData.get("type") || "vendor"),
       description: String(formData.get("description") || ""),

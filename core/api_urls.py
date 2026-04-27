@@ -5,30 +5,30 @@ from core.api import (
     ContentViewSet,
     EntityViewSet,
     IngestionRunViewSet,
+    ProjectConfigViewSet,
+    ProjectViewSet,
     ReviewQueueViewSet,
     SkillResultViewSet,
     SourceConfigViewSet,
-    TenantConfigViewSet,
-    TenantViewSet,
     UserFeedbackViewSet,
 )
 
 app_name = "api"
 
 router = DefaultRouter()
-router.register("tenants", TenantViewSet, basename="tenant")
+router.register("projects", ProjectViewSet, basename="project")
 
-tenant_router = NestedSimpleRouter(router, r"tenants", lookup="tenant")
-tenant_router.register(r"tenant-configs", TenantConfigViewSet, basename="tenant-config")
-tenant_router.register(r"entities", EntityViewSet, basename="tenant-entity")
-tenant_router.register(r"contents", ContentViewSet, basename="tenant-content")
-tenant_router.register(r"skill-results", SkillResultViewSet, basename="tenant-skill-result")
-tenant_router.register(r"feedback", UserFeedbackViewSet, basename="tenant-feedback")
-tenant_router.register(r"ingestion-runs", IngestionRunViewSet, basename="tenant-ingestion-run")
-tenant_router.register(r"source-configs", SourceConfigViewSet, basename="tenant-source-config")
-tenant_router.register(r"review-queue", ReviewQueueViewSet, basename="tenant-review-queue")
+project_router = NestedSimpleRouter(router, r"projects", lookup="project")
+project_router.register(r"project-configs", ProjectConfigViewSet, basename="project-config")
+project_router.register(r"entities", EntityViewSet, basename="project-entity")
+project_router.register(r"contents", ContentViewSet, basename="project-content")
+project_router.register(r"skill-results", SkillResultViewSet, basename="project-skill-result")
+project_router.register(r"feedback", UserFeedbackViewSet, basename="project-feedback")
+project_router.register(r"ingestion-runs", IngestionRunViewSet, basename="project-ingestion-run")
+project_router.register(r"source-configs", SourceConfigViewSet, basename="project-source-config")
+project_router.register(r"review-queue", ReviewQueueViewSet, basename="project-review-queue")
 
 urlpatterns = [
     *router.urls,
-    *tenant_router.urls,
+    *project_router.urls,
 ]

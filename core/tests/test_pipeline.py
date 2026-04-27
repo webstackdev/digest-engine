@@ -1,8 +1,9 @@
 from types import SimpleNamespace
 
 import pytest
+from django.contrib.auth.models import Group
 
-from core.models import Content, ReviewQueue, ReviewReason, SkillResult, Tenant
+from core.models import Content, Project, ReviewQueue, ReviewReason, SkillResult
 from core.pipeline import CLASSIFICATION_SKILL_NAME, RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
 from core.tasks import process_content
 
@@ -12,9 +13,11 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def pipeline_context(django_user_model):
     user = django_user_model.objects.create_user(username="pipeline-owner", password="testpass123")
-    tenant = Tenant.objects.create(name="Pipeline Tenant", user=user, topic_description="Platform engineering")
+    group = Group.objects.create(name="pipeline-team")
+    user.groups.add(group)
+    project = Project.objects.create(name="Pipeline Project", group=group, topic_description="Platform engineering")
     content = Content.objects.create(
-        tenant=tenant,
+        project=project,
         url="https://example.com/article",
         title="Kubernetes Release Notes",
         author="Editor",
@@ -23,7 +26,7 @@ def pipeline_context(django_user_model):
         content_text="This article covers a new Kubernetes release and what changed for platform teams.",
         embedding_id="emb_123",
     )
-    return SimpleNamespace(user=user, tenant=tenant, content=content)
+    return SimpleNamespace(user=user, group=group, project=project, content=content)
 
 
 def test_process_content_runs_full_pipeline_for_relevant_content(pipeline_context, mocker):
@@ -41,7 +44,7 @@ def test_process_content_runs_full_pipeline_for_relevant_content(pipeline_contex
         "core.pipeline.run_relevance_scoring",
         return_value={
             "relevance_score": 0.92,
-            "explanation": "Very close to the tenant reference corpus.",
+            "explanation": "Very close to the project reference corpus.",
             "used_llm": False,
             "model_used": "embedding:test",
             "latency_ms": 0,
@@ -84,7 +87,7 @@ def test_process_content_queues_borderline_items_for_review(pipeline_context, mo
         "core.pipeline.run_relevance_scoring",
         return_value={
             "relevance_score": 0.55,
-            "explanation": "Borderline similarity to the tenant baseline.",
+            "explanation": "Borderline similarity to the project baseline.",
             "used_llm": False,
             "model_used": "embedding:test",
             "latency_ms": 0,
@@ -117,7 +120,7 @@ def test_process_content_archives_irrelevant_items(pipeline_context, mocker):
         "core.pipeline.run_relevance_scoring",
         return_value={
             "relevance_score": 0.2,
-            "explanation": "Far from the tenant reference corpus.",
+            "explanation": "Far from the project reference corpus.",
             "used_llm": False,
             "model_used": "embedding:test",
             "latency_ms": 0,
@@ -149,7 +152,7 @@ def test_process_content_adds_review_item_for_low_confidence_classification(pipe
         "core.pipeline.run_relevance_scoring",
         return_value={
             "relevance_score": 0.9,
-            "explanation": "Close to the tenant baseline.",
+            "explanation": "Close to the project baseline.",
             "used_llm": False,
             "model_used": "embedding:test",
             "latency_ms": 0,

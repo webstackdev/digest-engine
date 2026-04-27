@@ -7,10 +7,10 @@ import type {
   ContentSkillName,
   Entity,
   IngestionRun,
+  Project,
   ReviewQueueItem,
   SkillResult,
   SourceConfig,
-  Tenant,
   UserFeedback,
 } from "@/lib/types"
 
@@ -60,78 +60,78 @@ export async function apiFetch<T>(
   return data
 }
 
-export const getTenants = cache(
-  async (): Promise<Tenant[]> => apiFetch<Tenant[]>("/api/v1/tenants/"),
+export const getProjects = cache(
+  async (): Promise<Project[]> => apiFetch<Project[]>("/api/v1/projects/"),
 )
 
-export async function getTenantContents(tenantId: number): Promise<Content[]> {
-  return apiFetch<Content[]>(`/api/v1/tenants/${tenantId}/contents/`)
+export async function getProjectContents(projectId: number): Promise<Content[]> {
+  return apiFetch<Content[]>(`/api/v1/projects/${projectId}/contents/`)
 }
 
-export async function getTenantContent(
-  tenantId: number,
+export async function getProjectContent(
+  projectId: number,
   contentId: number,
 ): Promise<Content> {
-  return apiFetch<Content>(`/api/v1/tenants/${tenantId}/contents/${contentId}/`)
+  return apiFetch<Content>(`/api/v1/projects/${projectId}/contents/${contentId}/`)
 }
 
-export async function getTenantEntities(tenantId: number): Promise<Entity[]> {
-  return apiFetch<Entity[]>(`/api/v1/tenants/${tenantId}/entities/`)
+export async function getProjectEntities(projectId: number): Promise<Entity[]> {
+  return apiFetch<Entity[]>(`/api/v1/projects/${projectId}/entities/`)
 }
 
-export async function getTenantSkillResults(
-  tenantId: number,
+export async function getProjectSkillResults(
+  projectId: number,
 ): Promise<SkillResult[]> {
-  return apiFetch<SkillResult[]>(`/api/v1/tenants/${tenantId}/skill-results/`)
+  return apiFetch<SkillResult[]>(`/api/v1/projects/${projectId}/skill-results/`)
 }
 
 export async function getContentSkillResults(
-  tenantId: number,
+  projectId: number,
   contentId: number,
 ): Promise<SkillResult[]> {
-  const skillResults = await getTenantSkillResults(tenantId)
+  const skillResults = await getProjectSkillResults(projectId)
   return skillResults.filter((skillResult) => skillResult.content === contentId)
 }
 
-export async function getTenantReviewQueue(
-  tenantId: number,
+export async function getProjectReviewQueue(
+  projectId: number,
 ): Promise<ReviewQueueItem[]> {
   return apiFetch<ReviewQueueItem[]>(
-    `/api/v1/tenants/${tenantId}/review-queue/`,
+    `/api/v1/projects/${projectId}/review-queue/`,
   )
 }
 
-export async function getTenantIngestionRuns(
-  tenantId: number,
+export async function getProjectIngestionRuns(
+  projectId: number,
 ): Promise<IngestionRun[]> {
-  return apiFetch<IngestionRun[]>(`/api/v1/tenants/${tenantId}/ingestion-runs/`)
+  return apiFetch<IngestionRun[]>(`/api/v1/projects/${projectId}/ingestion-runs/`)
 }
 
-export async function getTenantSourceConfigs(
-  tenantId: number,
+export async function getProjectSourceConfigs(
+  projectId: number,
 ): Promise<SourceConfig[]> {
-  return apiFetch<SourceConfig[]>(`/api/v1/tenants/${tenantId}/source-configs/`)
+  return apiFetch<SourceConfig[]>(`/api/v1/projects/${projectId}/source-configs/`)
 }
 
-export async function getTenantFeedback(
-  tenantId: number,
+export async function getProjectFeedback(
+  projectId: number,
 ): Promise<UserFeedback[]> {
-  return apiFetch<UserFeedback[]>(`/api/v1/tenants/${tenantId}/feedback/`)
+  return apiFetch<UserFeedback[]>(`/api/v1/projects/${projectId}/feedback/`)
 }
 
 export async function createFeedback(
-  tenantId: number,
+  projectId: number,
   contentId: number,
   feedbackType: "upvote" | "downvote",
 ) {
-  return apiFetch(`/api/v1/tenants/${tenantId}/feedback/`, {
+  return apiFetch(`/api/v1/projects/${projectId}/feedback/`, {
     method: "POST",
     body: JSON.stringify({ content: contentId, feedback_type: feedbackType }),
   })
 }
 
 export async function createEntity(
-  tenantId: number,
+  projectId: number,
   payload: {
     name: string
     type: string
@@ -144,7 +144,7 @@ export async function createEntity(
     twitter_handle: string
   },
 ) {
-  return apiFetch(`/api/v1/tenants/${tenantId}/entities/`, {
+  return apiFetch(`/api/v1/projects/${projectId}/entities/`, {
     method: "POST",
     body: JSON.stringify(payload),
   })
@@ -152,30 +152,30 @@ export async function createEntity(
 
 export async function updateEntity(
   entityId: number,
-  tenantId: number,
+  projectId: number,
   payload: Record<string, unknown>,
 ) {
-  return apiFetch(`/api/v1/tenants/${tenantId}/entities/${entityId}/`, {
+  return apiFetch(`/api/v1/projects/${projectId}/entities/${entityId}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
 }
 
-export async function deleteEntity(entityId: number, tenantId: number) {
-  return apiFetch(`/api/v1/tenants/${tenantId}/entities/${entityId}/`, {
+export async function deleteEntity(entityId: number, projectId: number) {
+  return apiFetch(`/api/v1/projects/${projectId}/entities/${entityId}/`, {
     method: "DELETE",
   })
 }
 
 export async function createSourceConfig(
-  tenantId: number,
+  projectId: number,
   payload: {
     plugin_name: string
     config: Record<string, unknown>
     is_active: boolean
   },
 ) {
-  return apiFetch(`/api/v1/tenants/${tenantId}/source-configs/`, {
+  return apiFetch(`/api/v1/projects/${projectId}/source-configs/`, {
     method: "POST",
     body: JSON.stringify(payload),
   })
@@ -183,11 +183,11 @@ export async function createSourceConfig(
 
 export async function updateSourceConfig(
   sourceConfigId: number,
-  tenantId: number,
+  projectId: number,
   payload: Record<string, unknown>,
 ) {
   return apiFetch(
-    `/api/v1/tenants/${tenantId}/source-configs/${sourceConfigId}/`,
+    `/api/v1/projects/${projectId}/source-configs/${sourceConfigId}/`,
     {
       method: "PATCH",
       body: JSON.stringify(payload),
@@ -197,22 +197,22 @@ export async function updateSourceConfig(
 
 export async function updateReviewQueueItem(
   reviewId: number,
-  tenantId: number,
+  projectId: number,
   payload: Record<string, unknown>,
 ) {
-  return apiFetch(`/api/v1/tenants/${tenantId}/review-queue/${reviewId}/`, {
+  return apiFetch(`/api/v1/projects/${projectId}/review-queue/${reviewId}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   })
 }
 
 export async function runContentSkill(
-  tenantId: number,
+  projectId: number,
   contentId: number,
   skillName: ContentSkillName,
 ) {
   return apiFetch<SkillResult>(
-    `/api/v1/tenants/${tenantId}/contents/${contentId}/skills/${skillName}/`,
+    `/api/v1/projects/${projectId}/contents/${contentId}/skills/${skillName}/`,
     {
       method: "POST",
     },

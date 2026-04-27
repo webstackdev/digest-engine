@@ -1,34 +1,39 @@
+from django.contrib.auth.models import Group
 from rest_framework import serializers
 
 from core.models import (
     Content,
     Entity,
     IngestionRun,
+    Project,
+    ProjectConfig,
     ReviewQueue,
     SkillResult,
     SourceConfig,
-    Tenant,
-    TenantConfig,
     UserFeedback,
 )
 from core.plugins import validate_plugin_config
 
 
-class TenantScopedSerializerMixin:
+class ProjectScopedSerializerMixin:
     def _filter_related_queryset(self, request):
         user = request.user
-        tenant = self.context.get("tenant")
-        if "tenant" in self.fields:
-            self.fields["tenant"].queryset = Tenant.objects.filter(user=user)
+        project = self.context.get("project")
+        if "group" in self.fields:
+            self.fields["group"].queryset = Group.objects.filter(user=user)
+        if "project" in self.fields:
+            self.fields["project"].queryset = Project.objects.filter(group__user=user).distinct()
         if "entity" in self.fields:
-            entity_queryset = Entity.objects.filter(tenant=tenant) if tenant else Entity.objects.filter(tenant__user=user)
+            entity_queryset = Entity.objects.filter(project=project) if project else Entity.objects.filter(project__group__user=user)
             self.fields["entity"].queryset = entity_queryset
         if "content" in self.fields:
-            content_queryset = Content.objects.filter(tenant=tenant) if tenant else Content.objects.filter(tenant__user=user)
+            content_queryset = Content.objects.filter(project=project) if project else Content.objects.filter(project__group__user=user)
             self.fields["content"].queryset = content_queryset
         if "superseded_by" in self.fields:
             skill_result_queryset = (
-                SkillResult.objects.filter(tenant=tenant) if tenant else SkillResult.objects.filter(tenant__user=user)
+                SkillResult.objects.filter(project=project)
+                if project
+                else SkillResult.objects.filter(project__group__user=user)
             )
             self.fields["superseded_by"].queryset = skill_result_queryset
 
@@ -39,34 +44,33 @@ class TenantScopedSerializerMixin:
             self._filter_related_queryset(request)
 
 
-class TenantSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(read_only=True)
+class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
 
     class Meta:
-        model = Tenant
-        fields = ["id", "name", "user", "topic_description", "content_retention_days", "created_at"]
-        read_only_fields = ["id", "user", "created_at"]
+        model = Project
+        fields = ["id", "name", "group", "topic_description", "content_retention_days", "created_at"]
+        read_only_fields = ["id", "created_at"]
 
 
-class TenantConfigSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):
+class ProjectConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     class Meta:
-        model = TenantConfig
+        model = ProjectConfig
         fields = [
             "id",
-            "tenant",
+            "project",
             "upvote_authority_weight",
             "downvote_authority_weight",
             "authority_decay_rate",
         ]
-        read_only_fields = ["id", "tenant"]
+        read_only_fields = ["id", "project"]
 
 
-class EntitySerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):
+class EntitySerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Entity
         fields = [
             "id",
-            "tenant",
+            "project",
             "name",
             "type",
             "description",
@@ -79,15 +83,15 @@ class EntitySerializer(TenantScopedSerializerMixin, serializers.ModelSerializer)
             "twitter_handle",
             "created_at",
         ]
-        read_only_fields = ["id", "tenant", "created_at"]
+        read_only_fields = ["id", "project", "created_at"]
 
 
-class ContentSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):
+class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Content
         fields = [
             "id",
-            "tenant",
+            "project",
             "url",
             "title",
             "author",
@@ -102,23 +106,23 @@ class ContentSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer
             "is_reference",
             "is_active",
         ]
-        read_only_fields = ["id", "tenant", "ingested_at", "embedding_id"]
+        read_only_fields = ["id", "project", "ingested_at", "embedding_id"]
 
     def validate(self, attrs):
-        tenant = self.context.get("tenant") or attrs.get("tenant") or getattr(self.instance, "tenant", None)
+        project = self.context.get("project") or attrs.get("project") or getattr(self.instance, "project", None)
         entity = attrs.get("entity") or getattr(self.instance, "entity", None)
-        if tenant and entity and entity.tenant_id != tenant.id:
-            raise serializers.ValidationError({"entity": "Entity must belong to the selected tenant."})
+        if project and entity and entity.project_id != project.id:
+            raise serializers.ValidationError({"entity": "Entity must belong to the selected project."})
         return attrs
 
 
-class SkillResultSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):
+class SkillResultSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = SkillResult
         fields = [
             "id",
             "content",
-            "tenant",
+            "project",
             "skill_name",
             "status",
             "result_data",
@@ -129,38 +133,38 @@ class SkillResultSerializer(TenantScopedSerializerMixin, serializers.ModelSerial
             "created_at",
             "superseded_by",
         ]
-        read_only_fields = ["id", "tenant", "created_at"]
+        read_only_fields = ["id", "project", "created_at"]
 
     def validate(self, attrs):
-        tenant = self.context.get("tenant") or attrs.get("tenant") or getattr(self.instance, "tenant", None)
+        project = self.context.get("project") or attrs.get("project") or getattr(self.instance, "project", None)
         content = attrs.get("content") or getattr(self.instance, "content", None)
-        if tenant and content and content.tenant_id != tenant.id:
-            raise serializers.ValidationError({"content": "Content must belong to the selected tenant."})
+        if project and content and content.project_id != project.id:
+            raise serializers.ValidationError({"content": "Content must belong to the selected project."})
         return attrs
 
 
-class UserFeedbackSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):
+class UserFeedbackSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = UserFeedback
-        fields = ["id", "content", "tenant", "user", "feedback_type", "created_at"]
-        read_only_fields = ["id", "tenant", "user", "created_at"]
+        fields = ["id", "content", "project", "user", "feedback_type", "created_at"]
+        read_only_fields = ["id", "project", "user", "created_at"]
 
     def validate(self, attrs):
-        tenant = self.context.get("tenant") or attrs.get("tenant") or getattr(self.instance, "tenant", None)
+        project = self.context.get("project") or attrs.get("project") or getattr(self.instance, "project", None)
         content = attrs.get("content") or getattr(self.instance, "content", None)
-        if tenant and content and content.tenant_id != tenant.id:
-            raise serializers.ValidationError({"content": "Content must belong to the selected tenant."})
+        if project and content and content.project_id != project.id:
+            raise serializers.ValidationError({"content": "Content must belong to the selected project."})
         return attrs
 
 
-class IngestionRunSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):
+class IngestionRunSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = IngestionRun
         fields = [
             "id",
-            "tenant",
+            "project",
             "plugin_name",
             "started_at",
             "completed_at",
@@ -169,14 +173,14 @@ class IngestionRunSerializer(TenantScopedSerializerMixin, serializers.ModelSeria
             "items_ingested",
             "error_message",
         ]
-        read_only_fields = ["id", "tenant", "started_at"]
+        read_only_fields = ["id", "project", "started_at"]
 
 
-class SourceConfigSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):
+class SourceConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = SourceConfig
-        fields = ["id", "tenant", "plugin_name", "config", "is_active", "last_fetched_at"]
-        read_only_fields = ["id", "tenant", "last_fetched_at"]
+        fields = ["id", "project", "plugin_name", "config", "is_active", "last_fetched_at"]
+        read_only_fields = ["id", "project", "last_fetched_at"]
 
     def validate(self, attrs):
         plugin_name = attrs.get("plugin_name") or getattr(self.instance, "plugin_name", None)
@@ -189,15 +193,15 @@ class SourceConfigSerializer(TenantScopedSerializerMixin, serializers.ModelSeria
         return attrs
 
 
-class ReviewQueueSerializer(TenantScopedSerializerMixin, serializers.ModelSerializer):
+class ReviewQueueSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = ReviewQueue
-        fields = ["id", "tenant", "content", "reason", "confidence", "created_at", "resolved", "resolution"]
-        read_only_fields = ["id", "tenant", "created_at"]
+        fields = ["id", "project", "content", "reason", "confidence", "created_at", "resolved", "resolution"]
+        read_only_fields = ["id", "project", "created_at"]
 
     def validate(self, attrs):
-        tenant = self.context.get("tenant") or attrs.get("tenant") or getattr(self.instance, "tenant", None)
+        project = self.context.get("project") or attrs.get("project") or getattr(self.instance, "project", None)
         content = attrs.get("content") or getattr(self.instance, "content", None)
-        if tenant and content and content.tenant_id != tenant.id:
-            raise serializers.ValidationError({"content": "Content must belong to the selected tenant."})
+        if project and content and content.project_id != project.id:
+            raise serializers.ValidationError({"content": "Content must belong to the selected project."})
         return attrs

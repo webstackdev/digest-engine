@@ -28,12 +28,12 @@ export async function POST(
   const redirectTo = String(formData.get("redirectTo") || "/admin/sources")
 
   try {
-    const tenantId = Number.parseInt(
-      String(formData.get("tenantId") || "0"),
+    const projectId = Number.parseInt(
+      String(formData.get("projectId") || "0"),
       10,
     )
     const sourceConfigId = Number.parseInt(id, 10)
-    await updateSourceConfig(sourceConfigId, tenantId, {
+    await updateSourceConfig(sourceConfigId, projectId, {
       is_active: String(formData.get("is_active") || "true") === "true",
       config: parseConfigJson(formData.get("config_json")),
     })

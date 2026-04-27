@@ -1,4 +1,4 @@
-import type { HealthStatus, Tenant } from "@/lib/types"
+import type { HealthStatus, Project } from "@/lib/types"
 
 export type SearchParams = Record<string, string | string[] | undefined>
 
@@ -10,19 +10,19 @@ export function getSearchParam(searchParams: SearchParams, key: string) {
   return value ?? ""
 }
 
-export function selectTenant(tenants: Tenant[], searchParams: SearchParams) {
-  if (tenants.length === 0) {
+export function selectProject(projects: Project[], searchParams: SearchParams) {
+  if (projects.length === 0) {
     return null
   }
 
-  const requestedTenantId = Number.parseInt(
-    getSearchParam(searchParams, "tenant"),
+  const requestedProjectId = Number.parseInt(
+    getSearchParam(searchParams, "project"),
     10,
   )
-  const selectedTenant = tenants.find(
-    (tenant) => tenant.id === requestedTenantId,
+  const selectedProject = projects.find(
+    (project) => project.id === requestedProjectId,
   )
-  return selectedTenant ?? tenants[0]
+  return selectedProject ?? projects[0]
 }
 
 export function formatDate(value: string | null) {

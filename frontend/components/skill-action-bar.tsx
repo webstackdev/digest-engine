@@ -12,7 +12,7 @@ type AsyncSkillName = Extract<
 >
 
 type SkillActionBarProps = {
-  tenantId: number
+  projectId: number
   contentId: number
   canSummarize: boolean
   initialPendingSkills: AsyncSkillName[]
@@ -43,7 +43,7 @@ function getSkillLabel(skillName: AsyncSkillName, isBusy: boolean) {
 }
 
 export function SkillActionBar({
-  tenantId,
+  projectId,
   contentId,
   canSummarize,
   initialPendingSkills,
@@ -56,11 +56,11 @@ export function SkillActionBar({
   const watchedSkills = [...new Set([...initialPendingSkills, ...queuedSkills])]
 
   const contentSkillResultsQuery = useQuery({
-    queryKey: ["content-skill-results", tenantId, contentId],
+    queryKey: ["content-skill-results", projectId, contentId],
     enabled: watchedSkills.length > 0,
     queryFn: async (): Promise<SkillResult[]> => {
       const response = await fetch(
-        `/api/content-skills?tenantId=${tenantId}&contentId=${contentId}`,
+        `/api/content-skills?projectId=${projectId}&contentId=${contentId}`,
         {
           cache: "no-store",
         },
@@ -101,9 +101,9 @@ export function SkillActionBar({
   const queueSkillMutation = useMutation({
     mutationFn: async (skillName: AsyncSkillName) => {
       const formData = new FormData()
-      formData.set("tenantId", String(tenantId))
+      formData.set("projectId", String(projectId))
       formData.set("contentId", String(contentId))
-      formData.set("redirectTo", `/content/${contentId}?tenant=${tenantId}`)
+      formData.set("redirectTo", `/content/${contentId}?project=${projectId}`)
 
       const response = await fetch(`/api/skills/${skillName}?mode=json`, {
         method: "POST",

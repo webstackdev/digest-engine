@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+from django.contrib.auth.models import Group
 from django.core.management import call_command
 from qdrant_client.http.exceptions import ResponseHandlingException
 
@@ -17,11 +18,11 @@ from core.models import (
     Content,
     Entity,
     IngestionRun,
+    Project,
     ReviewQueue,
     SkillResult,
     SourceConfig,
     SourcePluginName,
-    Tenant,
     UserFeedback,
 )
 from core.pipeline import (
@@ -43,9 +44,11 @@ def clear_embedding_provider_cache():
 @pytest.fixture
 def embedding_context(django_user_model):
     user = django_user_model.objects.create_user(username="embed-owner", password="testpass123")
-    tenant = Tenant.objects.create(name="Embedding Tenant", user=user, topic_description="Infra")
+    group = Group.objects.create(name="embedding-team")
+    user.groups.add(group)
+    project = Project.objects.create(name="Embedding Project", group=group, topic_description="Infra")
     content = Content.objects.create(
-        tenant=tenant,
+        project=project,
         url="https://example.com/embed",
         title="Embedding Content",
         author="Author",
@@ -53,7 +56,7 @@ def embedding_context(django_user_model):
         published_date="2026-04-20T12:00:00Z",
         content_text="This article covers platform engineering practices.",
     )
-    return SimpleNamespace(user=user, tenant=tenant, content=content)
+    return SimpleNamespace(user=user, group=group, project=project, content=content)
 
 
 def test_upsert_content_embedding_persists_embedding_id_and_payload(embedding_context, mocker):
@@ -73,13 +76,13 @@ def test_upsert_content_embedding_persists_embedding_id_and_payload(embedding_co
     assert upsert_points[0].payload["content_id"] == embedding_context.content.id
     assert upsert_points[0].payload["is_reference"] is False
 
-def test_search_similar_returns_qdrant_results_for_tenant_collection(embedding_context, mocker):
+def test_search_similar_returns_qdrant_results_for_project_collection(embedding_context, mocker):
     client_mock = mocker.patch("core.embeddings.get_qdrant_client")
     scored_point = SimpleNamespace(score=0.91, payload={"content_id": embedding_context.content.id})
     client_mock.return_value.get_collection.return_value = SimpleNamespace()
     client_mock.return_value.search.return_value = [scored_point]
 
-    results = search_similar(embedding_context.tenant.id, [0.1, 0.2, 0.3], limit=3, exclude_content_id=embedding_context.content.id)
+    results = search_similar(embedding_context.project.id, [0.1, 0.2, 0.3], limit=3, exclude_content_id=embedding_context.content.id)
 
     assert results == [scored_point]
     client_mock.return_value.search.assert_called_once()
@@ -96,7 +99,7 @@ def test_search_similar_content_embeds_current_content_and_excludes_self(embeddi
     assert len(results) == 1
     embed_text_mock.assert_called_once_with("Embedding Content\n\nThis article covers platform engineering practices.")
     search_similar_mock.assert_called_once_with(
-        embedding_context.tenant.id,
+        embedding_context.project.id,
         [0.3, 0.2, 0.1],
         limit=4,
         is_reference=False,
@@ -107,12 +110,12 @@ def test_get_reference_similarity_averages_reference_scores(embedding_context, m
     search_mock = mocker.patch("core.embeddings.search_similar")
     search_mock.return_value = [SimpleNamespace(score=0.8), SimpleNamespace(score=0.6)]
 
-    similarity = get_reference_similarity(embedding_context.tenant.id, [0.1, 0.2, 0.3])
+    similarity = get_reference_similarity(embedding_context.project.id, [0.1, 0.2, 0.3])
 
     assert similarity == 0.7
 
 def test_get_reference_similarity_returns_zero_when_no_reference_matches(embedding_context):
-    similarity = get_reference_similarity(embedding_context.tenant.id, [0.1, 0.2, 0.3])
+    similarity = get_reference_similarity(embedding_context.project.id, [0.1, 0.2, 0.3])
 
     assert similarity == 0.0
 
@@ -189,17 +192,17 @@ def test_seed_demo_creates_reference_corpus_and_embeds_demo_content(mocker, caps
 
     call_command("seed_demo")
 
-    tenant = Tenant.objects.get(name="Platform Engineering Weekly")
-    assert Entity.objects.filter(tenant=tenant).count() == 15
-    assert SourceConfig.objects.filter(tenant=tenant).count() == 8
-    assert Content.objects.filter(tenant=tenant, is_reference=True).count() == 50
-    assert Content.objects.filter(tenant=tenant, is_reference=False).count() == 200
-    assert SkillResult.objects.filter(tenant=tenant, skill_name=CLASSIFICATION_SKILL_NAME).count() == 200
-    assert SkillResult.objects.filter(tenant=tenant, skill_name=RELEVANCE_SKILL_NAME).count() == 200
-    assert SkillResult.objects.filter(tenant=tenant, skill_name=SUMMARIZATION_SKILL_NAME).count() == 115
-    assert ReviewQueue.objects.filter(tenant=tenant).exists()
-    assert UserFeedback.objects.filter(tenant=tenant).count() == 45
-    assert IngestionRun.objects.filter(tenant=tenant).count() == 6
+    project = Project.objects.get(name="Platform Engineering Weekly")
+    assert Entity.objects.filter(project=project).count() == 15
+    assert SourceConfig.objects.filter(project=project).count() == 8
+    assert Content.objects.filter(project=project, is_reference=True).count() == 50
+    assert Content.objects.filter(project=project, is_reference=False).count() == 200
+    assert SkillResult.objects.filter(project=project, skill_name=CLASSIFICATION_SKILL_NAME).count() == 200
+    assert SkillResult.objects.filter(project=project, skill_name=RELEVANCE_SKILL_NAME).count() == 200
+    assert SkillResult.objects.filter(project=project, skill_name=SUMMARIZATION_SKILL_NAME).count() == 115
+    assert ReviewQueue.objects.filter(project=project).exists()
+    assert UserFeedback.objects.filter(project=project).count() == 45
+    assert IngestionRun.objects.filter(project=project).count() == 6
     assert upsert_mock.call_count == 250
     output = capsys.readouterr().out
     assert "Reference corpus items: 50" in output
@@ -212,15 +215,15 @@ def test_seed_demo_is_stable_on_rerun(mocker):
     call_command("seed_demo")
     call_command("seed_demo")
 
-    tenant = Tenant.objects.get(name="Platform Engineering Weekly")
-    assert Entity.objects.filter(tenant=tenant).count() == 15
-    assert SourceConfig.objects.filter(tenant=tenant).count() == 8
-    assert Content.objects.filter(tenant=tenant, is_reference=True).count() == 50
-    assert Content.objects.filter(tenant=tenant, is_reference=False).count() == 200
-    assert SkillResult.objects.filter(tenant=tenant).count() == 515
-    assert ReviewQueue.objects.filter(tenant=tenant).count() > 0
-    assert UserFeedback.objects.filter(tenant=tenant).count() == 45
-    assert IngestionRun.objects.filter(tenant=tenant).count() == 6
+    project = Project.objects.get(name="Platform Engineering Weekly")
+    assert Entity.objects.filter(project=project).count() == 15
+    assert SourceConfig.objects.filter(project=project).count() == 8
+    assert Content.objects.filter(project=project, is_reference=True).count() == 50
+    assert Content.objects.filter(project=project, is_reference=False).count() == 200
+    assert SkillResult.objects.filter(project=project).count() == 515
+    assert ReviewQueue.objects.filter(project=project).count() > 0
+    assert UserFeedback.objects.filter(project=project).count() == 45
+    assert IngestionRun.objects.filter(project=project).count() == 6
 
 
 def test_seed_demo_skips_embeddings_when_vector_stack_is_unavailable(mocker, capsys):
@@ -231,10 +234,10 @@ def test_seed_demo_skips_embeddings_when_vector_stack_is_unavailable(mocker, cap
 
     call_command("seed_demo")
 
-    tenant = Tenant.objects.get(name="Platform Engineering Weekly")
-    assert Content.objects.filter(tenant=tenant, is_reference=True).count() == 50
-    assert Content.objects.filter(tenant=tenant, is_reference=False).count() == 200
-    assert SkillResult.objects.filter(tenant=tenant).count() == 515
+    project = Project.objects.get(name="Platform Engineering Weekly")
+    assert Content.objects.filter(project=project, is_reference=True).count() == 50
+    assert Content.objects.filter(project=project, is_reference=False).count() == 200
+    assert SkillResult.objects.filter(project=project).count() == 515
     assert upsert_mock.call_count == 1
     combined_output = capsys.readouterr()
     assert "Skipping remaining embedding sync" in combined_output.err
