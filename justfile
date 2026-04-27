@@ -18,6 +18,7 @@ backend-dev:
     {{compose}} up django celery-worker celery-beat postgres redis qdrant nginx
 
 frontend-dev:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
     cd frontend && npm run dev
 
 dev:
@@ -29,6 +30,7 @@ backend-build:
     {{compose}} build django
 
 frontend-build:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
     cd frontend && npm run build
 
 build:
@@ -36,6 +38,7 @@ build:
     just frontend-build
 
 frontend-typecheck:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
     cd frontend && npm run typecheck
 
 backend-lint:
@@ -49,6 +52,7 @@ backend-lint:
     python3 manage.py check
 
 frontend-lint:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
     cd frontend && npm run lint
 
 lint:
@@ -64,6 +68,7 @@ backend-lint-fix:
     just backend-lint
 
 frontend-lint-fix:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
     cd frontend && npm run lint:fix
 
 lint-fix:
@@ -71,12 +76,15 @@ lint-fix:
     just frontend-lint-fix
 
 frontend-format:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
     cd frontend && npm run format
 
 frontend-format-check:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
     cd frontend && npm run format:check
 
 frontend-test:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
     cd frontend && npm run test:run
 
 backend-test:

@@ -23,7 +23,7 @@ function getBasicAuthHeader() {
 
   if (!username || !password) {
     throw new Error(
-      "NEWSLETTER_API_USERNAME and NEWSLETTER_API_PASSWORD must be set for the frontend.",
+      "NEWSLETTER_API_USERNAME and NEWSLETTER_API_PASSWORD must be set for the frontend. Copy frontend/.env.example to frontend/.env.local when running Next.js outside Docker.",
     )
   }
 
