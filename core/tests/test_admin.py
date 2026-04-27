@@ -75,6 +75,21 @@ def test_test_source_connection_reports_failures(source_admin_context, mocker):
     )
 
 
+def test_source_config_display_health_renders_without_django6_format_html_error(source_admin_context):
+    source_config = SourceConfig.objects.create(
+        tenant=source_admin_context.tenant,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
+        is_active=True,
+        last_fetched_at=timezone.now(),
+    )
+    admin_instance = SourceConfigAdmin(SourceConfig, AdminSite())
+
+    rendered = admin_instance.display_health(source_config)
+
+    assert "Healthy" in rendered
+
+
 def test_review_queue_changelist_view_builds_dashboard_stats(source_admin_context, mocker):
     content = Content.objects.create(
         tenant=source_admin_context.tenant,

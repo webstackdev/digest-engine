@@ -344,8 +344,8 @@ class UserFeedbackAdmin(ModelAdmin):
     @admin.display(description="Type")
     def display_feedback(self, obj):
         if obj.feedback_type == "UPVOTE":
-            return format_html('<span style="font-size: 1.2rem;">👍</span>')
-        return format_html('<span style="font-size: 1.2rem;">👎</span>')
+            return format_html('<span style="font-size: {}">{}</span>', "1.2rem", "👍")
+        return format_html('<span style="font-size: {}">{}</span>', "1.2rem", "👎")
 
     @admin.display(description="Content Title")
     def get_content_title(self, obj):
@@ -492,15 +492,15 @@ class SourceConfigAdmin(ModelAdmin):
     @admin.display(description="Status")
     def display_health(self, obj):
         if not obj.is_active:
-            return format_html('<span style="color: gray;">● Paused</span>')
+            return format_html('<span style="color: {};">{}</span>', "gray", "● Paused")
 
         if obj.last_fetched_at:
             hours_since = (timezone.now() - obj.last_fetched_at).total_seconds() / 3600
             if hours_since > 24:
-                return format_html('<span style="color: red;">● Stale</span>')
-            return format_html('<span style="color: green;">● Healthy</span>')
+                return format_html('<span style="color: {};">{}</span>', "red", "● Stale")
+            return format_html('<span style="color: {};">{}</span>', "green", "● Healthy")
 
-        return format_html('<span style="color: orange;">● Never Run</span>')
+        return format_html('<span style="color: {};">{}</span>', "orange", "● Never Run")
 
     @admin.display(description="Config Preview")
     def pretty_config(self, obj):
