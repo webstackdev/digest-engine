@@ -18,6 +18,7 @@ from core.models import (
   TenantConfig,
   UserFeedback,
 )
+from core.plugins import get_plugin_for_source_config, validate_plugin_config
 from core.tasks import process_content
 
 
@@ -472,15 +473,13 @@ class SourceConfigAdmin(ModelAdmin):
     list_editable = ("is_active",)
     search_fields = ("plugin_name", "tenant__name")
     actions = ["test_source_connection"]
-
-    # detail page organization
     readonly_fields = ("last_fetched_at", "pretty_config")
     fieldsets = (
         ("Core Settings", {
             "fields": ("plugin_name", "tenant", "is_active")
         }),
         ("Configuration", {
-            "fields": ("pretty_config", "config"), # Shows pretty version and editable raw version
+            "fields": ("pretty_config", "config"),
         }),
         ("Activity", {
             "fields": ("last_fetched_at",),
@@ -491,14 +490,13 @@ class SourceConfigAdmin(ModelAdmin):
     def display_health(self, obj):
         if not obj.is_active:
             return format_html('<span style="color: gray;">● Paused</span>')
-        
-        # Check if the source is "Stale" (no fetch in 24 hours)
+
         if obj.last_fetched_at:
             hours_since = (timezone.now() - obj.last_fetched_at).total_seconds() / 3600
             if hours_since > 24:
                 return format_html('<span style="color: red;">● Stale</span>')
             return format_html('<span style="color: green;">● Healthy</span>')
-        
+
         return format_html('<span style="color: orange;">● Never Run</span>')
 
     @admin.display(description="Config Preview")
@@ -514,8 +512,36 @@ class SourceConfigAdmin(ModelAdmin):
         """
         Custom action to trigger a dry-run fetch for the selected sources.
         """
-        # Logic to ping the plugin's API or validate the URL goes here
-        self.message_user(request, "Connection tests triggered for selected sources.", messages.INFO)
+        healthy_sources = []
+        failed_sources = []
+
+        for source_config in queryset.select_related("tenant"):
+            try:
+                source_config.config = validate_plugin_config(
+                    source_config.plugin_name,
+                    source_config.config,
+                )
+                plugin = get_plugin_for_source_config(source_config)
+                if not plugin.health_check():
+                    raise RuntimeError("Health check returned an unhealthy status.")
+            except Exception as exc:
+                failed_sources.append(f"{source_config}: {exc}")
+            else:
+                healthy_sources.append(str(source_config))
+
+        if healthy_sources:
+            self.message_user(
+                request,
+                f"Connectivity check passed for {len(healthy_sources)} source(s).",
+                messages.SUCCESS,
+            )
+
+        if failed_sources:
+            self.message_user(
+                request,
+                "Connectivity check failed for: " + "; ".join(failed_sources),
+                messages.ERROR,
+            )
 
     def changelist_view(self, request, extra_context=None):
         qs = self.get_queryset(request)
