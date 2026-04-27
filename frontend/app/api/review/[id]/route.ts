@@ -23,14 +23,14 @@ export async function POST(
   const redirectTo = String(formData.get("redirectTo") || "/")
 
   try {
-    const tenantId = Number.parseInt(
-      String(formData.get("tenantId") || "0"),
+    const projectId = Number.parseInt(
+      String(formData.get("projectId") || "0"),
       10,
     )
     const reviewId = Number.parseInt(id, 10)
     const resolved = String(formData.get("resolved") || "false") === "true"
     const resolution = String(formData.get("resolution") || "")
-    await updateReviewQueueItem(reviewId, tenantId, { resolved, resolution })
+    await updateReviewQueueItem(reviewId, projectId, { resolved, resolution })
     return NextResponse.redirect(
       buildRedirectUrl(request, redirectTo, {
         message: "Review item updated.",

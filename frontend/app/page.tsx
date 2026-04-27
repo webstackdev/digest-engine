@@ -3,12 +3,12 @@ import Link from "next/link"
 import { AppShell } from "@/components/app-shell"
 import { StatusBadge } from "@/components/status-badge"
 import {
-  getTenantContents,
-  getTenantEntities,
-  getTenantFeedback,
-  getTenantReviewQueue,
-  getTenants,
-  getTenantSourceConfigs,
+  getProjectContents,
+  getProjectEntities,
+  getProjectFeedback,
+  getProjectReviewQueue,
+  getProjects,
+  getProjectSourceConfigs,
 } from "@/lib/api"
 import {
   formatDate,
@@ -16,7 +16,7 @@ import {
   getErrorMessage,
   getSearchParam,
   getSuccessMessage,
-  selectTenant,
+  selectProject,
   truncateText,
 } from "@/lib/view-helpers"
 
@@ -45,19 +45,19 @@ const chipClass =
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const resolvedSearchParams = await searchParams
-  const tenants = await getTenants()
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
+  const projects = await getProjects()
+  const selectedProject = selectProject(projects, resolvedSearchParams)
 
-  if (!selectedTenant) {
+  if (!selectedProject) {
     return (
       <AppShell
         title="Dashboard"
-        description="Create a tenant in Django admin first, then come back here to review ingested content."
-        tenants={[]}
-        selectedTenantId={null}
+        description="Create a project in Django admin first, then come back here to review ingested content."
+        projects={[]}
+        selectedProjectId={null}
       >
         <div className={emptyStateClass}>
-          No tenants are available for the configured API user.
+          No projects are available for the configured API user.
         </div>
       </AppShell>
     )
@@ -73,11 +73,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const [contents, reviewQueue, entities, sourceConfigs, feedback] =
     await Promise.all([
-      getTenantContents(selectedTenant.id),
-      getTenantReviewQueue(selectedTenant.id),
-      getTenantEntities(selectedTenant.id),
-      getTenantSourceConfigs(selectedTenant.id),
-      getTenantFeedback(selectedTenant.id),
+      getProjectContents(selectedProject.id),
+      getProjectReviewQueue(selectedProject.id),
+      getProjectEntities(selectedProject.id),
+      getProjectSourceConfigs(selectedProject.id),
+      getProjectFeedback(selectedProject.id),
     ])
 
   const activeContents = contents.filter((content) => content.is_active)
@@ -128,10 +128,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <AppShell
-      title={`${selectedTenant.name} dashboard`}
+      title={`${selectedProject.name} dashboard`}
       description="Ranked content, pending human review, and quick editorial actions backed by the current Django API."
-      tenants={tenants}
-      selectedTenantId={selectedTenant.id}
+      projects={projects}
+      selectedProjectId={selectedProject.id}
     >
       <section className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className={panelClass}>
@@ -152,7 +152,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <p className={eyebrowClass}>Tracked entities</p>
           <p className="mt-1 text-3xl font-bold">{entities.length}</p>
           <p className="text-sm leading-6 text-[#5d6d67]">
-            People, vendors, and organizations linked to this tenant.
+            People, vendors, and organizations linked to this project.
           </p>
         </article>
         <article className={panelClass}>
@@ -177,7 +177,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         className={`${panelClass} mb-4 grid gap-4 p-[1.1rem] sm:grid-cols-2 xl:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] xl:items-end`}
         method="GET"
       >
-        <input type="hidden" name="tenant" value={selectedTenant.id} />
+        <input type="hidden" name="project" value={selectedProject.id} />
         <div className={labelClass}>
           <label className={labelTextClass} htmlFor="view">
             View
@@ -250,7 +250,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </button>
           <Link
             className={ghostButtonClass}
-            href={`/?tenant=${selectedTenant.id}`}
+            href={`/?project=${selectedProject.id}`}
           >
             Reset
           </Link>
@@ -275,7 +275,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   <tr>
                     <td className="px-3 py-4" colSpan={5}>
                       <div className={emptyStateClass}>
-                        No unresolved review items for this tenant right now.
+                        No unresolved review items for this project right now.
                       </div>
                     </td>
                   </tr>
@@ -312,8 +312,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                           <form action={`/api/review/${item.id}`} method="POST">
                             <input
                               type="hidden"
-                              name="tenantId"
-                              value={selectedTenant.id}
+                              name="projectId"
+                              value={selectedProject.id}
                             />
                             <input type="hidden" name="resolved" value="true" />
                             <input
@@ -324,7 +324,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                             <input
                               type="hidden"
                               name="redirectTo"
-                              value={`/?tenant=${selectedTenant.id}&view=review`}
+                              value={`/?project=${selectedProject.id}&view=review`}
                             />
                             <button
                               className={primaryButtonClass}
@@ -336,8 +336,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                           <form action={`/api/review/${item.id}`} method="POST">
                             <input
                               type="hidden"
-                              name="tenantId"
-                              value={selectedTenant.id}
+                              name="projectId"
+                              value={selectedProject.id}
                             />
                             <input type="hidden" name="resolved" value="true" />
                             <input
@@ -348,7 +348,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                             <input
                               type="hidden"
                               name="redirectTo"
-                              value={`/?tenant=${selectedTenant.id}&view=review`}
+                              value={`/?project=${selectedProject.id}&view=review`}
                             />
                             <button className={ghostButtonClass} type="submit">
                               Reject
@@ -414,22 +414,22 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <div className="flex flex-wrap items-center gap-3">
                   <Link
                     className={primaryButtonClass}
-                    href={`/content/${content.id}?tenant=${selectedTenant.id}`}
+                    href={`/content/${content.id}?project=${selectedProject.id}`}
                   >
                     Open detail
                   </Link>
                   <form action="/api/feedback" method="POST">
                     <input
                       type="hidden"
-                      name="tenantId"
-                      value={selectedTenant.id}
+                      name="projectId"
+                      value={selectedProject.id}
                     />
                     <input type="hidden" name="contentId" value={content.id} />
                     <input type="hidden" name="feedbackType" value="upvote" />
                     <input
                       type="hidden"
                       name="redirectTo"
-                      value={`/?tenant=${selectedTenant.id}`}
+                      value={`/?project=${selectedProject.id}`}
                     />
                     <button className={primaryButtonClass} type="submit">
                       Upvote
@@ -438,15 +438,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   <form action="/api/feedback" method="POST">
                     <input
                       type="hidden"
-                      name="tenantId"
-                      value={selectedTenant.id}
+                      name="projectId"
+                      value={selectedProject.id}
                     />
                     <input type="hidden" name="contentId" value={content.id} />
                     <input type="hidden" name="feedbackType" value="downvote" />
                     <input
                       type="hidden"
                       name="redirectTo"
-                      value={`/?tenant=${selectedTenant.id}`}
+                      value={`/?project=${selectedProject.id}`}
                     />
                     <button className={ghostButtonClass} type="submit">
                       Downvote
@@ -459,12 +459,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
           <aside className="space-y-4">
             <article className={panelClass}>
-              <p className={eyebrowClass}>Tenant focus</p>
+              <p className={eyebrowClass}>Project focus</p>
               <h3 className="font-[family:var(--font-display)] text-[1.45rem] font-bold">
-                {selectedTenant.name}
+                {selectedProject.name}
               </h3>
               <p className="text-sm leading-6 text-[#5d6d67]">
-                {selectedTenant.topic_description}
+                {selectedProject.topic_description}
               </p>
             </article>
 

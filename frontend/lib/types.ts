@@ -1,7 +1,7 @@
-export type Tenant = {
+export type Project = {
   id: number
   name: string
-  user: number
+  group: number
   topic_description: string
   content_retention_days: number
   created_at: string
@@ -9,7 +9,7 @@ export type Tenant = {
 
 export type Entity = {
   id: number
-  tenant: number
+  project: number
   name: string
   type: "individual" | "vendor" | "organization"
   description: string
@@ -25,7 +25,7 @@ export type Entity = {
 
 export type Content = {
   id: number
-  tenant: number
+  project: number
   url: string
   title: string
   author: string
@@ -44,7 +44,7 @@ export type Content = {
 export type SkillResult = {
   id: number
   content: number
-  tenant: number
+  project: number
   skill_name: string
   status: "pending" | "running" | "completed" | "failed"
   result_data: Record<string, unknown> | null
@@ -58,7 +58,7 @@ export type SkillResult = {
 
 export type ReviewQueueItem = {
   id: number
-  tenant: number
+  project: number
   content: number
   reason: "low_confidence_classification" | "borderline_relevance"
   confidence: number
@@ -69,7 +69,7 @@ export type ReviewQueueItem = {
 
 export type IngestionRun = {
   id: number
-  tenant: number
+  project: number
   plugin_name: string
   started_at: string
   completed_at: string | null
@@ -81,7 +81,7 @@ export type IngestionRun = {
 
 export type SourceConfig = {
   id: number
-  tenant: number
+  project: number
   plugin_name: "rss" | "reddit"
   config: Record<string, unknown>
   is_active: boolean
@@ -91,7 +91,7 @@ export type SourceConfig = {
 export type UserFeedback = {
   id: number
   content: number
-  tenant: number
+  project: number
   user: number
   feedback_type: "upvote" | "downvote"
   created_at: string

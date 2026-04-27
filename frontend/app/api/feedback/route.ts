@@ -19,8 +19,8 @@ export async function POST(request: Request) {
   const redirectTo = String(formData.get("redirectTo") || "/")
 
   try {
-    const tenantId = Number.parseInt(
-      String(formData.get("tenantId") || "0"),
+    const projectId = Number.parseInt(
+      String(formData.get("projectId") || "0"),
       10,
     )
     const contentId = Number.parseInt(
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const feedbackType = String(formData.get("feedbackType") || "upvote") as
       | "upvote"
       | "downvote"
-    await createFeedback(tenantId, contentId, feedbackType)
+    await createFeedback(projectId, contentId, feedbackType)
     return NextResponse.redirect(
       buildRedirectUrl(request, redirectTo, { message: "Feedback saved." }),
     )

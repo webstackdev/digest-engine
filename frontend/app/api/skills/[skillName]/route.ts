@@ -29,8 +29,8 @@ export async function POST(
   const redirectTo = String(formData.get("redirectTo") || "/")
 
   try {
-    const tenantId = Number.parseInt(
-      String(formData.get("tenantId") || "0"),
+    const projectId = Number.parseInt(
+      String(formData.get("projectId") || "0"),
       10,
     )
     const contentId = Number.parseInt(
@@ -38,7 +38,7 @@ export async function POST(
       10,
     )
     const result = await runContentSkill(
-      tenantId,
+      projectId,
       contentId,
       skillName as ContentSkillName,
     )

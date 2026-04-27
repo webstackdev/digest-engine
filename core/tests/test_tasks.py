@@ -2,16 +2,17 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
+from django.contrib.auth.models import Group
 
 from core.models import (
     Content,
     Entity,
     IngestionRun,
+    Project,
     RunStatus,
     SkillStatus,
     SourceConfig,
     SourcePluginName,
-    Tenant,
 )
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
 from core.tasks import (
@@ -28,14 +29,16 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def source_plugin_context(django_user_model):
     user = django_user_model.objects.create_user(username="plugin-owner", password="testpass123")
-    tenant = Tenant.objects.create(name="Plugin Tenant", user=user, topic_description="Infra")
+    group = Group.objects.create(name="plugin-team")
+    user.groups.add(group)
+    project = Project.objects.create(name="Plugin Project", group=group, topic_description="Infra")
     entity = Entity.objects.create(
-        tenant=tenant,
+        project=project,
         name="Example",
         type="vendor",
         website_url="https://example.com",
     )
-    return SimpleNamespace(user=user, tenant=tenant, entity=entity)
+    return SimpleNamespace(user=user, group=group, project=project, entity=entity)
 
 
 def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, mocker):
@@ -43,7 +46,7 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
-            tenant=source_plugin_context.tenant,
+            project=source_plugin_context.project,
             plugin_name=SourcePluginName.RSS,
             config={"feed_url": "https://example.com/feed.xml"},
     )
@@ -64,12 +67,12 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
     assert result["items_fetched"] == 1
     assert result["items_ingested"] == 1
     content = Content.objects.get(url="https://example.com/post-1")
-    assert content.tenant == source_plugin_context.tenant
+    assert content.project == source_plugin_context.project
     assert content.entity == source_plugin_context.entity
     upsert_embedding_mock.assert_called_once_with(content)
     process_content_delay_mock.assert_called_once_with(content.id)
     assert SourceConfig.objects.get(pk=source_config.id).last_fetched_at is not None
-    ingestion_run = IngestionRun.objects.get(tenant=source_plugin_context.tenant, plugin_name=SourcePluginName.RSS)
+    ingestion_run = IngestionRun.objects.get(project=source_plugin_context.project, plugin_name=SourcePluginName.RSS)
     assert ingestion_run.status == RunStatus.SUCCESS
 
 def test_run_ingestion_skips_duplicate_urls(source_plugin_context, mocker):
@@ -77,12 +80,12 @@ def test_run_ingestion_skips_duplicate_urls(source_plugin_context, mocker):
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
-            tenant=source_plugin_context.tenant,
+            project=source_plugin_context.project,
             plugin_name=SourcePluginName.RSS,
             config={"feed_url": "https://example.com/feed.xml"},
     )
     Content.objects.create(
-        tenant=source_plugin_context.tenant,
+        project=source_plugin_context.project,
         entity=source_plugin_context.entity,
         url="https://example.com/post-1",
         title="Existing",
@@ -116,7 +119,7 @@ def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, 
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     reddit_mock = mocker.patch("core.plugins.reddit.praw.Reddit")
     source_config = SourceConfig.objects.create(
-            tenant=source_plugin_context.tenant,
+            project=source_plugin_context.project,
             plugin_name=SourcePluginName.REDDIT,
             config={"subreddit": "python", "listing": "new", "limit": 5},
     )
@@ -145,17 +148,17 @@ def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, 
 def test_run_all_ingestions_enqueues_active_source_configs(source_plugin_context, mocker):
     delay_mock = mocker.patch("core.tasks.run_ingestion.delay")
     active_one = SourceConfig.objects.create(
-            tenant=source_plugin_context.tenant,
+            project=source_plugin_context.project,
             plugin_name=SourcePluginName.RSS,
             config={"feed_url": "https://example.com/feed.xml"},
     )
     active_two = SourceConfig.objects.create(
-        tenant=source_plugin_context.tenant,
+        project=source_plugin_context.project,
         plugin_name=SourcePluginName.REDDIT,
         config={"subreddit": "python"},
     )
     SourceConfig.objects.create(
-        tenant=source_plugin_context.tenant,
+        project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,
         config={"feed_url": "https://example.com/inactive.xml"},
         is_active=False,
@@ -171,7 +174,7 @@ def test_run_all_ingestions_enqueues_active_source_configs(source_plugin_context
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
     parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
-            tenant=source_plugin_context.tenant,
+        project=source_plugin_context.project,
             plugin_name=SourcePluginName.RSS,
             config={"feed_url": "https://example.com/feed.xml"},
     )
@@ -180,14 +183,14 @@ def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, m
     with pytest.raises(RuntimeError, match="feed unavailable"):
         run_ingestion(source_config.id)
 
-    ingestion_run = IngestionRun.objects.get(tenant=source_plugin_context.tenant, plugin_name=SourcePluginName.RSS)
+    ingestion_run = IngestionRun.objects.get(project=source_plugin_context.project, plugin_name=SourcePluginName.RSS)
     assert ingestion_run.status == RunStatus.FAILED
     assert ingestion_run.error_message == "feed unavailable"
 
 
 def test_queue_content_skill_enqueues_relevance_task(source_plugin_context, mocker):
     content = Content.objects.create(
-        tenant=source_plugin_context.tenant,
+        project=source_plugin_context.project,
         entity=source_plugin_context.entity,
         url="https://example.com/manual-content",
         title="Manual Content",
@@ -206,7 +209,7 @@ def test_queue_content_skill_enqueues_relevance_task(source_plugin_context, mock
 
 def test_run_relevance_scoring_skill_updates_pending_result(source_plugin_context, mocker):
     content = Content.objects.create(
-        tenant=source_plugin_context.tenant,
+        project=source_plugin_context.project,
         entity=source_plugin_context.entity,
         url="https://example.com/relevance-content",
         title="Relevance Content",
@@ -219,7 +222,7 @@ def test_run_relevance_scoring_skill_updates_pending_result(source_plugin_contex
         "core.pipeline.run_relevance_scoring",
         return_value={
             "relevance_score": 0.82,
-            "explanation": "Strong match for the tenant topic.",
+            "explanation": "Strong match for the project topic.",
             "used_llm": False,
             "model_used": "embedding:test",
             "latency_ms": 0,
@@ -242,7 +245,7 @@ def test_run_relevance_scoring_skill_updates_pending_result(source_plugin_contex
 
 def test_run_summarization_skill_marks_result_failed_when_relevance_is_too_low(source_plugin_context, mocker):
     content = Content.objects.create(
-        tenant=source_plugin_context.tenant,
+        project=source_plugin_context.project,
         entity=source_plugin_context.entity,
         url="https://example.com/summary-content",
         title="Summary Content",

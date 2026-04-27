@@ -4,18 +4,18 @@ import { AppShell } from "@/components/app-shell"
 import { SkillActionBar } from "@/components/skill-action-bar"
 import { StatusBadge } from "@/components/status-badge"
 import {
-  getTenantContent,
-  getTenantFeedback,
-  getTenantReviewQueue,
-  getTenants,
-  getTenantSkillResults,
+  getProjectContent,
+  getProjectFeedback,
+  getProjectReviewQueue,
+  getProjects,
+  getProjectSkillResults,
 } from "@/lib/api"
 import {
   formatDate,
   formatScore,
   getErrorMessage,
   getSuccessMessage,
-  selectTenant,
+  selectProject,
 } from "@/lib/view-helpers"
 
 type ContentDetailPageProps = {
@@ -44,19 +44,19 @@ export default async function ContentDetailPage({
     params,
     searchParams,
   ])
-  const tenants = await getTenants()
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
+  const projects = await getProjects()
+  const selectedProject = selectProject(projects, resolvedSearchParams)
 
-  if (!selectedTenant) {
+  if (!selectedProject) {
     return (
       <AppShell
         title="Content detail"
-        description="No tenant is available for the configured API user."
-        tenants={[]}
-        selectedTenantId={null}
+        description="No project is available for the configured API user."
+        projects={[]}
+        selectedProjectId={null}
       >
         <div className={emptyStateClass}>
-          Create a tenant first in Django admin.
+          Create a project first in Django admin.
         </div>
       </AppShell>
     )
@@ -64,10 +64,10 @@ export default async function ContentDetailPage({
 
   const contentId = Number.parseInt(id, 10)
   const [content, skillResults, reviewQueue, feedback] = await Promise.all([
-    getTenantContent(selectedTenant.id, contentId),
-    getTenantSkillResults(selectedTenant.id),
-    getTenantReviewQueue(selectedTenant.id),
-    getTenantFeedback(selectedTenant.id),
+    getProjectContent(selectedProject.id, contentId),
+    getProjectSkillResults(selectedProject.id),
+    getProjectReviewQueue(selectedProject.id),
+    getProjectFeedback(selectedProject.id),
   ])
   const errorMessage = getErrorMessage(resolvedSearchParams)
   const successMessage = getSuccessMessage(resolvedSearchParams)
@@ -97,8 +97,8 @@ export default async function ContentDetailPage({
     <AppShell
       title="Content detail"
       description="Inspect the raw article, persisted skill outputs, and editorial status for a single content item."
-      tenants={tenants}
-      selectedTenantId={selectedTenant.id}
+      projects={projects}
+      selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
         <div className={errorBannerClass}>{errorMessage}</div>
@@ -141,15 +141,15 @@ export default async function ContentDetailPage({
               <form action="/api/feedback" method="POST">
                 <input
                   type="hidden"
-                  name="tenantId"
-                  value={selectedTenant.id}
+                  name="projectId"
+                  value={selectedProject.id}
                 />
                 <input type="hidden" name="contentId" value={content.id} />
                 <input type="hidden" name="feedbackType" value="upvote" />
                 <input
                   type="hidden"
                   name="redirectTo"
-                  value={`/content/${content.id}?tenant=${selectedTenant.id}`}
+                  value={`/content/${content.id}?project=${selectedProject.id}`}
                 />
                 <button className={primaryButtonClass} type="submit">
                   Upvote
@@ -158,15 +158,15 @@ export default async function ContentDetailPage({
               <form action="/api/feedback" method="POST">
                 <input
                   type="hidden"
-                  name="tenantId"
-                  value={selectedTenant.id}
+                  name="projectId"
+                  value={selectedProject.id}
                 />
                 <input type="hidden" name="contentId" value={content.id} />
                 <input type="hidden" name="feedbackType" value="downvote" />
                 <input
                   type="hidden"
                   name="redirectTo"
-                  value={`/content/${content.id}?tenant=${selectedTenant.id}`}
+                  value={`/content/${content.id}?project=${selectedProject.id}`}
                 />
                 <button className={ghostButtonClass} type="submit">
                   Downvote
@@ -183,8 +183,8 @@ export default async function ContentDetailPage({
             <p className={eyebrowClass}>Skill action bar</p>
             <div className="flex flex-wrap items-center gap-3">
               <SkillActionBar
-                key={`${selectedTenant.id}:${content.id}:${initialPendingSkills.slice().sort().join(",")}`}
-                tenantId={selectedTenant.id}
+                key={`${selectedProject.id}:${content.id}:${initialPendingSkills.slice().sort().join(",")}`}
+                projectId={selectedProject.id}
                 contentId={content.id}
                 canSummarize={canSummarize}
                 initialPendingSkills={initialPendingSkills}
@@ -192,14 +192,14 @@ export default async function ContentDetailPage({
               <form action="/api/skills/find_related" method="POST">
                 <input
                   type="hidden"
-                  name="tenantId"
-                  value={selectedTenant.id}
+                  name="projectId"
+                  value={selectedProject.id}
                 />
                 <input type="hidden" name="contentId" value={content.id} />
                 <input
                   type="hidden"
                   name="redirectTo"
-                  value={`/content/${content.id}?tenant=${selectedTenant.id}`}
+                  value={`/content/${content.id}?project=${selectedProject.id}`}
                 />
                 <button className={ghostButtonClass} type="submit">
                   Find related
@@ -290,13 +290,13 @@ export default async function ContentDetailPage({
             <p className={eyebrowClass}>Navigate</p>
             <Link
               className={primaryButtonClass}
-              href={`/?tenant=${selectedTenant.id}`}
+              href={`/?project=${selectedProject.id}`}
             >
               Back to dashboard
             </Link>
             <Link
               className={ghostButtonClass}
-              href={`/entities?tenant=${selectedTenant.id}`}
+              href={`/entities?project=${selectedProject.id}`}
             >
               Manage entities
             </Link>

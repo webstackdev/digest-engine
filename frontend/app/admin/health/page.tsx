@@ -1,12 +1,12 @@
 import { AppShell } from "@/components/app-shell"
 import { StatusBadge } from "@/components/status-badge"
 import {
-  getTenantIngestionRuns,
-  getTenants,
-  getTenantSourceConfigs,
+  getProjectIngestionRuns,
+  getProjects,
+  getProjectSourceConfigs,
 } from "@/lib/api"
 import type { HealthStatus } from "@/lib/types"
-import { formatDate, healthTone, selectTenant } from "@/lib/view-helpers"
+import { formatDate, healthTone, selectProject } from "@/lib/view-helpers"
 
 type HealthPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -40,27 +40,27 @@ function deriveSourceStatus(
 
 export default async function HealthPage({ searchParams }: HealthPageProps) {
   const resolvedSearchParams = await searchParams
-  const tenants = await getTenants()
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
+  const projects = await getProjects()
+  const selectedProject = selectProject(projects, resolvedSearchParams)
 
-  if (!selectedTenant) {
+  if (!selectedProject) {
     return (
       <AppShell
         title="Health"
-        description="No tenant found for this API user."
-        tenants={[]}
-        selectedTenantId={null}
+        description="No project found for this API user."
+        projects={[]}
+        selectedProjectId={null}
       >
         <div className={emptyStateClass}>
-          Create a tenant first in Django admin.
+          Create a project first in Django admin.
         </div>
       </AppShell>
     )
   }
 
   const [sourceConfigs, ingestionRuns] = await Promise.all([
-    getTenantSourceConfigs(selectedTenant.id),
-    getTenantIngestionRuns(selectedTenant.id),
+    getProjectSourceConfigs(selectedProject.id),
+    getProjectIngestionRuns(selectedProject.id),
   ])
 
   const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
@@ -74,8 +74,8 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
     <AppShell
       title="Ingestion health"
       description="A source-by-source view of freshness, last run outcome, and whether the pipeline is idle, healthy, or failing."
-      tenants={tenants}
-      selectedTenantId={selectedTenant.id}
+      projects={projects}
+      selectedProjectId={selectedProject.id}
     >
       <section className={`${panelClass} overflow-hidden`}>
         <div className="overflow-x-auto">
@@ -95,7 +95,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                 <tr>
                   <td className="px-3 py-4" colSpan={6}>
                     <div className={emptyStateClass}>
-                      No source configurations exist for this tenant yet.
+                      No source configurations exist for this project yet.
                     </div>
                   </td>
                 </tr>

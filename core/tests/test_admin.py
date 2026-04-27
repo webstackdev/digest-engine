@@ -4,6 +4,7 @@ from unittest.mock import ANY
 import pytest
 from django.contrib import messages
 from django.contrib.admin.sites import AdminSite
+from django.contrib.auth.models import Group
 from django.utils import timezone
 
 from core.admin import (
@@ -15,12 +16,12 @@ from core.admin import (
 from core.models import (
     Content,
     IngestionRun,
+    Project,
     ReviewQueue,
     ReviewReason,
     RunStatus,
     SourceConfig,
     SourcePluginName,
-    Tenant,
 )
 
 pytestmark = pytest.mark.django_db
@@ -29,13 +30,15 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def source_admin_context(django_user_model):
     user = django_user_model.objects.create_user(username="admin-owner", password="testpass123")
-    tenant = Tenant.objects.create(name="Admin Tenant", user=user, topic_description="Infra")
-    return SimpleNamespace(user=user, tenant=tenant)
+    group = Group.objects.create(name="admin-team")
+    user.groups.add(group)
+    project = Project.objects.create(name="Admin Project", group=group, topic_description="Infra")
+    return SimpleNamespace(user=user, group=group, project=project)
 
 
 def test_test_source_connection_reports_success(source_admin_context, mocker):
     source_config = SourceConfig.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         plugin_name=SourcePluginName.RSS,
         config={"feed_url": "https://example.com/feed.xml"},
     )
@@ -66,7 +69,7 @@ def test_test_source_connection_reports_success(source_admin_context, mocker):
 
 def test_test_source_connection_reports_failures(source_admin_context, mocker):
     source_config = SourceConfig.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         plugin_name=SourcePluginName.RSS,
         config={"feed_url": "https://example.com/feed.xml"},
     )
@@ -84,14 +87,14 @@ def test_test_source_connection_reports_failures(source_admin_context, mocker):
 
     admin_instance.message_user.assert_called_once_with(
         ANY,
-        "Connectivity check failed for: rss source for Admin Tenant: Missing required config field: feed_url",
+        "Connectivity check failed for: rss source for Admin Project: Missing required config field: feed_url",
         messages.ERROR,
     )
 
 
 def test_source_config_display_health_renders_without_django6_format_html_error(source_admin_context):
     source_config = SourceConfig.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         plugin_name=SourcePluginName.RSS,
         config={"feed_url": "https://example.com/feed.xml"},
         is_active=True,
@@ -106,7 +109,7 @@ def test_source_config_display_health_renders_without_django6_format_html_error(
 
 def test_review_queue_changelist_view_builds_dashboard_stats(source_admin_context, mocker):
     content = Content.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         url="https://example.com/review-item",
         title="Review Item",
         author="Reviewer",
@@ -115,7 +118,7 @@ def test_review_queue_changelist_view_builds_dashboard_stats(source_admin_contex
         content_text="Review queue content",
     )
     ReviewQueue.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         content=content,
         reason=ReviewReason.BORDERLINE_RELEVANCE,
         confidence=0.42,
@@ -137,7 +140,7 @@ def test_review_queue_changelist_view_builds_dashboard_stats(source_admin_contex
 
 def test_review_queue_display_confidence_renders_without_django6_format_error(source_admin_context):
     content = Content.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         url="https://example.com/review-confidence",
         title="Review Confidence",
         author="Reviewer",
@@ -146,7 +149,7 @@ def test_review_queue_display_confidence_renders_without_django6_format_error(so
         content_text="Review queue content",
     )
     review_item = ReviewQueue.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         content=content,
         reason=ReviewReason.BORDERLINE_RELEVANCE,
         confidence=0.42,
@@ -161,7 +164,7 @@ def test_review_queue_display_confidence_renders_without_django6_format_error(so
 
 def test_ingestion_run_display_efficiency_renders_without_django6_format_error(source_admin_context):
     run = IngestionRun.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         plugin_name=SourcePluginName.RSS,
         status=RunStatus.SUCCESS,
         items_fetched=12,
@@ -176,7 +179,7 @@ def test_ingestion_run_display_efficiency_renders_without_django6_format_error(s
 
 def test_content_preview_uses_content_text(source_admin_context):
     content = Content.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         url="https://example.com/admin-preview",
         title="Admin Preview",
         author="Editor",
@@ -193,7 +196,7 @@ def test_content_preview_uses_content_text(source_admin_context):
 
 def test_content_preview_returns_dash_when_content_text_blank(source_admin_context):
     content = Content.objects.create(
-        tenant=source_admin_context.tenant,
+        project=source_admin_context.project,
         url="https://example.com/admin-preview-empty",
         title="Admin Preview Empty",
         author="Editor",

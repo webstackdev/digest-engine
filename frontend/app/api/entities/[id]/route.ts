@@ -23,21 +23,21 @@ export async function POST(
   const redirectTo = String(formData.get("redirectTo") || "/entities")
 
   try {
-    const tenantId = Number.parseInt(
-      String(formData.get("tenantId") || "0"),
+    const projectId = Number.parseInt(
+      String(formData.get("projectId") || "0"),
       10,
     )
     const entityId = Number.parseInt(id, 10)
     const intent = String(formData.get("intent") || "update")
 
     if (intent === "delete") {
-      await deleteEntity(entityId, tenantId)
+      await deleteEntity(entityId, projectId)
       return NextResponse.redirect(
         buildRedirectUrl(request, redirectTo, { message: "Entity deleted." }),
       )
     }
 
-    await updateEntity(entityId, tenantId, {
+    await updateEntity(entityId, projectId, {
       name: String(formData.get("name") || ""),
       type: String(formData.get("type") || "vendor"),
       description: String(formData.get("description") || ""),

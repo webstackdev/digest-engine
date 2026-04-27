@@ -1,15 +1,15 @@
 import { AppShell } from "@/components/app-shell"
 import { StatusBadge } from "@/components/status-badge"
 import {
-  getTenantIngestionRuns,
-  getTenants,
-  getTenantSourceConfigs,
+  getProjectIngestionRuns,
+  getProjects,
+  getProjectSourceConfigs,
 } from "@/lib/api"
 import {
   formatDate,
   getErrorMessage,
   getSuccessMessage,
-  selectTenant,
+  selectProject,
 } from "@/lib/view-helpers"
 
 type SourcesPageProps = {
@@ -33,27 +33,27 @@ const primaryButtonClass =
 
 export default async function SourcesPage({ searchParams }: SourcesPageProps) {
   const resolvedSearchParams = await searchParams
-  const tenants = await getTenants()
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
+  const projects = await getProjects()
+  const selectedProject = selectProject(projects, resolvedSearchParams)
 
-  if (!selectedTenant) {
+  if (!selectedProject) {
     return (
       <AppShell
         title="Sources"
-        description="No tenant found for this API user."
-        tenants={[]}
-        selectedTenantId={null}
+        description="No project found for this API user."
+        projects={[]}
+        selectedProjectId={null}
       >
         <div className={emptyStateClass}>
-          Create a tenant first in Django admin.
+          Create a project first in Django admin.
         </div>
       </AppShell>
     )
   }
 
   const [sourceConfigs, ingestionRuns] = await Promise.all([
-    getTenantSourceConfigs(selectedTenant.id),
-    getTenantIngestionRuns(selectedTenant.id),
+    getProjectSourceConfigs(selectedProject.id),
+    getProjectIngestionRuns(selectedProject.id),
   ])
   const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
   for (const ingestionRun of ingestionRuns) {
@@ -69,8 +69,8 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
     <AppShell
       title="Source configuration"
       description="Add, tune, and disable RSS feeds or Reddit subscriptions without leaving the editor dashboard."
-      tenants={tenants}
-      selectedTenantId={selectedTenant.id}
+      projects={projects}
+      selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
         <div className={errorBannerClass}>{errorMessage}</div>
@@ -87,11 +87,11 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
             action="/api/source-configs"
             method="POST"
           >
-            <input type="hidden" name="tenantId" value={selectedTenant.id} />
+            <input type="hidden" name="projectId" value={selectedProject.id} />
             <input
               type="hidden"
               name="redirectTo"
-              value={`/admin/sources?tenant=${selectedTenant.id}`}
+              value={`/admin/sources?project=${selectedProject.id}`}
             />
             <label className={labelClass}>
               <span className={labelTextClass}>Plugin</span>
@@ -136,7 +136,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
         <div className="space-y-4">
           {sourceConfigs.length === 0 ? (
             <div className={emptyStateClass}>
-              No source configurations exist for this tenant yet.
+              No source configurations exist for this project yet.
             </div>
           ) : null}
           {sourceConfigs.map((sourceConfig) => {
@@ -173,13 +173,13 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                 >
                   <input
                     type="hidden"
-                    name="tenantId"
-                    value={selectedTenant.id}
+                    name="projectId"
+                    value={selectedProject.id}
                   />
                   <input
                     type="hidden"
                     name="redirectTo"
-                    value={`/admin/sources?tenant=${selectedTenant.id}`}
+                    value={`/admin/sources?project=${selectedProject.id}`}
                   />
                   <label className={labelClass}>
                     <span className={labelTextClass}>Plugin</span>

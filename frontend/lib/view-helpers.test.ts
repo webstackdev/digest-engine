@@ -1,21 +1,21 @@
 import { describe, expect, it } from "vitest"
 
-import type { Tenant } from "@/lib/types"
+import type { Project } from "@/lib/types"
 import {
   formatScore,
   getErrorMessage,
   getSearchParam,
   getSuccessMessage,
   healthTone,
-  selectTenant,
+  selectProject,
   truncateText,
 } from "@/lib/view-helpers"
 
-const tenants: Tenant[] = [
+const projects: Project[] = [
   {
     id: 1,
     name: "AI Weekly",
-    user: 7,
+    group: 3,
     topic_description: "Applied AI",
     content_retention_days: 30,
     created_at: "2026-04-27T00:00:00Z",
@@ -23,7 +23,7 @@ const tenants: Tenant[] = [
   {
     id: 2,
     name: "Platform Weekly",
-    user: 7,
+    group: 3,
     topic_description: "Platform engineering",
     content_retention_days: 30,
     created_at: "2026-04-27T00:00:00Z",
@@ -32,15 +32,15 @@ const tenants: Tenant[] = [
 
 describe("view helpers", () => {
   it("returns the first array value for a search param", () => {
-    expect(getSearchParam({ tenant: ["2", "1"] }, "tenant")).toBe("2")
+    expect(getSearchParam({ project: ["2", "1"] }, "project")).toBe("2")
   })
 
-  it("falls back to the first tenant when the query does not match", () => {
-    expect(selectTenant(tenants, { tenant: "99" })).toEqual(tenants[0])
+  it("falls back to the first project when the query does not match", () => {
+    expect(selectProject(projects, { project: "99" })).toEqual(projects[0])
   })
 
-  it("returns null when no tenants exist", () => {
-    expect(selectTenant([], { tenant: "1" })).toBeNull()
+  it("returns null when no projects exist", () => {
+    expect(selectProject([], { project: "1" })).toBeNull()
   })
 
   it("formats a score with two decimal places", () => {

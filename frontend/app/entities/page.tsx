@@ -1,11 +1,11 @@
 import { AppShell } from "@/components/app-shell"
 import { StatusBadge } from "@/components/status-badge"
-import { getTenantEntities, getTenants } from "@/lib/api"
+import { getProjectEntities, getProjects } from "@/lib/api"
 import {
   formatDate,
   getErrorMessage,
   getSuccessMessage,
-  selectTenant,
+  selectProject,
 } from "@/lib/view-helpers"
 
 type EntitiesPageProps = {
@@ -33,34 +33,34 @@ export default async function EntitiesPage({
   searchParams,
 }: EntitiesPageProps) {
   const resolvedSearchParams = await searchParams
-  const tenants = await getTenants()
-  const selectedTenant = selectTenant(tenants, resolvedSearchParams)
+  const projects = await getProjects()
+  const selectedProject = selectProject(projects, resolvedSearchParams)
 
-  if (!selectedTenant) {
+  if (!selectedProject) {
     return (
       <AppShell
         title="Entities"
-        description="No tenant found for this API user."
-        tenants={[]}
-        selectedTenantId={null}
+        description="No project found for this API user."
+        projects={[]}
+        selectedProjectId={null}
       >
         <div className={emptyStateClass}>
-          Create a tenant first in Django admin.
+          Create a project first in Django admin.
         </div>
       </AppShell>
     )
   }
 
-  const entities = await getTenantEntities(selectedTenant.id)
+  const entities = await getProjectEntities(selectedProject.id)
   const errorMessage = getErrorMessage(resolvedSearchParams)
   const successMessage = getSuccessMessage(resolvedSearchParams)
 
   return (
     <AppShell
       title="Entity management"
-      description="Create, update, and remove the people and organizations that anchor relevance for this tenant."
-      tenants={tenants}
-      selectedTenantId={selectedTenant.id}
+      description="Create, update, and remove the people and organizations that anchor relevance for this project."
+      projects={projects}
+      selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
         <div className={errorBannerClass}>{errorMessage}</div>
@@ -73,11 +73,11 @@ export default async function EntitiesPage({
         <article className={`${panelClass} space-y-4`}>
           <p className={eyebrowClass}>Create entity</p>
           <form className="space-y-4" action="/api/entities" method="POST">
-            <input type="hidden" name="tenantId" value={selectedTenant.id} />
+            <input type="hidden" name="projectId" value={selectedProject.id} />
             <input
               type="hidden"
               name="redirectTo"
-              value={`/entities?tenant=${selectedTenant.id}`}
+              value={`/entities?project=${selectedProject.id}`}
             />
             <div className="grid gap-4 sm:grid-cols-2">
               <label className={labelClass}>
@@ -139,7 +139,7 @@ export default async function EntitiesPage({
         <div className="space-y-4">
           {entities.length === 0 ? (
             <div className={emptyStateClass}>
-              No entities exist for this tenant yet.
+              No entities exist for this project yet.
             </div>
           ) : null}
           {entities.map((entity) => (
@@ -163,13 +163,13 @@ export default async function EntitiesPage({
               >
                 <input
                   type="hidden"
-                  name="tenantId"
-                  value={selectedTenant.id}
+                  name="projectId"
+                  value={selectedProject.id}
                 />
                 <input
                   type="hidden"
                   name="redirectTo"
-                  value={`/entities?tenant=${selectedTenant.id}`}
+                  value={`/entities?project=${selectedProject.id}`}
                 />
                 <input type="hidden" name="intent" value="update" />
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -265,13 +265,13 @@ export default async function EntitiesPage({
               <form action={`/api/entities/${entity.id}`} method="POST">
                 <input
                   type="hidden"
-                  name="tenantId"
-                  value={selectedTenant.id}
+                  name="projectId"
+                  value={selectedProject.id}
                 />
                 <input
                   type="hidden"
                   name="redirectTo"
-                  value={`/entities?tenant=${selectedTenant.id}`}
+                  value={`/entities?project=${selectedProject.id}`}
                 />
                 <input type="hidden" name="intent" value="delete" />
                 <button className={dangerButtonClass} type="submit">

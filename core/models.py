@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.db import models
 
 
@@ -41,9 +42,9 @@ class ReviewResolution(models.TextChoices):
 	HUMAN_REJECTED = "human_rejected", "Human Rejected"
 
 
-class Tenant(models.Model):
+class Project(models.Model):
 	name = models.CharField(max_length=255)
-	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tenants")
+	group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="projects")
 	topic_description = models.TextField()
 	content_retention_days = models.PositiveIntegerField(default=365)
 	created_at = models.DateTimeField(auto_now_add=True)
@@ -55,22 +56,22 @@ class Tenant(models.Model):
 		return self.name
 
 
-class TenantConfig(models.Model):
-	tenant = models.OneToOneField(Tenant, on_delete=models.CASCADE, related_name="config")
+class ProjectConfig(models.Model):
+	project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name="config")
 	upvote_authority_weight = models.FloatField(default=0.1)
 	downvote_authority_weight = models.FloatField(default=-0.05)
 	authority_decay_rate = models.FloatField(default=0.95)
 
 	class Meta:
-		verbose_name = "Tenant config"
-		verbose_name_plural = "Tenant configs"
+		verbose_name = "Project config"
+		verbose_name_plural = "Project configs"
 
 	def __str__(self) -> str:
-		return f"Config for {self.tenant.name}"
+		return f"Config for {self.project.name}"
 
 
 class Entity(models.Model):
-	tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="entities")
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="entities")
 	name = models.CharField(max_length=255)
 	type = models.CharField(max_length=32, choices=EntityType.choices)
 	description = models.TextField(blank=True)
@@ -86,7 +87,7 @@ class Entity(models.Model):
 	class Meta:
 		ordering = ["name"]
 		constraints = [
-			models.UniqueConstraint(fields=["tenant", "name"], name="core_entity_unique_tenant_name"),
+			models.UniqueConstraint(fields=["project", "name"], name="core_entity_unique_project_name"),
 		]
 
 	def __str__(self) -> str:
@@ -94,7 +95,7 @@ class Entity(models.Model):
 
 
 class Content(models.Model):
-	tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="contents")
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="contents")
 	url = models.URLField()
 	title = models.CharField(max_length=512)
 	author = models.CharField(max_length=255, blank=True)
@@ -112,9 +113,9 @@ class Content(models.Model):
 	class Meta:
 		ordering = ["-published_date"]
 		indexes = [
-			models.Index(fields=["tenant", "-published_date"]),
-			models.Index(fields=["tenant", "-relevance_score"]),
-			models.Index(fields=["tenant", "is_reference"]),
+			models.Index(fields=["project", "-published_date"]),
+			models.Index(fields=["project", "-relevance_score"]),
+			models.Index(fields=["project", "is_reference"]),
 			models.Index(fields=["url"]),
 		]
 
@@ -124,7 +125,7 @@ class Content(models.Model):
 
 class SkillResult(models.Model):
 	content = models.ForeignKey(Content, on_delete=models.CASCADE, related_name="skill_results")
-	tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="skill_results")
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="skill_results")
 	skill_name = models.CharField(max_length=64)
 	status = models.CharField(max_length=16, choices=SkillStatus.choices)
 	result_data = models.JSONField(null=True, blank=True)
@@ -145,7 +146,7 @@ class SkillResult(models.Model):
 		ordering = ["-created_at"]
 		indexes = [
 			models.Index(fields=["content", "skill_name"]),
-			models.Index(fields=["tenant", "created_at"]),
+			models.Index(fields=["project", "created_at"]),
 		]
 
 	def __str__(self) -> str:
@@ -154,7 +155,7 @@ class SkillResult(models.Model):
 
 class UserFeedback(models.Model):
 	content = models.ForeignKey(Content, on_delete=models.CASCADE, related_name="feedback")
-	tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="feedback")
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="feedback")
 	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="content_feedback")
 	feedback_type = models.CharField(max_length=16, choices=FeedbackType.choices)
 	created_at = models.DateTimeField(auto_now_add=True)
@@ -170,7 +171,7 @@ class UserFeedback(models.Model):
 
 
 class SourceConfig(models.Model):
-	tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="source_configs")
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="source_configs")
 	plugin_name = models.CharField(max_length=64, choices=SourcePluginName.choices)
 	config = models.JSONField(default=dict)
 	is_active = models.BooleanField(default=True)
@@ -179,15 +180,15 @@ class SourceConfig(models.Model):
 	class Meta:
 		ordering = ["plugin_name", "id"]
 		indexes = [
-			models.Index(fields=["tenant", "plugin_name", "is_active"]),
+			models.Index(fields=["project", "plugin_name", "is_active"]),
 		]
 
 	def __str__(self) -> str:
-		return f"{self.plugin_name} source for {self.tenant.name}"
+		return f"{self.plugin_name} source for {self.project.name}"
 
 
 class IngestionRun(models.Model):
-	tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="ingestion_runs")
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="ingestion_runs")
 	plugin_name = models.CharField(max_length=64)
 	started_at = models.DateTimeField(auto_now_add=True)
 	completed_at = models.DateTimeField(null=True, blank=True)
@@ -199,15 +200,15 @@ class IngestionRun(models.Model):
 	class Meta:
 		ordering = ["-started_at"]
 		indexes = [
-			models.Index(fields=["tenant", "plugin_name", "-started_at"]),
+			models.Index(fields=["project", "plugin_name", "-started_at"]),
 		]
 
 	def __str__(self) -> str:
-		return f"{self.plugin_name} for {self.tenant.name}"
+		return f"{self.plugin_name} for {self.project.name}"
 
 
 class ReviewQueue(models.Model):
-	tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="review_queue_items")
+	project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="review_queue_items")
 	content = models.ForeignKey(Content, on_delete=models.CASCADE, related_name="review_queue_items")
 	reason = models.CharField(max_length=64, choices=ReviewReason.choices)
 	confidence = models.FloatField()

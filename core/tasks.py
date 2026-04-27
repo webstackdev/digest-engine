@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 
 @shared_task(name="core.tasks.run_ingestion")
 def run_ingestion(source_config_id: int):
-    source_config = SourceConfig.objects.select_related("tenant").get(pk=source_config_id)
+    source_config = SourceConfig.objects.select_related("project").get(pk=source_config_id)
     ingestion_run = IngestionRun.objects.create(
-        tenant=source_config.tenant,
+        project=source_config.project,
         plugin_name=source_config.plugin_name,
         status=RunStatus.RUNNING,
     )
@@ -95,10 +95,10 @@ def _ingest_source_config(source_config: SourceConfig) -> tuple[int, int]:
     fetched_items = plugin.fetch_new_content(source_config.last_fetched_at)
     ingested_count = 0
     for item in fetched_items:
-        if Content.objects.filter(tenant=source_config.tenant, url=item.url).exists():
+        if Content.objects.filter(project=source_config.project, url=item.url).exists():
             continue
         content = Content.objects.create(
-            tenant=source_config.tenant,
+            project=source_config.project,
             entity=plugin.match_entity_for_url(item.url),
             url=item.url,
             title=item.title[:512],

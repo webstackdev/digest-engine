@@ -17,11 +17,11 @@ from core.models import (
     Content,
     Entity,
     IngestionRun,
+    Project,
+    ProjectConfig,
     ReviewQueue,
     SkillResult,
     SourceConfig,
-    Tenant,
-    TenantConfig,
     UserFeedback,
 )
 from core.pipeline import (
@@ -35,20 +35,20 @@ from core.serializers import (
     ContentSerializer,
     EntitySerializer,
     IngestionRunSerializer,
+    ProjectConfigSerializer,
+    ProjectSerializer,
     ReviewQueueSerializer,
     SkillResultSerializer,
     SourceConfigSerializer,
-    TenantConfigSerializer,
-    TenantSerializer,
     UserFeedbackSerializer,
 )
 from core.tasks import queue_content_skill
 
-TENANT_ID_PARAMETER = OpenApiParameter(
-    name="tenant_id",
+PROJECT_ID_PARAMETER = OpenApiParameter(
+    name="project_id",
     type=int,
     location=OpenApiParameter.PATH,
-    description="The unique ID of the tenant that owns this nested resource.",
+    description="The unique ID of the project that owns this nested resource.",
 )
 
 SKILL_NAME_PARAMETER = OpenApiParameter(
@@ -61,22 +61,23 @@ SKILL_NAME_PARAMETER = OpenApiParameter(
     ),
 )
 
-TENANT_CREATE_REQUEST_EXAMPLE = OpenApiExample(
-    "Create Tenant Request",
+PROJECT_CREATE_REQUEST_EXAMPLE = OpenApiExample(
+    "Create Project Request",
     value={
         "name": "AI Weekly",
+        "group": 3,
         "topic_description": "Coverage of developer tools, model releases, and applied AI workflows.",
         "content_retention_days": 180,
     },
     request_only=True,
 )
 
-TENANT_RESPONSE_EXAMPLE = OpenApiExample(
-    "Tenant Response",
+PROJECT_RESPONSE_EXAMPLE = OpenApiExample(
+    "Project Response",
     value={
         "id": 1,
         "name": "AI Weekly",
-        "user": 7,
+        "group": 3,
         "topic_description": "Coverage of developer tools, model releases, and applied AI workflows.",
         "content_retention_days": 180,
         "created_at": "2026-04-26T12:00:00Z",
@@ -114,7 +115,7 @@ SOURCE_CONFIG_RESPONSE_EXAMPLE = OpenApiExample(
     "Source Configuration Response",
     value={
         "id": 12,
-        "tenant": 1,
+        "project": 1,
         "plugin_name": "rss",
         "config": {
             "feed_url": "https://example.com/feed.xml",
@@ -147,7 +148,7 @@ CONTENT_RESPONSE_EXAMPLE = OpenApiExample(
     "Content Response",
     value={
         "id": 44,
-        "tenant": 1,
+        "project": 1,
         "url": "https://example.com/posts/agent-memory-patterns",
         "title": "Practical Agent Memory Patterns",
         "author": "Jane Doe",
@@ -170,7 +171,7 @@ SKILL_RESULT_RESPONSE_EXAMPLE = OpenApiExample(
     value={
         "id": 91,
         "content": 44,
-        "tenant": 1,
+        "project": 1,
         "skill_name": "relevance_classifier",
         "status": "completed",
         "result_data": {
@@ -299,7 +300,7 @@ def build_crud_action_overrides(
     return overrides
 
 
-def document_user_owned_viewset(
+def document_group_access_viewset(
     resource_plural: str,
     resource_singular: str,
     create_description: str,
@@ -323,12 +324,12 @@ def document_user_owned_viewset(
         list=schema(
             "list",
             summary=f"List {resource_plural}",
-            description=f"Return all {resource_plural} owned by the authenticated user.",
+            description=f"Return all {resource_plural} available to the authenticated user through group membership.",
         ),
         retrieve=schema(
             "retrieve",
             summary=f"Get {resource_singular}",
-            description=f"Return a single {resource_singular} owned by the authenticated user.",
+            description=f"Return a single {resource_singular} available to the authenticated user through group membership.",
         ),
         create=schema(
             "create",
@@ -338,29 +339,29 @@ def document_user_owned_viewset(
         update=schema(
             "update",
             summary=f"Replace {resource_singular}",
-            description=f"Replace an existing {resource_singular} owned by the authenticated user.",
+            description=f"Replace an existing {resource_singular} available to the authenticated user through group membership.",
         ),
         partial_update=schema(
             "partial_update",
             summary=f"Update {resource_singular}",
-            description=f"Update one or more fields on an existing {resource_singular} owned by the authenticated user.",
+            description=f"Update one or more fields on an existing {resource_singular} available to the authenticated user through group membership.",
         ),
         destroy=schema(
             "destroy",
             summary=f"Delete {resource_singular}",
-            description=f"Delete an existing {resource_singular} owned by the authenticated user.",
+            description=f"Delete an existing {resource_singular} available to the authenticated user through group membership.",
         ),
     )
 
 
-def document_tenant_owned_viewset(
+def document_project_owned_viewset(
     resource_plural: str,
     resource_singular: str,
     create_description: str,
     tag: str,
     action_overrides: dict[str, dict] | None = None,
 ):
-    parameters = [TENANT_ID_PARAMETER]
+    parameters = [PROJECT_ID_PARAMETER]
     action_overrides = action_overrides or {}
 
     def schema(action: str, **kwargs):
@@ -378,13 +379,13 @@ def document_tenant_owned_viewset(
         list=schema(
             "list",
             summary=f"List {resource_plural}",
-            description=f"Return all {resource_plural} for the selected tenant.",
+            description=f"Return all {resource_plural} for the selected project.",
             parameters=parameters,
         ),
         retrieve=schema(
             "retrieve",
             summary=f"Get {resource_singular}",
-            description=f"Return a single {resource_singular} for the selected tenant.",
+            description=f"Return a single {resource_singular} for the selected project.",
             parameters=parameters,
         ),
         create=schema(
@@ -396,127 +397,123 @@ def document_tenant_owned_viewset(
         update=schema(
             "update",
             summary=f"Replace {resource_singular}",
-            description=f"Replace an existing {resource_singular} for the selected tenant.",
+            description=f"Replace an existing {resource_singular} for the selected project.",
             parameters=parameters,
         ),
         partial_update=schema(
             "partial_update",
             summary=f"Update {resource_singular}",
-            description=f"Update one or more fields on an existing {resource_singular} for the selected tenant.",
+            description=f"Update one or more fields on an existing {resource_singular} for the selected project.",
             parameters=parameters,
         ),
         destroy=schema(
             "destroy",
             summary=f"Delete {resource_singular}",
-            description=f"Delete an existing {resource_singular} for the selected tenant.",
+            description=f"Delete an existing {resource_singular} for the selected project.",
             parameters=parameters,
         ),
     )
 
 
-class TenantOwnedQuerysetMixin:
+class ProjectOwnedQuerysetMixin:
     queryset: Any = None
 
-    def get_tenant(self):
-        tenant_id = self.kwargs.get("tenant_id")
-        if tenant_id is None:
-            raise AssertionError("tenant_id must be present in nested tenant-scoped routes")
+    def get_project(self):
+        project_id = self.kwargs.get("project_id")
+        if project_id is None:
+            raise AssertionError("project_id must be present in nested project-scoped routes")
         try:
-            return Tenant.objects.get(pk=tenant_id, user=self.request.user)
-        except Tenant.DoesNotExist as exc:
-            raise NotFound("Tenant not found.") from exc
+            return Project.objects.get(pk=project_id, group__user=self.request.user)
+        except Project.DoesNotExist as exc:
+            raise NotFound("Project not found.") from exc
 
     def get_queryset(self):
         queryset = self.queryset
         if queryset is None:
-            raise AssertionError("queryset must be set on tenant-scoped viewsets")
-        return queryset.filter(tenant=self.get_tenant())
+            raise AssertionError("queryset must be set on project-scoped viewsets")
+        return queryset.filter(project=self.get_project())
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context["tenant"] = self.get_tenant()
+        context["project"] = self.get_project()
         return context
 
     def perform_create(self, serializer):
-        serializer.save(tenant=self.get_tenant())
+        serializer.save(project=self.get_project())
 
 
-
-@document_user_owned_viewset(
-    resource_plural="tenants",
-    resource_singular="tenant",
-    create_description="Create a new tenant for the authenticated user. The requesting user is attached automatically.",
-    tag="Tenant Management",
+@document_group_access_viewset(
+    resource_plural="projects",
+    resource_singular="project",
+    create_description="Create a new project for one of the authenticated user's groups.",
+    tag="Project Management",
     action_overrides=build_crud_action_overrides(
-        TenantSerializer,
-        resource_plural="tenants owned by the authenticated user",
-        resource_singular="tenant",
-        create_examples=[TENANT_CREATE_REQUEST_EXAMPLE, TENANT_RESPONSE_EXAMPLE],
-        create_response_examples=[TENANT_RESPONSE_EXAMPLE],
-        retrieve_examples=[TENANT_RESPONSE_EXAMPLE],
+        ProjectSerializer,
+        resource_plural="projects available to the authenticated user",
+        resource_singular="project",
+        create_examples=[PROJECT_CREATE_REQUEST_EXAMPLE, PROJECT_RESPONSE_EXAMPLE],
+        create_response_examples=[PROJECT_RESPONSE_EXAMPLE],
+        retrieve_examples=[PROJECT_RESPONSE_EXAMPLE],
     ),
 )
-class TenantViewSet(viewsets.ModelViewSet):
-    serializer_class = TenantSerializer
-    queryset = Tenant.objects.select_related("user")
+class ProjectViewSet(viewsets.ModelViewSet):
+    serializer_class = ProjectSerializer
+    queryset = Project.objects.select_related("group")
     lookup_url_kwarg = "id"
 
     def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        return self.queryset.filter(group__user=self.request.user).distinct()
 
 
-@document_tenant_owned_viewset(
-    resource_plural="tenant configurations",
-    resource_singular="tenant configuration",
-    create_description="Create a new tenant configuration record for the selected tenant, including authority weighting and decay settings.",
-    tag="Tenant Management",
+@document_project_owned_viewset(
+    resource_plural="project configurations",
+    resource_singular="project configuration",
+    create_description="Create a new project configuration record for the selected project, including authority weighting and decay settings.",
+    tag="Project Management",
     action_overrides=build_crud_action_overrides(
-        TenantConfigSerializer,
-        resource_plural="tenant configurations for the selected tenant",
-        resource_singular="tenant configuration",
+        ProjectConfigSerializer,
+        resource_plural="project configurations for the selected project",
+        resource_singular="project configuration",
     ),
 )
-class TenantConfigViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
-    serializer_class = TenantConfigSerializer
-    queryset = TenantConfig.objects.select_related("tenant")
+class ProjectConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    serializer_class = ProjectConfigSerializer
+    queryset = ProjectConfig.objects.select_related("project")
 
 
-@document_tenant_owned_viewset(
+@document_project_owned_viewset(
     resource_plural="entities",
     resource_singular="entity",
-    create_description="Create a new tracked entity for the selected tenant, such as a company, person, or project.",
+    create_description="Create a new tracked entity for the selected project, such as a company, person, or organization.",
     tag="Entity Catalog",
     action_overrides=build_crud_action_overrides(
         EntitySerializer,
-        resource_plural="entities for the selected tenant",
+        resource_plural="entities for the selected project",
         resource_singular="entity",
     ),
 )
-class EntityViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
+class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = EntitySerializer
-    queryset = Entity.objects.select_related("tenant")
+    queryset = Entity.objects.select_related("project")
 
 
-@document_tenant_owned_viewset(
+@document_project_owned_viewset(
     resource_plural="content items",
     resource_singular="content item",
-    create_description="Create a new content item for the selected tenant. Any related entity must belong to the same tenant.",
+    create_description="Create a new content item for the selected project. Any related entity must belong to the same project.",
     tag="Content Library",
     action_overrides=build_crud_action_overrides(
         ContentSerializer,
-        resource_plural="content items for the selected tenant",
+        resource_plural="content items for the selected project",
         resource_singular="content item",
         create_examples=[CONTENT_CREATE_REQUEST_EXAMPLE, CONTENT_RESPONSE_EXAMPLE],
         create_response_examples=[CONTENT_RESPONSE_EXAMPLE],
         retrieve_examples=[CONTENT_RESPONSE_EXAMPLE],
     ),
 )
-class ContentViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
+class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = ContentSerializer
-    queryset = Content.objects.select_related("tenant", "entity")
+    queryset = Content.objects.select_related("project", "entity")
 
     @extend_schema(
         summary="Run content skill",
@@ -525,7 +522,7 @@ class ContentViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
             "Supported skill names are content_classification, relevance_scoring, summarization, and find_related."
         ),
         tags=["AI Processing"],
-        parameters=[TENANT_ID_PARAMETER, SKILL_NAME_PARAMETER],
+        parameters=[PROJECT_ID_PARAMETER, SKILL_NAME_PARAMETER],
         request=None,
         responses={
             201: SkillResultSerializer,
@@ -562,66 +559,66 @@ class ContentViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-@document_tenant_owned_viewset(
+@document_project_owned_viewset(
     resource_plural="skill results",
     resource_singular="skill result",
-    create_description="Create a new skill result for tenant content. The referenced content must belong to the selected tenant.",
+    create_description="Create a new skill result for project content. The referenced content must belong to the selected project.",
     tag="AI Processing",
     action_overrides=build_crud_action_overrides(
         SkillResultSerializer,
-        resource_plural="skill results for the selected tenant",
+        resource_plural="skill results for the selected project",
         resource_singular="skill result",
         retrieve_examples=[SKILL_RESULT_RESPONSE_EXAMPLE],
     ),
 )
-class SkillResultViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
+class SkillResultViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = SkillResultSerializer
-    queryset = SkillResult.objects.select_related("content", "tenant", "superseded_by")
+    queryset = SkillResult.objects.select_related("content", "project", "superseded_by")
 
 
-@document_tenant_owned_viewset(
+@document_project_owned_viewset(
     resource_plural="user feedback entries",
     resource_singular="user feedback entry",
-    create_description="Create a new feedback entry for content in the selected tenant. The authenticated user is recorded automatically.",
+    create_description="Create a new feedback entry for content in the selected project. The authenticated user is recorded automatically.",
     tag="Feedback",
     action_overrides=build_crud_action_overrides(
         UserFeedbackSerializer,
-        resource_plural="user feedback entries for the selected tenant",
+        resource_plural="user feedback entries for the selected project",
         resource_singular="user feedback entry",
     ),
 )
-class UserFeedbackViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
+class UserFeedbackViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = UserFeedbackSerializer
-    queryset = UserFeedback.objects.select_related("content", "tenant", "user")
+    queryset = UserFeedback.objects.select_related("content", "project", "user")
 
     def perform_create(self, serializer):
-        serializer.save(tenant=self.get_tenant(), user=self.request.user)
+        serializer.save(project=self.get_project(), user=self.request.user)
 
 
-@document_tenant_owned_viewset(
+@document_project_owned_viewset(
     resource_plural="ingestion runs",
     resource_singular="ingestion run",
-    create_description="Create a new ingestion run record for the selected tenant to track a content ingestion attempt and its status.",
+    create_description="Create a new ingestion run record for the selected project to track a content ingestion attempt and its status.",
     tag="Ingestion",
     action_overrides=build_crud_action_overrides(
         IngestionRunSerializer,
-        resource_plural="ingestion runs for the selected tenant",
+        resource_plural="ingestion runs for the selected project",
         resource_singular="ingestion run",
     ),
 )
-class IngestionRunViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
+class IngestionRunViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = IngestionRunSerializer
-    queryset = IngestionRun.objects.select_related("tenant")
+    queryset = IngestionRun.objects.select_related("project")
 
 
-@document_tenant_owned_viewset(
+@document_project_owned_viewset(
     resource_plural="source configurations",
     resource_singular="source configuration",
-    create_description="Create a new source configuration for the selected tenant. Plugin-specific configuration is validated before the record is saved.",
+    create_description="Create a new source configuration for the selected project. Plugin-specific configuration is validated before the record is saved.",
     tag="Ingestion",
     action_overrides=build_crud_action_overrides(
         SourceConfigSerializer,
-        resource_plural="source configurations for the selected tenant",
+        resource_plural="source configurations for the selected project",
         resource_singular="source configuration",
         create_examples=[
             SOURCE_CONFIG_CREATE_REQUEST_EXAMPLE,
@@ -632,22 +629,22 @@ class IngestionRunViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
         retrieve_examples=[SOURCE_CONFIG_RESPONSE_EXAMPLE],
     ),
 )
-class SourceConfigViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
+class SourceConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = SourceConfigSerializer
-    queryset = SourceConfig.objects.select_related("tenant")
+    queryset = SourceConfig.objects.select_related("project")
 
 
-@document_tenant_owned_viewset(
+@document_project_owned_viewset(
     resource_plural="review queue entries",
     resource_singular="review queue entry",
-    create_description="Create a new review queue entry for the selected tenant. The referenced content must belong to the same tenant.",
+    create_description="Create a new review queue entry for the selected project. The referenced content must belong to the same project.",
     tag="Review Queue",
     action_overrides=build_crud_action_overrides(
         ReviewQueueSerializer,
-        resource_plural="review queue entries for the selected tenant",
+        resource_plural="review queue entries for the selected project",
         resource_singular="review queue entry",
     ),
 )
-class ReviewQueueViewSet(TenantOwnedQuerysetMixin, viewsets.ModelViewSet):
+class ReviewQueueViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = ReviewQueueSerializer
-    queryset = ReviewQueue.objects.select_related("content", "tenant")
+    queryset = ReviewQueue.objects.select_related("content", "project")
