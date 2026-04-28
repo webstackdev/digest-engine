@@ -7,7 +7,6 @@ from django.urls import reverse
 from core.models import Content, IntakeAllowlist, NewsletterIntake, NewsletterIntakeStatus, Project
 from core.newsletters import compute_resend_signature, extract_newsletter_items, sanitize_newsletter_html
 
-
 pytestmark = pytest.mark.django_db
 
 

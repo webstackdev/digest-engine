@@ -1,11 +1,10 @@
-from http import HTTPStatus
 import json
+from http import HTTPStatus
 from typing import cast
 
 from django.conf import settings as django_settings
 from django.db import connection
-from django.http import HttpRequest
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt

@@ -5,7 +5,15 @@ from django.conf import settings
 from django.utils import timezone
 
 from core.embeddings import upsert_content_embedding
-from core.models import Content, IngestionRun, IntakeAllowlist, NewsletterIntake, NewsletterIntakeStatus, RunStatus, SourceConfig
+from core.models import (
+    Content,
+    IngestionRun,
+    IntakeAllowlist,
+    NewsletterIntake,
+    NewsletterIntakeStatus,
+    RunStatus,
+    SourceConfig,
+)
 from core.newsletters import extract_newsletter_items
 from core.pipeline import (
     RELEVANCE_SKILL_NAME,
