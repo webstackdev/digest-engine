@@ -1,6 +1,16 @@
 import type { Content, ReviewQueueItem, UserFeedback } from "@/lib/types"
 import { getSearchParam, type SearchParams } from "@/lib/view-helpers"
 
+/**
+ * Supported dashboard tabs derived from the `view` search param.
+ *
+ * Unknown or missing values are normalized to `"content"` by `buildDashboardView`.
+ *
+ * @example
+ * ```ts
+ * const view: DashboardView = "review"
+ * ```
+ */
 export type DashboardView = "content" | "review"
 
 type BuildDashboardViewArgs = {
@@ -11,6 +21,36 @@ type BuildDashboardViewArgs = {
   now?: Date
 }
 
+/**
+ * Build the derived dashboard state used by the project home page.
+ *
+ * This helper keeps filtering, sorting, and summary-count logic in one place so the
+ * page layer can render a stable view model from API payloads and URL search params.
+ * Missing or invalid search params fall back to safe defaults: unknown views become
+ * `"content"`, missing or invalid day filters become `30`, and empty filters do not
+ * exclude any content.
+ *
+ * @param args - Dashboard source data and URL search params.
+ * @param args.contents - Project content rows. Inactive content is excluded from the
+ * returned filters and lists.
+ * @param args.reviewQueue - Review queue rows used to compute unresolved review items.
+ * @param args.feedback - Feedback rows used for positive and negative count summaries.
+ * @param args.searchParams - App Router search params. `null`, `undefined`, or unknown
+ * values are normalized through `getSearchParam` and the helper defaults.
+ * @param args.now - Reference date for the rolling `days` filter. Omit to use the
+ * current time.
+ * @returns A dashboard-ready view model with filtered content, lookup maps, available
+ * filter options, and summary counts.
+ * @example
+ * ```ts
+ * const dashboardView = buildDashboardView({
+ *   contents,
+ *   reviewQueue,
+ *   feedback,
+ *   searchParams: { view: "review", days: "7" },
+ * })
+ * ```
+ */
 export function buildDashboardView({
   contents,
   reviewQueue,

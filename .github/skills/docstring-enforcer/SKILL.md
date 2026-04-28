@@ -1,25 +1,37 @@
 ---
 name: docstring-enforcer
-description: "Use when adding or revising documentation for Python modules, classes, functions, Django admin or API code, or exported TypeScript and React utilities. Trigger phrases include docstring, JSDoc, document this file, improve docs, admindoc, and explain intent in code."
+description: "Use when adding or revising documentation for Python modules/Django code or exported TypeScript/React utilities. Triggers: docstring, JSDoc, document this file, lib utilities, improve docs, and explain intent."
 ---
 
 # Docstring Enforcer Skill
 
-Use this skill for meaningful documentation work, not blanket boilerplate.
+Use this skill for meaningful documentation that explains *why* code exists and *how* it handles edge cases.
 
 ## Rules
 
-- **Python:** Use Google-style docstrings and PEP 257 conventions.
-- Add module docstrings for important runtime modules.
-- Document public classes, public functions, and non-obvious helpers.
-- Use `Args:`, `Returns:`, and `Raises:` only when they actually apply. Do not invent empty sections.
-- Favor intent and workflow context over repeating the function name.
-- Trivial dunder methods, obvious properties, and mechanical accessors may use a one-line docstring or no docstring when the code is already self-explanatory.
-- **TypeScript/React:** Use JSDoc for exported utilities, hooks, route handlers, and non-trivial components when behavior is not obvious from types alone.
-- Keep docs aligned with actual runtime behavior and field names.
+### 🐍 Python (Google Style)
+
+- **Standard:** Use Google-style docstrings and PEP 257.
+- **Structure:** Include `Args:`, `Returns:`, and `Raises:` only when they provide value. Do not add empty sections.
+- **Django Specifics:** Document the "why" behind complex QuerySets or signal receivers. Trivial dunder methods or obvious model fields can remain undocumented if self-explanatory.
+- **Intent:** Favor workflow context over repeating the function name (e.g., "Invalidates the cache after user logout" vs "Does logout stuff").
+
+### ⚛️ TypeScript & Next.js (JSDoc Style)
+
+- **Standard:** Use JSDoc for exported utilities, hooks, and complex components.
+- **Frontend `lib/` Policy:** ALL shared utilities in `lib/` must include:
+    - **@example:** A brief code snippet showing typical usage.
+    - **Edge Cases:** Describe behavior for `null`, `undefined`, or empty strings in `@param` or `@returns`.
+- **Clarity:** Do not just restate TypeScript types. Explain constraints (e.g., "The string must be a valid ISO-8601 date").
 
 ## References
 
-- Good backend examples live in `core/models.py`, `core/pipeline.py`, `core/tasks.py`, and `core/newsletters.py`.
-- Use `docs/DEVELOPER_GUIDE.md` to understand where a file sits in the overall workflow before documenting it.
-- Update nearby docs in `docs/` when the code change also changes architecture or workflow behavior.
+- **Gold Standard (Python):** See `core/models.py` and `core/pipeline.py`.
+- **Gold Standard (TS/lib):** See `frontend/src/lib/formatters.ts` (if applicable) for example-driven JSDoc.
+- **Context:** Check `docs/DEVELOPER_GUIDE.md` to ensure docs align with overall system architecture.
+
+## Workflow
+
+1. Analyze the file to understand its role in the Django/Next.js bridge.
+2. If documentation is missing or outdated, rewrite it using the styles above.
+3. Ensure that if a Django API field changes, the corresponding Next.js JSDoc for that field is also flagged for an update.
