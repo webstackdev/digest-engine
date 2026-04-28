@@ -2,6 +2,18 @@ import { NextResponse } from "next/server"
 
 import { createEntity } from "@/lib/api"
 
+/**
+ * Build a redirect target for the entity creation form handler.
+ *
+ * The route uses this helper to return users to the entities UI with a single flash
+ * message encoded in the query string. Relative redirects are resolved against the
+ * incoming request URL.
+ *
+ * @param request - Incoming request used as the base URL for relative redirects.
+ * @param redirectTo - Caller-provided redirect target, or a fallback path.
+ * @param params - Query params to append to the redirect target.
+ * @returns A redirect URL with the provided flash-message params.
+ */
 function buildRedirectUrl(
   request: Request,
   redirectTo: string,
@@ -14,6 +26,22 @@ function buildRedirectUrl(
   return url
 }
 
+/**
+ * Handle entity creation form submissions.
+ *
+ * The entities page posts `FormData` here so creation can reuse the shared backend
+ * API helper without exposing backend credentials to the browser. On success the
+ * handler redirects back to the requested UI location with a success flash message.
+ * Errors are converted into redirect query params so the page can render inline
+ * feedback after the navigation completes.
+ *
+ * @param request - Incoming form submission request.
+ * @returns A redirect response pointing back to the entities UI.
+ * @example
+ * ```ts
+ * const response = await POST(request)
+ * ```
+ */
 export async function POST(request: Request) {
   const formData = await request.formData()
   const redirectTo = String(formData.get("redirectTo") || "/entities")

@@ -23,6 +23,43 @@ type ContentDetailPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
+/**
+ * Derive the pending skill actions that should hydrate the client action bar.
+ *
+ * Only the latest non-superseded relevance and summarization results should control the
+ * pending state shown to the editor. Completed, failed, and superseded records are ignored
+ * so the page reflects only active background work for the current content item.
+ *
+ * @param skillResults - Skill results already filtered to the current content item.
+ * @returns The pending or running skill names relevant to the action bar.
+ */
+export function deriveInitialPendingSkills(
+  skillResults: Awaited<ReturnType<typeof getProjectSkillResults>>,
+) {
+  return skillResults
+    .filter(
+      (item) =>
+        item.superseded_by === null &&
+        (item.skill_name === "relevance_scoring" ||
+          item.skill_name === "summarization") &&
+        (item.status === "pending" || item.status === "running"),
+    )
+    .map((item) => item.skill_name as "relevance_scoring" | "summarization")
+}
+
+/**
+ * Render the detail view for a single content item within the selected project.
+ *
+ * This page joins the content record with persisted skill results, review queue entries,
+ * and user feedback so editors can inspect raw article text and workflow state in one place.
+ * When no project is available for the configured API user, the page returns a guarded empty
+ * state instead of issuing project-scoped API calls.
+ *
+ * @param props - Async server component props from the App Router.
+ * @param props.params - Route params promise containing the content id.
+ * @param props.searchParams - Search params promise containing the optional `project`, `error`, and `message` values.
+ * @returns The rendered content detail page or the no-project empty state.
+ */
 export default async function ContentDetailPage({
   params,
   searchParams,
@@ -42,7 +79,7 @@ export default async function ContentDetailPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -70,15 +107,7 @@ export default async function ContentDetailPage({
     (item) => item.feedback_type === "downvote",
   ).length
   const canSummarize = (content.relevance_score ?? 0) >= 0.7
-  const initialPendingSkills = contentSkillResults
-    .filter(
-      (item) =>
-        item.superseded_by === null &&
-        (item.skill_name === "relevance_scoring" ||
-          item.skill_name === "summarization") &&
-        (item.status === "pending" || item.status === "running"),
-    )
-    .map((item) => item.skill_name as "relevance_scoring" | "summarization")
+  const initialPendingSkills = deriveInitialPendingSkills(contentSkillResults)
 
   return (
     <AppShell
@@ -88,10 +117,10 @@ export default async function ContentDetailPage({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
+        <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
+        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
         <div className="space-y-4">
@@ -227,7 +256,7 @@ export default async function ContentDetailPage({
                 <span>Confidence {formatScore(skillResult.confidence)}</span>
               </div>
               {skillResult.error_message ? (
-                <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">
+                <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">
                   {skillResult.error_message}
                 </div>
               ) : null}

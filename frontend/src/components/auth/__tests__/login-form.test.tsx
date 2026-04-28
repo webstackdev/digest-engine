@@ -56,6 +56,25 @@ describe("LoginForm", () => {
     expect(refreshMock).toHaveBeenCalled()
   })
 
+  it("falls back to the callback URL when signIn succeeds without a redirect URL", async () => {
+    signInMock.mockResolvedValue({ url: null })
+
+    render(<LoginForm callbackUrl="/content/4?project=2" />)
+
+    fireEvent.change(screen.getByLabelText("Username or email"), {
+      target: { value: "alice@example.com" },
+    })
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "correct-horse-battery-staple" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }))
+
+    await waitFor(() => {
+      expect(pushMock).toHaveBeenCalledWith("/content/4?project=2")
+    })
+    expect(refreshMock).toHaveBeenCalled()
+  })
+
   it("renders an authentication error returned by next-auth", async () => {
     signInMock.mockResolvedValue({ error: "Invalid credentials" })
 

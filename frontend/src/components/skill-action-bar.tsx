@@ -23,13 +23,6 @@ type SkillActionResponse = {
   skillResult: SkillResult
 }
 
-const ghostButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50"
-const statusMessageClass =
-  "basis-full rounded-[18px] bg-ink/6 px-4 py-3 text-sm leading-6 text-muted"
-const errorMessageClass =
-  "basis-full rounded-[18px] bg-danger/14 px-4 py-3 text-sm leading-6 text-danger-ink"
-
 function isPendingStatus(status: SkillResult["status"]) {
   return status === "pending" || status === "running"
 }
@@ -42,6 +35,32 @@ function getSkillLabel(skillName: AsyncSkillName, isBusy: boolean) {
   return isBusy ? "Scoring relevance..." : "Explain relevance"
 }
 
+/**
+ * Render the per-content action buttons for running ad hoc AI skills.
+ *
+ * The component coordinates optimistic UI state with the App Router and React Query.
+ * It can start summarization or relevance scoring, poll for watched pending skills,
+ * and refresh the current page once asynchronous work settles so downstream panels
+ * render the latest `SkillResult` records. Summarization is disabled when the caller
+ * knows the content cannot be summarized, while pending or running skills lock their
+ * matching action button and show progress-oriented labels.
+ *
+ * @param props - Component props.
+ * @param props.projectId - Numeric project identifier used by the API routes.
+ * @param props.contentId - Numeric content identifier receiving the skill run.
+ * @param props.canSummarize - Whether summarization is allowed for the current content.
+ * @param props.initialPendingSkills - Skills already pending when the page first loads.
+ * @returns Action buttons plus inline status or error messages for queued skill runs.
+ * @example
+ * ```tsx
+ * <SkillActionBar
+ *   projectId={4}
+ *   contentId={9}
+ *   canSummarize
+ *   initialPendingSkills={[]}
+ * />
+ * ```
+ */
 export function SkillActionBar({
   projectId,
   contentId,
@@ -149,7 +168,7 @@ export function SkillActionBar({
   return (
     <>
       <button
-        className={ghostButtonClass}
+        className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
         disabled={!canSummarize || isBusy("summarization")}
         onClick={() => {
@@ -160,7 +179,7 @@ export function SkillActionBar({
         {getSkillLabel("summarization", isBusy("summarization"))}
       </button>
       <button
-        className={ghostButtonClass}
+        className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
         disabled={isBusy("relevance_scoring")}
         onClick={() => {
@@ -171,12 +190,12 @@ export function SkillActionBar({
         {getSkillLabel("relevance_scoring", isBusy("relevance_scoring"))}
       </button>
       {statusMessage ? (
-        <p className={statusMessageClass} role="status">
+        <p className="basis-full rounded-panel bg-ink/6 px-4 py-3 text-sm leading-6 text-muted" role="status">
           {statusMessage}
         </p>
       ) : null}
       {errorMessage ? (
-        <p className={errorMessageClass} role="alert">
+        <p className="basis-full rounded-panel bg-danger/14 px-4 py-3 text-sm leading-6 text-danger-ink" role="alert">
           {errorMessage}
         </p>
       ) : null}

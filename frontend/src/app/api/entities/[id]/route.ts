@@ -2,6 +2,18 @@ import { NextResponse } from "next/server"
 
 import { deleteEntity, updateEntity } from "@/lib/api"
 
+/**
+ * Build a redirect target for the entity form handlers.
+ *
+ * The route uses this helper to send users back to the entities screen while adding
+ * a single success or error flash message to the query string. Relative paths are
+ * resolved against the current request URL.
+ *
+ * @param request - Incoming request used as the base URL for relative redirects.
+ * @param redirectTo - Caller-provided redirect target, or a fallback path.
+ * @param params - Query params to append to the redirect target.
+ * @returns A redirect URL with the provided flash-message params.
+ */
 function buildRedirectUrl(
   request: Request,
   redirectTo: string,
@@ -14,6 +26,26 @@ function buildRedirectUrl(
   return url
 }
 
+/**
+ * Handle entity form submissions for update and delete actions.
+ *
+ * The page layer posts `FormData` here so it can reuse the shared API helpers without
+ * exposing backend credentials to the browser. The handler reads the dynamic entity id,
+ * routes `intent=delete` to the delete helper, otherwise updates the entity, and then
+ * redirects back to the requested UI location with a success or error flash message.
+ * Missing form fields are normalized to empty strings to preserve the current backend
+ * serializer contract.
+ *
+ * @param request - Incoming form submission request.
+ * @param context - Route params containing the entity id.
+ * @returns A redirect response pointing back to the entities UI.
+ * @example
+ * ```ts
+ * const response = await POST(request, {
+ *   params: Promise.resolve({ id: "9" }),
+ * })
+ * ```
+ */
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },

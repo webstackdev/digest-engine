@@ -8,6 +8,7 @@ export default tseslint.config(
   {
     ignores: [
       ".next/**",
+      "coverage/**",
       "node_modules/**",
       "next-env.d.ts",
       "tsconfig.tsbuildinfo",

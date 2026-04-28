@@ -25,7 +25,12 @@ Use this skill to add the smallest effective tests around the changed behavior.
 	- `core/tests/test_newsletters.py`
 	- `core/tests/test_pipeline.py`
 - For frontend work, extend the nearest existing `__tests__` file under `frontend/src/components/` or `frontend/src/lib/`.
+- When adding new frontend tests, keep imports sorted to satisfy the repo's ESLint import-order rules. If you hit `Run autofix to sort these imports!`, fix the import block or run file-scoped ESLint before moving on.
 - After changing tests, run the narrowest relevant validation command first.
+- For Provider/Wrapper components, do not test state or initialization. Instead, render a consumer child component and assert that the context values or library configurations (like QueryClient options) match the expected project defaults.
+- For Server Components, prioritize unit testing exported helper functions (like deriveSourceStatus) for logic, and use integration tests to verify that API data is mapped correctly to the UI components (badges, tables, etc.). Mock all library API calls using vi.mock.
+- Out of Scope: Root layouts, static metadata, font configurations, and pure "pass-through" providers.
+- In Scope: Layouts with conditional rendering, breadcrumb logic, or role-based access checks.
 
 ## References
 
