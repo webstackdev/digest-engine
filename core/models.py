@@ -1,3 +1,10 @@
+"""Core domain models for projects, ingestion, and editorial review.
+
+The admin, API, Celery tasks, and AI pipeline all revolve around the models in this
+module. Adding model-level docstrings here gives Django admindocs a useful summary
+of the core entities new contributors interact with first.
+"""
+
 import secrets
 
 from django.conf import settings
@@ -6,20 +13,38 @@ from django.db import models
 
 
 def generate_project_intake_token() -> str:
+    """Generate the stable token used in project-specific intake email aliases.
+
+    Returns:
+        A random hex token that can be embedded in addresses like
+        ``intake+<token>@...`` to route inbound newsletters to a project.
+    """
+
     return secrets.token_hex(16)
 
 
 def generate_confirmation_token() -> str:
+    """Generate a one-time token for newsletter sender confirmation links.
+
+    Returns:
+        A URL-safe random token stored on an allowlist entry until the sender
+        confirms newsletter intake access.
+    """
+
     return secrets.token_urlsafe(24)
 
 
 class EntityType(models.TextChoices):
+    """Supported types of tracked entities within a project."""
+
     INDIVIDUAL = "individual", "Individual"
     VENDOR = "vendor", "Vendor"
     ORGANIZATION = "organization", "Organization"
 
 
 class SkillStatus(models.TextChoices):
+    """Execution states recorded for AI skill runs."""
+
     PENDING = "pending", "Pending"
     RUNNING = "running", "Running"
     COMPLETED = "completed", "Completed"
@@ -27,16 +52,22 @@ class SkillStatus(models.TextChoices):
 
 
 class FeedbackType(models.TextChoices):
+    """Editorial feedback signals that tune authority and ranking."""
+
     UPVOTE = "upvote", "Upvote"
     DOWNVOTE = "downvote", "Downvote"
 
 
 class SourcePluginName(models.TextChoices):
+    """Built-in ingestion plugins that can populate project content."""
+
     RSS = "rss", "RSS"
     REDDIT = "reddit", "Reddit"
 
 
 class NewsletterIntakeStatus(models.TextChoices):
+    """Lifecycle states for a raw inbound newsletter email."""
+
     PENDING = "pending", "Pending"
     EXTRACTED = "extracted", "Extracted"
     FAILED = "failed", "Failed"
@@ -44,12 +75,16 @@ class NewsletterIntakeStatus(models.TextChoices):
 
 
 class RunStatus(models.TextChoices):
+    """Outcome states for ingestion runs."""
+
     RUNNING = "running", "Running"
     SUCCESS = "success", "Success"
     FAILED = "failed", "Failed"
 
 
 class ReviewReason(models.TextChoices):
+    """Reasons content is pushed to the manual review queue."""
+
     LOW_CONFIDENCE_CLASSIFICATION = (
         "low_confidence_classification",
         "Low Confidence Classification",
@@ -58,11 +93,20 @@ class ReviewReason(models.TextChoices):
 
 
 class ReviewResolution(models.TextChoices):
+    """Human outcomes for review queue items."""
+
     HUMAN_APPROVED = "human_approved", "Human Approved"
     HUMAN_REJECTED = "human_rejected", "Human Rejected"
 
 
 class Project(models.Model):
+    """Represents a newsletter workspace owned by a Django auth group.
+
+    A project defines the editorial topic, retention policy, and email-intake
+    identity used by all downstream ingestion, relevance scoring, and review flows.
+    Most other core models are scoped to a single project.
+    """
+
     name = models.CharField(max_length=255)
     group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="projects")
     topic_description = models.TextField()
@@ -84,6 +128,12 @@ class Project(models.Model):
 
 
 class ProjectConfig(models.Model):
+    """Stores tunable scoring parameters for a single project.
+
+    These values let the application adjust how strongly upvotes, downvotes, and
+    score decay influence entity authority over time without changing code.
+    """
+
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name="config"
     )
@@ -100,6 +150,12 @@ class ProjectConfig(models.Model):
 
 
 class Entity(models.Model):
+    """Represents a person, vendor, or organization tracked inside a project.
+
+    Content can optionally link to an entity so authority signals and editorial
+    curation can accumulate around a known subject instead of isolated articles.
+    """
+
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="entities"
     )
@@ -128,6 +184,14 @@ class Entity(models.Model):
 
 
 class Content(models.Model):
+    """Stores an ingested content item that may appear in a newsletter.
+
+    A content row is the canonical record for fetched articles, newsletter links,
+    or other source items. It keeps the raw text used for embedding, skill output,
+    and editorial review, and it also links the row to its Qdrant vector via
+    ``embedding_id``.
+    """
+
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="contents"
     )
@@ -166,6 +230,13 @@ class Content(models.Model):
 
 
 class IntakeAllowlist(models.Model):
+    """Tracks who is allowed to send newsletters into a project inbox.
+
+    When the first message arrives from a sender, the system creates an allowlist
+    entry and emails a confirmation link. After confirmation, future inbound
+    messages from the same sender can be processed automatically.
+    """
+
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="intake_allowlist"
     )
@@ -190,10 +261,19 @@ class IntakeAllowlist(models.Model):
 
     @property
     def is_confirmed(self) -> bool:
+        """Return whether the sender has confirmed newsletter intake access."""
+
         return self.confirmed_at is not None
 
 
 class NewsletterIntake(models.Model):
+    """Stores a raw inbound newsletter email before extraction.
+
+    Intake rows preserve the original email payload, deduplicate by message ID,
+    and record whether extraction succeeded so the system can reprocess or audit
+    inbound newsletter handling later.
+    """
+
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="newsletter_intakes"
     )
@@ -222,6 +302,13 @@ class NewsletterIntake(models.Model):
 
 
 class SkillResult(models.Model):
+    """Persists the output of one AI skill execution for a content item.
+
+    Skill results provide an auditable history of classifications, relevance
+    scores, summaries, and related-content lookups, including model metadata,
+    latency, and any superseded reruns.
+    """
+
     content = models.ForeignKey(
         Content, on_delete=models.CASCADE, related_name="skill_results"
     )
@@ -256,6 +343,12 @@ class SkillResult(models.Model):
 
 
 class UserFeedback(models.Model):
+    """Records an editor's feedback on a specific content item.
+
+    Feedback is stored separately from the content row so the application can use
+    it as an explicit human signal when adjusting ranking and authority logic.
+    """
+
     content = models.ForeignKey(
         Content, on_delete=models.CASCADE, related_name="feedback"
     )
@@ -283,6 +376,12 @@ class UserFeedback(models.Model):
 
 
 class SourceConfig(models.Model):
+    """Configures one ingestion source for a project.
+
+    Each source config selects a plugin, stores its provider-specific settings,
+    and records the last successful fetch time used for incremental ingestion.
+    """
+
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="source_configs"
     )
@@ -302,6 +401,12 @@ class SourceConfig(models.Model):
 
 
 class IngestionRun(models.Model):
+    """Captures the outcome of one source-ingestion execution.
+
+    Run rows make ingestion observable in the admin by recording the source,
+    timestamps, item counts, and any error that stopped the fetch.
+    """
+
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="ingestion_runs"
     )
@@ -324,6 +429,13 @@ class IngestionRun(models.Model):
 
 
 class ReviewQueue(models.Model):
+    """Tracks content items that require a human decision.
+
+    The AI pipeline adds rows here when classification confidence is low or the
+    relevance score is borderline. Review outcomes are stored on the queue item so
+    editors can see why an article was escalated and how it was resolved.
+    """
+
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="review_queue_items"
     )

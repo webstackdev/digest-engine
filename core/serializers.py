@@ -1,3 +1,10 @@
+"""DRF serializers for project-scoped core models.
+
+These serializers enforce the project's access rules at the API boundary. They do
+more than simple field translation: several serializers limit related querysets to
+ the active project and validate that cross-project relationships cannot be posted.
+"""
+
 from django.contrib.auth.models import Group
 from rest_framework import serializers
 
@@ -18,7 +25,11 @@ from core.plugins import validate_plugin_config
 
 
 class ProjectScopedSerializerMixin:
+    """Limit serializer relationship fields to objects the current user can access."""
+
     def _filter_related_queryset(self, request):
+        """Constrain related-field querysets using the request user and project context."""
+
         user = request.user
         project = self.context.get("project")
         if "group" in self.fields:
@@ -50,6 +61,8 @@ class ProjectScopedSerializerMixin:
             self.fields["superseded_by"].queryset = skill_result_queryset
 
     def __init__(self, *args, **kwargs):
+        """Initialize the serializer and scope relation fields when authenticated."""
+
         super().__init__(*args, **kwargs)
         request = self.context.get("request")
         if request and request.user.is_authenticated:
@@ -57,6 +70,7 @@ class ProjectScopedSerializerMixin:
 
 
 class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+    """Serialize top-level project records."""
 
     class Meta:
         model = Project
@@ -76,6 +90,8 @@ class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
 class ProjectConfigSerializer(
     ProjectScopedSerializerMixin, serializers.ModelSerializer
 ):
+    """Serialize per-project authority and scoring settings."""
+
     class Meta:
         model = ProjectConfig
         fields = [
@@ -89,6 +105,8 @@ class ProjectConfigSerializer(
 
 
 class EntitySerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+    """Serialize tracked entities for a project."""
+
     class Meta:
         model = Entity
         fields = [
@@ -110,6 +128,8 @@ class EntitySerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer
 
 
 class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+    """Serialize ingested content items and enforce project/entity consistency."""
+
     class Meta:
         model = Content
         fields = [
@@ -133,6 +153,8 @@ class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
         read_only_fields = ["id", "project", "ingested_at", "embedding_id"]
 
     def validate(self, attrs):
+        """Reject entity assignments that point at a different project."""
+
         project = (
             self.context.get("project")
             or attrs.get("project")
@@ -147,6 +169,8 @@ class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
 
 
 class SkillResultSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+    """Serialize persisted AI skill executions for content."""
+
     class Meta:
         model = SkillResult
         fields = [
@@ -166,6 +190,8 @@ class SkillResultSerializer(ProjectScopedSerializerMixin, serializers.ModelSeria
         read_only_fields = ["id", "project", "created_at"]
 
     def validate(self, attrs):
+        """Reject skill results whose content does not belong to the active project."""
+
         project = (
             self.context.get("project")
             or attrs.get("project")
@@ -180,6 +206,8 @@ class SkillResultSerializer(ProjectScopedSerializerMixin, serializers.ModelSeria
 
 
 class UserFeedbackSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+    """Serialize editor feedback attached to a content item."""
+
     user = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
@@ -188,6 +216,8 @@ class UserFeedbackSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
         read_only_fields = ["id", "project", "user", "created_at"]
 
     def validate(self, attrs):
+        """Reject feedback that targets content outside the active project."""
+
         project = (
             self.context.get("project")
             or attrs.get("project")
@@ -202,6 +232,8 @@ class UserFeedbackSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
 
 
 class IngestionRunSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+    """Serialize ingestion-run audit records."""
+
     class Meta:
         model = IngestionRun
         fields = [
@@ -219,6 +251,8 @@ class IngestionRunSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
 
 
 class SourceConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+    """Serialize source-plugin configuration and normalize provider settings."""
+
     class Meta:
         model = SourceConfig
         fields = [
@@ -232,6 +266,8 @@ class SourceConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
         read_only_fields = ["id", "project", "last_fetched_at"]
 
     def validate(self, attrs):
+        """Validate plugin-specific configuration with the plugin registry."""
+
         plugin_name = attrs.get("plugin_name") or getattr(
             self.instance, "plugin_name", None
         )
@@ -245,6 +281,8 @@ class SourceConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
 
 
 class ReviewQueueSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+    """Serialize manual-review queue items for project content."""
+
     class Meta:
         model = ReviewQueue
         fields = [
@@ -260,6 +298,8 @@ class ReviewQueueSerializer(ProjectScopedSerializerMixin, serializers.ModelSeria
         read_only_fields = ["id", "project", "created_at"]
 
     def validate(self, attrs):
+        """Reject review items whose content does not belong to the active project."""
+
         project = (
             self.context.get("project")
             or attrs.get("project")
@@ -276,6 +316,8 @@ class ReviewQueueSerializer(ProjectScopedSerializerMixin, serializers.ModelSeria
 class IntakeAllowlistSerializer(
     ProjectScopedSerializerMixin, serializers.ModelSerializer
 ):
+    """Serialize confirmed and pending newsletter sender allowlist entries."""
+
     class Meta:
         model = IntakeAllowlist
         fields = [
@@ -292,6 +334,8 @@ class IntakeAllowlistSerializer(
 class NewsletterIntakeSerializer(
     ProjectScopedSerializerMixin, serializers.ModelSerializer
 ):
+    """Serialize raw inbound newsletter messages captured for a project."""
+
     class Meta:
         model = NewsletterIntake
         fields = [

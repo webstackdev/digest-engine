@@ -1,3 +1,5 @@
+"""Reddit source plugin used for trend and discussion ingestion."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -10,10 +12,14 @@ from core.plugins.base import ContentItem, SourcePlugin
 
 
 class RedditSourcePlugin(SourcePlugin):
+    """Fetch posts from a configured subreddit listing."""
+
     required_config_fields = ("subreddit",)
 
     @classmethod
     def validate_config(cls, config: object) -> dict:
+        """Validate Reddit-specific config such as listing and limit values."""
+
         normalized_config = super().validate_config(config)
         listing = normalized_config.get("listing", "both")
         if listing not in {"new", "hot", "both"}:
@@ -25,6 +31,8 @@ class RedditSourcePlugin(SourcePlugin):
         return normalized_config
 
     def fetch_new_content(self, since: datetime | None) -> list[ContentItem]:
+        """Fetch subreddit submissions newer than ``since`` and normalize them."""
+
         subreddit = self._client().subreddit(self.source_config.config["subreddit"])
         items: list[ContentItem] = []
         seen_submission_ids: set[str] = set()
@@ -49,14 +57,20 @@ class RedditSourcePlugin(SourcePlugin):
         return items
 
     def health_check(self) -> bool:
+        """Verify that the configured subreddit can be queried successfully."""
+
         subreddit = self._client().subreddit(self.source_config.config["subreddit"])
         next(subreddit.new(limit=1), None)
         return True
 
     def match_entity_for_url(self, url: str):
+        """Skip entity matching for Reddit because posts are not entity-driven."""
+
         return None
 
     def _iter_submissions(self, subreddit):
+        """Yield submissions from the configured listing modes without duplicates."""
+
         listing = self.source_config.config.get("listing", "both")
         limit = self.source_config.config.get("limit", 25)
         if listing in {"new", "both"}:
@@ -66,6 +80,12 @@ class RedditSourcePlugin(SourcePlugin):
 
     @staticmethod
     def _client():
+        """Create the authenticated PRAW client from Django settings.
+
+        Raises:
+            RuntimeError: If Reddit credentials are missing.
+        """
+
         if not settings.REDDIT_CLIENT_ID or not settings.REDDIT_CLIENT_SECRET:
             raise RuntimeError("Reddit credentials are not configured.")
         return praw.Reddit(

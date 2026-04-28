@@ -1,3 +1,5 @@
+"""Heuristics for extracting article candidates from newsletter emails."""
+
 from __future__ import annotations
 
 import re
@@ -9,6 +11,8 @@ URL_PATTERN = re.compile(r"https?://[^\s<>'\"]+")
 
 @dataclass(slots=True)
 class ExtractedNewsletterItem:
+    """Represents one link candidate extracted from a newsletter email."""
+
     url: str
     title: str
     excerpt: str
@@ -16,6 +20,8 @@ class ExtractedNewsletterItem:
 
 
 class _NewsletterLinkParser(HTMLParser):
+    """Collect anchor tags with HTTP(S) targets from newsletter HTML."""
+
     def __init__(self) -> None:
         super().__init__()
         self.links: list[dict[str, str]] = []
@@ -53,6 +59,17 @@ class _NewsletterLinkParser(HTMLParser):
 def extract_newsletter_items(
     *, subject: str, raw_html: str, raw_text: str
 ) -> list[ExtractedNewsletterItem]:
+    """Extract ordered newsletter items from HTML anchors and plain-text URLs.
+
+    Args:
+        subject: Subject line used as a fallback title.
+        raw_html: HTML body of the newsletter email.
+        raw_text: Plain-text body of the newsletter email.
+
+    Returns:
+        A de-duplicated ordered list of extracted article candidates.
+    """
+
     parser = _NewsletterLinkParser()
     if raw_html:
         parser.feed(raw_html)

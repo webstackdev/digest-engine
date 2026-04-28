@@ -1,3 +1,5 @@
+"""Celery tasks that drive ingestion, AI processing, and newsletter extraction."""
+
 import logging
 
 from celery import shared_task
@@ -29,6 +31,15 @@ logger = logging.getLogger(__name__)
 
 @shared_task(name="core.tasks.run_ingestion")
 def run_ingestion(source_config_id: int):
+    """Fetch new content for one source config and record an ingestion run.
+
+    Args:
+        source_config_id: Primary key of the source configuration to ingest.
+
+    Returns:
+        A summary containing fetched and ingested item counts.
+    """
+
     source_config = SourceConfig.objects.select_related("project").get(
         pk=source_config_id
     )
@@ -61,6 +72,12 @@ def run_ingestion(source_config_id: int):
 
 @shared_task(name="core.tasks.run_all_ingestions")
 def run_all_ingestions():
+    """Queue ingestion for every active source configuration.
+
+    Returns:
+        The number of source configurations scheduled.
+    """
+
     source_config_ids = list(
         SourceConfig.objects.filter(is_active=True).values_list("id", flat=True)
     )
@@ -74,20 +91,37 @@ def run_all_ingestions():
 
 @shared_task(name="core.tasks.process_content")
 def process_content(content_id: int):
+    """Run the main AI pipeline for a stored content item."""
+
     return process_content_pipeline(content_id)
 
 
 @shared_task(name="core.tasks.run_relevance_scoring_skill", ignore_result=True)
 def run_relevance_scoring_skill(skill_result_id: int):
+    """Execute a pending ad hoc relevance skill result in the background."""
+
     return execute_background_skill_result(skill_result_id, RELEVANCE_SKILL_NAME)
 
 
 @shared_task(name="core.tasks.run_summarization_skill", ignore_result=True)
 def run_summarization_skill(skill_result_id: int):
+    """Execute a pending ad hoc summarization skill result in the background."""
+
     return execute_background_skill_result(skill_result_id, SUMMARIZATION_SKILL_NAME)
 
 
 def queue_content_skill(content: Content, skill_name: str):
+    """Create and dispatch an asynchronous ad hoc skill for a content row.
+
+    Args:
+        content: The content row to process.
+        skill_name: Supported async skill name.
+
+    Returns:
+        The refreshed ``SkillResult`` row after the task has been queued or eagerly
+        executed.
+    """
+
     skill_result = create_pending_skill_result(content, skill_name)
 
     if skill_name == RELEVANCE_SKILL_NAME:
@@ -108,6 +142,8 @@ def queue_content_skill(content: Content, skill_name: str):
 
 
 def _ingest_source_config(source_config: SourceConfig) -> tuple[int, int]:
+    """Fetch items from a configured source and create new content rows."""
+
     plugin = get_plugin_for_source_config(source_config)
     fetched_items = plugin.fetch_new_content(source_config.last_fetched_at)
     ingested_count = 0
@@ -133,6 +169,15 @@ def _ingest_source_config(source_config: SourceConfig) -> tuple[int, int]:
 
 @shared_task(name="core.tasks.process_newsletter_intake")
 def process_newsletter_intake(intake_id: int):
+    """Convert a stored newsletter email into content rows.
+
+    Args:
+        intake_id: Primary key of the ``NewsletterIntake`` row to process.
+
+    Returns:
+        A summary containing the final intake status and ingested item count.
+    """
+
     intake = NewsletterIntake.objects.select_related("project").get(pk=intake_id)
 
     allowlist = IntakeAllowlist.objects.filter(
@@ -191,6 +236,8 @@ def process_newsletter_intake(intake_id: int):
 
 
 def _schedule_content_processing(content: Content) -> None:
+    """Ensure a content row is embedded before it enters the AI pipeline."""
+
     upsert_content_embedding(content)
     if settings.CELERY_TASK_ALWAYS_EAGER:
         process_content(content.id)

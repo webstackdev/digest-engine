@@ -1,3 +1,10 @@
+"""Django admin configuration for the core editorial workflow.
+
+These admin classes are intentionally richer than default CRUD screens. They expose
+the health, traceability, and review information editors and operators need while
+running ingestion and AI-assisted content curation.
+"""
+
 import json
 
 from django.contrib import admin, messages
@@ -24,6 +31,8 @@ from core.plugins import get_plugin_for_source_config, validate_plugin_config
 
 @admin.register(Project)
 class ProjectAdmin(ExportActionMixin, admin.ModelAdmin):
+    """Admin configuration for top-level project workspaces."""
+
     list_display = ("name", "group", "content_retention_days", "created_at")
 
     # Better navigation
@@ -42,6 +51,8 @@ class ProjectAdmin(ExportActionMixin, admin.ModelAdmin):
 
 @admin.register(ProjectConfig)
 class ProjectConfigAdmin(admin.ModelAdmin):
+    """Admin configuration for per-project scoring settings."""
+
     list_display = (
         "project",
         "upvote_authority_weight",
@@ -52,11 +63,15 @@ class ProjectConfigAdmin(admin.ModelAdmin):
 
 @admin.register(Entity)
 class EntityAdmin(admin.ModelAdmin):
+    """Admin configuration for tracked people, vendors, and organizations."""
+
     # Replace 'authority_score' with your new method name
     list_display = ("name", "project", "type", "colored_score", "created_at")
 
     @admin.display(description="Authority Score", ordering="authority_score")
     def colored_score(self, obj):
+        """Render the authority score with a traffic-light color cue."""
+
         # Choose a color based on the value
         if obj.authority_score >= 80:
             color = "green"
@@ -73,13 +88,19 @@ class EntityAdmin(admin.ModelAdmin):
 
 
 class HighValueFilter(admin.SimpleListFilter):
+    """Filter content down to high-value reference items."""
+
     title = "Content Value"
     parameter_name = "value_tier"
 
     def lookups(self, request, model_admin):
+        """Return the custom filter options displayed in the admin sidebar."""
+
         return (("high_value", "🔥 High Value (Score > 80 & Reference)"),)
 
     def queryset(self, request, queryset):
+        """Apply the high-value filter when it is selected."""
+
         if self.value() == "high_value":
             return queryset.filter(relevance_score__gt=80, is_reference=True)
         return queryset
@@ -87,6 +108,8 @@ class HighValueFilter(admin.SimpleListFilter):
 
 @admin.register(Content)
 class ContentAdmin(admin.ModelAdmin):
+    """Admin view for curated content plus trace and score context."""
+
     list_display = (
         "display_relevance",
         "is_active",
@@ -120,7 +143,7 @@ class ContentAdmin(admin.ModelAdmin):
 
     @admin.display(description="AI Trace")
     def view_trace(self, obj):
-        """Link to the latest external trace when present, otherwise the internal skill run history."""
+        """Link to the latest external trace or fall back to stored skill history."""
         from urllib.parse import urlencode
 
         from django.conf import settings
@@ -211,6 +234,8 @@ class ContentAdmin(admin.ModelAdmin):
 
     @admin.display(description="Score")
     def display_relevance(self, obj):
+        """Render the relevance score with a coarse color-coded severity band."""
+
         if obj.relevance_score is None:
             return "-"
         color = (
@@ -221,6 +246,8 @@ class ContentAdmin(admin.ModelAdmin):
         return format_html('<b style="color: {};">{}%</b>', color, obj.relevance_score)
 
     def changelist_view(self, request, extra_context=None):
+        """Augment the changelist with content dashboard statistics."""
+
         queryset = self.get_queryset(request)
         metrics = queryset.aggregate(avg_score=Avg("relevance_score"))
 
@@ -243,6 +270,8 @@ class ContentAdmin(admin.ModelAdmin):
 
     @admin.action(description="Generate Ideas for Newsletter")
     def generate_newsletter_ideas(self, request, queryset):
+        """Queue pipeline processing for the selected content items."""
+
         from core.tasks import process_content
 
         content_ids = list(queryset.values_list("id", flat=True))
@@ -257,6 +286,8 @@ class ContentAdmin(admin.ModelAdmin):
 
 @admin.register(SkillResult)
 class SkillResultAdmin(ModelAdmin):
+    """Admin view for AI skill history, retries, and result inspection."""
+
     list_display = (
         "skill_name",
         "get_content_link",
@@ -317,10 +348,14 @@ class SkillResultAdmin(ModelAdmin):
 
     @admin.display(description="Content")
     def get_content_link(self, obj):
+        """Return a compact content title for the table view."""
+
         return obj.content.title[:30] + "..." if obj.content.title else "Untitled"
 
     @admin.display(description="Status")
     def display_status(self, obj):
+        """Render the skill status as a colored dot plus label."""
+
         status_value = str(obj.status).lower()
         colors = {"completed": "green", "failed": "red", "pending": "orange"}
         color = colors.get(status_value, "gray")
@@ -332,16 +367,22 @@ class SkillResultAdmin(ModelAdmin):
 
     @admin.display(description="Perf / Conf")
     def display_performance(self, obj):
+        """Show latency and confidence together in a compact cell."""
+
         latency = f"{obj.latency_ms}ms" if obj.latency_ms else "-"
         conf = f"{int(obj.confidence * 100)}%" if obj.confidence is not None else "-"
         return f"{latency} / {conf}"
 
     @admin.display(description="Current", boolean=True)
     def is_current(self, obj):
+        """Return whether this row is the most recent non-superseded result."""
+
         return obj.superseded_by is None
 
     @admin.display(description="Result Data JSON")
     def pretty_result_data(self, obj):
+        """Render result JSON in a readable preformatted block."""
+
         if not obj.result_data:
             return "No data available"
         formatted_json = json.dumps(obj.result_data, indent=4)
@@ -352,6 +393,8 @@ class SkillResultAdmin(ModelAdmin):
         )
 
     def changelist_view(self, request, extra_context=None):
+        """Augment the changelist with latency and failure-rate statistics."""
+
         qs = self.get_queryset(request)
         extra_context = extra_context or {}
         metrics = qs.aggregate(avg_lat=Avg("latency_ms"))
@@ -378,6 +421,8 @@ class SkillResultAdmin(ModelAdmin):
 
 @admin.register(UserFeedback)
 class UserFeedbackAdmin(ModelAdmin):
+    """Admin view for editorial feedback and agreement with AI scoring."""
+
     list_display = (
         "display_feedback",
         "get_content_title",
@@ -391,12 +436,16 @@ class UserFeedbackAdmin(ModelAdmin):
 
     @admin.display(description="Type")
     def display_feedback(self, obj):
+        """Render feedback as a thumbs-up or thumbs-down glyph."""
+
         if str(obj.feedback_type).lower() == "upvote":
             return format_html('<span style="font-size: {}">{}</span>', "1.2rem", "👍")
         return format_html('<span style="font-size: {}">{}</span>', "1.2rem", "👎")
 
     @admin.display(description="Content Title")
     def get_content_title(self, obj):
+        """Return a shortened content title for list display."""
+
         return obj.content.title[:50] + "..."
 
     @admin.display(description="AI Score")
@@ -409,6 +458,8 @@ class UserFeedbackAdmin(ModelAdmin):
         return format_html('<b style="color: {};">{}%</b>', color, score)
 
     def changelist_view(self, request, extra_context=None):
+        """Augment the changelist with editorial approval statistics."""
+
         qs = self.get_queryset(request)
         extra_context = extra_context or {}
         upvotes = qs.filter(feedback_type="upvote").count()
@@ -433,6 +484,8 @@ class UserFeedbackAdmin(ModelAdmin):
 
 @admin.register(IngestionRun)
 class IngestionRunAdmin(ModelAdmin):
+    """Admin view for ingestion health, throughput, and timing."""
+
     list_display = (
         "plugin_name",
         "project",
@@ -460,6 +513,8 @@ class IngestionRunAdmin(ModelAdmin):
 
     @admin.display(description="Status")
     def display_status(self, obj):
+        """Render ingestion status as an Unfold badge."""
+
         status_value = str(obj.status).lower()
         colors = {"success": "success", "failed": "danger", "running": "info"}
         return format_html(
@@ -470,6 +525,8 @@ class IngestionRunAdmin(ModelAdmin):
 
     @admin.display(description="Efficiency (Ingested/Fetched)")
     def display_efficiency(self, obj):
+        """Show how much of the fetched content became stored content."""
+
         if obj.items_fetched == 0:
             return "0/0"
         percent = (obj.items_ingested / obj.items_fetched) * 100
@@ -485,6 +542,8 @@ class IngestionRunAdmin(ModelAdmin):
 
     @admin.display(description="Duration")
     def display_duration(self, obj):
+        """Return human-readable runtime for completed ingestion runs."""
+
         if not obj.completed_at:
             return "In Progress..."
         duration = obj.completed_at - obj.started_at
@@ -492,6 +551,8 @@ class IngestionRunAdmin(ModelAdmin):
         return f"{int(seconds // 60)}m {int(seconds % 60)}s"
 
     def changelist_view(self, request, extra_context=None):
+        """Augment the changelist with ingestion success statistics."""
+
         qs = self.get_queryset(request)
         extra_context = extra_context or {}
         total_runs = qs.count()
@@ -516,6 +577,8 @@ class IngestionRunAdmin(ModelAdmin):
 
 @admin.register(SourceConfig)
 class SourceConfigAdmin(ModelAdmin):
+    """Admin view for source-plugin configuration and connectivity checks."""
+
     list_display = (
         "plugin_name",
         "project",
@@ -550,6 +613,8 @@ class SourceConfigAdmin(ModelAdmin):
 
     @admin.display(description="Status")
     def display_health(self, obj):
+        """Infer a human-friendly health state from activity timestamps."""
+
         if not obj.is_active:
             return format_html('<span style="color: {};">{}</span>', "gray", "● Paused")
 
@@ -614,6 +679,8 @@ class SourceConfigAdmin(ModelAdmin):
             )
 
     def changelist_view(self, request, extra_context=None):
+        """Augment the changelist with source-count and diversity stats."""
+
         qs = self.get_queryset(request)
         extra_context = extra_context or {}
         active_count = qs.filter(is_active=True).count()
@@ -637,6 +704,8 @@ class SourceConfigAdmin(ModelAdmin):
 
 @admin.register(ReviewQueue)
 class ReviewQueueAdmin(ModelAdmin):
+    """Admin view for items waiting on editorial judgment."""
+
     list_display = (
         "get_content_title",
         "project",
@@ -652,10 +721,14 @@ class ReviewQueueAdmin(ModelAdmin):
 
     @admin.display(description="Content")
     def get_content_title(self, obj):
+        """Return a shortened content title for list display."""
+
         return obj.content.title[:50] + "..."
 
     @admin.display(description="Confidence")
     def display_confidence(self, obj):
+        """Render confidence as a percentage with risk coloring."""
+
         color = (
             "red"
             if obj.confidence < 0.3
@@ -666,15 +739,21 @@ class ReviewQueueAdmin(ModelAdmin):
 
     @admin.action(description="Approve selected items")
     def mark_as_approved(self, request, queryset):
+        """Resolve selected review items as approved."""
+
         queryset.update(resolved=True, resolution="APPROVED")
         self.message_user(request, "Selected items approved.", messages.SUCCESS)
 
     @admin.action(description="Reject selected items")
     def mark_as_rejected(self, request, queryset):
+        """Resolve selected review items as rejected."""
+
         queryset.update(resolved=True, resolution="REJECTED")
         self.message_user(request, "Selected items rejected.", messages.WARNING)
 
     def changelist_view(self, request, extra_context=None):
+        """Augment the changelist with pending-volume and confidence stats."""
+
         qs = self.get_queryset(request)
         extra_context = extra_context or {}
         pending_count = qs.filter(resolved=False).count()

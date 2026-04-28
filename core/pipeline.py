@@ -1,3 +1,10 @@
+"""Content-classification, relevance, and summarization workflow helpers.
+
+This module contains the runtime implementation of the app's AI pipeline. It owns
+the LangGraph orchestration, the heuristics and LLM fallbacks for each skill, and
+the persistence of skill results and manual-review queue items.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -37,6 +44,8 @@ CONTENT_TYPES = (
 
 
 class PipelineState(TypedDict, total=False):
+    """State payload passed between LangGraph pipeline nodes."""
+
     content_id: int
     project_id: int
     classification: dict[str, Any] | None
@@ -47,6 +56,13 @@ class PipelineState(TypedDict, total=False):
 
 @lru_cache(maxsize=1)
 def get_ingestion_graph():
+    """Build and cache the LangGraph workflow used for content processing.
+
+    Returns:
+        A compiled state graph that classifies content, scores relevance, and then
+        routes the item to summarization, archival, or human review.
+    """
+
     graph = StateGraph(PipelineState)
     graph.add_node("classify", classify_node)
     graph.add_node("score_relevance", relevance_node)
@@ -71,6 +87,15 @@ def get_ingestion_graph():
 
 
 def process_content_pipeline(content_id: int) -> PipelineState:
+    """Run the end-to-end ingestion pipeline for one content item.
+
+    Args:
+        content_id: Primary key of the content row to process.
+
+    Returns:
+        The final pipeline state returned by the compiled LangGraph workflow.
+    """
+
     content = Content.objects.select_related("project").get(pk=content_id)
     initial_state: PipelineState = {
         "content_id": content.id,
@@ -81,6 +106,8 @@ def process_content_pipeline(content_id: int) -> PipelineState:
 
 
 def classify_node(state: PipelineState) -> PipelineState:
+    """Classify the content item and persist the resulting skill output."""
+
     content = _get_content(state)
     classification = _execute_with_retries(
         CLASSIFICATION_SKILL_NAME, lambda: run_content_classification(content)
@@ -106,6 +133,8 @@ def classify_node(state: PipelineState) -> PipelineState:
 
 
 def relevance_node(state: PipelineState) -> PipelineState:
+    """Score content relevance, persist the score, and keep the item active."""
+
     content = _get_content(state)
     relevance = _execute_with_retries(
         RELEVANCE_SKILL_NAME, lambda: run_relevance_scoring(content)
@@ -126,6 +155,8 @@ def relevance_node(state: PipelineState) -> PipelineState:
 
 
 def summarize_node(state: PipelineState) -> PipelineState:
+    """Generate and store a newsletter-ready summary for relevant content."""
+
     content = _get_content(state)
     summary = _execute_with_retries(
         SUMMARIZATION_SKILL_NAME, lambda: run_summarization(content)
@@ -142,6 +173,8 @@ def summarize_node(state: PipelineState) -> PipelineState:
 
 
 def archive_node(state: PipelineState) -> PipelineState:
+    """Mark a low-value content item inactive so it drops out of active flows."""
+
     content = _get_content(state)
     content.is_active = False
     content.save(update_fields=["is_active"])
@@ -149,6 +182,8 @@ def archive_node(state: PipelineState) -> PipelineState:
 
 
 def queue_review_node(state: PipelineState) -> PipelineState:
+    """Create or refresh a manual review item for borderline relevance."""
+
     content = _get_content(state)
     relevance = state.get("relevance") or {}
     _upsert_review_queue_item(
@@ -166,6 +201,15 @@ def queue_review_node(state: PipelineState) -> PipelineState:
 def route_by_relevance(
     state: PipelineState,
 ) -> Literal["relevant", "borderline", "irrelevant"]:
+    """Choose the next workflow branch from the computed relevance score.
+
+    Args:
+        state: Current pipeline state, including the relevance result when present.
+
+    Returns:
+        The route name consumed by LangGraph to continue processing.
+    """
+
     relevance = state.get("relevance") or {}
     score = float(relevance.get("relevance_score", 0.0))
     if score >= settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD:
@@ -176,6 +220,16 @@ def route_by_relevance(
 
 
 def run_content_classification(content: Content) -> dict[str, Any]:
+    """Classify a content item into a newsletter-oriented content type.
+
+    Args:
+        content: The content row being classified.
+
+    Returns:
+        A normalized payload containing the selected content type, confidence,
+        explanation, and model metadata.
+    """
+
     if settings.OPENROUTER_API_KEY:
         try:
             response = openrouter_chat_json(
@@ -210,6 +264,18 @@ def run_content_classification(content: Content) -> dict[str, Any]:
 
 
 def run_relevance_scoring(content: Content) -> dict[str, Any]:
+    """Score how relevant a content item is to its project's topic.
+
+    The function first measures similarity to the project's reference corpus in
+    Qdrant. Only borderline scores are sent to the LLM for adjudication.
+
+    Args:
+        content: The content row being scored.
+
+    Returns:
+        A payload containing the relevance score, explanation, and model metadata.
+    """
+
     vector = embed_text(build_content_embedding_text(content))
     similarity = float(get_reference_similarity(content.project_id, vector))
     if (
@@ -270,6 +336,15 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
 
 
 def run_summarization(content: Content) -> dict[str, Any]:
+    """Generate a concise newsletter summary for a content item.
+
+    Args:
+        content: The content row to summarize.
+
+    Returns:
+        A payload containing the summary text plus model metadata.
+    """
+
     if settings.OPENROUTER_API_KEY:
         try:
             response = openrouter_chat_json(
@@ -303,6 +378,19 @@ def run_summarization(content: Content) -> dict[str, Any]:
 
 
 def execute_ad_hoc_skill(content: Content, skill_name: str) -> SkillResult:
+    """Run one supported skill immediately for a single content item.
+
+    Args:
+        content: The content row to evaluate.
+        skill_name: Name of the skill to execute.
+
+    Returns:
+        The persisted skill-result row for the ad hoc execution.
+
+    Raises:
+        ValueError: If the requested skill name is not supported.
+    """
+
     if skill_name == CLASSIFICATION_SKILL_NAME:
         return _execute_ad_hoc_classification(content)
     if skill_name == RELEVANCE_SKILL_NAME:
@@ -315,6 +403,19 @@ def execute_ad_hoc_skill(content: Content, skill_name: str) -> SkillResult:
 
 
 def create_pending_skill_result(content: Content, skill_name: str) -> SkillResult:
+    """Create a placeholder skill-result row for async ad hoc execution.
+
+    Args:
+        content: The content row the skill will operate on.
+        skill_name: Supported async skill name.
+
+    Returns:
+        A pending skill-result row that can be updated by a Celery worker.
+
+    Raises:
+        ValueError: If the skill cannot be executed asynchronously.
+    """
+
     if skill_name not in ASYNC_AD_HOC_SKILL_NAMES:
         raise ValueError(f"Unsupported async skill name: {skill_name}")
     return _create_skill_result(
@@ -327,6 +428,20 @@ def create_pending_skill_result(content: Content, skill_name: str) -> SkillResul
 def execute_background_skill_result(
     skill_result_id: int, skill_name: str
 ) -> SkillResult:
+    """Execute an async ad hoc skill and update its persisted result row.
+
+    Args:
+        skill_result_id: Primary key of the pending skill-result row.
+        skill_name: Expected skill name for the row being executed.
+
+    Returns:
+        The updated skill-result row after success or failure.
+
+    Raises:
+        ValueError: If the stored skill name does not match the requested one or if
+            the skill name is unsupported.
+    """
+
     skill_result = SkillResult.objects.select_related(
         "content", "content__project"
     ).get(pk=skill_result_id)
@@ -374,6 +489,8 @@ def execute_background_skill_result(
 
 
 def _execute_ad_hoc_classification(content: Content) -> SkillResult:
+    """Run classification immediately and persist success or failure."""
+
     try:
         classification = _execute_with_retries(
             CLASSIFICATION_SKILL_NAME, lambda: run_content_classification(content)
@@ -402,6 +519,8 @@ def _execute_ad_hoc_classification(content: Content) -> SkillResult:
 
 
 def _execute_ad_hoc_relevance(content: Content) -> SkillResult:
+    """Run relevance scoring immediately and persist success or failure."""
+
     try:
         relevance, relevance_score = _run_ad_hoc_relevance(content)
         return _create_skill_result(
@@ -420,6 +539,8 @@ def _execute_ad_hoc_relevance(content: Content) -> SkillResult:
 
 
 def _execute_ad_hoc_summarization(content: Content) -> SkillResult:
+    """Run summarization immediately and persist success or failure."""
+
     try:
         summary = _run_ad_hoc_summarization(content)
         return _create_skill_result(
@@ -437,6 +558,8 @@ def _execute_ad_hoc_summarization(content: Content) -> SkillResult:
 
 
 def _execute_ad_hoc_related_content(content: Content) -> SkillResult:
+    """Find similar non-reference content and store the match list as a skill result."""
+
     try:
         matches = search_similar_content(content, limit=5, is_reference=False)
         related_items = [_serialize_related_match(match) for match in matches]
@@ -460,6 +583,8 @@ def _execute_ad_hoc_related_content(content: Content) -> SkillResult:
 
 
 def _run_ad_hoc_relevance(content: Content) -> tuple[dict[str, Any], float]:
+    """Apply ad hoc relevance scoring and update the content row accordingly."""
+
     relevance = _execute_with_retries(
         RELEVANCE_SKILL_NAME, lambda: run_relevance_scoring(content)
     )
@@ -481,6 +606,19 @@ def _run_ad_hoc_relevance(content: Content) -> tuple[dict[str, Any], float]:
 
 
 def _run_ad_hoc_summarization(content: Content) -> dict[str, Any]:
+    """Run summarization only when the content has already cleared the score gate.
+
+    Args:
+        content: The content row to summarize.
+
+    Returns:
+        The summarization payload returned by ``run_summarization``.
+
+    Raises:
+        ValueError: If the content has not yet reached the relevance threshold
+            required for summarization.
+    """
+
     if (content.relevance_score or 0.0) < settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD:
         raise ValueError(
             "Summarization requires relevance_score >= "
@@ -492,6 +630,19 @@ def _run_ad_hoc_summarization(content: Content) -> dict[str, Any]:
 
 
 def _execute_with_retries(skill_name: str, fn):
+    """Retry a skill callable up to the configured retry budget.
+
+    Args:
+        skill_name: Name used for logging failed attempts.
+        fn: Zero-argument callable that performs the skill work.
+
+    Returns:
+        The value returned by ``fn`` when one attempt succeeds.
+
+    Raises:
+        Exception: Re-raises the final exception after all retries fail.
+    """
+
     last_exc: Exception | None = None
     for attempt in range(settings.AI_MAX_NODE_RETRIES + 1):
         try:
@@ -507,6 +658,8 @@ def _execute_with_retries(skill_name: str, fn):
 
 
 def _serialize_related_match(match: Any) -> dict[str, Any]:
+    """Convert a Qdrant match object into the API-friendly related-content shape."""
+
     payload = dict(getattr(match, "payload", {}) or {})
     return {
         "content_id": payload.get("content_id"),

@@ -1,3 +1,5 @@
+"""Operational and newsletter-intake views used outside the REST API."""
+
 from http import HTTPStatus
 from typing import cast
 
@@ -17,12 +19,16 @@ settings = cast(CoreSettings, django_settings)
 
 
 def healthz_view(request):
+    """Return a lightweight liveness response for load balancers and probes."""
+
     return JsonResponse(
         {"status": "ok", "service": "newsletter-maker"}, status=HTTPStatus.OK
     )
 
 
 def readyz_view(request):
+    """Return readiness status based on the database and Qdrant dependencies."""
+
     checks = {
         "database": _check_database(),
         "qdrant": _check_qdrant(),
@@ -36,6 +42,8 @@ def readyz_view(request):
 
 
 def _check_database() -> bool:
+    """Verify the application can execute a trivial SQL query."""
+
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
@@ -46,6 +54,8 @@ def _check_database() -> bool:
 
 
 def _check_qdrant() -> bool:
+    """Verify the application can reach the configured Qdrant instance."""
+
     try:
         client = QdrantClient(
             url=settings.QDRANT_URL, timeout=2, check_compatibility=False
@@ -58,6 +68,17 @@ def _check_qdrant() -> bool:
 
 @require_GET
 def confirm_newsletter_sender_view(request: HttpRequest, token: str):
+    """Confirm a sender and queue any pending newsletter intake rows.
+
+    Args:
+        request: Incoming confirmation request.
+        token: Confirmation token stored on the allowlist entry.
+
+    Returns:
+        A JSON response showing that the sender was confirmed and how many pending
+        intake rows were queued for processing.
+    """
+
     allowlist = get_object_or_404(IntakeAllowlist, confirmation_token=token)
     if allowlist.confirmed_at is None:
         allowlist.confirmed_at = timezone.now()

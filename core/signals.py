@@ -1,3 +1,5 @@
+"""Signal handlers that adapt Anymail inbound events to project intake logic."""
+
 from __future__ import annotations
 
 from anymail.signals import inbound
@@ -7,6 +9,8 @@ from core.newsletters import process_inbound_newsletter
 
 
 def _address_to_string(address) -> str:
+    """Normalize an Anymail address object or string into plain text."""
+
     if address is None:
         return ""
     addr_spec = getattr(address, "addr_spec", None)
@@ -17,6 +21,15 @@ def _address_to_string(address) -> str:
 
 @receiver(inbound)
 def handle_anymail_inbound(sender, event, esp_name, **kwargs):
+    """Translate an inbound Anymail event into the internal intake payload.
+
+    Args:
+        sender: Signal sender supplied by Anymail.
+        event: Normalized inbound event object.
+        esp_name: Name of the email service provider that generated the event.
+        **kwargs: Additional Anymail signal metadata.
+    """
+
     message = event.message
 
     recipients: list[str] = []

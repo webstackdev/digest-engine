@@ -1,3 +1,5 @@
+"""Top-level URL configuration for the newsletter-maker project."""
+
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
@@ -10,6 +12,8 @@ from core.auth_views import GitHubLoginView, GoogleLoginView
 
 
 def root_redirect_view(request):
+    """Redirect the bare site root to the Django admin."""
+
     return redirect("/admin/")
 
 
