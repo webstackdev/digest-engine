@@ -10,19 +10,18 @@ from django.utils import timezone
 from core.admin import (
     ContentAdmin,
     EntityAdmin,
+    HighValueFilter,
     IngestionRunAdmin,
     ReviewQueueAdmin,
     SkillResultAdmin,
     SourceConfigAdmin,
     UserFeedbackAdmin,
-    HighValueFilter,
 )
 from core.models import (
     Content,
     Entity,
     IngestionRun,
     Project,
-    ProjectConfig,
     ReviewQueue,
     ReviewReason,
     RunStatus,

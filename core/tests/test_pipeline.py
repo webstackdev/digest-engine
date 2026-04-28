@@ -9,9 +9,16 @@ from core.pipeline import (
     RELATED_CONTENT_SKILL_NAME,
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
+    _clamp_score,
+    _execute_with_retries,
+    _heuristic_summary,
+    _normalize_summary,
+    _run_ad_hoc_relevance,
+    _serialize_related_match,
     create_pending_skill_result,
     execute_ad_hoc_skill,
     execute_background_skill_result,
+    route_by_relevance,
     run_content_classification,
     run_relevance_scoring,
     run_summarization,
@@ -218,6 +225,21 @@ def test_run_content_classification_uses_openrouter_response_and_normalizes_valu
     }
 
 
+def test_run_content_classification_falls_back_to_heuristic_when_openrouter_fails(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    settings.OPENROUTER_API_KEY = "test-key"
+    mocker.patch("core.pipeline.openrouter_chat_json", side_effect=RuntimeError("llm unavailable"))
+
+    result = run_content_classification(pipeline_context.content)
+
+    assert result["content_type"] == "technical_article"
+    assert result["model_used"] == "heuristic"
+    assert result["latency_ms"] == 0
+
+
 def test_run_relevance_scoring_uses_openrouter_for_borderline_similarity(
     pipeline_context,
     settings,
@@ -249,6 +271,46 @@ def test_run_relevance_scoring_uses_openrouter_for_borderline_similarity(
         "latency_ms": 87,
     }
     openrouter_mock.assert_called_once()
+
+
+def test_run_relevance_scoring_skips_llm_for_high_similarity(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    mocker.patch("core.pipeline.build_content_embedding_text", return_value="embedding text")
+    mocker.patch("core.pipeline.embed_text", return_value=[0.1, 0.2, 0.3])
+    mocker.patch("core.pipeline.get_reference_similarity", return_value=0.95)
+    openrouter_mock = mocker.patch("core.pipeline.openrouter_chat_json")
+
+    result = run_relevance_scoring(pipeline_context.content)
+
+    assert result == {
+        "relevance_score": 0.95,
+        "explanation": "Reference corpus similarity score is 0.95; no LLM adjudication was required.",
+        "used_llm": False,
+        "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
+        "latency_ms": 0,
+    }
+    openrouter_mock.assert_not_called()
+
+
+def test_run_relevance_scoring_falls_back_when_openrouter_fails(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    settings.OPENROUTER_API_KEY = "test-key"
+    mocker.patch("core.pipeline.build_content_embedding_text", return_value="embedding text")
+    mocker.patch("core.pipeline.embed_text", return_value=[0.1, 0.2, 0.3])
+    mocker.patch("core.pipeline.get_reference_similarity", return_value=0.6)
+    mocker.patch("core.pipeline.openrouter_chat_json", side_effect=RuntimeError("llm unavailable"))
+
+    result = run_relevance_scoring(pipeline_context.content)
+
+    assert result["relevance_score"] == 0.6
+    assert result["used_llm"] is False
+    assert "Borderline reference similarity" in result["explanation"]
 
 
 def test_run_summarization_falls_back_to_heuristic_when_openrouter_fails(
@@ -406,3 +468,112 @@ def test_execute_background_skill_result_completes_summary_when_requirements_are
     assert pending_result.status == SkillStatus.COMPLETED
     assert pending_result.result_data == {"summary": "Manual summary output.", "model_used": "heuristic", "latency_ms": 0}
 
+
+def test_execute_background_skill_result_marks_relevance_failed_when_execution_errors(
+    pipeline_context,
+    mocker,
+):
+    pending_result = create_pending_skill_result(pipeline_context.content, RELEVANCE_SKILL_NAME)
+    mocker.patch("core.pipeline.run_relevance_scoring", side_effect=RuntimeError("embedding unavailable"))
+
+    result = execute_background_skill_result(pending_result.id, RELEVANCE_SKILL_NAME)
+
+    pending_result.refresh_from_db()
+    assert result.status == SkillStatus.FAILED
+    assert pending_result.status == SkillStatus.FAILED
+    assert pending_result.error_message == "embedding unavailable"
+
+
+def test_route_by_relevance_uses_threshold_boundaries(settings):
+    assert route_by_relevance({"relevance": {"relevance_score": settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD}}) == "relevant"
+    assert route_by_relevance({"relevance": {"relevance_score": settings.AI_RELEVANCE_REVIEW_THRESHOLD - 0.01}}) == "irrelevant"
+    assert route_by_relevance({"relevance": {"relevance_score": settings.AI_RELEVANCE_REVIEW_THRESHOLD}}) == "borderline"
+
+
+def test_run_ad_hoc_relevance_updates_existing_review_item(pipeline_context, mocker):
+    existing = ReviewQueue.objects.create(
+        project=pipeline_context.project,
+        content=pipeline_context.content,
+        reason=ReviewReason.BORDERLINE_RELEVANCE,
+        confidence=0.2,
+        resolved=False,
+    )
+    mocker.patch(
+        "core.pipeline.run_relevance_scoring",
+        return_value={
+            "relevance_score": 0.58,
+            "explanation": "Borderline relevance for manual review.",
+            "used_llm": False,
+            "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+
+    relevance, relevance_score = _run_ad_hoc_relevance(pipeline_context.content)
+
+    existing.refresh_from_db()
+    assert relevance_score == pytest.approx(0.58)
+    assert existing.confidence == pytest.approx(0.58)
+    assert ReviewQueue.objects.filter(content=pipeline_context.content, reason=ReviewReason.BORDERLINE_RELEVANCE).count() == 1
+
+
+def test_execute_with_retries_retries_until_success(settings):
+    attempts = {"count": 0}
+
+    def flaky_call():
+        attempts["count"] += 1
+        if attempts["count"] < 3:
+            raise RuntimeError("temporary")
+        return {"ok": True}
+
+    result = _execute_with_retries("relevance_scoring", flaky_call)
+
+    assert result == {"ok": True}
+    assert attempts["count"] == 3
+
+
+def test_execute_with_retries_raises_last_exception(settings):
+    def always_fail():
+        raise RuntimeError("permanent")
+
+    with pytest.raises(RuntimeError, match="permanent"):
+        _execute_with_retries("summarization", always_fail)
+
+
+def test_pipeline_helper_utilities_cover_serialization_and_summary_edges(pipeline_context):
+    empty_content = Content(
+        project=pipeline_context.project,
+        url="https://example.com/empty",
+        title="Empty Content",
+        author="Editor",
+        source_plugin="rss",
+        published_date="2026-04-26T00:00:00Z",
+        content_text="   ",
+    )
+    long_sentence = "A" * 401 + "."
+    long_content = Content(
+        project=pipeline_context.project,
+        url="https://example.com/long",
+        title="Long Content",
+        author="Editor",
+        source_plugin="rss",
+        published_date="2026-04-26T00:00:00Z",
+        content_text=f"{long_sentence} Second sentence.",
+    )
+
+    assert _serialize_related_match(SimpleNamespace(payload=None)) == {
+        "content_id": None,
+        "title": None,
+        "url": None,
+        "published_date": None,
+        "source_plugin": None,
+        "score": 0.0,
+    }
+    assert _heuristic_summary(empty_content) == "Empty Content: no summary was available from the source content."
+    assert _heuristic_summary(long_content).endswith("...")
+    assert _normalize_summary("   ", pipeline_context.content) == (
+        "Kubernetes Release Notes: summary generation returned no content."
+    )
+    assert _clamp_score("bad") == 0.0
+    assert _clamp_score(2) == 1.0
+    assert _clamp_score(-1) == 0.0

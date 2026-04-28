@@ -7,7 +7,6 @@ from django.contrib.auth.models import Group
 from core.models import Entity, Project
 from core.plugins.base import ContentItem, SourcePlugin
 
-
 pytestmark = pytest.mark.django_db
 
 
@@ -28,14 +27,6 @@ class DummySourcePlugin(SourcePlugin):
 
     def health_check(self) -> bool:
         return True
-
-
-class SuperCallingSourcePlugin(SourcePlugin):
-    def fetch_new_content(self, since):
-        return super().fetch_new_content(since)
-
-    def health_check(self) -> bool:
-        return super().health_check()
 
 
 @pytest.fixture
@@ -101,13 +92,13 @@ def test_source_plugin_match_entity_for_url_returns_none_when_no_entity_matches(
 
 
 def test_source_plugin_abstract_methods_raise_not_implemented(plugin_context):
-    plugin = SuperCallingSourcePlugin(plugin_context.source_config)
+    plugin = DummySourcePlugin(plugin_context.source_config)
 
     with pytest.raises(NotImplementedError):
-        plugin.fetch_new_content(since=None)
+        SourcePlugin.fetch_new_content(plugin, since=None)
 
     with pytest.raises(NotImplementedError):
-        plugin.health_check()
+        SourcePlugin.health_check(plugin)
 
 
 def test_dummy_source_plugin_implements_abstract_contract(plugin_context):

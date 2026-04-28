@@ -2,9 +2,8 @@ from types import SimpleNamespace
 
 import pytest
 from django.contrib.auth.models import AnonymousUser, Group
-from rest_framework import serializers
 
-from core.models import Content, Entity, Project, ReviewQueue, ReviewReason, SkillResult, SourceConfig, SourcePluginName
+from core.models import Content, Entity, Project, ReviewReason, SkillResult, SourceConfig, SourcePluginName
 from core.serializers import (
     ContentSerializer,
     EntitySerializer,
@@ -15,7 +14,6 @@ from core.serializers import (
     SourceConfigSerializer,
     UserFeedbackSerializer,
 )
-
 
 pytestmark = pytest.mark.django_db
 

@@ -16,6 +16,7 @@ from core.models import (
 )
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
 from core.tasks import (
+    _ingest_source_config,
     queue_content_skill,
     run_all_ingestions,
     run_ingestion,
@@ -171,6 +172,30 @@ def test_run_all_ingestions_enqueues_active_source_configs(source_plugin_context
     delay_mock.assert_any_call(active_two.id)
     assert delay_mock.call_count == 2
 
+
+def test_run_all_ingestions_executes_inline_when_eager(source_plugin_context, settings, mocker):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    run_ingestion_mock = mocker.patch("core.tasks.run_ingestion")
+    delay_mock = mocker.patch("core.tasks.run_ingestion.delay")
+    active_one = SourceConfig.objects.create(
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
+    )
+    active_two = SourceConfig.objects.create(
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.REDDIT,
+        config={"subreddit": "python"},
+    )
+
+    enqueued_count = run_all_ingestions()
+
+    assert enqueued_count == 2
+    run_ingestion_mock.assert_any_call(active_one.id)
+    run_ingestion_mock.assert_any_call(active_two.id)
+    assert run_ingestion_mock.call_count == 2
+    delay_mock.assert_not_called()
+
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
     parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
@@ -205,6 +230,51 @@ def test_queue_content_skill_enqueues_relevance_task(source_plugin_context, mock
 
     assert skill_result.status == SkillStatus.PENDING
     delay_mock.assert_called_once_with(skill_result.id)
+
+
+def test_queue_content_skill_executes_inline_when_eager(source_plugin_context, settings, mocker):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    content = Content.objects.create(
+        project=source_plugin_context.project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/manual-inline-content",
+        title="Manual Inline Content",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-20T12:00:00Z",
+        content_text="Manual content body",
+    )
+    task_mock = mocker.patch("core.tasks.run_relevance_scoring_skill")
+    delay_mock = mocker.patch("core.tasks.run_relevance_scoring_skill.delay")
+
+    skill_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
+
+    assert skill_result.status == SkillStatus.PENDING
+    task_mock.assert_called_once_with(skill_result.id)
+    delay_mock.assert_not_called()
+
+
+def test_queue_content_skill_executes_summary_inline_when_eager(source_plugin_context, settings, mocker):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    content = Content.objects.create(
+        project=source_plugin_context.project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/manual-inline-summary",
+        title="Manual Inline Summary",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-20T12:00:00Z",
+        content_text="Manual content body",
+        relevance_score=0.9,
+    )
+    task_mock = mocker.patch("core.tasks.run_summarization_skill")
+    delay_mock = mocker.patch("core.tasks.run_summarization_skill.delay")
+
+    skill_result = queue_content_skill(content, SUMMARIZATION_SKILL_NAME)
+
+    assert skill_result.status == SkillStatus.PENDING
+    task_mock.assert_called_once_with(skill_result.id)
+    delay_mock.assert_not_called()
 
 
 def test_run_relevance_scoring_skill_updates_pending_result(source_plugin_context, mocker):
@@ -266,3 +336,40 @@ def test_run_summarization_skill_marks_result_failed_when_relevance_is_too_low(s
     assert result.status == SkillStatus.FAILED
     assert pending_result.status == SkillStatus.FAILED
     assert "Summarization requires relevance_score" in pending_result.error_message
+
+
+def test_ingest_source_config_truncates_fields_and_processes_inline(source_plugin_context, settings, mocker):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    plugin = mocker.Mock()
+    plugin.fetch_new_content.return_value = [
+        SimpleNamespace(
+            url="https://example.com/post-long",
+            title="T" * 600,
+            author="A" * 300,
+            source_plugin=SourcePluginName.RSS,
+            published_date=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+            content_text="Summary",
+        )
+    ]
+    plugin.match_entity_for_url.return_value = source_plugin_context.entity
+    source_config = SourceConfig.objects.create(
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
+    )
+    mocker.patch("core.tasks.get_plugin_for_source_config", return_value=plugin)
+    upsert_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    process_mock = mocker.patch("core.tasks.process_content")
+    delay_mock = mocker.patch("core.tasks.process_content.delay")
+
+    items_fetched, items_ingested = _ingest_source_config(source_config)
+
+    created = Content.objects.get(url="https://example.com/post-long")
+    assert items_fetched == 1
+    assert items_ingested == 1
+    assert created.entity == source_plugin_context.entity
+    assert len(created.title) == 512
+    assert len(created.author) == 255
+    upsert_mock.assert_called_once_with(created)
+    process_mock.assert_called_once_with(created.id)
+    delay_mock.assert_not_called()

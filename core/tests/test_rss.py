@@ -8,7 +8,6 @@ from django.contrib.auth.models import Group
 from core.models import Project, SourceConfig, SourcePluginName
 from core.plugins.rss import RSSSourcePlugin
 
-
 pytestmark = pytest.mark.django_db
 
 

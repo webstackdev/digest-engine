@@ -8,7 +8,6 @@ from core.models import Project, SourceConfig, SourcePluginName
 from core.plugins.reddit import RedditSourcePlugin
 from core.plugins.registry import validate_plugin_config
 
-
 pytestmark = pytest.mark.django_db
 
 

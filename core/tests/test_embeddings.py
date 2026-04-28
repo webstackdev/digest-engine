@@ -1,5 +1,5 @@
-from types import SimpleNamespace
 from io import StringIO
+from types import SimpleNamespace
 from unittest.mock import call
 
 import httpx
