@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+@theme {
+	--font-body: var(--font-body-source), sans-serif;
+	--font-display: var(--font-display-source), serif;
+
+	--text-eyebrow: 0.78rem;
+	--text-title-md: 1.45rem;
+	--text-display-hero: clamp(2rem, 5vw, 2.8rem);
+	--text-display-page: clamp(2rem, 4vw, 3.25rem);
+
+	--tracking-eyebrow: 0.12em;
+	--leading-display: 0.95;
+
+	--color-primary: #156f68;
+	--color-primary-strong: #1d8d83;
+	--color-primary-soft: #156f68;
+
+	--color-danger: #c55f4d;
+	--color-danger-strong: #da7a67;
+	--color-danger-ink: #7c3023;
+	--color-danger-soft: #c55f4d;
+
+	--color-warning: #c27a2c;
+	--color-warning-soft: #f0cd83;
+
+	--color-ink: #1f2b27;
+	--color-muted: #5d6d67;
+	--color-paper: #fffaf4;
+	--color-surface: #fffaf4;
+	--color-surface-strong: #ffffff;
+	--color-surface-soft: #f7f0e7;
+	--color-canvas-start: #f6f1e9;
+	--color-canvas-end: #efe6da;
+
+	--color-sidebar: #141f1c;
+	--color-sidebar-ink: #f7f0e7;
+	--color-sidebar-muted: #f7f0e7;
+
+	--color-google-blue: #4285f4;
+	--color-google-green: #34a853;
+	--color-google-yellow: #fbbc05;
+	--color-google-red: #ea4335;
+
+	--shadow-panel: 0 24px 60px rgba(35, 30, 22, 0.12);
+}
+
+@layer base {
+	body {
+		@apply bg-paper text-ink;
+		background-image:
+			radial-gradient(circle at top left, rgba(21, 111, 104, 0.14), transparent 38%),
+			radial-gradient(circle at top right, rgba(194, 122, 44, 0.14), transparent 28%),
+			linear-gradient(180deg, var(--color-canvas-start) 0%, var(--color-canvas-end) 100%);
+	}
+}

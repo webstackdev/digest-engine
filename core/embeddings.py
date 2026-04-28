@@ -6,7 +6,7 @@ from typing import Any, cast
 from uuid import uuid4
 
 import httpx
-from django.conf import settings
+from django.conf import settings as django_settings
 from django.utils.dateparse import parse_datetime
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -17,9 +17,23 @@ from qdrant_client.models import (
   PointStruct,
   VectorParams,
 )
-from sentence_transformers import SentenceTransformer
 
 from core.models import Content
+from core.settings_types import CoreSettings
+
+SentenceTransformer = None
+settings = cast(CoreSettings, django_settings)
+
+
+def get_sentence_transformer_class():
+        global SentenceTransformer
+
+        if SentenceTransformer is None:
+                from sentence_transformers import SentenceTransformer as sentence_transformer_class
+
+                SentenceTransformer = sentence_transformer_class
+
+        return SentenceTransformer
 
 
 class EmbeddingProvider(ABC):
@@ -33,7 +47,8 @@ class EmbeddingProvider(ABC):
 
 class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
     def __init__(self):
-        self.model = SentenceTransformer(
+        sentence_transformer_class = get_sentence_transformer_class()
+        self.model = sentence_transformer_class(
             settings.EMBEDDING_MODEL,
             trust_remote_code=settings.EMBEDDING_TRUST_REMOTE_CODE,
         )
@@ -97,7 +112,7 @@ def collection_name_for_project(project_id: int) -> str:
 
 @lru_cache(maxsize=1)
 def get_qdrant_client() -> QdrantClient:
-    return QdrantClient(url=settings.QDRANT_URL, timeout=10)
+    return QdrantClient(url=settings.QDRANT_URL, timeout=10, check_compatibility=False)
 
 
 @lru_cache(maxsize=1)

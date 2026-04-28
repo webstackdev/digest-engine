@@ -3,8 +3,6 @@ import sys
 from pathlib import Path
 
 import dj_database_url
-from django.templatetags.static import static
-from django.utils.translation import gettext_lazy as _
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -41,25 +39,49 @@ CSRF_TRUSTED_ORIGINS = env_list(
 )
 
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+SITE_ID = int(os.getenv("SITE_ID", "1"))
+
 REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
 REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
 REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "newsletter-maker/0.1")
 
 INSTALLED_APPS = [
-    "unfold",  # Must be first
+    # 1. High-priority middleware dependencies
+    "corsheaders",
+
+    # 2. Unfold Admin Overrides (Must stay at the top and before django.contrib.admin)
+    "unfold",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
+    "unfold.contrib.import_export",  # Specific Unfold integration for import_export
+
+    # 3. Core Django Apps
     "django.contrib.admin",
-    "core",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "import_export",
+    "django.contrib.sites",  # Required for allauth
+
+    # 4. Third-Party Authentication & API Tools
     "rest_framework",
+    "rest_framework.authtoken",
+    "dj_rest_auth",
+    "dj_rest_auth.registration",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.github",
+
+    # 5. Utilities & Schema Tools
+    "import_export",  # Standard library
     "drf_spectacular",
     "drf_standardized_errors",
+
+    # 6. Project Apps
+    "core",
 ]
 
 MIDDLEWARE = [
@@ -68,6 +90,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -108,6 +131,15 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
@@ -124,6 +156,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
         "rest_framework.authentication.BasicAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_standardized_errors.openapi.AutoSchema",
@@ -139,80 +172,37 @@ USE_X_FORWARDED_HOST = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Unfold Admin Template
-UNFOLD = {
-    "SITE_TITLE": _("Newsletter Maker"),
-    "SITE_HEADER": _("Newsletter Maker"),
-    "SITE_SUBHEADER": _("Administration"),
-    "SHOW_HISTORY": True,
-    "DASHBOARD_CALLBACK": "core.utils.dashboard_callback",
-    "SITE_FAVICONS": [
-        {
-            "rel": "icon",
-            "sizes": "32x32",
-            "type": "image/x-icon",
-            "href": lambda request: static("core/favicon.ico"),
-        },
-    ],
-    "SITE_ICON": lambda request: static("core/logo.png"),
-    "SITE_SYMBOL": "speed", # Material Icon for the sidebar
-    "COLORS": {
-        "primary": {
-            "50": "250 245 255",
-            "100": "243 232 255",
-            "500": "168 85 247",
-            "900": "88 28 135",
-        },
-    },
-    "SIDEBAR": {
-        "show_search": True,
-        "show_all_applications": False,
-    },
-}
-
-# Add metadata for Swagger UI
-SPECTACULAR_SETTINGS = {
-    "TITLE": "Newsletter Maker API",
-    "DESCRIPTION": "API documentation for the newsletter maker app",
-    "VERSION": "1.0.0",
-    "SERVE_INCLUDE_SCHEMA": False,
-    "POSTPROCESSING_HOOKS": ["drf_standardized_errors.openapi_hooks.postprocess_schema_enums"],
-    "ENUM_NAME_OVERRIDES": {
-        "ValidationErrorEnum": "drf_standardized_errors.openapi_serializers.ValidationErrorEnum.choices",
-        "ClientErrorEnum": "drf_standardized_errors.openapi_serializers.ClientErrorEnum.choices",
-        "ServerErrorEnum": "drf_standardized_errors.openapi_serializers.ServerErrorEnum.choices",
-        "ParseErrorCodeEnum": "drf_standardized_errors.openapi_serializers.ParseErrorCodeEnum.choices",
-        "ErrorCode403Enum": "drf_standardized_errors.openapi_serializers.ErrorCode403Enum.choices",
-        "ErrorCode404Enum": "drf_standardized_errors.openapi_serializers.ErrorCode404Enum.choices",
-    },
-    "TAGS": [
-        {
-            "name": "Tenant Management",
-            "description": "Create tenants and manage tenant-specific configuration for newsletter workspaces.",
-        },
-        {
-            "name": "Entity Catalog",
-            "description": "Manage tracked people, companies, and organizations associated with a tenant.",
-        },
-        {
-            "name": "Content Library",
-            "description": "Browse and maintain ingested content items that feed newsletter generation and ranking.",
-        },
-        {
-            "name": "AI Processing",
-            "description": "Inspect AI skill execution results, model outputs, and confidence metadata for tenant content.",
-        },
-        {
-            "name": "Feedback",
-            "description": "Capture editorial feedback signals that influence ranking and future recommendation quality.",
-        },
-        {
-            "name": "Ingestion",
-            "description": "Configure source plugins and review ingestion runs for each tenant.",
-        },
-        {
-            "name": "Review Queue",
-            "description": "Review borderline or low-confidence content items that need human resolution.",
-        },
-    ],
-}
+__all__ = [
+    "BASE_DIR",
+    "SECRET_KEY",
+    "DEBUG",
+    "ALLOWED_HOSTS",
+    "CSRF_TRUSTED_ORIGINS",
+    "DATABASE_URL",
+    "SITE_ID",
+    "REDDIT_CLIENT_ID",
+    "REDDIT_CLIENT_SECRET",
+    "REDDIT_USER_AGENT",
+    "INSTALLED_APPS",
+    "MIDDLEWARE",
+    "ROOT_URLCONF",
+    "TEMPLATES",
+    "WSGI_APPLICATION",
+    "DATABASES",
+    "AUTH_PASSWORD_VALIDATORS",
+    "AUTHENTICATION_BACKENDS",
+    "ACCOUNT_EMAIL_VERIFICATION",
+    "ACCOUNT_LOGIN_METHODS",
+    "ACCOUNT_SIGNUP_FIELDS",
+    "LANGUAGE_CODE",
+    "TIME_ZONE",
+    "USE_I18N",
+    "USE_TZ",
+    "STATIC_URL",
+    "STATIC_ROOT",
+    "REST_FRAMEWORK",
+    "DRF_STANDARDIZED_ERRORS",
+    "SECURE_PROXY_SSL_HEADER",
+    "USE_X_FORWARDED_HOST",
+    "DEFAULT_AUTO_FIELD",
+]

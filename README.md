@@ -172,13 +172,6 @@ just changepassword your-username
 
 For the default local bootstrap, `.env` also seeds an `admin` superuser in the container database using `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_EMAIL`, and `DJANGO_SUPERUSER_PASSWORD`.
 
-## Documentation
-
-- [PLANNING.md](docs/PLANNING.md) - Full architecture decisions, data model, and feedback loop design
-- [VENDOR.md](docs/VENDOR.md) - Per-skill model selection, rationale, and API pricing
-- [GENRES.md](docs/GENRES.md) - Newsletter format types and layout templates
-- [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) - Additional implementation notes
-
 ## License
 
 This repository is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE).
