@@ -1,23 +1,22 @@
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass
 from email.utils import parseaddr
+from html import escape
 from html.parser import HTMLParser
 from typing import Any, Iterable, cast
 
+from celery import current_app
 from django.conf import settings as django_settings
 from django.core.mail import EmailMultiAlternatives
 from django.urls import reverse
 
 from core.models import IntakeAllowlist, NewsletterIntake, Project
+from core.newsletter_extraction import extract_newsletter_items
 from core.settings_types import CoreSettings
 
 settings = cast(CoreSettings, django_settings)
 
-SCRIPT_TAG_PATTERN = re.compile(r"<script\b[^<]*(?:(?!</script>)<[^<]*)*</script>", re.IGNORECASE | re.DOTALL)
-INLINE_HANDLER_PATTERN = re.compile(r"\son[a-z]+=(?:\"[^\"]*\"|'[^']*')", re.IGNORECASE)
-URL_PATTERN = re.compile(r"https?://[^\s<>'\"]+")
+__all__ = ["extract_newsletter_items"]
 
 
 def normalize_sender_email(value: str) -> str:
@@ -26,8 +25,131 @@ def normalize_sender_email(value: str) -> str:
 
 
 def sanitize_newsletter_html(raw_html: str) -> str:
-    without_scripts = SCRIPT_TAG_PATTERN.sub("", raw_html)
-    return INLINE_HANDLER_PATTERN.sub("", without_scripts)
+    without_scripts = _strip_script_blocks(raw_html)
+    parser = _InlineHandlerStrippingParser()
+    parser.feed(without_scripts)
+    parser.close()
+    return parser.get_html()
+
+
+def _strip_script_blocks(raw_html: str) -> str:
+    sanitized_parts: list[str] = []
+    index = 0
+    raw_length = len(raw_html)
+    while index < raw_length:
+        script_start = _find_script_start(raw_html, index)
+        if script_start == -1:
+            sanitized_parts.append(raw_html[index:])
+            break
+
+        sanitized_parts.append(raw_html[index:script_start])
+        opening_tag_end = _find_tag_end(raw_html, script_start + 1)
+        if opening_tag_end == -1:
+            break
+
+        script_end = _find_script_end(raw_html, opening_tag_end + 1)
+        if script_end == -1:
+            break
+        index = script_end
+
+    return "".join(sanitized_parts)
+
+
+def _find_script_start(raw_html: str, start_index: int) -> int:
+    search_index = start_index
+    while True:
+        candidate = raw_html.lower().find("<script", search_index)
+        if candidate == -1:
+            return -1
+        tag_name_end = candidate + len("<script")
+        if tag_name_end >= len(raw_html) or raw_html[tag_name_end] in " \t\r\n\f/>":
+            return candidate
+        search_index = candidate + 1
+
+
+def _find_script_end(raw_html: str, start_index: int) -> int:
+    search_index = start_index
+    lower_html = raw_html.lower()
+    while True:
+        candidate = lower_html.find("</script", search_index)
+        if candidate == -1:
+            return -1
+        tag_name_end = candidate + len("</script")
+        if tag_name_end < len(raw_html) and raw_html[tag_name_end] not in " \t\r\n\f>":
+            search_index = candidate + 1
+            continue
+        closing_tag_end = _find_tag_end(raw_html, candidate + 1)
+        if closing_tag_end == -1:
+            return len(raw_html)
+        return closing_tag_end + 1
+
+
+def _find_tag_end(raw_html: str, start_index: int) -> int:
+    quote_char: str | None = None
+    for index in range(start_index, len(raw_html)):
+        current_char = raw_html[index]
+        if quote_char is not None:
+            if current_char == quote_char:
+                quote_char = None
+            continue
+        if current_char in {'"', "'"}:
+            quote_char = current_char
+            continue
+        if current_char == ">":
+            return index
+    return -1
+
+
+class _InlineHandlerStrippingParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self._parts: list[str] = []
+
+    def get_html(self) -> str:
+        return "".join(self._parts)
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._parts.append(self._render_tag(tag, attrs))
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        rendered = self._render_tag(tag, attrs)
+        if rendered.endswith(">"):
+            rendered = f"{rendered[:-1]} />"
+        self._parts.append(rendered)
+
+    def handle_endtag(self, tag: str) -> None:
+        self._parts.append(f"</{tag}>")
+
+    def handle_data(self, data: str) -> None:
+        self._parts.append(data)
+
+    def handle_entityref(self, name: str) -> None:
+        self._parts.append(f"&{name};")
+
+    def handle_charref(self, name: str) -> None:
+        self._parts.append(f"&#{name};")
+
+    def handle_comment(self, data: str) -> None:
+        self._parts.append(f"<!--{data}-->")
+
+    def handle_decl(self, decl: str) -> None:
+        self._parts.append(f"<!{decl}>")
+
+    def unknown_decl(self, data: str) -> None:
+        self._parts.append(f"<![{data}]>")
+
+    @staticmethod
+    def _render_tag(tag: str, attrs: list[tuple[str, str | None]]) -> str:
+        rendered_attrs: list[str] = []
+        for name, value in attrs:
+            if name.lower().startswith("on"):
+                continue
+            if value is None:
+                rendered_attrs.append(name)
+                continue
+            rendered_attrs.append(f'{name}="{escape(value, quote=True)}"')
+        attr_suffix = f" {' '.join(rendered_attrs)}" if rendered_attrs else ""
+        return f"<{tag}{attr_suffix}>"
 
 
 def extract_project_token(recipient: str) -> str | None:
@@ -117,10 +239,9 @@ def process_inbound_newsletter(
 
 
 def queue_newsletter_intake(intake_id: int) -> None:
-    from core.tasks import process_newsletter_intake
-
+    process_newsletter_intake = current_app.tasks["core.tasks.process_newsletter_intake"]
     if settings.CELERY_TASK_ALWAYS_EAGER:
-        process_newsletter_intake(intake_id)
+        process_newsletter_intake.apply(args=(intake_id,), throw=True)
     else:
         process_newsletter_intake.delay(intake_id)
 
@@ -134,82 +255,3 @@ def _find_intake_project(recipients: Iterable[str]) -> Project | None:
         if project is not None:
             return project
     return None
-
-
-@dataclass(slots=True)
-class ExtractedNewsletterItem:
-    url: str
-    title: str
-    excerpt: str
-    position: int
-
-
-class _NewsletterLinkParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.links: list[dict[str, str]] = []
-        self._active_href: str | None = None
-        self._active_text: list[str] = []
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag != "a":
-            return
-        for name, value in attrs:
-            if name == "href" and value and value.startswith(("http://", "https://")):
-                self._active_href = value
-                self._active_text = []
-                return
-
-    def handle_data(self, data: str) -> None:
-        if self._active_href is not None:
-            self._active_text.append(data)
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag != "a" or self._active_href is None:
-            return
-        self.links.append(
-            {
-                "url": self._active_href,
-                "title": " ".join(part.strip() for part in self._active_text if part.strip()),
-            }
-        )
-        self._active_href = None
-        self._active_text = []
-
-
-def extract_newsletter_items(*, subject: str, raw_html: str, raw_text: str) -> list[ExtractedNewsletterItem]:
-    parser = _NewsletterLinkParser()
-    if raw_html:
-        parser.feed(raw_html)
-
-    seen_urls: set[str] = set()
-    extracted_items: list[ExtractedNewsletterItem] = []
-    for candidate in parser.links:
-        url = candidate["url"].strip()
-        if not url or url in seen_urls:
-            continue
-        seen_urls.add(url)
-        extracted_items.append(
-            ExtractedNewsletterItem(
-                url=url,
-                title=candidate["title"] or subject or url,
-                excerpt=raw_text[:500].strip(),
-                position=len(extracted_items) + 1,
-            )
-        )
-
-    for match in URL_PATTERN.finditer(raw_text):
-        url = match.group(0).rstrip(".,)")
-        if url in seen_urls:
-            continue
-        seen_urls.add(url)
-        extracted_items.append(
-            ExtractedNewsletterItem(
-                url=url,
-                title=subject or url,
-                excerpt=raw_text[:500].strip(),
-                position=len(extracted_items) + 1,
-            )
-        )
-
-    return extracted_items

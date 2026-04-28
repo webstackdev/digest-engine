@@ -14,7 +14,7 @@ from core.models import (
     RunStatus,
     SourceConfig,
 )
-from core.newsletters import extract_newsletter_items
+from core.newsletter_extraction import extract_newsletter_items
 from core.pipeline import (
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,

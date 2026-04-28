@@ -14,12 +14,12 @@ SPECTACULAR_SETTINGS = {
     },
     "TAGS": [
         {
-            "name": "Tenant Management",
-            "description": "Create tenants and manage tenant-specific configuration for newsletter workspaces.",
+            "name": "Project Management",
+            "description": "Create projects and manage project-specific configuration for newsletter workspaces.",
         },
         {
             "name": "Entity Catalog",
-            "description": "Manage tracked people, companies, and organizations associated with a tenant.",
+            "description": "Manage tracked people, companies, and organizations associated with a project.",
         },
         {
             "name": "Content Library",
@@ -27,7 +27,7 @@ SPECTACULAR_SETTINGS = {
         },
         {
             "name": "AI Processing",
-            "description": "Inspect AI skill execution results, model outputs, and confidence metadata for tenant content.",
+            "description": "Inspect AI skill execution results, model outputs, and confidence metadata for project content.",
         },
         {
             "name": "Feedback",
@@ -35,7 +35,7 @@ SPECTACULAR_SETTINGS = {
         },
         {
             "name": "Ingestion",
-            "description": "Configure source plugins and review ingestion runs for each tenant.",
+            "description": "Configure source plugins and review ingestion runs for each project.",
         },
         {
             "name": "Review Queue",

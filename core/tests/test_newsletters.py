@@ -38,6 +38,17 @@ def test_sanitize_newsletter_html_removes_scripts_and_inline_handlers():
     assert "onclick=" not in sanitized
 
 
+def test_sanitize_newsletter_html_removes_scripts_with_malformed_end_tags():
+    sanitized = sanitize_newsletter_html(
+        '<div><script>alert(1)</script foo="bar"><a href="https://example.com" onclick="alert(2)">Read</a></div>'
+    )
+
+    assert "alert(1)" not in sanitized
+    assert "<script" not in sanitized
+    assert "onclick=" not in sanitized
+    assert 'href="https://example.com"' in sanitized
+
+
 def test_extract_newsletter_items_prefers_anchor_titles_and_dedupes_urls():
     items = extract_newsletter_items(
         subject="Weekly Digest",
