@@ -1,3 +1,5 @@
+"""RSS source plugin used to ingest feed entries into project content."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -11,9 +13,13 @@ from core.plugins.base import ContentItem, SourcePlugin
 
 
 class RSSSourcePlugin(SourcePlugin):
+    """Fetch content from a configured RSS or Atom feed."""
+
     required_config_fields = ("feed_url",)
 
     def fetch_new_content(self, since: datetime | None) -> list[ContentItem]:
+        """Parse the feed and return entries newer than ``since``."""
+
         parsed_feed = feedparser.parse(self.source_config.config["feed_url"])
         items: list[ContentItem] = []
         for entry in parsed_feed.entries:
@@ -24,7 +30,11 @@ class RSSSourcePlugin(SourcePlugin):
             title = (getattr(entry, "title", "") or "").strip()
             if not url or not title:
                 continue
-            summary = getattr(entry, "summary", "") or getattr(entry, "description", "") or title
+            summary = (
+                getattr(entry, "summary", "")
+                or getattr(entry, "description", "")
+                or title
+            )
             items.append(
                 ContentItem(
                     url=url,
@@ -38,11 +48,15 @@ class RSSSourcePlugin(SourcePlugin):
         return items
 
     def health_check(self) -> bool:
+        """Treat the feed as healthy when it returns at least one entry."""
+
         parsed_feed = feedparser.parse(self.source_config.config["feed_url"])
         return bool(getattr(parsed_feed, "entries", []))
 
     @staticmethod
     def _published_date_for_entry(entry) -> datetime:
+        """Choose the best available published timestamp for a feed entry."""
+
         for field_name in ("published_parsed", "updated_parsed", "created_parsed"):
             parsed_value = getattr(entry, field_name, None)
             if parsed_value:
@@ -51,6 +65,8 @@ class RSSSourcePlugin(SourcePlugin):
 
     @staticmethod
     def _struct_time_to_datetime(parsed_value: struct_time) -> datetime:
+        """Convert ``feedparser`` time tuples into timezone-aware datetimes."""
+
         return datetime(
             parsed_value.tm_year,
             parsed_value.tm_mon,

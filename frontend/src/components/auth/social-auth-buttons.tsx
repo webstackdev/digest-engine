@@ -2,6 +2,20 @@
 
 import { signIn } from "next-auth/react"
 
+/**
+ * Render the enabled social sign-in entry points for the login page.
+ *
+ * These buttons delegate directly to NextAuth provider flows so the login form can
+ * offer GitHub and Google entry points without duplicating provider-specific logic.
+ * Each button only starts the provider handshake; backend token exchange happens in
+ * the shared auth callbacks after NextAuth returns.
+ *
+ * @returns A stacked set of social-provider sign-in buttons.
+ * @example
+ * ```tsx
+ * <SocialButtons />
+ * ```
+ */
 export default function SocialButtons() {
   return (
     <div className="flex flex-col space-y-3 w-full max-w-sm">

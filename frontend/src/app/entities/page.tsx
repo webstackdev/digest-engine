@@ -12,6 +12,18 @@ type EntitiesPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
+/**
+ * Render the entity management page for the selected project.
+ *
+ * This page resolves the active project from the URL, loads the project-scoped entity
+ * list, and renders both the create form and update/delete controls for existing entities.
+ * When no project is available for the configured API user, it returns a guarded empty
+ * state instead of issuing any project-scoped entity requests.
+ *
+ * @param props - Async server component props from the App Router.
+ * @param props.searchParams - Search params promise containing the optional `project`, `error`, and `message` values.
+ * @returns The rendered entity management page or the no-project empty state.
+ */
 export default async function EntitiesPage({
   searchParams,
 }: EntitiesPageProps) {
@@ -27,7 +39,7 @@ export default async function EntitiesPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -46,10 +58,10 @@ export default async function EntitiesPage({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
+        <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
+        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
@@ -83,7 +95,7 @@ export default async function EntitiesPage({
             <label className="grid gap-2">
               <span className="text-sm font-medium text-ink">Description</span>
               <textarea
-                className="min-h-[120px] w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                className="min-h-30 w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                 name="description"
               />
             </label>
@@ -121,7 +133,7 @@ export default async function EntitiesPage({
 
         <div className="space-y-4">
           {entities.length === 0 ? (
-            <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+            <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
               No entities exist for this project yet.
             </div>
           ) : null}
@@ -181,7 +193,7 @@ export default async function EntitiesPage({
                 <label className="grid gap-2">
                   <span className="text-sm font-medium text-ink">Description</span>
                   <textarea
-                    className="min-h-[120px] w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                    className="min-h-30 w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                     name="description"
                     defaultValue={entity.description}
                   />

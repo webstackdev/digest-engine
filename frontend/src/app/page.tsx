@@ -24,6 +24,18 @@ type HomePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
+/**
+ * Render the project dashboard for the selected API-visible project.
+ *
+ * The page resolves the active project from the URL, loads the project-scoped content,
+ * review queue, entity, source, and feedback data, and then delegates filter and summary
+ * derivation to `buildDashboardView`. When the current API user has no visible projects,
+ * the page returns a guarded empty state instead of issuing any project-scoped requests.
+ *
+ * @param props - Async server component props from the App Router.
+ * @param props.searchParams - Search params promise containing the optional dashboard filters and flash messages.
+ * @returns The rendered project dashboard or the no-project empty state.
+ */
 export default async function HomePage({ searchParams }: HomePageProps) {
   const resolvedSearchParams = await searchParams
   const projects = await getProjects()
@@ -37,7 +49,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
           No projects are available for the configured API user.
         </div>
       </AppShell>
@@ -115,10 +127,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       </section>
 
       {errorMessage ? (
-        <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
+        <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
+        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
 
       <form
@@ -222,7 +234,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 {pendingReviewItems.length === 0 ? (
                   <tr>
                     <td className="px-3 py-4" colSpan={5}>
-                      <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+                      <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
                         No unresolved review items for this project right now.
                       </div>
                     </td>
@@ -315,7 +327,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
           <div className="space-y-4">
             {filteredContents.length === 0 ? (
-              <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+              <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
                 No content matched the current filters.
               </div>
             ) : null}

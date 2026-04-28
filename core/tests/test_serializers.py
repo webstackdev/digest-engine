@@ -3,7 +3,15 @@ from types import SimpleNamespace
 import pytest
 from django.contrib.auth.models import AnonymousUser, Group
 
-from core.models import Content, Entity, Project, ReviewReason, SkillResult, SourceConfig, SourcePluginName
+from core.models import (
+    Content,
+    Entity,
+    Project,
+    ReviewReason,
+    SkillResult,
+    SourceConfig,
+    SourcePluginName,
+)
 from core.serializers import (
     ContentSerializer,
     EntitySerializer,
@@ -20,16 +28,28 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def serializer_context(django_user_model):
-    user = django_user_model.objects.create_user(username="serializer-owner", password="testpass123")
-    other_user = django_user_model.objects.create_user(username="serializer-other", password="testpass123")
+    user = django_user_model.objects.create_user(
+        username="serializer-owner", password="testpass123"
+    )
+    other_user = django_user_model.objects.create_user(
+        username="serializer-other", password="testpass123"
+    )
     group = Group.objects.create(name="serializer-team")
     other_group = Group.objects.create(name="serializer-other-team")
     user.groups.add(group)
     other_user.groups.add(other_group)
-    project = Project.objects.create(name="Serializer Project", group=group, topic_description="Infra")
-    other_project = Project.objects.create(name="Other Serializer Project", group=other_group, topic_description="Data")
-    entity = Entity.objects.create(project=project, name="Serializer Entity", type="vendor")
-    other_entity = Entity.objects.create(project=other_project, name="Other Entity", type="vendor")
+    project = Project.objects.create(
+        name="Serializer Project", group=group, topic_description="Infra"
+    )
+    other_project = Project.objects.create(
+        name="Other Serializer Project", group=other_group, topic_description="Data"
+    )
+    entity = Entity.objects.create(
+        project=project, name="Serializer Entity", type="vendor"
+    )
+    other_entity = Entity.objects.create(
+        project=other_project, name="Other Entity", type="vendor"
+    )
     content = Content.objects.create(
         project=project,
         url="https://example.com/serializer-content",
@@ -82,7 +102,9 @@ def _request_for(user):
     return SimpleNamespace(user=user)
 
 
-def test_project_scoped_serializer_filters_related_querysets_with_project_context(serializer_context):
+def test_project_scoped_serializer_filters_related_querysets_with_project_context(
+    serializer_context,
+):
     serializer = SkillResultSerializer(
         context={
             "request": _request_for(serializer_context.user),
@@ -91,12 +113,18 @@ def test_project_scoped_serializer_filters_related_querysets_with_project_contex
     )
 
     assert list(serializer.fields["content"].queryset) == [serializer_context.content]
-    assert list(serializer.fields["superseded_by"].queryset) == [serializer_context.skill_result]
+    assert list(serializer.fields["superseded_by"].queryset) == [
+        serializer_context.skill_result
+    ]
     assert list(serializer.fields["project"].queryset) == [serializer_context.project]
 
 
-def test_project_scoped_serializer_filters_related_querysets_without_project_context(serializer_context):
-    serializer = ContentSerializer(context={"request": _request_for(serializer_context.user)})
+def test_project_scoped_serializer_filters_related_querysets_without_project_context(
+    serializer_context,
+):
+    serializer = ContentSerializer(
+        context={"request": _request_for(serializer_context.user)}
+    )
 
     assert list(serializer.fields["entity"].queryset) == [serializer_context.entity]
     assert list(serializer.fields["project"].queryset) == [serializer_context.project]
@@ -117,7 +145,9 @@ def test_content_serializer_rejects_cross_project_entity(serializer_context):
     )
 
     assert serializer.is_valid() is False
-    assert serializer.errors == {"entity": ["Entity must belong to the selected project."]}
+    assert serializer.errors == {
+        "entity": ["Entity must belong to the selected project."]
+    }
 
 
 def test_skill_result_serializer_rejects_cross_project_content(serializer_context):
@@ -133,7 +163,9 @@ def test_skill_result_serializer_rejects_cross_project_content(serializer_contex
     )
 
     assert serializer.is_valid() is False
-    assert serializer.errors == {"content": ["Content must belong to the selected project."]}
+    assert serializer.errors == {
+        "content": ["Content must belong to the selected project."]
+    }
 
 
 def test_review_queue_serializer_rejects_cross_project_content(serializer_context):
@@ -149,7 +181,9 @@ def test_review_queue_serializer_rejects_cross_project_content(serializer_contex
     )
 
     assert serializer.is_valid() is False
-    assert serializer.errors == {"content": ["Content must belong to the selected project."]}
+    assert serializer.errors == {
+        "content": ["Content must belong to the selected project."]
+    }
 
 
 def test_source_config_serializer_normalizes_valid_config(serializer_context):
@@ -166,7 +200,9 @@ def test_source_config_serializer_normalizes_valid_config(serializer_context):
     )
 
     assert serializer.is_valid(), serializer.errors
-    assert serializer.validated_data["config"] == {"feed_url": "https://example.com/feed.xml"}
+    assert serializer.validated_data["config"] == {
+        "feed_url": "https://example.com/feed.xml"
+    }
 
 
 def test_source_config_serializer_surfaces_plugin_validation_errors(serializer_context):
@@ -189,7 +225,9 @@ def test_source_config_serializer_surfaces_plugin_validation_errors(serializer_c
 
 
 def test_entity_serializer_filters_project_queryset_to_request_user(serializer_context):
-    serializer = EntitySerializer(context={"request": _request_for(serializer_context.user)})
+    serializer = EntitySerializer(
+        context={"request": _request_for(serializer_context.user)}
+    )
 
     assert list(serializer.fields["project"].queryset) == [serializer_context.project]
 
@@ -206,7 +244,9 @@ def test_user_feedback_serializer_rejects_cross_project_content(serializer_conte
     )
 
     assert serializer.is_valid() is False
-    assert serializer.errors == {"content": ["Content must belong to the selected project."]}
+    assert serializer.errors == {
+        "content": ["Content must belong to the selected project."]
+    }
 
 
 def test_review_queue_serializer_accepts_same_project_content(serializer_context):
@@ -225,9 +265,13 @@ def test_review_queue_serializer_accepts_same_project_content(serializer_context
     assert serializer.validated_data["content"] == serializer_context.content
 
 
-def test_source_config_serializer_skips_plugin_validation_when_plugin_name_missing(serializer_context):
+def test_source_config_serializer_skips_plugin_validation_when_plugin_name_missing(
+    serializer_context,
+):
     serializer = SourceConfigSerializer(
-        instance=SourceConfig(project=serializer_context.project, plugin_name="", config={}),
+        instance=SourceConfig(
+            project=serializer_context.project, plugin_name="", config={}
+        ),
         data={"config": {}},
         partial=True,
         context={
@@ -240,6 +284,8 @@ def test_source_config_serializer_skips_plugin_validation_when_plugin_name_missi
 
 
 def test_ingestion_run_serializer_filters_project_queryset(serializer_context):
-    serializer = IngestionRunSerializer(context={"request": _request_for(serializer_context.user)})
+    serializer = IngestionRunSerializer(
+        context={"request": _request_for(serializer_context.user)}
+    )
 
     assert list(serializer.fields["project"].queryset) == [serializer_context.project]

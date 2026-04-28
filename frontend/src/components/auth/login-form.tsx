@@ -11,6 +11,24 @@ type LoginFormProps = {
   callbackUrl: string
 }
 
+/**
+ * Render the primary sign-in form for project users.
+ *
+ * The component bridges the branded login UI to NextAuth credential sign-in. It
+ * trims the username field before submission, shows inline errors returned by the
+ * auth flow, and navigates to either the returned redirect URL or the provided
+ * callback URL on success. While a request is in flight, the submit button switches
+ * to a loading label and prevents duplicate submissions.
+ *
+ * @param props - Component props.
+ * @param props.callbackUrl - Fallback destination used when sign-in succeeds without
+ * an explicit redirect URL.
+ * @returns The login form card with social sign-in options and password auth fields.
+ * @example
+ * ```tsx
+ * <LoginForm callbackUrl="/content/4?project=2" />
+ * ```
+ */
 export default function LoginForm({ callbackUrl }: LoginFormProps) {
   const router = useRouter()
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -106,7 +124,7 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
         </div>
 
         {errorMessage ? (
-          <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">
+          <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">
             {errorMessage}
           </div>
         ) : null}

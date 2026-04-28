@@ -9,7 +9,13 @@ from django.core import mail
 from django.urls import reverse
 from svix.webhooks import Webhook
 
-from core.models import Content, IntakeAllowlist, NewsletterIntake, NewsletterIntakeStatus, Project
+from core.models import (
+    Content,
+    IntakeAllowlist,
+    NewsletterIntake,
+    NewsletterIntakeStatus,
+    Project,
+)
 from core.newsletters import (
     extract_newsletter_items,
     sanitize_newsletter_html,
@@ -32,7 +38,9 @@ def project():
 
 
 def test_sanitize_newsletter_html_removes_scripts_and_inline_handlers():
-    sanitized = sanitize_newsletter_html('<div onclick="alert(1)"><script>alert(2)</script><a href="https://example.com">Read</a></div>')
+    sanitized = sanitize_newsletter_html(
+        '<div onclick="alert(1)"><script>alert(2)</script><a href="https://example.com">Read</a></div>'
+    )
 
     assert "<script" not in sanitized
     assert "onclick=" not in sanitized
@@ -53,10 +61,13 @@ def test_extract_newsletter_items_prefers_anchor_titles_and_dedupes_urls():
     items = extract_newsletter_items(
         subject="Weekly Digest",
         raw_html='<a href="https://example.com/a">Article A</a><a href="https://example.com/a">Duplicate</a>',
-        raw_text='See also https://example.com/b and https://example.com/a',
+        raw_text="See also https://example.com/b and https://example.com/a",
     )
 
-    assert [item.url for item in items] == ["https://example.com/a", "https://example.com/b"]
+    assert [item.url for item in items] == [
+        "https://example.com/a",
+        "https://example.com/b",
+    ]
     assert items[0].title == "Article A"
     assert items[1].title == "Weekly Digest"
 
@@ -86,7 +97,9 @@ class FakeInboundMessage:
         return self._headers.get(key, default)
 
 
-def _signed_resend_headers(secret: str, payload: str, *, message_id: str) -> dict[str, str]:
+def _signed_resend_headers(
+    secret: str, payload: str, *, message_id: str
+) -> dict[str, str]:
     timestamp = datetime.now(timezone.utc)
     signature = Webhook(secret).sign(
         msg_id=message_id,
@@ -105,7 +118,9 @@ def _basic_auth_header(credentials: str) -> str:
     return f"Basic {encoded}"
 
 
-def test_handle_anymail_inbound_creates_pending_intake_and_sends_confirmation(settings, mocker, project):
+def test_handle_anymail_inbound_creates_pending_intake_and_sends_confirmation(
+    settings, mocker, project
+):
     settings.NEWSLETTER_API_BASE_URL = "https://example.com"
     send_mock = mocker.patch("core.newsletters.send_confirmation_email")
     event = SimpleNamespace(
@@ -123,11 +138,15 @@ def test_handle_anymail_inbound_creates_pending_intake_and_sends_confirmation(se
     handle_anymail_inbound(sender=object(), event=event, esp_name="Resend")
 
     intake = NewsletterIntake.objects.get(message_id="msg-123")
-    allowlist = IntakeAllowlist.objects.get(project=project, sender_email="newsletter@example.com")
+    allowlist = IntakeAllowlist.objects.get(
+        project=project, sender_email="newsletter@example.com"
+    )
     assert intake.status == NewsletterIntakeStatus.PENDING
     assert allowlist.confirmed_at is None
     send_mock.assert_called_once()
-    assert send_mock.call_args.kwargs["confirm_url"].startswith("https://example.com/api/v1/inbound/confirm/")
+    assert send_mock.call_args.kwargs["confirm_url"].startswith(
+        "https://example.com/api/v1/inbound/confirm/"
+    )
 
 
 def test_handle_anymail_inbound_queues_confirmed_sender(settings, mocker, project):
@@ -208,7 +227,9 @@ def test_resend_inbound_webhook_posts_to_anymail_url(settings, client, mocker, p
 
     assert response.status_code == 200
     intake = NewsletterIntake.objects.get(message_id="<msg-789@example.com>")
-    allowlist = IntakeAllowlist.objects.get(project=project, sender_email="newsletter@example.com")
+    allowlist = IntakeAllowlist.objects.get(
+        project=project, sender_email="newsletter@example.com"
+    )
     assert intake.status == NewsletterIntakeStatus.PENDING
     assert allowlist.confirmed_at is None
     assert len(mail.outbox) == 1
@@ -273,7 +294,9 @@ def test_amazon_ses_inbound_webhook_posts_to_anymail_url(settings, client, proje
 
     assert response.status_code == 200
     intake = NewsletterIntake.objects.get(message_id="<ses-message-123@example.com>")
-    allowlist = IntakeAllowlist.objects.get(project=project, sender_email="newsletter@example.com")
+    allowlist = IntakeAllowlist.objects.get(
+        project=project, sender_email="newsletter@example.com"
+    )
     assert intake.status == NewsletterIntakeStatus.PENDING
     assert allowlist.confirmed_at is None
     assert len(mail.outbox) == 1
@@ -292,7 +315,9 @@ def test_send_confirmation_email_uses_django_mail_backend(settings):
 
     assert len(mail.outbox) == 1
     message = mail.outbox[0]
-    assert message.subject == "Confirm newsletter intake for Platform Engineering Weekly"
+    assert (
+        message.subject == "Confirm newsletter intake for Platform Engineering Weekly"
+    )
     assert message.from_email == "noreply@example.com"
     assert message.to == ["newsletter@example.com"]
     assert "https://example.com/confirm/token" in message.body
@@ -302,9 +327,13 @@ def test_send_confirmation_email_uses_django_mail_backend(settings):
     )
 
 
-def test_confirm_newsletter_sender_confirms_allowlist_and_queues_pending_intakes(client, settings, mocker, project):
+def test_confirm_newsletter_sender_confirms_allowlist_and_queues_pending_intakes(
+    client, settings, mocker, project
+):
     settings.CELERY_TASK_ALWAYS_EAGER = False
-    allowlist = IntakeAllowlist.objects.create(project=project, sender_email="newsletter@example.com")
+    allowlist = IntakeAllowlist.objects.create(
+        project=project, sender_email="newsletter@example.com"
+    )
     intake = NewsletterIntake.objects.create(
         project=project,
         sender_email="newsletter@example.com",
@@ -314,7 +343,11 @@ def test_confirm_newsletter_sender_confirms_allowlist_and_queues_pending_intakes
     )
     delay_mock = mocker.patch("core.tasks.process_newsletter_intake.delay")
 
-    response = client.get(reverse("confirm-newsletter-sender", kwargs={"token": allowlist.confirmation_token}))
+    response = client.get(
+        reverse(
+            "confirm-newsletter-sender", kwargs={"token": allowlist.confirmation_token}
+        )
+    )
 
     assert response.status_code == 200
     allowlist.refresh_from_db()
@@ -322,7 +355,9 @@ def test_confirm_newsletter_sender_confirms_allowlist_and_queues_pending_intakes
     delay_mock.assert_called_once_with(intake.id)
 
 
-def test_process_newsletter_intake_creates_content_for_confirmed_sender(settings, mocker, project):
+def test_process_newsletter_intake_creates_content_for_confirmed_sender(
+    settings, mocker, project
+):
     settings.CELERY_TASK_ALWAYS_EAGER = False
     allowlist = IntakeAllowlist.objects.create(
         project=project,

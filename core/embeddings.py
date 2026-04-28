@@ -1,3 +1,11 @@
+"""Embedding generation and Qdrant vector-store helpers.
+
+The rest of the application treats this module as the integration boundary for
+vector search. It normalizes provider differences, creates per-project Qdrant
+collections, and stores the payload fields later used by relevance scoring and
+related-content search.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -10,12 +18,12 @@ from django.conf import settings as django_settings
 from django.utils.dateparse import parse_datetime
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-  Distance,
-  FieldCondition,
-  Filter,
-  MatchValue,
-  PointStruct,
-  VectorParams,
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
 )
 
 from core.models import Content
@@ -26,26 +34,46 @@ settings = cast(CoreSettings, django_settings)
 
 
 def get_sentence_transformer_class():
-        global SentenceTransformer
+    """Lazily import and cache the sentence-transformer class.
 
-        if SentenceTransformer is None:
-                from sentence_transformers import SentenceTransformer as sentence_transformer_class
+    Returns:
+        The ``SentenceTransformer`` class from the optional dependency.
+    """
 
-                SentenceTransformer = sentence_transformer_class
+    global SentenceTransformer
 
-        return SentenceTransformer
+    if SentenceTransformer is None:
+        from sentence_transformers import (
+            SentenceTransformer as sentence_transformer_class,
+        )
+
+        SentenceTransformer = sentence_transformer_class
+
+    return SentenceTransformer
 
 
 class EmbeddingProvider(ABC):
+    """Abstract interface implemented by all embedding backends."""
+
     @abstractmethod
     def embed_text(self, text: str) -> list[float]:
+        """Embed normalized text into a dense vector."""
+
         raise NotImplementedError
 
     def get_embedding_dimension(self) -> int:
+        """Infer the output vector size for the provider.
+
+        Returns:
+            The number of dimensions produced by ``embed_text``.
+        """
+
         return len(self.embed_text("dimension probe"))
 
 
 class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider backed by ``sentence-transformers`` models."""
+
     def __init__(self):
         sentence_transformer_class = get_sentence_transformer_class()
         self.model = sentence_transformer_class(
@@ -54,14 +82,22 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
         )
 
     def embed_text(self, text: str) -> list[float]:
+        """Encode text with normalized sentence-transformer embeddings."""
+
         return self.model.encode(text, normalize_embeddings=True).tolist()
 
     def get_embedding_dimension(self) -> int:
+        """Return the model's native embedding dimension without probing text."""
+
         return int(self.model.get_sentence_embedding_dimension())
 
 
 class OllamaEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider backed by an Ollama server."""
+
     def embed_text(self, text: str) -> list[float]:
+        """Request embeddings from the Ollama HTTP API."""
+
         normalized_text = normalize_text(text)
         response = httpx.post(
             f"{settings.OLLAMA_URL.rstrip('/')}/api/embed",
@@ -81,9 +117,19 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
 
 
 class OpenRouterEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider backed by OpenRouter's embeddings endpoint."""
+
     def embed_text(self, text: str) -> list[float]:
+        """Request embeddings from OpenRouter using the configured model.
+
+        Raises:
+            RuntimeError: If the OpenRouter API key is not configured.
+        """
+
         if not settings.OPENROUTER_API_KEY:
-            raise RuntimeError("OPENROUTER_API_KEY must be set when using the openrouter embedding provider.")
+            raise RuntimeError(
+                "OPENROUTER_API_KEY must be set when using the openrouter embedding provider."
+            )
         headers = {
             "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
@@ -107,16 +153,29 @@ class OpenRouterEmbeddingProvider(EmbeddingProvider):
 
 
 def collection_name_for_project(project_id: int) -> str:
+    """Return the Qdrant collection name for a project."""
+
     return f"project_{project_id}_content"
 
 
 @lru_cache(maxsize=1)
 def get_qdrant_client() -> QdrantClient:
+    """Create and cache the shared Qdrant client instance."""
+
     return QdrantClient(url=settings.QDRANT_URL, timeout=10, check_compatibility=False)
 
 
 @lru_cache(maxsize=1)
 def get_embedding_provider() -> EmbeddingProvider:
+    """Resolve the configured embedding provider implementation.
+
+    Returns:
+        The provider instance selected by ``EMBEDDING_PROVIDER``.
+
+    Raises:
+        ValueError: If the configured provider name is unsupported.
+    """
+
     provider_name = settings.EMBEDDING_PROVIDER
     if provider_name == "sentence-transformers":
         return SentenceTransformerEmbeddingProvider()
@@ -128,14 +187,27 @@ def get_embedding_provider() -> EmbeddingProvider:
 
 
 def get_embedding_dimension() -> int:
+    """Return the current embedding model's output dimension."""
+
     return get_embedding_provider().get_embedding_dimension()
 
 
 def embed_text(text: str) -> list[float]:
+    """Normalize and embed arbitrary text with the active provider."""
+
     return get_embedding_provider().embed_text(normalize_text(text))
 
 
 def upsert_content_embedding(content: Content) -> str:
+    """Write or update a content embedding in the project's Qdrant collection.
+
+    Args:
+        content: The content row whose embedding should be stored.
+
+    Returns:
+        The Qdrant point identifier associated with the content row.
+    """
+
     client = get_qdrant_client()
     ensure_project_collection(content.project_id)
     embedding_id = content.embedding_id or str(uuid4())
@@ -173,9 +245,26 @@ def search_similar(
     is_reference: bool | None = None,
     exclude_content_id: int | None = None,
 ):
+    """Search a project's Qdrant collection for nearest-neighbor matches.
+
+    Args:
+        project_id: Project whose collection should be queried.
+        query_vector: Embedded query vector to compare against stored points.
+        limit: Maximum number of results to return.
+        is_reference: Optional filter limiting matches to reference or non-reference
+            content.
+        exclude_content_id: Optional content ID to exclude from the result set.
+
+    Returns:
+        A list of scored Qdrant points. Returns an empty list when the collection
+        does not exist yet.
+    """
+
     if not project_collection_exists(project_id):
         return []
-    query_filter = build_search_filter(is_reference=is_reference, exclude_content_id=exclude_content_id)
+    query_filter = build_search_filter(
+        is_reference=is_reference, exclude_content_id=exclude_content_id
+    )
     client = cast(Any, get_qdrant_client())
     return client.search(
         collection_name=collection_name_for_project(project_id),
@@ -186,7 +275,11 @@ def search_similar(
     )
 
 
-def search_similar_content(content: Content, limit: int = 10, *, is_reference: bool | None = None):
+def search_similar_content(
+    content: Content, limit: int = 10, *, is_reference: bool | None = None
+):
+    """Find content similar to an existing content row within the same project."""
+
     return search_similar(
         content.project_id,
         embed_text(build_content_embedding_text(content)),
@@ -196,7 +289,21 @@ def search_similar_content(content: Content, limit: int = 10, *, is_reference: b
     )
 
 
-def get_reference_similarity(project_id: int, vector: list[float], limit: int = 5) -> float:
+def get_reference_similarity(
+    project_id: int, vector: list[float], limit: int = 5
+) -> float:
+    """Average the top reference-item similarity scores for a vector.
+
+    Args:
+        project_id: Project whose reference corpus should be searched.
+        vector: Embedded representation of the candidate content.
+        limit: Number of reference matches to average.
+
+    Returns:
+        The mean cosine similarity of the top matching reference items, or ``0.0``
+        when the project has no reference corpus.
+    """
+
     scored_points = search_similar(project_id, vector, limit=limit, is_reference=True)
     if not scored_points:
         return 0.0
@@ -204,17 +311,23 @@ def get_reference_similarity(project_id: int, vector: list[float], limit: int = 
 
 
 def ensure_project_collection(project_id: int) -> None:
+    """Create the per-project Qdrant collection when it does not yet exist."""
+
     client = get_qdrant_client()
     collection_name = collection_name_for_project(project_id)
     if project_collection_exists(project_id):
         return
     client.create_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(size=get_embedding_dimension(), distance=Distance.COSINE),
+        vectors_config=VectorParams(
+            size=get_embedding_dimension(), distance=Distance.COSINE
+        ),
     )
 
 
 def project_collection_exists(project_id: int) -> bool:
+    """Return whether the project's Qdrant collection already exists."""
+
     try:
         get_qdrant_client().get_collection(collection_name_for_project(project_id))
     except Exception:
@@ -223,10 +336,14 @@ def project_collection_exists(project_id: int) -> bool:
 
 
 def build_content_embedding_text(content: Content) -> str:
+    """Build the text blob used to generate content embeddings."""
+
     return "\n\n".join(part for part in [content.title, content.content_text] if part)
 
 
 def normalize_text(text: str) -> str:
+    """Trim input text and replace empty input with a stable placeholder."""
+
     normalized_text = text.strip()
     if not normalized_text:
         return "empty content"
@@ -234,6 +351,8 @@ def normalize_text(text: str) -> str:
 
 
 def serialize_published_date(value) -> str:
+    """Convert supported published-date values into a string payload for Qdrant."""
+
     if hasattr(value, "isoformat"):
         return value.isoformat()
     if isinstance(value, str):
@@ -244,12 +363,20 @@ def serialize_published_date(value) -> str:
     return str(value)
 
 
-def build_search_filter(*, is_reference: bool | None = None, exclude_content_id: int | None = None) -> Filter | None:
+def build_search_filter(
+    *, is_reference: bool | None = None, exclude_content_id: int | None = None
+) -> Filter | None:
+    """Build a Qdrant filter for reference scoping and self-exclusion."""
+
     conditions = []
     if is_reference is not None:
-        conditions.append(FieldCondition(key="is_reference", match=MatchValue(value=is_reference)))
+        conditions.append(
+            FieldCondition(key="is_reference", match=MatchValue(value=is_reference))
+        )
     if exclude_content_id is not None:
-        conditions.append(FieldCondition(key="content_id", match=MatchValue(value=exclude_content_id)))
+        conditions.append(
+            FieldCondition(key="content_id", match=MatchValue(value=exclude_content_id))
+        )
     if not conditions:
         return None
     must_conditions = conditions if exclude_content_id is None else conditions[:-1]

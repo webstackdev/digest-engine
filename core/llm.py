@@ -19,9 +19,13 @@ class OpenRouterJSONResponse:
     latency_ms: int
 
 
-def openrouter_chat_json(*, model: str, system_prompt: str, user_prompt: str) -> OpenRouterJSONResponse:
+def openrouter_chat_json(
+    *, model: str, system_prompt: str, user_prompt: str
+) -> OpenRouterJSONResponse:
     if not settings.OPENROUTER_API_KEY:
-        raise RuntimeError("OPENROUTER_API_KEY must be configured for OpenRouter chat completions.")
+        raise RuntimeError(
+            "OPENROUTER_API_KEY must be configured for OpenRouter chat completions."
+        )
 
     headers = {
         "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",

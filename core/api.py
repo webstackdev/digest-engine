@@ -1,3 +1,10 @@
+"""REST API viewsets and OpenAPI documentation helpers for the core app.
+
+This module exposes the project-scoped CRUD surface used by the frontend and by
+external clients. It also centralizes the drf-spectacular helpers that keep the
+generated schema consistent across similar viewsets.
+"""
+
 from typing import Any
 
 from drf_spectacular.utils import (
@@ -222,7 +229,20 @@ AUTHENTICATION_REQUIRED_RESPONSE = OpenApiResponse(
 )
 
 
-def build_success_response(response, description: str, examples: list[OpenApiExample] | None = None):
+def build_success_response(
+    response, description: str, examples: list[OpenApiExample] | None = None
+):
+    """Build a reusable OpenAPI success response object.
+
+    Args:
+        response: Serializer, inline serializer, or response object for the schema.
+        description: Human-readable description shown in the generated docs.
+        examples: Optional example payloads to attach to the response.
+
+    Returns:
+        A configured ``OpenApiResponse`` instance.
+    """
+
     response_kwargs = {
         "response": response,
         "description": description,
@@ -242,6 +262,22 @@ def build_crud_action_overrides(
     create_examples: list[OpenApiExample] | None = None,
     create_response_examples: list[OpenApiExample] | None = None,
 ):
+    """Generate common schema overrides for CRUD-style viewset actions.
+
+    Args:
+        serializer_class: Serializer used by the viewset.
+        resource_plural: Human-readable plural name for the resource.
+        resource_singular: Human-readable singular name for the resource.
+        list_examples: Optional examples for list responses.
+        retrieve_examples: Optional examples for retrieve responses.
+        create_examples: Optional request examples for create actions.
+        create_response_examples: Optional examples for create responses.
+
+    Returns:
+        A mapping suitable for ``action_overrides`` on the documentation helpers
+        below.
+    """
+
     overrides: dict[str, dict[str, Any]] = {
         "list": {
             "responses": {
@@ -275,19 +311,25 @@ def build_crud_action_overrides(
         },
         "update": {
             "responses": {
-                200: build_success_response(serializer_class, f"The updated {resource_singular}."),
+                200: build_success_response(
+                    serializer_class, f"The updated {resource_singular}."
+                ),
                 403: AUTHENTICATION_REQUIRED_RESPONSE,
             }
         },
         "partial_update": {
             "responses": {
-                200: build_success_response(serializer_class, f"The updated {resource_singular}."),
+                200: build_success_response(
+                    serializer_class, f"The updated {resource_singular}."
+                ),
                 403: AUTHENTICATION_REQUIRED_RESPONSE,
             }
         },
         "destroy": {
             "responses": {
-                204: OpenApiResponse(description=f"The {resource_singular} was deleted."),
+                204: OpenApiResponse(
+                    description=f"The {resource_singular} was deleted."
+                ),
                 403: AUTHENTICATION_REQUIRED_RESPONSE,
             }
         },
@@ -304,6 +346,19 @@ def document_group_access_viewset(
     tag: str,
     action_overrides: dict[str, dict] | None = None,
 ):
+    """Decorate a viewset with schema metadata for group-access resources.
+
+    Args:
+        resource_plural: Human-readable plural label for the resource.
+        resource_singular: Human-readable singular label for the resource.
+        create_description: Detailed description for the create action.
+        tag: OpenAPI tag applied to each action.
+        action_overrides: Optional per-action schema overrides.
+
+    Returns:
+        A class decorator produced by ``extend_schema_view``.
+    """
+
     action_overrides = action_overrides or {}
 
     def schema(action: str, **kwargs):
@@ -314,7 +369,9 @@ def document_group_access_viewset(
             responses = dict(schema_kwargs.get("responses", {}))
             responses.update(override_responses)
             schema_kwargs["responses"] = responses
-        schema_kwargs.update({key: value for key, value in action_override.items() if key != "responses"})
+        schema_kwargs.update(
+            {key: value for key, value in action_override.items() if key != "responses"}
+        )
         return extend_schema(**schema_kwargs)
 
     return extend_schema_view(
@@ -358,6 +415,19 @@ def document_project_owned_viewset(
     tag: str,
     action_overrides: dict[str, dict] | None = None,
 ):
+    """Decorate a nested project-scoped viewset with consistent schema metadata.
+
+    Args:
+        resource_plural: Human-readable plural label for the resource.
+        resource_singular: Human-readable singular label for the resource.
+        create_description: Detailed description for the create action.
+        tag: OpenAPI tag applied to each action.
+        action_overrides: Optional per-action schema overrides.
+
+    Returns:
+        A class decorator produced by ``extend_schema_view``.
+    """
+
     parameters = [PROJECT_ID_PARAMETER]
     action_overrides = action_overrides or {}
 
@@ -369,7 +439,9 @@ def document_project_owned_viewset(
             responses = dict(schema_kwargs.get("responses", {}))
             responses.update(override_responses)
             schema_kwargs["responses"] = responses
-        schema_kwargs.update({key: value for key, value in action_override.items() if key != "responses"})
+        schema_kwargs.update(
+            {key: value for key, value in action_override.items() if key != "responses"}
+        )
         return extend_schema(**schema_kwargs)
 
     return extend_schema_view(
@@ -413,29 +485,46 @@ def document_project_owned_viewset(
 
 
 class ProjectOwnedQuerysetMixin:
+    """Scope nested viewsets to the authenticated user's selected project."""
+
     queryset: Any = None
 
     def get_project(self):
+        """Return the project referenced by ``project_id`` after access checks.
+
+        Raises:
+            AssertionError: If the nested route does not supply ``project_id``.
+            NotFound: If the project does not exist or the user lacks access.
+        """
+
         project_id = self.kwargs.get("project_id")
         if project_id is None:
-            raise AssertionError("project_id must be present in nested project-scoped routes")
+            raise AssertionError(
+                "project_id must be present in nested project-scoped routes"
+            )
         try:
             return Project.objects.get(pk=project_id, group__user=self.request.user)
         except Project.DoesNotExist as exc:
             raise NotFound("Project not found.") from exc
 
     def get_queryset(self):
+        """Filter the configured queryset down to the current project."""
+
         queryset = self.queryset
         if queryset is None:
             raise AssertionError("queryset must be set on project-scoped viewsets")
         return queryset.filter(project=self.get_project())
 
     def get_serializer_context(self):
+        """Inject the resolved project into serializer context."""
+
         context = super().get_serializer_context()
         context["project"] = self.get_project()
         return context
 
     def perform_create(self, serializer):
+        """Ensure nested resources are always created under the current project."""
+
         serializer.save(project=self.get_project())
 
 
@@ -454,11 +543,15 @@ class ProjectOwnedQuerysetMixin:
     ),
 )
 class ProjectViewSet(viewsets.ModelViewSet):
+    """Manage projects accessible through the current user's group memberships."""
+
     serializer_class = ProjectSerializer
     queryset = Project.objects.select_related("group")
     lookup_url_kwarg = "id"
 
     def get_queryset(self):
+        """Limit projects to those visible through the authenticated user."""
+
         return self.queryset.filter(group__user=self.request.user).distinct()
 
 
@@ -474,6 +567,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     ),
 )
 class ProjectConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Manage per-project scoring and authority configuration."""
+
     serializer_class = ProjectConfigSerializer
     queryset = ProjectConfig.objects.select_related("project")
 
@@ -490,6 +585,8 @@ class ProjectConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     ),
 )
 class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Manage tracked entities associated with a project."""
+
     serializer_class = EntitySerializer
     queryset = Entity.objects.select_related("project")
 
@@ -509,6 +606,8 @@ class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     ),
 )
 class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Browse project content and trigger ad hoc AI processing for it."""
+
     serializer_class = ContentSerializer
     queryset = Content.objects.select_related("project", "entity")
 
@@ -529,6 +628,13 @@ class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     )
     @action(detail=True, methods=["post"], url_path=r"skills/(?P<skill_name>[^/.]+)")
     def run_skill(self, request, *args, **kwargs):
+        """Execute one supported ad hoc skill for a content item.
+
+        Relevant and summarization requests are queued through Celery, while the
+        other supported skills execute inline and return their ``SkillResult``
+        immediately.
+        """
+
         from core.pipeline import execute_ad_hoc_skill
         from core.tasks import queue_content_skill
 
@@ -551,11 +657,15 @@ class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
         content = self.get_object()
         if skill_name in {RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME}:
             skill_result = queue_content_skill(content, skill_name)
-            serializer = SkillResultSerializer(skill_result, context=self.get_serializer_context())
+            serializer = SkillResultSerializer(
+                skill_result, context=self.get_serializer_context()
+            )
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
         skill_result = execute_ad_hoc_skill(content, skill_name)
-        serializer = SkillResultSerializer(skill_result, context=self.get_serializer_context())
+        serializer = SkillResultSerializer(
+            skill_result, context=self.get_serializer_context()
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -572,6 +682,8 @@ class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     ),
 )
 class SkillResultViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Inspect persisted AI skill outputs for project content."""
+
     serializer_class = SkillResultSerializer
     queryset = SkillResult.objects.select_related("content", "project", "superseded_by")
 
@@ -588,10 +700,14 @@ class SkillResultViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     ),
 )
 class UserFeedbackViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Capture editor feedback on project content items."""
+
     serializer_class = UserFeedbackSerializer
     queryset = UserFeedback.objects.select_related("content", "project", "user")
 
     def perform_create(self, serializer):
+        """Attach the authenticated user automatically to new feedback rows."""
+
         serializer.save(project=self.get_project(), user=self.request.user)
 
 
@@ -607,6 +723,8 @@ class UserFeedbackViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     ),
 )
 class IngestionRunViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Inspect ingestion-run history for a project."""
+
     serializer_class = IngestionRunSerializer
     queryset = IngestionRun.objects.select_related("project")
 
@@ -630,6 +748,8 @@ class IngestionRunViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     ),
 )
 class SourceConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Manage source-plugin configuration for a project."""
+
     serializer_class = SourceConfigSerializer
     queryset = SourceConfig.objects.select_related("project")
 
@@ -646,5 +766,7 @@ class SourceConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     ),
 )
 class ReviewQueueViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Inspect and manage content awaiting manual review."""
+
     serializer_class = ReviewQueueSerializer
     queryset = ReviewQueue.objects.select_related("content", "project")

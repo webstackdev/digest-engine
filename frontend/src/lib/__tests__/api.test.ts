@@ -30,6 +30,10 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   })
 }
 
+function textResponse(body: string, init?: ResponseInit) {
+  return new Response(body, init)
+}
+
 function getExpectedBasicAuthHeader() {
   const username = process.env.NEWSLETTER_API_USERNAME
   const password = process.env.NEWSLETTER_API_PASSWORD
@@ -89,6 +93,22 @@ describe("api helpers", () => {
     )
   })
 
+  it("uses a bearer token when the session provides backend access credentials", async () => {
+    getServerSessionMock.mockResolvedValue({ backendAuth: { access: "jwt-token" } })
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { apiFetch } = await import("@/lib/api")
+    await apiFetch("/api/v1/projects/")
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/projects/",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer jwt-token" }),
+      }),
+    )
+  })
+
   it("surfaces a normalized error preview for failed requests", async () => {
     getServerSessionMock.mockResolvedValue(null)
     const fetchMock = vi
@@ -105,6 +125,111 @@ describe("api helpers", () => {
 
     await expect(apiFetch("/api/v1/projects/")).rejects.toThrow(
       "API request failed (500) from https://api.example.com/api/v1/projects/ with text/plain: bad request body",
+    )
+  })
+
+  it("returns undefined for no-content responses", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 204,
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { deleteEntity } = await import("@/lib/api")
+    const result = await deleteEntity(7, 4)
+
+    expect(result).toBeUndefined()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/projects/4/entities/7/",
+      expect.objectContaining({
+        method: "DELETE",
+      }),
+    )
+  })
+
+  it("returns undefined for successful responses with an empty body", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(
+      textResponse("", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { apiFetch } = await import("@/lib/api")
+    const result = await apiFetch("/api/v1/projects/")
+
+    expect(result).toBeUndefined()
+  })
+
+  it("throws when a successful response is not JSON", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(
+      textResponse("ok", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { apiFetch } = await import("@/lib/api")
+
+    await expect(apiFetch("/api/v1/projects/")).rejects.toThrow(
+      "API request to https://api.example.com/api/v1/projects/ returned text/plain instead of JSON: ok",
+    )
+  })
+
+  it("throws when a successful JSON response cannot be parsed", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(
+      textResponse("{", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { apiFetch } = await import("@/lib/api")
+
+    await expect(apiFetch("/api/v1/projects/")).rejects.toThrow(
+      "API request to https://api.example.com/api/v1/projects/ returned invalid JSON: {",
+    )
+  })
+
+  it("sends the expected payload for createFeedback", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: 3 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { createFeedback } = await import("@/lib/api")
+    await createFeedback(4, 9, "upvote")
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/projects/4/feedback/",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ content: 9, feedback_type: "upvote" }),
+      }),
+    )
+  })
+
+  it("sends the expected payload for updateEntity", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: 9 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { updateEntity } = await import("@/lib/api")
+    await updateEntity(9, 4, { description: "Updated" })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/projects/4/entities/9/",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ description: "Updated" }),
+      }),
     )
   })
 

@@ -16,6 +16,40 @@ type SourcesPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
+/**
+ * Build a per-plugin lookup of the newest ingestion run records already returned by the API.
+ *
+ * The ingestion runs list is expected to arrive in newest-first order. This helper keeps the
+ * first run seen for each plugin so the page can show one concise status summary beside each
+ * source configuration without re-sorting or scanning the array repeatedly.
+ *
+ * @param ingestionRuns - Ingestion history for the selected project, ideally ordered newest first.
+ * @returns A map keyed by plugin name with the latest run for each source plugin.
+ */
+export function buildLatestRunByPlugin(
+  ingestionRuns: Awaited<ReturnType<typeof getProjectIngestionRuns>>,
+) {
+  const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
+  for (const ingestionRun of ingestionRuns) {
+    if (!latestRunByPlugin.has(ingestionRun.plugin_name)) {
+      latestRunByPlugin.set(ingestionRun.plugin_name, ingestionRun)
+    }
+  }
+  return latestRunByPlugin
+}
+
+/**
+ * Render the source-configuration admin page for the selected project.
+ *
+ * The page resolves the active project from the URL, shows any success or error flash messages
+ * returned from the source-config routes, and renders both the create form and the editable list
+ * of existing source configurations. When no project is available, it renders a guarded empty
+ * state instead of issuing project-scoped API requests.
+ *
+ * @param props - Async server component props from the App Router.
+ * @param props.searchParams - Search params promise containing the optional `project`, `message`, and `error` values.
+ * @returns The rendered source configuration admin page or the no-project empty state.
+ */
 export default async function SourcesPage({ searchParams }: SourcesPageProps) {
   const resolvedSearchParams = await searchParams
   const projects = await getProjects()
@@ -29,7 +63,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -40,12 +74,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
     getProjectSourceConfigs(selectedProject.id),
     getProjectIngestionRuns(selectedProject.id),
   ])
-  const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
-  for (const ingestionRun of ingestionRuns) {
-    if (!latestRunByPlugin.has(ingestionRun.plugin_name)) {
-      latestRunByPlugin.set(ingestionRun.plugin_name, ingestionRun)
-    }
-  }
+  const latestRunByPlugin = buildLatestRunByPlugin(ingestionRuns)
 
   const errorMessage = getErrorMessage(resolvedSearchParams)
   const successMessage = getSuccessMessage(resolvedSearchParams)
@@ -58,10 +87,10 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <div className="rounded-[18px] bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
+        <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
+        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
@@ -92,7 +121,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
             <label className="grid gap-2">
               <span className="text-sm font-medium text-ink">Config JSON</span>
               <textarea
-                className="min-h-[120px] w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 font-mono text-sm text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                className="min-h-30 w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 font-mono text-sm text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                 name="config_json"
                 defaultValue={JSON.stringify(
                   { feed_url: "https://example.com/feed.xml" },
@@ -120,7 +149,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
 
         <div className="space-y-4">
           {sourceConfigs.length === 0 ? (
-            <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+            <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
               No source configurations exist for this project yet.
             </div>
           ) : null}
@@ -178,7 +207,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                   <label className="grid gap-2">
                     <span className="text-sm font-medium text-ink">Config JSON</span>
                     <textarea
-                      className="min-h-[120px] w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 font-mono text-sm text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      className="min-h-30 w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 font-mono text-sm text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="config_json"
                       defaultValue={JSON.stringify(
                         sourceConfig.config,

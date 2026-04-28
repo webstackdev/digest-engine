@@ -3,7 +3,14 @@ from types import SimpleNamespace
 import pytest
 from django.contrib.auth.models import Group
 
-from core.models import Content, Project, ReviewQueue, ReviewReason, SkillResult, SkillStatus
+from core.models import (
+    Content,
+    Project,
+    ReviewQueue,
+    ReviewReason,
+    SkillResult,
+    SkillStatus,
+)
 from core.pipeline import (
     CLASSIFICATION_SKILL_NAME,
     RELATED_CONTENT_SKILL_NAME,
@@ -30,10 +37,14 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def pipeline_context(django_user_model):
-    user = django_user_model.objects.create_user(username="pipeline-owner", password="testpass123")
+    user = django_user_model.objects.create_user(
+        username="pipeline-owner", password="testpass123"
+    )
     group = Group.objects.create(name="pipeline-team")
     user.groups.add(group)
-    project = Project.objects.create(name="Pipeline Project", group=group, topic_description="Platform engineering")
+    project = Project.objects.create(
+        name="Pipeline Project", group=group, topic_description="Platform engineering"
+    )
     content = Content.objects.create(
         project=project,
         url="https://example.com/article",
@@ -47,7 +58,9 @@ def pipeline_context(django_user_model):
     return SimpleNamespace(user=user, group=group, project=project, content=content)
 
 
-def test_process_content_runs_full_pipeline_for_relevant_content(pipeline_context, mocker):
+def test_process_content_runs_full_pipeline_for_relevant_content(
+    pipeline_context, mocker
+):
     mocker.patch(
         "core.pipeline.run_content_classification",
         return_value={
@@ -84,9 +97,24 @@ def test_process_content_runs_full_pipeline_for_relevant_content(pipeline_contex
     assert pipeline_context.content.content_type == "release_notes"
     assert pipeline_context.content.relevance_score == pytest.approx(0.92)
     assert pipeline_context.content.is_active is True
-    assert SkillResult.objects.filter(content=pipeline_context.content, skill_name=CLASSIFICATION_SKILL_NAME).count() == 1
-    assert SkillResult.objects.filter(content=pipeline_context.content, skill_name=RELEVANCE_SKILL_NAME).count() == 1
-    assert SkillResult.objects.filter(content=pipeline_context.content, skill_name=SUMMARIZATION_SKILL_NAME).count() == 1
+    assert (
+        SkillResult.objects.filter(
+            content=pipeline_context.content, skill_name=CLASSIFICATION_SKILL_NAME
+        ).count()
+        == 1
+    )
+    assert (
+        SkillResult.objects.filter(
+            content=pipeline_context.content, skill_name=RELEVANCE_SKILL_NAME
+        ).count()
+        == 1
+    )
+    assert (
+        SkillResult.objects.filter(
+            content=pipeline_context.content, skill_name=SUMMARIZATION_SKILL_NAME
+        ).count()
+        == 1
+    )
     assert ReviewQueue.objects.filter(content=pipeline_context.content).count() == 0
 
 
@@ -119,7 +147,9 @@ def test_process_content_queues_borderline_items_for_review(pipeline_context, mo
     assert result["status"] == "review"
     assert pipeline_context.content.is_active is True
     summarize_mock.assert_not_called()
-    review_item = ReviewQueue.objects.get(content=pipeline_context.content, reason=ReviewReason.BORDERLINE_RELEVANCE)
+    review_item = ReviewQueue.objects.get(
+        content=pipeline_context.content, reason=ReviewReason.BORDERLINE_RELEVANCE
+    )
     assert review_item.confidence == pytest.approx(0.55)
 
 
@@ -152,10 +182,17 @@ def test_process_content_archives_irrelevant_items(pipeline_context, mocker):
     assert result["status"] == "archived"
     assert pipeline_context.content.is_active is False
     summarize_mock.assert_not_called()
-    assert ReviewQueue.objects.filter(content=pipeline_context.content, reason=ReviewReason.BORDERLINE_RELEVANCE).count() == 0
+    assert (
+        ReviewQueue.objects.filter(
+            content=pipeline_context.content, reason=ReviewReason.BORDERLINE_RELEVANCE
+        ).count()
+        == 0
+    )
 
 
-def test_process_content_adds_review_item_for_low_confidence_classification(pipeline_context, mocker):
+def test_process_content_adds_review_item_for_low_confidence_classification(
+    pipeline_context, mocker
+):
     mocker.patch(
         "core.pipeline.run_content_classification",
         return_value={
@@ -231,7 +268,10 @@ def test_run_content_classification_falls_back_to_heuristic_when_openrouter_fail
     mocker,
 ):
     settings.OPENROUTER_API_KEY = "test-key"
-    mocker.patch("core.pipeline.openrouter_chat_json", side_effect=RuntimeError("llm unavailable"))
+    mocker.patch(
+        "core.pipeline.openrouter_chat_json",
+        side_effect=RuntimeError("llm unavailable"),
+    )
 
     result = run_content_classification(pipeline_context.content)
 
@@ -246,7 +286,9 @@ def test_run_relevance_scoring_uses_openrouter_for_borderline_similarity(
     mocker,
 ):
     settings.OPENROUTER_API_KEY = "test-key"
-    mocker.patch("core.pipeline.build_content_embedding_text", return_value="embedding text")
+    mocker.patch(
+        "core.pipeline.build_content_embedding_text", return_value="embedding text"
+    )
     mocker.patch("core.pipeline.embed_text", return_value=[0.1, 0.2, 0.3])
     mocker.patch("core.pipeline.get_reference_similarity", return_value=0.6)
     openrouter_mock = mocker.patch(
@@ -278,7 +320,9 @@ def test_run_relevance_scoring_skips_llm_for_high_similarity(
     settings,
     mocker,
 ):
-    mocker.patch("core.pipeline.build_content_embedding_text", return_value="embedding text")
+    mocker.patch(
+        "core.pipeline.build_content_embedding_text", return_value="embedding text"
+    )
     mocker.patch("core.pipeline.embed_text", return_value=[0.1, 0.2, 0.3])
     mocker.patch("core.pipeline.get_reference_similarity", return_value=0.95)
     openrouter_mock = mocker.patch("core.pipeline.openrouter_chat_json")
@@ -301,10 +345,15 @@ def test_run_relevance_scoring_falls_back_when_openrouter_fails(
     mocker,
 ):
     settings.OPENROUTER_API_KEY = "test-key"
-    mocker.patch("core.pipeline.build_content_embedding_text", return_value="embedding text")
+    mocker.patch(
+        "core.pipeline.build_content_embedding_text", return_value="embedding text"
+    )
     mocker.patch("core.pipeline.embed_text", return_value=[0.1, 0.2, 0.3])
     mocker.patch("core.pipeline.get_reference_similarity", return_value=0.6)
-    mocker.patch("core.pipeline.openrouter_chat_json", side_effect=RuntimeError("llm unavailable"))
+    mocker.patch(
+        "core.pipeline.openrouter_chat_json",
+        side_effect=RuntimeError("llm unavailable"),
+    )
 
     result = run_relevance_scoring(pipeline_context.content)
 
@@ -319,7 +368,10 @@ def test_run_summarization_falls_back_to_heuristic_when_openrouter_fails(
     mocker,
 ):
     settings.OPENROUTER_API_KEY = "test-key"
-    mocker.patch("core.pipeline.openrouter_chat_json", side_effect=RuntimeError("model unavailable"))
+    mocker.patch(
+        "core.pipeline.openrouter_chat_json",
+        side_effect=RuntimeError("model unavailable"),
+    )
 
     result = run_summarization(pipeline_context.content)
 
@@ -354,8 +406,12 @@ def test_execute_ad_hoc_classification_supersedes_previous_result_and_updates_re
         ],
     )
 
-    first_result = execute_ad_hoc_skill(pipeline_context.content, CLASSIFICATION_SKILL_NAME)
-    second_result = execute_ad_hoc_skill(pipeline_context.content, CLASSIFICATION_SKILL_NAME)
+    first_result = execute_ad_hoc_skill(
+        pipeline_context.content, CLASSIFICATION_SKILL_NAME
+    )
+    second_result = execute_ad_hoc_skill(
+        pipeline_context.content, CLASSIFICATION_SKILL_NAME
+    )
 
     first_result.refresh_from_db()
     pipeline_context.content.refresh_from_db()
@@ -371,10 +427,13 @@ def test_execute_ad_hoc_classification_supersedes_previous_result_and_updates_re
     assert first_result.superseded_by_id == second_result.id
     assert pipeline_context.content.content_type == "tutorial"
     assert review_item.confidence == pytest.approx(0.45)
-    assert ReviewQueue.objects.filter(
-        content=pipeline_context.content,
-        reason=ReviewReason.LOW_CONFIDENCE_CLASSIFICATION,
-    ).count() == 1
+    assert (
+        ReviewQueue.objects.filter(
+            content=pipeline_context.content,
+            reason=ReviewReason.LOW_CONFIDENCE_CLASSIFICATION,
+        ).count()
+        == 1
+    )
 
 
 def test_execute_ad_hoc_relevance_creates_review_item_for_borderline_scores(
@@ -424,7 +483,10 @@ def test_execute_ad_hoc_related_content_returns_failed_result_on_search_error(
     pipeline_context,
     mocker,
 ):
-    mocker.patch("core.pipeline.search_similar_content", side_effect=RuntimeError("vector index unavailable"))
+    mocker.patch(
+        "core.pipeline.search_similar_content",
+        side_effect=RuntimeError("vector index unavailable"),
+    )
 
     result = execute_ad_hoc_skill(pipeline_context.content, RELATED_CONTENT_SKILL_NAME)
 
@@ -439,7 +501,9 @@ def test_create_pending_skill_result_rejects_non_async_skill(pipeline_context):
 
 
 def test_execute_background_skill_result_rejects_skill_name_mismatch(pipeline_context):
-    pending_result = create_pending_skill_result(pipeline_context.content, RELEVANCE_SKILL_NAME)
+    pending_result = create_pending_skill_result(
+        pipeline_context.content, RELEVANCE_SKILL_NAME
+    )
 
     with pytest.raises(ValueError, match="is for relevance_scoring, not summarization"):
         execute_background_skill_result(pending_result.id, SUMMARIZATION_SKILL_NAME)
@@ -451,7 +515,9 @@ def test_execute_background_skill_result_completes_summary_when_requirements_are
 ):
     pipeline_context.content.relevance_score = 0.9
     pipeline_context.content.save(update_fields=["relevance_score"])
-    pending_result = create_pending_skill_result(pipeline_context.content, SUMMARIZATION_SKILL_NAME)
+    pending_result = create_pending_skill_result(
+        pipeline_context.content, SUMMARIZATION_SKILL_NAME
+    )
     mocker.patch(
         "core.pipeline.run_summarization",
         return_value={
@@ -461,20 +527,31 @@ def test_execute_background_skill_result_completes_summary_when_requirements_are
         },
     )
 
-    result = execute_background_skill_result(pending_result.id, SUMMARIZATION_SKILL_NAME)
+    result = execute_background_skill_result(
+        pending_result.id, SUMMARIZATION_SKILL_NAME
+    )
 
     pending_result.refresh_from_db()
     assert result.status == SkillStatus.COMPLETED
     assert pending_result.status == SkillStatus.COMPLETED
-    assert pending_result.result_data == {"summary": "Manual summary output.", "model_used": "heuristic", "latency_ms": 0}
+    assert pending_result.result_data == {
+        "summary": "Manual summary output.",
+        "model_used": "heuristic",
+        "latency_ms": 0,
+    }
 
 
 def test_execute_background_skill_result_marks_relevance_failed_when_execution_errors(
     pipeline_context,
     mocker,
 ):
-    pending_result = create_pending_skill_result(pipeline_context.content, RELEVANCE_SKILL_NAME)
-    mocker.patch("core.pipeline.run_relevance_scoring", side_effect=RuntimeError("embedding unavailable"))
+    pending_result = create_pending_skill_result(
+        pipeline_context.content, RELEVANCE_SKILL_NAME
+    )
+    mocker.patch(
+        "core.pipeline.run_relevance_scoring",
+        side_effect=RuntimeError("embedding unavailable"),
+    )
 
     result = execute_background_skill_result(pending_result.id, RELEVANCE_SKILL_NAME)
 
@@ -485,9 +562,32 @@ def test_execute_background_skill_result_marks_relevance_failed_when_execution_e
 
 
 def test_route_by_relevance_uses_threshold_boundaries(settings):
-    assert route_by_relevance({"relevance": {"relevance_score": settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD}}) == "relevant"
-    assert route_by_relevance({"relevance": {"relevance_score": settings.AI_RELEVANCE_REVIEW_THRESHOLD - 0.01}}) == "irrelevant"
-    assert route_by_relevance({"relevance": {"relevance_score": settings.AI_RELEVANCE_REVIEW_THRESHOLD}}) == "borderline"
+    assert (
+        route_by_relevance(
+            {
+                "relevance": {
+                    "relevance_score": settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD
+                }
+            }
+        )
+        == "relevant"
+    )
+    assert (
+        route_by_relevance(
+            {
+                "relevance": {
+                    "relevance_score": settings.AI_RELEVANCE_REVIEW_THRESHOLD - 0.01
+                }
+            }
+        )
+        == "irrelevant"
+    )
+    assert (
+        route_by_relevance(
+            {"relevance": {"relevance_score": settings.AI_RELEVANCE_REVIEW_THRESHOLD}}
+        )
+        == "borderline"
+    )
 
 
 def test_run_ad_hoc_relevance_updates_existing_review_item(pipeline_context, mocker):
@@ -514,7 +614,12 @@ def test_run_ad_hoc_relevance_updates_existing_review_item(pipeline_context, moc
     existing.refresh_from_db()
     assert relevance_score == pytest.approx(0.58)
     assert existing.confidence == pytest.approx(0.58)
-    assert ReviewQueue.objects.filter(content=pipeline_context.content, reason=ReviewReason.BORDERLINE_RELEVANCE).count() == 1
+    assert (
+        ReviewQueue.objects.filter(
+            content=pipeline_context.content, reason=ReviewReason.BORDERLINE_RELEVANCE
+        ).count()
+        == 1
+    )
 
 
 def test_execute_with_retries_retries_until_success(settings):
@@ -540,7 +645,9 @@ def test_execute_with_retries_raises_last_exception(settings):
         _execute_with_retries("summarization", always_fail)
 
 
-def test_pipeline_helper_utilities_cover_serialization_and_summary_edges(pipeline_context):
+def test_pipeline_helper_utilities_cover_serialization_and_summary_edges(
+    pipeline_context,
+):
     empty_content = Content(
         project=pipeline_context.project,
         url="https://example.com/empty",
@@ -569,7 +676,10 @@ def test_pipeline_helper_utilities_cover_serialization_and_summary_edges(pipelin
         "source_plugin": None,
         "score": 0.0,
     }
-    assert _heuristic_summary(empty_content) == "Empty Content: no summary was available from the source content."
+    assert (
+        _heuristic_summary(empty_content)
+        == "Empty Content: no summary was available from the source content."
+    )
     assert _heuristic_summary(long_content).endswith("...")
     assert _normalize_summary("   ", pipeline_context.content) == (
         "Kubernetes Release Notes: summary generation returned no content."

@@ -12,6 +12,7 @@ if "pytest" in sys.modules:
 
 load_dotenv(BASE_DIR / ".env")
 
+
 # Helpers: environment variables always arrive as strings. These helpers coerce
 # common boolean and comma-separated list values into the Python types Django
 # actually expects.
@@ -63,22 +64,20 @@ if ANYMAIL_WEBHOOK_SECRET:
 INSTALLED_APPS = [
     # 1. High-priority middleware dependencies
     "corsheaders",
-
     # 2. Unfold Admin Overrides (Must stay at the top and before django.contrib.admin)
     "unfold",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
     "unfold.contrib.import_export",  # Specific Unfold integration for import_export
-
     # 3. Core Django Apps
     "django.contrib.admin",
+    "django.contrib.admindocs",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",  # Required for allauth
-
     # 4. Third-Party Authentication & API Tools
     "rest_framework",
     "rest_framework.authtoken",
@@ -90,12 +89,10 @@ INSTALLED_APPS = [
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.github",
     "anymail",
-
     # 5. Utilities & Schema Tools
     "import_export",  # Standard library
     "drf_spectacular",
     "drf_standardized_errors",
-
     # 6. Project Apps
     "core",
 ]

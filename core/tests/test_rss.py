@@ -13,10 +13,14 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def rss_context(django_user_model):
-    user = django_user_model.objects.create_user(username="rss-owner", password="testpass123")
+    user = django_user_model.objects.create_user(
+        username="rss-owner", password="testpass123"
+    )
     group = Group.objects.create(name="rss-team")
     user.groups.add(group)
-    project = Project.objects.create(name="RSS Project", group=group, topic_description="Infra")
+    project = Project.objects.create(
+        name="RSS Project", group=group, topic_description="Infra"
+    )
     source_config = SourceConfig.objects.create(
         project=project,
         plugin_name=SourcePluginName.RSS,
@@ -32,8 +36,14 @@ def test_rss_fetch_new_content_filters_invalid_and_old_entries(rss_context, mock
     parsed_feed = SimpleNamespace(
         entries=[
             SimpleNamespace(link="", title="Missing link", published_parsed=fresh_time),
-            SimpleNamespace(link="https://example.com/no-title", title="   ", published_parsed=fresh_time),
-            SimpleNamespace(link="https://example.com/old", title="Old", published_parsed=old_time),
+            SimpleNamespace(
+                link="https://example.com/no-title",
+                title="   ",
+                published_parsed=fresh_time,
+            ),
+            SimpleNamespace(
+                link="https://example.com/old", title="Old", published_parsed=old_time
+            ),
             SimpleNamespace(
                 link="https://example.com/fresh",
                 title="  Fresh entry  ",
@@ -56,7 +66,9 @@ def test_rss_fetch_new_content_filters_invalid_and_old_entries(rss_context, mock
     assert items[0].source_plugin == SourcePluginName.RSS
 
 
-def test_rss_fetch_new_content_uses_title_when_summary_and_description_missing(rss_context, mocker):
+def test_rss_fetch_new_content_uses_title_when_summary_and_description_missing(
+    rss_context, mocker
+):
     parsed_feed = SimpleNamespace(
         entries=[
             SimpleNamespace(
@@ -76,7 +88,9 @@ def test_rss_fetch_new_content_uses_title_when_summary_and_description_missing(r
 
 
 def test_rss_health_check_returns_false_for_empty_feed(rss_context, mocker):
-    mocker.patch("core.plugins.rss.feedparser.parse", return_value=SimpleNamespace(entries=[]))
+    mocker.patch(
+        "core.plugins.rss.feedparser.parse", return_value=SimpleNamespace(entries=[])
+    )
     plugin = RSSSourcePlugin(rss_context.source_config)
 
     assert plugin.health_check() is False

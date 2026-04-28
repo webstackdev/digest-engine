@@ -4,6 +4,12 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import GithubProvider from "next-auth/providers/github"
 import GoogleProvider from "next-auth/providers/google"
 
+/**
+ * Backend authentication fields returned by the Django auth endpoints.
+ *
+ * Missing fields are expected when a provider only returns part of the token pair
+ * or when an error response only includes `detail` or `non_field_errors`.
+ */
 type BackendAuthPayload = {
   access?: string
   detail?: string
@@ -14,12 +20,28 @@ type BackendAuthPayload = {
   [key: string]: unknown
 }
 
+/**
+ * NextAuth user object extended with the backend auth payload used by the app API.
+ */
 type AuthenticatedUser = User & {
   backendAuth?: BackendAuthPayload
 }
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL
 
+/**
+ * Parse a backend authentication response when it contains JSON.
+ *
+ * Empty bodies, invalid JSON, and non-JSON content types all resolve to `null` so
+ * callers can fall back to the module's generic auth error handling.
+ *
+ * @param response - Fetch response returned by a Django auth endpoint.
+ * @returns Parsed backend auth payload, or `null` when the body is empty or unusable.
+ * @example
+ * ```ts
+ * const payload = await parseBackendResponse(response)
+ * ```
+ */
 async function parseBackendResponse(response: Response) {
   const contentType = response.headers.get("content-type") ?? ""
   const text = await response.text()
@@ -39,6 +61,25 @@ async function parseBackendResponse(response: Response) {
   return null
 }
 
+/**
+ * Exchange frontend login or social-provider credentials for Django auth data.
+ *
+ * This is the bridge between NextAuth and the backend API. It normalizes backend
+ * error responses so credential and social sign-in flows surface consistent error
+ * messages even when the response body is empty or malformed.
+ *
+ * @param path - Relative Django auth endpoint path such as `/api/auth/login/`.
+ * @param body - JSON payload expected by the backend auth endpoint.
+ * @returns Parsed backend auth payload. Successful empty JSON bodies resolve to `{}`.
+ * @throws When `NEXT_PUBLIC_API_URL` is missing or the backend rejects the request.
+ * @example
+ * ```ts
+ * const backendAuth = await postBackendAuth("/api/auth/login/", {
+ *   username: "alice@example.com",
+ *   password: "secret",
+ * })
+ * ```
+ */
 async function postBackendAuth(
   path: string,
   body: Record<string, unknown>,
@@ -117,6 +158,21 @@ if (process.env.GOOGLE_ID && process.env.GOOGLE_SECRET) {
   )
 }
 
+/**
+ * Shared NextAuth configuration for credential and optional social-provider sign-in.
+ *
+ * Credential logins always authenticate against the Django backend. Social logins are
+ * only registered when their provider environment variables are present, and they are
+ * enriched with backend auth so the rest of the app can keep using the same API token
+ * contract. When no backend auth is available, the session is left unchanged.
+ *
+ * @example
+ * ```ts
+ * import { authOptions } from "@/lib/auth"
+ *
+ * const providers = authOptions.providers
+ * ```
+ */
 export const authOptions: NextAuthOptions = {
   providers,
   pages: {
@@ -171,6 +227,14 @@ export const authOptions: NextAuthOptions = {
   },
 }
 
+/**
+ * NextAuth route handler reused by the App Router auth endpoint.
+ *
+ * @example
+ * ```ts
+ * export { handler as GET, handler as POST } from "@/lib/auth"
+ * ```
+ */
 const handler = NextAuth(authOptions)
 
 export default handler

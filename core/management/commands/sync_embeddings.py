@@ -8,8 +8,12 @@ class Command(BaseCommand):
     help = "Backfill Qdrant embeddings for content records."
 
     def add_arguments(self, parser):
-        parser.add_argument("--project-id", type=int, help="Only sync content for one project.")
-        parser.add_argument("--content-id", type=int, help="Only sync one content record.")
+        parser.add_argument(
+            "--project-id", type=int, help="Only sync content for one project."
+        )
+        parser.add_argument(
+            "--content-id", type=int, help="Only sync one content record."
+        )
         parser.add_argument(
             "--references-only",
             action="store_true",
@@ -33,4 +37,6 @@ class Command(BaseCommand):
             upsert_content_embedding(content)
             synced_count += 1
 
-        self.stdout.write(self.style.SUCCESS(f"Synced embeddings for {synced_count} content item(s)."))
+        self.stdout.write(
+            self.style.SUCCESS(f"Synced embeddings for {synced_count} content item(s).")
+        )

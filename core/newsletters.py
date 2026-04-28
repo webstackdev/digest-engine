@@ -1,3 +1,10 @@
+"""Newsletter intake helpers for inbound email processing.
+
+This module normalizes inbound sender data, sanitizes HTML before storage,
+deduplicates raw email messages, and hands confirmed messages off to the Celery
+task that extracts content items from a newsletter email.
+"""
+
 from __future__ import annotations
 
 from email.utils import parseaddr
@@ -20,11 +27,22 @@ __all__ = ["extract_newsletter_items"]
 
 
 def normalize_sender_email(value: str) -> str:
+    """Normalize a sender header into a lowercase bare email address."""
+
     _, email_address = parseaddr(value)
     return email_address.strip().lower()
 
 
 def sanitize_newsletter_html(raw_html: str) -> str:
+    """Remove script content and inline event handlers from newsletter HTML.
+
+    Args:
+        raw_html: Raw HTML body captured from the inbound message.
+
+    Returns:
+        A sanitized HTML fragment safe to persist and render in the admin.
+    """
+
     without_scripts = _strip_script_blocks(raw_html)
     parser = _InlineHandlerStrippingParser()
     parser.feed(without_scripts)
@@ -33,6 +51,8 @@ def sanitize_newsletter_html(raw_html: str) -> str:
 
 
 def _strip_script_blocks(raw_html: str) -> str:
+    """Remove complete ``<script>`` blocks using a tolerant manual scanner."""
+
     sanitized_parts: list[str] = []
     index = 0
     raw_length = len(raw_html)
@@ -56,6 +76,8 @@ def _strip_script_blocks(raw_html: str) -> str:
 
 
 def _find_script_start(raw_html: str, start_index: int) -> int:
+    """Find the next real ``<script`` tag boundary, ignoring lookalikes."""
+
     search_index = start_index
     while True:
         candidate = raw_html.lower().find("<script", search_index)
@@ -68,6 +90,8 @@ def _find_script_start(raw_html: str, start_index: int) -> int:
 
 
 def _find_script_end(raw_html: str, start_index: int) -> int:
+    """Find the closing ``</script>`` boundary for a previously found script tag."""
+
     search_index = start_index
     lower_html = raw_html.lower()
     while True:
@@ -85,6 +109,8 @@ def _find_script_end(raw_html: str, start_index: int) -> int:
 
 
 def _find_tag_end(raw_html: str, start_index: int) -> int:
+    """Find the closing ``>`` for a tag while respecting quoted attributes."""
+
     quote_char: str | None = None
     for index in range(start_index, len(raw_html)):
         current_char = raw_html[index]
@@ -101,11 +127,15 @@ def _find_tag_end(raw_html: str, start_index: int) -> int:
 
 
 class _InlineHandlerStrippingParser(HTMLParser):
+    """HTML parser that rebuilds markup without inline JavaScript handlers."""
+
     def __init__(self) -> None:
         super().__init__(convert_charrefs=False)
         self._parts: list[str] = []
 
     def get_html(self) -> str:
+        """Return the reconstructed sanitized HTML string."""
+
         return "".join(self._parts)
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -140,6 +170,8 @@ class _InlineHandlerStrippingParser(HTMLParser):
 
     @staticmethod
     def _render_tag(tag: str, attrs: list[tuple[str, str | None]]) -> str:
+        """Render a tag while omitting attributes like ``onclick``."""
+
         rendered_attrs: list[str] = []
         for name, value in attrs:
             if name.lower().startswith("on"):
@@ -153,6 +185,16 @@ class _InlineHandlerStrippingParser(HTMLParser):
 
 
 def extract_project_token(recipient: str) -> str | None:
+    """Extract the project intake token from an inbound recipient address.
+
+    Args:
+        recipient: Email recipient such as ``intake+<token>@example.com``.
+
+    Returns:
+        The embedded project token, or ``None`` when the address does not match the
+        intake alias format.
+    """
+
     _, email_address = parseaddr(recipient)
     local_part = email_address.partition("@")[0]
     prefix, separator, token = local_part.partition("+")
@@ -161,7 +203,11 @@ def extract_project_token(recipient: str) -> str | None:
     return token
 
 
-def send_confirmation_email(*, to_email: str, confirm_url: str, project_name: str) -> None:
+def send_confirmation_email(
+    *, to_email: str, confirm_url: str, project_name: str
+) -> None:
+    """Send the confirmation email required for new newsletter senders."""
+
     subject = f"Confirm newsletter intake for {project_name}"
     text_body = (
         "Confirm this sender for newsletter ingestion.\n\n"
@@ -183,6 +229,8 @@ def send_confirmation_email(*, to_email: str, confirm_url: str, project_name: st
 
 
 def build_confirmation_url(token: str) -> str:
+    """Build the absolute confirmation URL for an allowlist token."""
+
     base_url = settings.NEWSLETTER_API_BASE_URL.rstrip("/")
     return f"{base_url}{reverse('confirm-newsletter-sender', kwargs={'token': token})}"
 
@@ -196,6 +244,21 @@ def process_inbound_newsletter(
     raw_text: str,
     message_id: str,
 ) -> dict[str, Any]:
+    """Persist and route one inbound newsletter message.
+
+    Args:
+        recipients: Recipient addresses from the inbound email payload.
+        sender_email: Envelope sender or normalized message sender.
+        subject: Newsletter email subject.
+        raw_html: Raw HTML body captured from the provider webhook.
+        raw_text: Raw plain-text body captured from the provider webhook.
+        message_id: Provider message identifier used for deduplication.
+
+    Returns:
+        A status payload describing whether the message was ignored, queued, or is
+        waiting for sender confirmation.
+    """
+
     project = _find_intake_project(recipients)
     if project is None:
         return {"status": "ignored", "reason": "no_matching_project"}
@@ -239,7 +302,15 @@ def process_inbound_newsletter(
 
 
 def queue_newsletter_intake(intake_id: int) -> None:
-    process_newsletter_intake = current_app.tasks["core.tasks.process_newsletter_intake"]
+    """Dispatch newsletter extraction for a stored intake row.
+
+    Args:
+        intake_id: Primary key of the stored ``NewsletterIntake`` row.
+    """
+
+    process_newsletter_intake = current_app.tasks[
+        "core.tasks.process_newsletter_intake"
+    ]
     if settings.CELERY_TASK_ALWAYS_EAGER:
         process_newsletter_intake.apply(args=(intake_id,), throw=True)
     else:
@@ -247,11 +318,15 @@ def queue_newsletter_intake(intake_id: int) -> None:
 
 
 def _find_intake_project(recipients: Iterable[str]) -> Project | None:
+    """Resolve the first enabled project referenced by the recipient list."""
+
     for recipient in recipients:
         token = extract_project_token(recipient)
         if token is None:
             continue
-        project = Project.objects.filter(intake_token=token, intake_enabled=True).first()
+        project = Project.objects.filter(
+            intake_token=token, intake_enabled=True
+        ).first()
         if project is not None:
             return project
     return None

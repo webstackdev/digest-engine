@@ -38,25 +38,25 @@ export function AppShell({
 
         <nav className="grid gap-4">
           <Link
-            className="rounded-[18px] border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
             href={`/${projectQuery}`}
           >
             Dashboard
           </Link>
           <Link
-            className="rounded-[18px] border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
             href={`/entities${projectQuery}`}
           >
             Entities
           </Link>
           <Link
-            className="rounded-[18px] border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
             href={`/admin/health${projectQuery}`}
           >
             Ingestion health
           </Link>
           <Link
-            className="rounded-[18px] border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
             href={`/admin/sources${projectQuery}`}
           >
             Source configs
@@ -75,7 +75,7 @@ export function AppShell({
                   data-active={isActive ? "true" : "false"}
                   key={project.id}
                   href={`/?project=${project.id}`}
-                  className={`grid gap-1 rounded-[18px] border px-4 py-4 transition hover:-translate-y-0.5 ${
+                  className={`grid gap-1 rounded-panel border px-4 py-4 transition hover:-translate-y-0.5 ${
                     isActive
                       ? "border-warning-soft/46 bg-linear-to-b from-warning/18 to-sidebar-ink/3"
                       : "border-sidebar-ink/8 bg-sidebar-ink/3 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
@@ -102,7 +102,7 @@ export function AppShell({
               {title}
             </h2>
           </div>
-          <p className="max-w-[36rem] text-sm leading-6 text-muted md:text-base">
+          <p className="max-w-xl text-sm leading-6 text-muted md:text-base">
             {description}
           </p>
         </header>

@@ -36,10 +36,14 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def source_admin_context(django_user_model):
-    user = django_user_model.objects.create_user(username="admin-owner", password="testpass123")
+    user = django_user_model.objects.create_user(
+        username="admin-owner", password="testpass123"
+    )
     group = Group.objects.create(name="admin-team")
     user.groups.add(group)
-    project = Project.objects.create(name="Admin Project", group=group, topic_description="Infra")
+    project = Project.objects.create(
+        name="Admin Project", group=group, topic_description="Infra"
+    )
     return SimpleNamespace(user=user, group=group, project=project)
 
 
@@ -55,7 +59,9 @@ def test_test_source_connection_reports_success(source_admin_context, mocker):
         "core.admin.validate_plugin_config",
         return_value={"feed_url": "https://example.com/feed.xml"},
     )
-    get_plugin_mock = mocker.patch("core.admin.get_plugin_for_source_config", return_value=plugin)
+    get_plugin_mock = mocker.patch(
+        "core.admin.get_plugin_for_source_config", return_value=plugin
+    )
     admin_instance = SourceConfigAdmin(SourceConfig, AdminSite())
     admin_instance.message_user = mocker.Mock()
 
@@ -64,7 +70,9 @@ def test_test_source_connection_reports_success(source_admin_context, mocker):
         queryset=SourceConfig.objects.filter(pk=source_config.pk),
     )
 
-    validate_mock.assert_called_once_with(SourcePluginName.RSS, {"feed_url": "https://example.com/feed.xml"})
+    validate_mock.assert_called_once_with(
+        SourcePluginName.RSS, {"feed_url": "https://example.com/feed.xml"}
+    )
     get_plugin_mock.assert_called_once()
     plugin.health_check.assert_called_once_with()
     admin_instance.message_user.assert_called_once_with(
@@ -99,7 +107,9 @@ def test_test_source_connection_reports_failures(source_admin_context, mocker):
     )
 
 
-def test_source_config_display_health_renders_without_django6_format_html_error(source_admin_context):
+def test_source_config_display_health_renders_without_django6_format_html_error(
+    source_admin_context,
+):
     source_config = SourceConfig.objects.create(
         project=source_admin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -114,7 +124,9 @@ def test_source_config_display_health_renders_without_django6_format_html_error(
     assert "Healthy" in rendered
 
 
-def test_review_queue_changelist_view_builds_dashboard_stats(source_admin_context, mocker):
+def test_review_queue_changelist_view_builds_dashboard_stats(
+    source_admin_context, mocker
+):
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/review-item",
@@ -132,7 +144,9 @@ def test_review_queue_changelist_view_builds_dashboard_stats(source_admin_contex
         resolved=False,
     )
     admin_instance = ReviewQueueAdmin(ReviewQueue, AdminSite())
-    mocker.patch.object(admin_instance, "get_queryset", return_value=ReviewQueue.objects.all())
+    mocker.patch.object(
+        admin_instance, "get_queryset", return_value=ReviewQueue.objects.all()
+    )
     super_changelist_view = mocker.patch(
         "core.admin.ModelAdmin.changelist_view",
         side_effect=lambda request, extra_context=None: extra_context,
@@ -145,7 +159,9 @@ def test_review_queue_changelist_view_builds_dashboard_stats(source_admin_contex
     assert response["dashboard_stats"][1]["value"] == "42%"
 
 
-def test_review_queue_display_confidence_renders_without_django6_format_error(source_admin_context):
+def test_review_queue_display_confidence_renders_without_django6_format_error(
+    source_admin_context,
+):
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/review-confidence",
@@ -169,7 +185,9 @@ def test_review_queue_display_confidence_renders_without_django6_format_error(so
     assert "42%" in rendered
 
 
-def test_ingestion_run_display_efficiency_renders_without_django6_format_error(source_admin_context):
+def test_ingestion_run_display_efficiency_renders_without_django6_format_error(
+    source_admin_context,
+):
     run = IngestionRun.objects.create(
         project=source_admin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -288,7 +306,9 @@ def test_content_changelist_view_builds_dashboard_stats(source_admin_context, mo
         relevance_score=40,
     )
     admin_instance = ContentAdmin(Content, AdminSite())
-    mocker.patch.object(admin_instance, "get_queryset", return_value=Content.objects.all())
+    mocker.patch.object(
+        admin_instance, "get_queryset", return_value=Content.objects.all()
+    )
     super_changelist_view = mocker.patch(
         "django.contrib.admin.options.ModelAdmin.changelist_view",
         side_effect=lambda request, extra_context=None: extra_context,
@@ -301,7 +321,9 @@ def test_content_changelist_view_builds_dashboard_stats(source_admin_context, mo
     assert response["dashboard_stats"][1]["value"] == 2
 
 
-def test_generate_newsletter_ideas_queues_selected_content(source_admin_context, mocker):
+def test_generate_newsletter_ideas_queues_selected_content(
+    source_admin_context, mocker
+):
     first_content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/admin-queue-1",
@@ -326,7 +348,9 @@ def test_generate_newsletter_ideas_queues_selected_content(source_admin_context,
 
     admin_instance.generate_newsletter_ideas(
         request=SimpleNamespace(),
-        queryset=Content.objects.filter(id__in=[first_content.id, second_content.id]).order_by("id"),
+        queryset=Content.objects.filter(
+            id__in=[first_content.id, second_content.id]
+        ).order_by("id"),
     )
 
     delay_mock.assert_any_call(first_content.id)
@@ -347,7 +371,9 @@ def test_generate_newsletter_ideas_queues_selected_content(source_admin_context,
         (20, "red"),
     ],
 )
-def test_entity_colored_score_uses_expected_color(source_admin_context, authority_score, expected_color):
+def test_entity_colored_score_uses_expected_color(
+    source_admin_context, authority_score, expected_color
+):
     entity = Entity.objects.create(
         project=source_admin_context.project,
         name=f"Entity {authority_score}",
@@ -363,7 +389,9 @@ def test_entity_colored_score_uses_expected_color(source_admin_context, authorit
     assert str(authority_score) in rendered
 
 
-def test_high_value_filter_only_returns_high_value_reference_content(source_admin_context):
+def test_high_value_filter_only_returns_high_value_reference_content(
+    source_admin_context,
+):
     high_value = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/high-value",
@@ -400,9 +428,7 @@ def test_high_value_filter_only_returns_high_value_reference_content(source_admi
 
 
 def test_content_view_trace_builds_template_trace_url(source_admin_context, settings):
-    settings.AI_TRACE_URL_TEMPLATE = (
-        "https://trace.example/{project_id}/{skill_name}/{skill_result_id}/{trace_id}/{content_id}/{run_id}"
-    )
+    settings.AI_TRACE_URL_TEMPLATE = "https://trace.example/{project_id}/{skill_name}/{skill_result_id}/{trace_id}/{content_id}/{run_id}"
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/admin-template-trace",
@@ -423,7 +449,10 @@ def test_content_view_trace_builds_template_trace_url(source_admin_context, sett
 
     rendered = admin_instance.view_trace(content)
 
-    assert f"https://trace.example/{content.project_id}/summarization/{skill_result.id}/trace-123/{content.id}/trace-123" in rendered
+    assert (
+        f"https://trace.example/{content.project_id}/summarization/{skill_result.id}/trace-123/{content.id}/trace-123"
+        in rendered
+    )
 
 
 @pytest.mark.parametrize(
@@ -435,7 +464,9 @@ def test_content_view_trace_builds_template_trace_url(source_admin_context, sett
         (10, "red"),
     ],
 )
-def test_content_display_relevance_uses_expected_output(source_admin_context, score, expected_color):
+def test_content_display_relevance_uses_expected_output(
+    source_admin_context, score, expected_color
+):
     content = Content.objects.create(
         project=source_admin_context.project,
         url=f"https://example.com/relevance-{score}",
@@ -494,7 +525,9 @@ def test_skill_result_admin_helpers_and_dashboard_stats(source_admin_context, mo
         side_effect=lambda request, extra_context=None: extra_context,
     )
 
-    admin_instance.retry_selected_skills(SimpleNamespace(), SkillResult.objects.filter(pk=current_result.pk))
+    admin_instance.retry_selected_skills(
+        SimpleNamespace(), SkillResult.objects.filter(pk=current_result.pk)
+    )
     current_result.refresh_from_db()
     response = admin_instance.changelist_view(SimpleNamespace())
 
@@ -505,7 +538,10 @@ def test_skill_result_admin_helpers_and_dashboard_stats(source_admin_context, mo
         "Successfully reset 1 skills to PENDING for retry.",
         messages.SUCCESS,
     )
-    assert admin_instance.preview_json(current_result) == f'<a href="{current_result.pk}/change/" class="font-bold text-primary-600">🔍 Preview</a>'
+    assert (
+        admin_instance.preview_json(current_result)
+        == f'<a href="{current_result.pk}/change/" class="font-bold text-primary-600">🔍 Preview</a>'
+    )
     assert admin_instance.preview_json(superseded_result) == "-"
     assert admin_instance.get_content_link(current_result).endswith("...")
     assert "● PENDING" in admin_instance.display_status(current_result)
@@ -519,8 +555,12 @@ def test_skill_result_admin_helpers_and_dashboard_stats(source_admin_context, mo
     assert response["dashboard_stats"][1]["value"] == "0.0%"
 
 
-def test_user_feedback_admin_helpers_and_dashboard_stats(source_admin_context, django_user_model, mocker):
-    user = django_user_model.objects.create_user(username="feedback-user", password="testpass123")
+def test_user_feedback_admin_helpers_and_dashboard_stats(
+    source_admin_context, django_user_model, mocker
+):
+    user = django_user_model.objects.create_user(
+        username="feedback-user", password="testpass123"
+    )
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/feedback",
@@ -550,7 +590,9 @@ def test_user_feedback_admin_helpers_and_dashboard_stats(source_admin_context, d
     UserFeedback.objects.create(
         content=other_content,
         project=source_admin_context.project,
-        user=django_user_model.objects.create_user(username="feedback-user-2", password="testpass123"),
+        user=django_user_model.objects.create_user(
+            username="feedback-user-2", password="testpass123"
+        ),
         feedback_type="downvote",
     )
     admin_instance = UserFeedbackAdmin(UserFeedback, AdminSite())
@@ -573,7 +615,9 @@ def test_user_feedback_admin_helpers_and_dashboard_stats(source_admin_context, d
     assert response["dashboard_stats"][1]["value"] == 2
 
 
-def test_ingestion_run_display_duration_handles_running_and_completed(source_admin_context):
+def test_ingestion_run_display_duration_handles_running_and_completed(
+    source_admin_context,
+):
     running_run = IngestionRun.objects.create(
         project=source_admin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -589,7 +633,9 @@ def test_ingestion_run_display_duration_handles_running_and_completed(source_adm
         items_ingested=10,
     )
     completed_run.started_at = timezone.now() - timezone.timedelta(minutes=3, seconds=5)
-    completed_run.completed_at = completed_run.started_at + timezone.timedelta(minutes=3, seconds=5)
+    completed_run.completed_at = completed_run.started_at + timezone.timedelta(
+        minutes=3, seconds=5
+    )
     completed_run.save(update_fields=["started_at", "completed_at"])
     admin_instance = IngestionRunAdmin(IngestionRun, AdminSite())
 
@@ -597,7 +643,9 @@ def test_ingestion_run_display_duration_handles_running_and_completed(source_adm
     assert admin_instance.display_duration(completed_run) == "3m 5s"
 
 
-def test_review_queue_actions_update_resolution_and_emit_message(source_admin_context, mocker):
+def test_review_queue_actions_update_resolution_and_emit_message(
+    source_admin_context, mocker
+):
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/review-action",
@@ -624,8 +672,12 @@ def test_review_queue_actions_update_resolution_and_emit_message(source_admin_co
     admin_instance = ReviewQueueAdmin(ReviewQueue, AdminSite())
     admin_instance.message_user = mocker.Mock()
 
-    admin_instance.mark_as_approved(SimpleNamespace(), ReviewQueue.objects.filter(pk=approve_item.pk))
-    admin_instance.mark_as_rejected(SimpleNamespace(), ReviewQueue.objects.filter(pk=reject_item.pk))
+    admin_instance.mark_as_approved(
+        SimpleNamespace(), ReviewQueue.objects.filter(pk=approve_item.pk)
+    )
+    admin_instance.mark_as_rejected(
+        SimpleNamespace(), ReviewQueue.objects.filter(pk=reject_item.pk)
+    )
 
     approve_item.refresh_from_db()
     reject_item.refresh_from_db()
@@ -654,8 +706,12 @@ def test_high_value_filter_lookups_and_noop_queryset(source_admin_context):
         content_text="noop",
     )
 
-    assert filter_instance.lookups(None, None) == (("high_value", "🔥 High Value (Score > 80 & Reference)"),)
-    assert list(filter_instance.queryset(SimpleNamespace(), Content.objects.all())) == [content]
+    assert filter_instance.lookups(None, None) == (
+        ("high_value", "🔥 High Value (Score > 80 & Reference)"),
+    )
+    assert list(filter_instance.queryset(SimpleNamespace(), Content.objects.all())) == [
+        content
+    ]
 
 
 def test_content_view_trace_returns_dash_when_no_skill_results(source_admin_context):
@@ -673,7 +729,9 @@ def test_content_view_trace_returns_dash_when_no_skill_results(source_admin_cont
     assert admin_instance.view_trace(content) == "-"
 
 
-def test_skill_result_admin_handles_unknown_status_and_empty_performance(source_admin_context):
+def test_skill_result_admin_handles_unknown_status_and_empty_performance(
+    source_admin_context,
+):
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/skill-result-empty",
@@ -699,7 +757,9 @@ def test_skill_result_admin_handles_unknown_status_and_empty_performance(source_
     assert admin_instance.display_performance(skill_result) == "- / -"
 
 
-def test_skill_result_changelist_view_uses_warning_and_danger_colors(source_admin_context, mocker):
+def test_skill_result_changelist_view_uses_warning_and_danger_colors(
+    source_admin_context, mocker
+):
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/skill-result-slow",
@@ -752,7 +812,9 @@ def test_user_feedback_admin_upvote_and_orange_score_branches(source_admin_conte
     assert "orange" in admin_instance.get_ai_score(feedback)
 
 
-def test_user_feedback_changelist_view_uses_success_color_for_high_approval(source_admin_context, django_user_model, mocker):
+def test_user_feedback_changelist_view_uses_success_color_for_high_approval(
+    source_admin_context, django_user_model, mocker
+):
     first_content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/feedback-success-1",
@@ -782,7 +844,9 @@ def test_user_feedback_changelist_view_uses_success_color_for_high_approval(sour
     UserFeedback.objects.create(
         content=second_content,
         project=source_admin_context.project,
-        user=django_user_model.objects.create_user(username="feedback-success-2", password="testpass123"),
+        user=django_user_model.objects.create_user(
+            username="feedback-success-2", password="testpass123"
+        ),
         feedback_type="upvote",
     )
     admin_instance = UserFeedbackAdmin(UserFeedback, AdminSite())
@@ -798,7 +862,9 @@ def test_user_feedback_changelist_view_uses_success_color_for_high_approval(sour
     assert response["dashboard_stats"][0]["value"] == "100.0%"
 
 
-def test_ingestion_run_admin_status_efficiency_and_dashboard_branches(source_admin_context, mocker):
+def test_ingestion_run_admin_status_efficiency_and_dashboard_branches(
+    source_admin_context, mocker
+):
     IngestionRun.objects.create(
         project=source_admin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -821,15 +887,24 @@ def test_ingestion_run_admin_status_efficiency_and_dashboard_branches(source_adm
 
     response = admin_instance.changelist_view(SimpleNamespace())
 
-    assert "danger" in admin_instance.display_status(IngestionRun.objects.filter(status="failed").first())
-    assert admin_instance.display_efficiency(IngestionRun.objects.filter(status="failed").first()) == "0/0"
+    assert "danger" in admin_instance.display_status(
+        IngestionRun.objects.filter(status="failed").first()
+    )
+    assert (
+        admin_instance.display_efficiency(
+            IngestionRun.objects.filter(status="failed").first()
+        )
+        == "0/0"
+    )
     assert "info" in admin_instance.display_status(running_run)
     super_changelist_view.assert_called_once()
     assert response["dashboard_stats"][0]["value"] == "5"
     assert response["dashboard_stats"][1]["color"] == "warning"
 
 
-def test_source_config_admin_health_pretty_config_and_dashboard_branches(source_admin_context, mocker):
+def test_source_config_admin_health_pretty_config_and_dashboard_branches(
+    source_admin_context, mocker
+):
     stale_config = SourceConfig.objects.create(
         project=source_admin_context.project,
         plugin_name=SourcePluginName.RSS,

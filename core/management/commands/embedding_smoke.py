@@ -27,12 +27,22 @@ class Command(BaseCommand):
             try:
                 content = Content.objects.get(pk=content_id)
             except Content.DoesNotExist as exc:
-                raise CommandError(f"Content with id {content_id} does not exist.") from exc
+                raise CommandError(
+                    f"Content with id {content_id} does not exist."
+                ) from exc
             embedding_id = upsert_content_embedding(content)
-            self.stdout.write(self.style.SUCCESS(f"Upserted embedding for content {content_id}: {embedding_id}"))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Upserted embedding for content {content_id}: {embedding_id}"
+                )
+            )
             return
 
         vector = embed_text(text)
         preview = ", ".join(f"{value:.4f}" for value in vector[:5])
-        self.stdout.write(self.style.SUCCESS(f"Embedding generated successfully. Dimension: {len(vector)}"))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Embedding generated successfully. Dimension: {len(vector)}"
+            )
+        )
         self.stdout.write(f"Preview: [{preview}]")

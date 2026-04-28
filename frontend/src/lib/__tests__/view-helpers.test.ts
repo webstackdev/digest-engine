@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import type { Project } from "@/lib/types"
 import {
+  formatDate,
   formatScore,
   getErrorMessage,
   getSearchParam,
@@ -35,6 +36,15 @@ describe("view helpers", () => {
     expect(getSearchParam({ project: ["2", "1"] }, "project")).toBe("2")
   })
 
+  it("returns scalar search params and defaults missing ones to an empty string", () => {
+    expect(getSearchParam({ project: "2" }, "project")).toBe("2")
+    expect(getSearchParam({}, "project")).toBe("")
+  })
+
+  it("returns the requested project when the query matches", () => {
+    expect(selectProject(projects, { project: "2" })).toEqual(projects[1])
+  })
+
   it("falls back to the first project when the query does not match", () => {
     expect(selectProject(projects, { project: "99" })).toEqual(projects[0])
   })
@@ -46,6 +56,19 @@ describe("view helpers", () => {
   it("formats a score with two decimal places", () => {
     expect(formatScore(0.825)).toBe("0.82")
     expect(formatScore(null)).toBe("n/a")
+    expect(formatScore(undefined)).toBe("n/a")
+  })
+
+  it("formats dates and falls back to Never for missing timestamps", () => {
+    const value = "2026-04-27T12:30:00Z"
+
+    expect(formatDate(null)).toBe("Never")
+    expect(formatDate(value)).toBe(
+      new Intl.DateTimeFormat("en", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(new Date(value)),
+    )
   })
 
   it("truncates long text and keeps short text intact", () => {

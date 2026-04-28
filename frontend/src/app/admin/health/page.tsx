@@ -12,7 +12,19 @@ type HealthPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
-function deriveSourceStatus(
+/**
+ * Classify a source configuration into the badge status shown on the admin health page.
+ *
+ * The page treats disabled sources as idle, active sources with failed or currently
+ * running ingestion as unhealthy, and sources with no fetch timestamp as degraded so
+ * operators can spot missing history before the source silently stalls.
+ *
+ * @param isActive - Whether the source configuration is enabled for ingestion.
+ * @param latestRunStatus - Status of the newest ingestion run for the same plugin, or `null` when no run exists.
+ * @param lastFetchedAt - ISO timestamp for the last successful fetch, or `null` when the source has not fetched yet.
+ * @returns The health badge state for the source row.
+ */
+export function deriveSourceStatus(
   isActive: boolean,
   latestRunStatus: string | null,
   lastFetchedAt: string | null,
@@ -32,6 +44,18 @@ function deriveSourceStatus(
   return "healthy"
 }
 
+/**
+ * Render the source-by-source ingestion health view for the selected project.
+ *
+ * The page resolves the active project from the URL search params, loads source
+ * configurations and their most recent ingestion runs, and then maps those records to
+ * a compact health table. When the API user has no available project, the page renders
+ * a safe empty state instead of attempting project-scoped API calls.
+ *
+ * @param props - Async server component props from the App Router.
+ * @param props.searchParams - Search params promise containing the optional `project` selector.
+ * @returns The rendered admin health page for the selected project or the empty project state.
+ */
 export default async function HealthPage({ searchParams }: HealthPageProps) {
   const resolvedSearchParams = await searchParams
   const projects = await getProjects()
@@ -45,7 +69,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -88,7 +112,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
               {sourceConfigs.length === 0 ? (
                 <tr>
                   <td className="px-3 py-4" colSpan={6}>
-                    <div className="rounded-[18px] bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+                    <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
                       No source configurations exist for this project yet.
                     </div>
                   </td>
