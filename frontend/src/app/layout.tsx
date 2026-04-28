@@ -19,6 +19,10 @@ const body = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Newsletter Maker Frontend",
   description: "Minimal dashboard for reviewing ingested newsletter content.",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
 }
 
 export default function RootLayout({

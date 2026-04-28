@@ -29,7 +29,7 @@ Every AI capability is a standalone, documented module following the Claude Skil
 Seven skills form the core pipeline:
 
 | Skill | Description |
-|-------|-------------|
+| ----- | ----------- |
 | **Content Classification** | Categorizes raw content (e.g., tutorial, opinion, release notes) and assigns a confidence score. |
 | **Relevance Scoring** | Evaluates content usefulness using semantic similarity against a reference corpus and LLM judgment. |
 | **Deduplication** | Compares new content against recent embeddings to group similar topics and pick the best version. |
@@ -175,5 +175,3 @@ For the default local bootstrap, `.env` also seeds an `admin` superuser in the c
 ## License
 
 This repository is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE).
-
-Based on the current direct dependencies, AGPL is a reasonable fit: the packages in use are permissive or LGPL-compatible licenses such as BSD, MIT, Apache-2.0, and LGPLv3. That said, this is a practical compatibility check, not legal advice, so review it with counsel if you need a formal licensing opinion.

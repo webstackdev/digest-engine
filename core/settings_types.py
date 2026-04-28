@@ -2,6 +2,9 @@ from typing import Protocol
 
 
 class CoreSettings(Protocol):
+    CELERY_TASK_ALWAYS_EAGER: bool
+    DEFAULT_FROM_EMAIL: str
+    NEWSLETTER_API_BASE_URL: str
     QDRANT_URL: str
     EMBEDDING_MODEL: str
     EMBEDDING_PROVIDER: str
@@ -11,3 +14,4 @@ class CoreSettings(Protocol):
     OPENROUTER_API_BASE: str
     OPENROUTER_APP_URL: str
     OPENROUTER_APP_NAME: str
+    RESEND_API_KEY: str

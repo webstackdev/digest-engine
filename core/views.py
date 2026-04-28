@@ -3,9 +3,14 @@ from typing import cast
 
 from django.conf import settings as django_settings
 from django.db import connection
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from django.views.decorators.http import require_GET
 from qdrant_client import QdrantClient
 
+from core.models import IntakeAllowlist, NewsletterIntake, NewsletterIntakeStatus
+from core.newsletters import queue_newsletter_intake
 from core.settings_types import CoreSettings
 
 settings = cast(CoreSettings, django_settings)
@@ -45,3 +50,23 @@ def _check_qdrant() -> bool:
     except Exception:
         return False
     return True
+
+
+@require_GET
+def confirm_newsletter_sender_view(request: HttpRequest, token: str):
+    allowlist = get_object_or_404(IntakeAllowlist, confirmation_token=token)
+    if allowlist.confirmed_at is None:
+        allowlist.confirmed_at = timezone.now()
+        allowlist.save(update_fields=["confirmed_at"])
+
+    pending_intake_ids = list(
+        NewsletterIntake.objects.filter(
+            project=allowlist.project,
+            sender_email=allowlist.sender_email,
+            status=NewsletterIntakeStatus.PENDING,
+        ).values_list("id", flat=True)
+    )
+    for intake_id in pending_intake_ids:
+        queue_newsletter_intake(intake_id)
+
+    return JsonResponse({"status": "confirmed", "queued": len(pending_intake_ids)})
