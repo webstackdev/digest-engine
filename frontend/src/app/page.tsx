@@ -10,11 +10,11 @@ import {
   getProjects,
   getProjectSourceConfigs,
 } from "@/lib/api"
+import { buildDashboardView } from "@/lib/dashboard-view"
 import {
   formatDate,
   formatScore,
   getErrorMessage,
-  getSearchParam,
   getSuccessMessage,
   selectProject,
   truncateText,
@@ -44,14 +44,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     )
   }
 
-  const view = getSearchParam(resolvedSearchParams, "view") || "content"
-  const contentTypeFilter = getSearchParam(resolvedSearchParams, "contentType")
-  const sourceFilter = getSearchParam(resolvedSearchParams, "source")
-  const daysFilter = Number.parseInt(
-    getSearchParam(resolvedSearchParams, "days") || "30",
-    10,
-  )
-
   const [contents, reviewQueue, entities, sourceConfigs, feedback] =
     await Promise.all([
       getProjectContents(selectedProject.id),
@@ -61,49 +53,24 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       getProjectFeedback(selectedProject.id),
     ])
 
-  const activeContents = contents.filter((content) => content.is_active)
-  const thresholdDate = new Date()
-  thresholdDate.setDate(
-    thresholdDate.getDate() - (Number.isNaN(daysFilter) ? 30 : daysFilter),
-  )
-
-  const filteredContents = activeContents
-    .filter(
-      (content) =>
-        !contentTypeFilter || content.content_type === contentTypeFilter,
-    )
-    .filter(
-      (content) => !sourceFilter || content.source_plugin === sourceFilter,
-    )
-    .filter((content) => new Date(content.published_date) >= thresholdDate)
-    .sort((left, right) => {
-      const relevanceDelta =
-        (right.relevance_score ?? -1) - (left.relevance_score ?? -1)
-      if (relevanceDelta !== 0) {
-        return relevanceDelta
-      }
-      return (
-        new Date(right.published_date).getTime() -
-        new Date(left.published_date).getTime()
-      )
-    })
-
-  const contentMap = new Map(contents.map((content) => [content.id, content]))
-  const pendingReviewItems = reviewQueue.filter((item) => !item.resolved)
-  const contentTypes = Array.from(
-    new Set(
-      activeContents.map((content) => content.content_type).filter(Boolean),
-    ),
-  ).sort()
-  const sources = Array.from(
-    new Set(activeContents.map((content) => content.source_plugin)),
-  ).sort()
-  const positiveFeedback = feedback.filter(
-    (item) => item.feedback_type === "upvote",
-  ).length
-  const negativeFeedback = feedback.filter(
-    (item) => item.feedback_type === "downvote",
-  ).length
+  const {
+    contentMap,
+    contentTypeFilter,
+    contentTypes,
+    daysFilter,
+    filteredContents,
+    negativeFeedback,
+    pendingReviewItems,
+    positiveFeedback,
+    sourceFilter,
+    sources,
+    view,
+  } = buildDashboardView({
+    contents,
+    reviewQueue,
+    feedback,
+    searchParams: resolvedSearchParams,
+  })
   const errorMessage = getErrorMessage(resolvedSearchParams)
   const successMessage = getSuccessMessage(resolvedSearchParams)
 
