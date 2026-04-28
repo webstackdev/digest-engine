@@ -19,7 +19,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="project",
             name="intake_token",
-            field=models.CharField(default=core.models.generate_project_intake_token, editable=False, max_length=64, unique=True),
+            field=models.CharField(
+                default=core.models.generate_project_intake_token,
+                editable=False,
+                max_length=64,
+                unique=True,
+            ),
         ),
         migrations.AddField(
             model_name="content",
@@ -29,14 +34,33 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="IntakeAllowlist",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
                 ("sender_email", models.EmailField(max_length=254)),
                 ("confirmed_at", models.DateTimeField(blank=True, null=True)),
-                ("confirmation_token", models.CharField(default=core.models.generate_confirmation_token, max_length=64, unique=True)),
+                (
+                    "confirmation_token",
+                    models.CharField(
+                        default=core.models.generate_confirmation_token,
+                        max_length=64,
+                        unique=True,
+                    ),
+                ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
                     "project",
-                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="intake_allowlist", to="core.project"),
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="intake_allowlist",
+                        to="core.project",
+                    ),
                 ),
             ],
             options={
@@ -46,7 +70,15 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="NewsletterIntake",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
                 ("sender_email", models.EmailField(max_length=254)),
                 ("subject", models.CharField(max_length=512)),
                 ("received_at", models.DateTimeField(auto_now_add=True)),
@@ -56,7 +88,12 @@ class Migration(migrations.Migration):
                 (
                     "status",
                     models.CharField(
-                        choices=[("pending", "Pending"), ("extracted", "Extracted"), ("failed", "Failed"), ("rejected", "Rejected")],
+                        choices=[
+                            ("pending", "Pending"),
+                            ("extracted", "Extracted"),
+                            ("failed", "Failed"),
+                            ("rejected", "Rejected"),
+                        ],
                         default="pending",
                         max_length=16,
                     ),
@@ -65,7 +102,11 @@ class Migration(migrations.Migration):
                 ("error_message", models.TextField(blank=True)),
                 (
                     "project",
-                    models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name="newsletter_intakes", to="core.project"),
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="newsletter_intakes",
+                        to="core.project",
+                    ),
                 ),
             ],
             options={
@@ -74,10 +115,16 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="newsletterintake",
-            index=models.Index(fields=["project", "sender_email", "status"], name="core_newsle_project_2c63fb_idx"),
+            index=models.Index(
+                fields=["project", "sender_email", "status"],
+                name="core_newsle_project_2c63fb_idx",
+            ),
         ),
         migrations.AddConstraint(
             model_name="intakeallowlist",
-            constraint=models.UniqueConstraint(fields=("project", "sender_email"), name="core_allowlist_unique_project_sender"),
+            constraint=models.UniqueConstraint(
+                fields=("project", "sender_email"),
+                name="core_allowlist_unique_project_sender",
+            ),
         ),
     ]

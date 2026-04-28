@@ -10,12 +10,12 @@ from django.conf import settings as django_settings
 from django.utils.dateparse import parse_datetime
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
-  Distance,
-  FieldCondition,
-  Filter,
-  MatchValue,
-  PointStruct,
-  VectorParams,
+    Distance,
+    FieldCondition,
+    Filter,
+    MatchValue,
+    PointStruct,
+    VectorParams,
 )
 
 from core.models import Content
@@ -26,14 +26,16 @@ settings = cast(CoreSettings, django_settings)
 
 
 def get_sentence_transformer_class():
-        global SentenceTransformer
+    global SentenceTransformer
 
-        if SentenceTransformer is None:
-                from sentence_transformers import SentenceTransformer as sentence_transformer_class
+    if SentenceTransformer is None:
+        from sentence_transformers import (
+            SentenceTransformer as sentence_transformer_class,
+        )
 
-                SentenceTransformer = sentence_transformer_class
+        SentenceTransformer = sentence_transformer_class
 
-        return SentenceTransformer
+    return SentenceTransformer
 
 
 class EmbeddingProvider(ABC):
@@ -83,7 +85,9 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
 class OpenRouterEmbeddingProvider(EmbeddingProvider):
     def embed_text(self, text: str) -> list[float]:
         if not settings.OPENROUTER_API_KEY:
-            raise RuntimeError("OPENROUTER_API_KEY must be set when using the openrouter embedding provider.")
+            raise RuntimeError(
+                "OPENROUTER_API_KEY must be set when using the openrouter embedding provider."
+            )
         headers = {
             "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
             "Content-Type": "application/json",
@@ -175,7 +179,9 @@ def search_similar(
 ):
     if not project_collection_exists(project_id):
         return []
-    query_filter = build_search_filter(is_reference=is_reference, exclude_content_id=exclude_content_id)
+    query_filter = build_search_filter(
+        is_reference=is_reference, exclude_content_id=exclude_content_id
+    )
     client = cast(Any, get_qdrant_client())
     return client.search(
         collection_name=collection_name_for_project(project_id),
@@ -186,7 +192,9 @@ def search_similar(
     )
 
 
-def search_similar_content(content: Content, limit: int = 10, *, is_reference: bool | None = None):
+def search_similar_content(
+    content: Content, limit: int = 10, *, is_reference: bool | None = None
+):
     return search_similar(
         content.project_id,
         embed_text(build_content_embedding_text(content)),
@@ -196,7 +204,9 @@ def search_similar_content(content: Content, limit: int = 10, *, is_reference: b
     )
 
 
-def get_reference_similarity(project_id: int, vector: list[float], limit: int = 5) -> float:
+def get_reference_similarity(
+    project_id: int, vector: list[float], limit: int = 5
+) -> float:
     scored_points = search_similar(project_id, vector, limit=limit, is_reference=True)
     if not scored_points:
         return 0.0
@@ -210,7 +220,9 @@ def ensure_project_collection(project_id: int) -> None:
         return
     client.create_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(size=get_embedding_dimension(), distance=Distance.COSINE),
+        vectors_config=VectorParams(
+            size=get_embedding_dimension(), distance=Distance.COSINE
+        ),
     )
 
 
@@ -244,12 +256,18 @@ def serialize_published_date(value) -> str:
     return str(value)
 
 
-def build_search_filter(*, is_reference: bool | None = None, exclude_content_id: int | None = None) -> Filter | None:
+def build_search_filter(
+    *, is_reference: bool | None = None, exclude_content_id: int | None = None
+) -> Filter | None:
     conditions = []
     if is_reference is not None:
-        conditions.append(FieldCondition(key="is_reference", match=MatchValue(value=is_reference)))
+        conditions.append(
+            FieldCondition(key="is_reference", match=MatchValue(value=is_reference))
+        )
     if exclude_content_id is not None:
-        conditions.append(FieldCondition(key="content_id", match=MatchValue(value=exclude_content_id)))
+        conditions.append(
+            FieldCondition(key="content_id", match=MatchValue(value=exclude_content_id))
+        )
     if not conditions:
         return None
     must_conditions = conditions if exclude_content_id is None else conditions[:-1]

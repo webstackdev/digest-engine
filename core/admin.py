@@ -9,40 +9,45 @@ from import_export.admin import ExportActionMixin
 from unfold.admin import ModelAdmin
 
 from core.models import (
-  Content,
-  Entity,
-  IngestionRun,
+    Content,
+    Entity,
+    IngestionRun,
     Project,
     ProjectConfig,
-  ReviewQueue,
-  SkillResult,
-  SourceConfig,
-  UserFeedback,
+    ReviewQueue,
+    SkillResult,
+    SourceConfig,
+    UserFeedback,
 )
 from core.plugins import get_plugin_for_source_config, validate_plugin_config
 
 
 @admin.register(Project)
 class ProjectAdmin(ExportActionMixin, admin.ModelAdmin):
-        list_display = ("name", "group", "content_retention_days", "created_at")
+    list_display = ("name", "group", "content_retention_days", "created_at")
 
-        # Better navigation
-        date_hierarchy = "created_at"
-        list_filter = ("created_at",)
+    # Better navigation
+    date_hierarchy = "created_at"
+    list_filter = ("created_at",)
 
-        # Faster searching
-        search_fields = ("name", "group__name")
+    # Faster searching
+    search_fields = ("name", "group__name")
 
-        # Performance for large user lists
-        autocomplete_fields = ("group",)
+    # Performance for large user lists
+    autocomplete_fields = ("group",)
 
-        # Quick editing
-        list_editable = ("content_retention_days",)
+    # Quick editing
+    list_editable = ("content_retention_days",)
 
 
 @admin.register(ProjectConfig)
 class ProjectConfigAdmin(admin.ModelAdmin):
-        list_display = ("project", "upvote_authority_weight", "downvote_authority_weight", "authority_decay_rate")
+    list_display = (
+        "project",
+        "upvote_authority_weight",
+        "downvote_authority_weight",
+        "authority_decay_rate",
+    )
 
 
 @admin.register(Entity)
@@ -68,16 +73,14 @@ class EntityAdmin(admin.ModelAdmin):
 
 
 class HighValueFilter(admin.SimpleListFilter):
-    title = 'Content Value'
-    parameter_name = 'value_tier'
+    title = "Content Value"
+    parameter_name = "value_tier"
 
     def lookups(self, request, model_admin):
-        return (
-            ('high_value', '🔥 High Value (Score > 80 & Reference)'),
-        )
+        return (("high_value", "🔥 High Value (Score > 80 & Reference)"),)
 
     def queryset(self, request, queryset):
-        if self.value() == 'high_value':
+        if self.value() == "high_value":
             return queryset.filter(relevance_score__gt=80, is_reference=True)
         return queryset
 
@@ -99,7 +102,7 @@ class ContentAdmin(admin.ModelAdmin):
         HighValueFilter,
         ("project", admin.RelatedOnlyFieldListFilter),
         "source_plugin",
-        "is_active"
+        "is_active",
     )
     search_fields = ("title", "author", "url")
     actions = ["generate_newsletter_ideas"]
@@ -112,7 +115,7 @@ class ContentAdmin(admin.ModelAdmin):
             return "-"
         return format_html(
             '<span title="{}" style="cursor:pointer;">🔍 View</span>',
-            preview_text[:500]
+            preview_text[:500],
         )
 
     @admin.display(description="AI Trace")
@@ -123,15 +126,25 @@ class ContentAdmin(admin.ModelAdmin):
         from django.conf import settings
         from django.urls import reverse
 
-        latest_skill_result = obj.skill_results.filter(
-            superseded_by__isnull=True,
-        ).order_by("-created_at").first()
+        latest_skill_result = (
+            obj.skill_results.filter(
+                superseded_by__isnull=True,
+            )
+            .order_by("-created_at")
+            .first()
+        )
         if latest_skill_result is None:
             return "-"
 
         result_data = latest_skill_result.result_data or {}
         trace_sections = [result_data]
-        for section_name in ("trace", "langsmith", "langfuse", "observability", "telemetry"):
+        for section_name in (
+            "trace",
+            "langsmith",
+            "langfuse",
+            "observability",
+            "telemetry",
+        ):
             section = result_data.get(section_name)
             if isinstance(section, dict):
                 trace_sections.append(section)
@@ -139,20 +152,36 @@ class ContentAdmin(admin.ModelAdmin):
         trace_url = ""
         trace_id = ""
         for section in trace_sections:
-            for key in ("trace_url", "traceUrl", "langsmith_run_url", "langfuse_trace_url"):
+            for key in (
+                "trace_url",
+                "traceUrl",
+                "langsmith_run_url",
+                "langfuse_trace_url",
+            ):
                 value = section.get(key)
                 if isinstance(value, str) and value:
                     trace_url = value
                     break
             if trace_url:
                 break
-            for key in ("trace_id", "traceId", "run_id", "runId", "langsmith_run_id", "langfuse_trace_id"):
+            for key in (
+                "trace_id",
+                "traceId",
+                "run_id",
+                "runId",
+                "langsmith_run_id",
+                "langfuse_trace_id",
+            ):
                 value = section.get(key)
                 if isinstance(value, str) and value:
                     trace_id = value
                     break
 
-        if not trace_url and trace_id and getattr(settings, "AI_TRACE_URL_TEMPLATE", ""):
+        if (
+            not trace_url
+            and trace_id
+            and getattr(settings, "AI_TRACE_URL_TEMPLATE", "")
+        ):
             trace_url = settings.AI_TRACE_URL_TEMPLATE.format(
                 content_id=obj.id,
                 run_id=trace_id,
@@ -184,12 +213,16 @@ class ContentAdmin(admin.ModelAdmin):
     def display_relevance(self, obj):
         if obj.relevance_score is None:
             return "-"
-        color = "green" if obj.relevance_score > 75 else "orange" if obj.relevance_score > 40 else "red"
+        color = (
+            "green"
+            if obj.relevance_score > 75
+            else "orange" if obj.relevance_score > 40 else "red"
+        )
         return format_html('<b style="color: {};">{}%</b>', color, obj.relevance_score)
 
     def changelist_view(self, request, extra_context=None):
         queryset = self.get_queryset(request)
-        metrics = queryset.aggregate(avg_score=Avg('relevance_score'))
+        metrics = queryset.aggregate(avg_score=Avg("relevance_score"))
 
         extra_context = extra_context or {}
         extra_context["dashboard_stats"] = [
@@ -197,7 +230,7 @@ class ContentAdmin(admin.ModelAdmin):
                 "title": "Avg Relevance",
                 "value": f"{metrics['avg_score'] or 0:.1f}%",
                 "icon": "insights",
-                "color": "success" if (metrics['avg_score'] or 0) > 70 else "warning",
+                "color": "success" if (metrics["avg_score"] or 0) > 70 else "warning",
             },
             {
                 "title": "Total Filtered",
@@ -237,17 +270,29 @@ class SkillResultAdmin(ModelAdmin):
     list_filter = ("status", "skill_name", "project", "model_used")
     search_fields = ("skill_name", "content__title", "model_used", "error_message")
     actions = ["retry_selected_skills"]
-    readonly_fields = ("pretty_result_data", "latency_ms", "created_at", "superseded_by")
+    readonly_fields = (
+        "pretty_result_data",
+        "latency_ms",
+        "created_at",
+        "superseded_by",
+    )
     fieldsets = (
-        ("Execution Details", {
-            "fields": ("skill_name", "content", "project", "status", "model_used")
-        }),
-        ("AI Output", {
-            "fields": ("pretty_result_data", "error_message"),
-        }),
-        ("Performance Metrics", {
-            "fields": ("latency_ms", "confidence", "created_at", "superseded_by"),
-        }),
+        (
+            "Execution Details",
+            {"fields": ("skill_name", "content", "project", "status", "model_used")},
+        ),
+        (
+            "AI Output",
+            {
+                "fields": ("pretty_result_data", "error_message"),
+            },
+        ),
+        (
+            "Performance Metrics",
+            {
+                "fields": ("latency_ms", "confidence", "created_at", "superseded_by"),
+            },
+        ),
     )
 
     @admin.action(description="Retry Selected Skills")
@@ -257,7 +302,7 @@ class SkillResultAdmin(ModelAdmin):
         self.message_user(
             request,
             f"Successfully reset {updated} skills to PENDING for retry.",
-            messages.SUCCESS
+            messages.SUCCESS,
         )
 
     @admin.display(description="Result Preview")
@@ -267,7 +312,7 @@ class SkillResultAdmin(ModelAdmin):
             return "-"
         return format_html(
             '<a href="{}" class="font-bold text-primary-600">🔍 Preview</a>',
-            f"{obj.pk}/change/"
+            f"{obj.pk}/change/",
         )
 
     @admin.display(description="Content")
@@ -281,7 +326,8 @@ class SkillResultAdmin(ModelAdmin):
         color = colors.get(status_value, "gray")
         return format_html(
             '<span style="color: {}; font-weight: bold;">● {}</span>',
-            color, status_value.upper()
+            color,
+            status_value.upper(),
         )
 
     @admin.display(description="Perf / Conf")
@@ -301,16 +347,16 @@ class SkillResultAdmin(ModelAdmin):
         formatted_json = json.dumps(obj.result_data, indent=4)
         return mark_safe(
             f'<pre style="background: #1e1e1e; color: #dcdcdc; padding: 15px; border-radius: 8px; overflow-x: auto; font-family: monospace; font-size: 13px;">'
-            f'{formatted_json}'
-            f'</pre>'
+            f"{formatted_json}"
+            f"</pre>"
         )
 
     def changelist_view(self, request, extra_context=None):
         qs = self.get_queryset(request)
         extra_context = extra_context or {}
-        metrics = qs.aggregate(avg_lat=Avg('latency_ms'))
-        avg_latency = metrics['avg_lat'] or 0
-        failure_count = qs.filter(status='failed').count()
+        metrics = qs.aggregate(avg_lat=Avg("latency_ms"))
+        avg_latency = metrics["avg_lat"] or 0
+        failure_count = qs.filter(status="failed").count()
         total_count = qs.count() or 1
 
         extra_context["dashboard_stats"] = [
@@ -338,7 +384,7 @@ class UserFeedbackAdmin(ModelAdmin):
         "get_ai_score",
         "project",
         "user",
-        "created_at"
+        "created_at",
     )
     list_filter = ("feedback_type", ("project", admin.RelatedOnlyFieldListFilter))
     search_fields = ("content__title", "user__email", "user__username")
@@ -395,23 +441,21 @@ class IngestionRunAdmin(ModelAdmin):
         "display_duration",
         "started_at",
     )
-    list_filter = ("plugin_name", "status", ("project", admin.RelatedOnlyFieldListFilter))
+    list_filter = (
+        "plugin_name",
+        "status",
+        ("project", admin.RelatedOnlyFieldListFilter),
+    )
     search_fields = ("plugin_name", "error_message", "project__name")
     readonly_fields = ("display_duration", "started_at", "completed_at")
     fieldsets = (
-        ("Run Info", {
-            "fields": ("plugin_name", "project", "status")
-        }),
-        ("Data Metrics", {
-            "fields": ("items_fetched", "items_ingested", "display_efficiency")
-        }),
-        ("Timing", {
-            "fields": ("started_at", "completed_at", "display_duration")
-        }),
-        ("Logs", {
-            "fields": ("error_message",),
-            "classes": ("collapse",)
-        }),
+        ("Run Info", {"fields": ("plugin_name", "project", "status")}),
+        (
+            "Data Metrics",
+            {"fields": ("items_fetched", "items_ingested", "display_efficiency")},
+        ),
+        ("Timing", {"fields": ("started_at", "completed_at", "display_duration")}),
+        ("Logs", {"fields": ("error_message",), "classes": ("collapse",)}),
     )
 
     @admin.display(description="Status")
@@ -421,7 +465,7 @@ class IngestionRunAdmin(ModelAdmin):
         return format_html(
             '<span class="unfold-badge {}">{}</span>',
             colors.get(status_value, "warning"),
-            status_value.upper()
+            status_value.upper(),
         )
 
     @admin.display(description="Efficiency (Ingested/Fetched)")
@@ -433,7 +477,10 @@ class IngestionRunAdmin(ModelAdmin):
         percent_label = f"({percent:.0f}%)"
         return format_html(
             '<b>{} / {}</b> <small style="color: {}">{}</small>',
-            obj.items_ingested, obj.items_fetched, color, percent_label
+            obj.items_ingested,
+            obj.items_fetched,
+            color,
+            percent_label,
         )
 
     @admin.display(description="Duration")
@@ -449,7 +496,7 @@ class IngestionRunAdmin(ModelAdmin):
         extra_context = extra_context or {}
         total_runs = qs.count()
         failed_runs = qs.filter(status="failed").count()
-        total_ingested = sum(qs.values_list('items_ingested', flat=True))
+        total_ingested = sum(qs.values_list("items_ingested", flat=True))
 
         extra_context["dashboard_stats"] = [
             {
@@ -476,21 +523,29 @@ class SourceConfigAdmin(ModelAdmin):
         "is_active",
         "last_fetched_at",
     )
-    list_filter = ("is_active", "plugin_name", ("project", admin.RelatedOnlyFieldListFilter))
+    list_filter = (
+        "is_active",
+        "plugin_name",
+        ("project", admin.RelatedOnlyFieldListFilter),
+    )
     list_editable = ("is_active",)
     search_fields = ("plugin_name", "project__name")
     actions = ["test_source_connection"]
     readonly_fields = ("last_fetched_at", "pretty_config")
     fieldsets = (
-        ("Core Settings", {
-            "fields": ("plugin_name", "project", "is_active")
-        }),
-        ("Configuration", {
-            "fields": ("pretty_config", "config"),
-        }),
-        ("Activity", {
-            "fields": ("last_fetched_at",),
-        }),
+        ("Core Settings", {"fields": ("plugin_name", "project", "is_active")}),
+        (
+            "Configuration",
+            {
+                "fields": ("pretty_config", "config"),
+            },
+        ),
+        (
+            "Activity",
+            {
+                "fields": ("last_fetched_at",),
+            },
+        ),
     )
 
     @admin.display(description="Status")
@@ -501,10 +556,16 @@ class SourceConfigAdmin(ModelAdmin):
         if obj.last_fetched_at:
             hours_since = (timezone.now() - obj.last_fetched_at).total_seconds() / 3600
             if hours_since > 24:
-                return format_html('<span style="color: {};">{}</span>', "red", "● Stale")
-            return format_html('<span style="color: {};">{}</span>', "green", "● Healthy")
+                return format_html(
+                    '<span style="color: {};">{}</span>', "red", "● Stale"
+                )
+            return format_html(
+                '<span style="color: {};">{}</span>', "green", "● Healthy"
+            )
 
-        return format_html('<span style="color: {};">{}</span>', "orange", "● Never Run")
+        return format_html(
+            '<span style="color: {};">{}</span>', "orange", "● Never Run"
+        )
 
     @admin.display(description="Config Preview")
     def pretty_config(self, obj):
@@ -512,7 +573,9 @@ class SourceConfigAdmin(ModelAdmin):
         if not obj.config:
             return "Empty"
         formatted_json = json.dumps(obj.config, indent=4)
-        return mark_safe(f'<pre style="background: #1e1e1e; color: #dcdcdc; padding: 10px; border-radius: 5px; font-size: 12px;">{formatted_json}</pre>')
+        return mark_safe(
+            f'<pre style="background: #1e1e1e; color: #dcdcdc; padding: 10px; border-radius: 5px; font-size: 12px;">{formatted_json}</pre>'
+        )
 
     @admin.action(description="Test Source Connectivity")
     def test_source_connection(self, request, queryset):
@@ -565,7 +628,7 @@ class SourceConfigAdmin(ModelAdmin):
             },
             {
                 "title": "Plugin Variety",
-                "value": qs.values('plugin_name').distinct().count(),
+                "value": qs.values("plugin_name").distinct().count(),
                 "icon": "extension",
             },
         ]
@@ -593,7 +656,11 @@ class ReviewQueueAdmin(ModelAdmin):
 
     @admin.display(description="Confidence")
     def display_confidence(self, obj):
-        color = "red" if obj.confidence < 0.3 else "orange" if obj.confidence < 0.6 else "green"
+        color = (
+            "red"
+            if obj.confidence < 0.3
+            else "orange" if obj.confidence < 0.6 else "green"
+        )
         confidence_label = f"{obj.confidence * 100:.0f}%"
         return format_html('<b style="color: {}">{}</b>', color, confidence_label)
 

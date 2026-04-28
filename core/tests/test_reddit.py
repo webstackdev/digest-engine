@@ -13,10 +13,14 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def reddit_context(django_user_model):
-    user = django_user_model.objects.create_user(username="reddit-owner", password="testpass123")
+    user = django_user_model.objects.create_user(
+        username="reddit-owner", password="testpass123"
+    )
     group = Group.objects.create(name="reddit-team")
     user.groups.add(group)
-    project = Project.objects.create(name="Reddit Project", group=group, topic_description="Infra")
+    project = Project.objects.create(
+        name="Reddit Project", group=group, topic_description="Infra"
+    )
     source_config = SourceConfig.objects.create(
         project=project,
         plugin_name=SourcePluginName.REDDIT,
@@ -44,7 +48,9 @@ def test_validate_plugin_config_rejects_unknown_plugin_name():
         validate_plugin_config("unknown-plugin", {})
 
 
-def test_reddit_fetch_new_content_deduplicates_and_filters_by_since(reddit_context, mocker):
+def test_reddit_fetch_new_content_deduplicates_and_filters_by_since(
+    reddit_context, mocker
+):
     plugin = RedditSourcePlugin(reddit_context.source_config)
     now = datetime.now(tz=UTC)
     duplicate_id = "dup-1"
@@ -113,7 +119,9 @@ def test_reddit_client_builds_praw_client(settings, mocker):
     settings.REDDIT_CLIENT_ID = "client-id"
     settings.REDDIT_CLIENT_SECRET = "client-secret"
     settings.REDDIT_USER_AGENT = "newsletter-maker-test"
-    reddit_cls = mocker.patch("core.plugins.reddit.praw.Reddit", return_value="reddit-client")
+    reddit_cls = mocker.patch(
+        "core.plugins.reddit.praw.Reddit", return_value="reddit-client"
+    )
 
     client = RedditSourcePlugin._client()
 

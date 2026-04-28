@@ -29,7 +29,9 @@ logger = logging.getLogger(__name__)
 
 @shared_task(name="core.tasks.run_ingestion")
 def run_ingestion(source_config_id: int):
-    source_config = SourceConfig.objects.select_related("project").get(pk=source_config_id)
+    source_config = SourceConfig.objects.select_related("project").get(
+        pk=source_config_id
+    )
     ingestion_run = IngestionRun.objects.create(
         project=source_config.project,
         plugin_name=source_config.plugin_name,
@@ -42,20 +44,26 @@ def run_ingestion(source_config_id: int):
         ingestion_run.completed_at = timezone.now()
         ingestion_run.error_message = str(exc)
         ingestion_run.save(update_fields=["status", "completed_at", "error_message"])
-        logger.exception("Source ingestion failed", extra={"source_config_id": source_config_id})
+        logger.exception(
+            "Source ingestion failed", extra={"source_config_id": source_config_id}
+        )
         raise
 
     ingestion_run.status = RunStatus.SUCCESS
     ingestion_run.completed_at = timezone.now()
     ingestion_run.items_fetched = items_fetched
     ingestion_run.items_ingested = items_ingested
-    ingestion_run.save(update_fields=["status", "completed_at", "items_fetched", "items_ingested"])
+    ingestion_run.save(
+        update_fields=["status", "completed_at", "items_fetched", "items_ingested"]
+    )
     return {"items_fetched": items_fetched, "items_ingested": items_ingested}
 
 
 @shared_task(name="core.tasks.run_all_ingestions")
 def run_all_ingestions():
-    source_config_ids = list(SourceConfig.objects.filter(is_active=True).values_list("id", flat=True))
+    source_config_ids = list(
+        SourceConfig.objects.filter(is_active=True).values_list("id", flat=True)
+    )
     for source_config_id in source_config_ids:
         if settings.CELERY_TASK_ALWAYS_EAGER:
             run_ingestion(source_config_id)

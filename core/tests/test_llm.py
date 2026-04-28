@@ -9,7 +9,9 @@ def test_openrouter_chat_json_requires_api_key(settings):
     settings.OPENROUTER_API_KEY = ""
 
     with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY must be configured"):
-        openrouter_chat_json(model="test-model", system_prompt="system", user_prompt="user")
+        openrouter_chat_json(
+            model="test-model", system_prompt="system", user_prompt="user"
+        )
 
 
 def test_openrouter_chat_json_posts_expected_request(settings, mocker):
@@ -35,7 +37,10 @@ def test_openrouter_chat_json_posts_expected_request(settings, mocker):
     assert result.payload == {"summary": "Hello"}
     assert result.model == "openrouter/test-model"
     assert result.latency_ms == 123
-    assert post_mock.call_args.args[0] == "https://openrouter.example/api/v1/chat/completions"
+    assert (
+        post_mock.call_args.args[0]
+        == "https://openrouter.example/api/v1/chat/completions"
+    )
     assert post_mock.call_args.kwargs["headers"] == {
         "Authorization": "Bearer test-key",
         "Content-Type": "application/json",
@@ -59,7 +64,9 @@ def test_extract_json_object_accepts_direct_json_object():
 
 
 def test_extract_json_object_extracts_embedded_json_object_from_text():
-    assert _extract_json_object('Here is the result:\n```json\n{"score": 0.7}\n```') == {"score": 0.7}
+    assert _extract_json_object(
+        'Here is the result:\n```json\n{"score": 0.7}\n```'
+    ) == {"score": 0.7}
 
 
 def test_extract_json_object_rejects_missing_json_object():

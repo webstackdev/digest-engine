@@ -24,12 +24,22 @@ class ProjectScopedSerializerMixin:
         if "group" in self.fields:
             self.fields["group"].queryset = Group.objects.filter(user=user)
         if "project" in self.fields:
-            self.fields["project"].queryset = Project.objects.filter(group__user=user).distinct()
+            self.fields["project"].queryset = Project.objects.filter(
+                group__user=user
+            ).distinct()
         if "entity" in self.fields:
-            entity_queryset = Entity.objects.filter(project=project) if project else Entity.objects.filter(project__group__user=user)
+            entity_queryset = (
+                Entity.objects.filter(project=project)
+                if project
+                else Entity.objects.filter(project__group__user=user)
+            )
             self.fields["entity"].queryset = entity_queryset
         if "content" in self.fields:
-            content_queryset = Content.objects.filter(project=project) if project else Content.objects.filter(project__group__user=user)
+            content_queryset = (
+                Content.objects.filter(project=project)
+                if project
+                else Content.objects.filter(project__group__user=user)
+            )
             self.fields["content"].queryset = content_queryset
         if "superseded_by" in self.fields:
             skill_result_queryset = (
@@ -63,7 +73,9 @@ class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
         read_only_fields = ["id", "created_at"]
 
 
-class ProjectConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+class ProjectConfigSerializer(
+    ProjectScopedSerializerMixin, serializers.ModelSerializer
+):
     class Meta:
         model = ProjectConfig
         fields = [
@@ -121,10 +133,16 @@ class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
         read_only_fields = ["id", "project", "ingested_at", "embedding_id"]
 
     def validate(self, attrs):
-        project = self.context.get("project") or attrs.get("project") or getattr(self.instance, "project", None)
+        project = (
+            self.context.get("project")
+            or attrs.get("project")
+            or getattr(self.instance, "project", None)
+        )
         entity = attrs.get("entity") or getattr(self.instance, "entity", None)
         if project and entity and entity.project_id != project.id:
-            raise serializers.ValidationError({"entity": "Entity must belong to the selected project."})
+            raise serializers.ValidationError(
+                {"entity": "Entity must belong to the selected project."}
+            )
         return attrs
 
 
@@ -148,10 +166,16 @@ class SkillResultSerializer(ProjectScopedSerializerMixin, serializers.ModelSeria
         read_only_fields = ["id", "project", "created_at"]
 
     def validate(self, attrs):
-        project = self.context.get("project") or attrs.get("project") or getattr(self.instance, "project", None)
+        project = (
+            self.context.get("project")
+            or attrs.get("project")
+            or getattr(self.instance, "project", None)
+        )
         content = attrs.get("content") or getattr(self.instance, "content", None)
         if project and content and content.project_id != project.id:
-            raise serializers.ValidationError({"content": "Content must belong to the selected project."})
+            raise serializers.ValidationError(
+                {"content": "Content must belong to the selected project."}
+            )
         return attrs
 
 
@@ -164,10 +188,16 @@ class UserFeedbackSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
         read_only_fields = ["id", "project", "user", "created_at"]
 
     def validate(self, attrs):
-        project = self.context.get("project") or attrs.get("project") or getattr(self.instance, "project", None)
+        project = (
+            self.context.get("project")
+            or attrs.get("project")
+            or getattr(self.instance, "project", None)
+        )
         content = attrs.get("content") or getattr(self.instance, "content", None)
         if project and content and content.project_id != project.id:
-            raise serializers.ValidationError({"content": "Content must belong to the selected project."})
+            raise serializers.ValidationError(
+                {"content": "Content must belong to the selected project."}
+            )
         return attrs
 
 
@@ -191,11 +221,20 @@ class IngestionRunSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
 class SourceConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = SourceConfig
-        fields = ["id", "project", "plugin_name", "config", "is_active", "last_fetched_at"]
+        fields = [
+            "id",
+            "project",
+            "plugin_name",
+            "config",
+            "is_active",
+            "last_fetched_at",
+        ]
         read_only_fields = ["id", "project", "last_fetched_at"]
 
     def validate(self, attrs):
-        plugin_name = attrs.get("plugin_name") or getattr(self.instance, "plugin_name", None)
+        plugin_name = attrs.get("plugin_name") or getattr(
+            self.instance, "plugin_name", None
+        )
         config = attrs.get("config") or getattr(self.instance, "config", {})
         if plugin_name:
             try:
@@ -208,25 +247,51 @@ class SourceConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
 class ReviewQueueSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = ReviewQueue
-        fields = ["id", "project", "content", "reason", "confidence", "created_at", "resolved", "resolution"]
+        fields = [
+            "id",
+            "project",
+            "content",
+            "reason",
+            "confidence",
+            "created_at",
+            "resolved",
+            "resolution",
+        ]
         read_only_fields = ["id", "project", "created_at"]
 
     def validate(self, attrs):
-        project = self.context.get("project") or attrs.get("project") or getattr(self.instance, "project", None)
+        project = (
+            self.context.get("project")
+            or attrs.get("project")
+            or getattr(self.instance, "project", None)
+        )
         content = attrs.get("content") or getattr(self.instance, "content", None)
         if project and content and content.project_id != project.id:
-            raise serializers.ValidationError({"content": "Content must belong to the selected project."})
+            raise serializers.ValidationError(
+                {"content": "Content must belong to the selected project."}
+            )
         return attrs
 
 
-class IntakeAllowlistSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+class IntakeAllowlistSerializer(
+    ProjectScopedSerializerMixin, serializers.ModelSerializer
+):
     class Meta:
         model = IntakeAllowlist
-        fields = ["id", "project", "sender_email", "confirmed_at", "confirmation_token", "created_at"]
+        fields = [
+            "id",
+            "project",
+            "sender_email",
+            "confirmed_at",
+            "confirmation_token",
+            "created_at",
+        ]
         read_only_fields = ["id", "project", "confirmation_token", "created_at"]
 
 
-class NewsletterIntakeSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+class NewsletterIntakeSerializer(
+    ProjectScopedSerializerMixin, serializers.ModelSerializer
+):
     class Meta:
         model = NewsletterIntake
         fields = [
@@ -242,4 +307,11 @@ class NewsletterIntakeSerializer(ProjectScopedSerializerMixin, serializers.Model
             "extraction_result",
             "error_message",
         ]
-        read_only_fields = ["id", "project", "received_at", "status", "extraction_result", "error_message"]
+        read_only_fields = [
+            "id",
+            "project",
+            "received_at",
+            "status",
+            "extraction_result",
+            "error_message",
+        ]

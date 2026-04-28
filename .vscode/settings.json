@@ -30,6 +30,7 @@
     "pylint",
     "PYTHONDONTWRITEBYTECODE",
     "PYTHONUNBUFFERED",
+    "pytokens",
     "pyyaml",
     "QDRANT",
     "readyz",

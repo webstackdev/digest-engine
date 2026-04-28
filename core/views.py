@@ -17,7 +17,9 @@ settings = cast(CoreSettings, django_settings)
 
 
 def healthz_view(request):
-    return JsonResponse({"status": "ok", "service": "newsletter-maker"}, status=HTTPStatus.OK)
+    return JsonResponse(
+        {"status": "ok", "service": "newsletter-maker"}, status=HTTPStatus.OK
+    )
 
 
 def readyz_view(request):
@@ -45,7 +47,9 @@ def _check_database() -> bool:
 
 def _check_qdrant() -> bool:
     try:
-        client = QdrantClient(url=settings.QDRANT_URL, timeout=2, check_compatibility=False)
+        client = QdrantClient(
+            url=settings.QDRANT_URL, timeout=2, check_compatibility=False
+        )
         client.get_collections()
     except Exception:
         return False

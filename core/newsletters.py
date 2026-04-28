@@ -161,7 +161,9 @@ def extract_project_token(recipient: str) -> str | None:
     return token
 
 
-def send_confirmation_email(*, to_email: str, confirm_url: str, project_name: str) -> None:
+def send_confirmation_email(
+    *, to_email: str, confirm_url: str, project_name: str
+) -> None:
     subject = f"Confirm newsletter intake for {project_name}"
     text_body = (
         "Confirm this sender for newsletter ingestion.\n\n"
@@ -239,7 +241,9 @@ def process_inbound_newsletter(
 
 
 def queue_newsletter_intake(intake_id: int) -> None:
-    process_newsletter_intake = current_app.tasks["core.tasks.process_newsletter_intake"]
+    process_newsletter_intake = current_app.tasks[
+        "core.tasks.process_newsletter_intake"
+    ]
     if settings.CELERY_TASK_ALWAYS_EAGER:
         process_newsletter_intake.apply(args=(intake_id,), throw=True)
     else:
@@ -251,7 +255,9 @@ def _find_intake_project(recipients: Iterable[str]) -> Project | None:
         token = extract_project_token(recipient)
         if token is None:
             continue
-        project = Project.objects.filter(intake_token=token, intake_enabled=True).first()
+        project = Project.objects.filter(
+            intake_token=token, intake_enabled=True
+        ).first()
         if project is not None:
             return project
     return None

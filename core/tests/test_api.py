@@ -28,8 +28,12 @@ from core.models import (
 class ProjectScopedApiTests(APITestCase):
     def setUp(self):
         user_model = get_user_model()
-        self.owner = user_model.objects.create_user(username="owner", password="testpass123")
-        self.other_user = user_model.objects.create_user(username="other", password="testpass123")
+        self.owner = user_model.objects.create_user(
+            username="owner", password="testpass123"
+        )
+        self.other_user = user_model.objects.create_user(
+            username="other", password="testpass123"
+        )
         self.owner_group = Group.objects.create(name="owner-team")
         self.owner.groups.add(self.owner_group)
         self.other_group = Group.objects.create(name="other-team")
@@ -134,20 +138,30 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.json()[0]["id"], self.owner_project.id)
 
     def test_entity_list_is_scoped_to_request_user_project(self):
-        response = self.client.get(reverse("v1:project-entity-list", kwargs={"project_id": self.owner_project.id}))
+        response = self.client.get(
+            reverse(
+                "v1:project-entity-list", kwargs={"project_id": self.owner_project.id}
+            )
+        )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], self.owner_entity.id)
 
     def test_nested_entity_list_rejects_other_users_project(self):
-        response = self.client.get(reverse("v1:project-entity-list", kwargs={"project_id": self.other_project.id}))
+        response = self.client.get(
+            reverse(
+                "v1:project-entity-list", kwargs={"project_id": self.other_project.id}
+            )
+        )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_feedback_create_assigns_current_user(self):
         response = self.client.post(
-            reverse("v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}),
+            reverse(
+                "v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}
+            ),
             {
                 "content": self.owner_content.id,
                 "feedback_type": FeedbackType.UPVOTE,
@@ -162,7 +176,9 @@ class ProjectScopedApiTests(APITestCase):
 
     def test_feedback_rejects_cross_project_content(self):
         response = self.client.post(
-            reverse("v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}),
+            reverse(
+                "v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}
+            ),
             {
                 "content": self.other_content.id,
                 "feedback_type": FeedbackType.DOWNVOTE,
@@ -175,7 +191,9 @@ class ProjectScopedApiTests(APITestCase):
 
     def test_content_create_uses_project_from_url(self):
         response = self.client.post(
-            reverse("v1:project-content-list", kwargs={"project_id": self.owner_project.id}),
+            reverse(
+                "v1:project-content-list", kwargs={"project_id": self.owner_project.id}
+            ),
             {
                 "url": "https://example.com/new",
                 "title": "New Content",
@@ -194,7 +212,9 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(created_content.project, self.owner_project)
 
     @patch("core.tasks.run_relevance_scoring_skill.delay")
-    def test_content_skill_action_queues_relevance_scoring(self, run_relevance_scoring_delay_mock):
+    def test_content_skill_action_queues_relevance_scoring(
+        self, run_relevance_scoring_delay_mock
+    ):
 
         response = self.client.post(
             f"/api/v1/projects/{self.owner_project.id}/contents/{self.owner_content.id}/skills/relevance_scoring/",
@@ -214,7 +234,9 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.json()["status"], SkillStatus.PENDING)
 
     @patch("core.tasks.run_summarization_skill.delay")
-    def test_content_skill_action_queues_summarization(self, run_summarization_delay_mock):
+    def test_content_skill_action_queues_summarization(
+        self, run_summarization_delay_mock
+    ):
         self.owner_content.relevance_score = 0.25
         self.owner_content.save(update_fields=["relevance_score"])
 
@@ -256,18 +278,41 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.json()["skill_name"], "find_related")
         self.assertEqual(response.json()["status"], SkillStatus.COMPLETED)
-        self.assertEqual(response.json()["result_data"]["related_items"][0]["content_id"], self.other_content.id)
+        self.assertEqual(
+            response.json()["result_data"]["related_items"][0]["content_id"],
+            self.other_content.id,
+        )
 
     def test_authenticated_nested_list_endpoints_smoke(self):
         list_endpoints = [
-            reverse("v1:project-config-list", kwargs={"project_id": self.owner_project.id}),
-            reverse("v1:project-entity-list", kwargs={"project_id": self.owner_project.id}),
-            reverse("v1:project-content-list", kwargs={"project_id": self.owner_project.id}),
-            reverse("v1:project-skill-result-list", kwargs={"project_id": self.owner_project.id}),
-            reverse("v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}),
-            reverse("v1:project-ingestion-run-list", kwargs={"project_id": self.owner_project.id}),
-            reverse("v1:project-source-config-list", kwargs={"project_id": self.owner_project.id}),
-            reverse("v1:project-review-queue-list", kwargs={"project_id": self.owner_project.id}),
+            reverse(
+                "v1:project-config-list", kwargs={"project_id": self.owner_project.id}
+            ),
+            reverse(
+                "v1:project-entity-list", kwargs={"project_id": self.owner_project.id}
+            ),
+            reverse(
+                "v1:project-content-list", kwargs={"project_id": self.owner_project.id}
+            ),
+            reverse(
+                "v1:project-skill-result-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            reverse(
+                "v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}
+            ),
+            reverse(
+                "v1:project-ingestion-run-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            reverse(
+                "v1:project-source-config-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            reverse(
+                "v1:project-review-queue-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
         ]
 
         for endpoint in list_endpoints:
@@ -279,31 +324,52 @@ class ProjectScopedApiTests(APITestCase):
         detail_endpoints = [
             reverse(
                 "v1:project-config-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": self.owner_config.id},
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_config.id,
+                },
             ),
             reverse(
                 "v1:project-entity-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": self.owner_entity.id},
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_entity.id,
+                },
             ),
             reverse(
                 "v1:project-content-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": self.owner_content.id},
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_content.id,
+                },
             ),
             reverse(
                 "v1:project-skill-result-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": self.owner_skill_result.id},
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_skill_result.id,
+                },
             ),
             reverse(
                 "v1:project-ingestion-run-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": self.owner_ingestion_run.id},
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_ingestion_run.id,
+                },
             ),
             reverse(
                 "v1:project-source-config-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": self.owner_source_config.id},
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_source_config.id,
+                },
             ),
             reverse(
                 "v1:project-review-queue-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": self.owner_review_queue.id},
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_review_queue.id,
+                },
             ),
         ]
 
@@ -327,7 +393,10 @@ class ProjectScopedApiTests(APITestCase):
 
     def test_source_config_create_validates_plugin_config(self):
         response = self.client.post(
-            reverse("v1:project-source-config-list", kwargs={"project_id": self.owner_project.id}),
+            reverse(
+                "v1:project-source-config-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
             {"plugin_name": SourcePluginName.RSS, "config": {}},
             format="json",
         )

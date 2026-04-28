@@ -49,21 +49,29 @@ def test_check_database_returns_true_when_query_succeeds(mocker):
 
 
 def test_check_database_returns_false_when_query_raises(mocker):
-    mocker.patch("core.views.connection.cursor", side_effect=RuntimeError("db unavailable"))
+    mocker.patch(
+        "core.views.connection.cursor", side_effect=RuntimeError("db unavailable")
+    )
 
     assert _check_database() is False
 
 
 def test_check_qdrant_returns_true_when_client_can_list_collections(mocker, settings):
     client_cls = mocker.patch("core.views.QdrantClient")
-    client_cls.return_value.get_collections.return_value = SimpleNamespace(collections=[])
+    client_cls.return_value.get_collections.return_value = SimpleNamespace(
+        collections=[]
+    )
 
     assert _check_qdrant() is True
-    client_cls.assert_called_once_with(url=settings.QDRANT_URL, timeout=2, check_compatibility=False)
+    client_cls.assert_called_once_with(
+        url=settings.QDRANT_URL, timeout=2, check_compatibility=False
+    )
 
 
 def test_check_qdrant_returns_false_when_client_errors(mocker):
     client_cls = mocker.patch("core.views.QdrantClient")
-    client_cls.return_value.get_collections.side_effect = RuntimeError("qdrant unavailable")
+    client_cls.return_value.get_collections.side_effect = RuntimeError(
+        "qdrant unavailable"
+    )
 
     assert _check_qdrant() is False

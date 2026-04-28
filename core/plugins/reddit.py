@@ -37,7 +37,8 @@ class RedditSourcePlugin(SourcePlugin):
                 continue
             items.append(
                 ContentItem(
-                    url=submission.url or f"https://www.reddit.com{submission.permalink}",
+                    url=submission.url
+                    or f"https://www.reddit.com{submission.permalink}",
                     title=submission.title.strip(),
                     author=str(submission.author) if submission.author else "",
                     published_date=published_date,

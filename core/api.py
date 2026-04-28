@@ -222,7 +222,9 @@ AUTHENTICATION_REQUIRED_RESPONSE = OpenApiResponse(
 )
 
 
-def build_success_response(response, description: str, examples: list[OpenApiExample] | None = None):
+def build_success_response(
+    response, description: str, examples: list[OpenApiExample] | None = None
+):
     response_kwargs = {
         "response": response,
         "description": description,
@@ -275,19 +277,25 @@ def build_crud_action_overrides(
         },
         "update": {
             "responses": {
-                200: build_success_response(serializer_class, f"The updated {resource_singular}."),
+                200: build_success_response(
+                    serializer_class, f"The updated {resource_singular}."
+                ),
                 403: AUTHENTICATION_REQUIRED_RESPONSE,
             }
         },
         "partial_update": {
             "responses": {
-                200: build_success_response(serializer_class, f"The updated {resource_singular}."),
+                200: build_success_response(
+                    serializer_class, f"The updated {resource_singular}."
+                ),
                 403: AUTHENTICATION_REQUIRED_RESPONSE,
             }
         },
         "destroy": {
             "responses": {
-                204: OpenApiResponse(description=f"The {resource_singular} was deleted."),
+                204: OpenApiResponse(
+                    description=f"The {resource_singular} was deleted."
+                ),
                 403: AUTHENTICATION_REQUIRED_RESPONSE,
             }
         },
@@ -314,7 +322,9 @@ def document_group_access_viewset(
             responses = dict(schema_kwargs.get("responses", {}))
             responses.update(override_responses)
             schema_kwargs["responses"] = responses
-        schema_kwargs.update({key: value for key, value in action_override.items() if key != "responses"})
+        schema_kwargs.update(
+            {key: value for key, value in action_override.items() if key != "responses"}
+        )
         return extend_schema(**schema_kwargs)
 
     return extend_schema_view(
@@ -369,7 +379,9 @@ def document_project_owned_viewset(
             responses = dict(schema_kwargs.get("responses", {}))
             responses.update(override_responses)
             schema_kwargs["responses"] = responses
-        schema_kwargs.update({key: value for key, value in action_override.items() if key != "responses"})
+        schema_kwargs.update(
+            {key: value for key, value in action_override.items() if key != "responses"}
+        )
         return extend_schema(**schema_kwargs)
 
     return extend_schema_view(
@@ -418,7 +430,9 @@ class ProjectOwnedQuerysetMixin:
     def get_project(self):
         project_id = self.kwargs.get("project_id")
         if project_id is None:
-            raise AssertionError("project_id must be present in nested project-scoped routes")
+            raise AssertionError(
+                "project_id must be present in nested project-scoped routes"
+            )
         try:
             return Project.objects.get(pk=project_id, group__user=self.request.user)
         except Project.DoesNotExist as exc:
@@ -551,11 +565,15 @@ class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
         content = self.get_object()
         if skill_name in {RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME}:
             skill_result = queue_content_skill(content, skill_name)
-            serializer = SkillResultSerializer(skill_result, context=self.get_serializer_context())
+            serializer = SkillResultSerializer(
+                skill_result, context=self.get_serializer_context()
+            )
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
         skill_result = execute_ad_hoc_skill(content, skill_name)
-        serializer = SkillResultSerializer(skill_result, context=self.get_serializer_context())
+        serializer = SkillResultSerializer(
+            skill_result, context=self.get_serializer_context()
+        )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

@@ -41,14 +41,18 @@ class _NewsletterLinkParser(HTMLParser):
         self.links.append(
             {
                 "url": self._active_href,
-                "title": " ".join(part.strip() for part in self._active_text if part.strip()),
+                "title": " ".join(
+                    part.strip() for part in self._active_text if part.strip()
+                ),
             }
         )
         self._active_href = None
         self._active_text = []
 
 
-def extract_newsletter_items(*, subject: str, raw_html: str, raw_text: str) -> list[ExtractedNewsletterItem]:
+def extract_newsletter_items(
+    *, subject: str, raw_html: str, raw_text: str
+) -> list[ExtractedNewsletterItem]:
     parser = _NewsletterLinkParser()
     if raw_html:
         parser.feed(raw_html)

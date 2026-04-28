@@ -30,7 +30,8 @@ def handle_anymail_inbound(sender, event, esp_name, **kwargs):
 
     process_inbound_newsletter(
         recipients=recipients,
-        sender_email=message.envelope_sender or _address_to_string(getattr(message, "from_email", None)),
+        sender_email=message.envelope_sender
+        or _address_to_string(getattr(message, "from_email", None)),
         subject=message.subject or "",
         raw_html=message.html or "",
         raw_text=message.text or "",

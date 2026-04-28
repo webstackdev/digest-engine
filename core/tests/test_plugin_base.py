@@ -31,10 +31,14 @@ class DummySourcePlugin(SourcePlugin):
 
 @pytest.fixture
 def plugin_context(django_user_model):
-    user = django_user_model.objects.create_user(username="plugin-owner", password="testpass123")
+    user = django_user_model.objects.create_user(
+        username="plugin-owner", password="testpass123"
+    )
     group = Group.objects.create(name="plugin-team")
     user.groups.add(group)
-    project = Project.objects.create(name="Plugin Project", group=group, topic_description="Infra")
+    project = Project.objects.create(
+        name="Plugin Project", group=group, topic_description="Infra"
+    )
     source_config = SimpleNamespace(project=project, config={"api_key": "secret"})
     return SimpleNamespace(project=project, source_config=source_config)
 
@@ -72,14 +76,21 @@ def test_source_plugin_match_entity_for_url_matches_normalized_hostname(plugin_c
     assert result == matching_entity
 
 
-def test_source_plugin_match_entity_for_url_returns_none_for_missing_hostname(plugin_context):
+def test_source_plugin_match_entity_for_url_returns_none_for_missing_hostname(
+    plugin_context,
+):
     plugin = DummySourcePlugin(plugin_context.source_config)
 
     assert plugin.match_entity_for_url("not-a-valid-url") is None
-    assert DummySourcePlugin._normalize_hostname("https://www.EXAMPLE.com/path") == "example.com"
+    assert (
+        DummySourcePlugin._normalize_hostname("https://www.EXAMPLE.com/path")
+        == "example.com"
+    )
 
 
-def test_source_plugin_match_entity_for_url_returns_none_when_no_entity_matches(plugin_context):
+def test_source_plugin_match_entity_for_url_returns_none_when_no_entity_matches(
+    plugin_context,
+):
     Entity.objects.create(
         project=plugin_context.project,
         name="Different Entity",

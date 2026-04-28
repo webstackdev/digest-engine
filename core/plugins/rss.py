@@ -24,7 +24,11 @@ class RSSSourcePlugin(SourcePlugin):
             title = (getattr(entry, "title", "") or "").strip()
             if not url or not title:
                 continue
-            summary = getattr(entry, "summary", "") or getattr(entry, "description", "") or title
+            summary = (
+                getattr(entry, "summary", "")
+                or getattr(entry, "description", "")
+                or title
+            )
             items.append(
                 ContentItem(
                     url=url,

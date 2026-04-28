@@ -646,7 +646,9 @@ class Command(BaseCommand):
             )
             content.content_type = article["content_type"]
             content.relevance_score = relevance_score
-            content.is_active = relevance_score >= settings.AI_RELEVANCE_REVIEW_THRESHOLD
+            content.is_active = (
+                relevance_score >= settings.AI_RELEVANCE_REVIEW_THRESHOLD
+            )
             content_updates.append(content)
 
             skill_results.append(
@@ -746,7 +748,10 @@ class Command(BaseCommand):
 
         active_contents = sorted(
             [content for content in contents if content.is_active],
-            key=lambda content: (content.relevance_score or 0.0, content.published_date),
+            key=lambda content: (
+                content.relevance_score or 0.0,
+                content.published_date,
+            ),
             reverse=True,
         )
         feedback_count = 0
@@ -889,7 +894,9 @@ class Command(BaseCommand):
     def _build_generated_rss_content(self) -> list[dict[str, Any]]:
         articles = []
         for index in range(147):
-            band = self._band_for_index(index, relevant_cutoff=87, borderline_cutoff=122)
+            band = self._band_for_index(
+                index, relevant_cutoff=87, borderline_cutoff=122
+            )
             publication = RSS_PUBLICATIONS[index % len(RSS_PUBLICATIONS)]
             topic = RSS_TOPIC_BLUEPRINTS[index % len(RSS_TOPIC_BLUEPRINTS)]
             relevance_score = self._relevance_score(index, band)
@@ -899,12 +906,18 @@ class Command(BaseCommand):
                         f"https://{publication['host']}/2026/04/"
                         f"{topic['slug']}-{index + 1:03d}"
                     ),
-                    "title": self._rss_title(publication["label"], topic["headline"], band),
+                    "title": self._rss_title(
+                        publication["label"], topic["headline"], band
+                    ),
                     "author": f"{publication['label']} Editorial",
                     "source_plugin": SourcePluginName.RSS,
-                    "content_text": self._rss_body(publication["label"], topic["body"], band),
+                    "content_text": self._rss_body(
+                        publication["label"], topic["body"], band
+                    ),
                     "days_ago": 1 + (index % 30),
-                    "content_type": self._content_type_for_band(topic["content_type"], band),
+                    "content_type": self._content_type_for_band(
+                        topic["content_type"], band
+                    ),
                     "classification_confidence": self._classification_confidence(index),
                     "relevance_score": relevance_score,
                     "entity_name": publication["entity_name"],
@@ -928,10 +941,16 @@ class Command(BaseCommand):
                     "title": self._reddit_title(subreddit, topic["headline"], band),
                     "author": f"u/demo_{subreddit}_{index + 1:03d}",
                     "source_plugin": SourcePluginName.REDDIT,
-                    "content_text": self._reddit_body(subreddit, topic["body"], band, index),
+                    "content_text": self._reddit_body(
+                        subreddit, topic["body"], band, index
+                    ),
                     "days_ago": 1 + ((index * 2) % 30),
-                    "content_type": self._content_type_for_band(topic["content_type"], band),
-                    "classification_confidence": self._classification_confidence(index + 200),
+                    "content_type": self._content_type_for_band(
+                        topic["content_type"], band
+                    ),
+                    "classification_confidence": self._classification_confidence(
+                        index + 200
+                    ),
                     "relevance_score": self._relevance_score(index + 200, band),
                     "entity_name": None,
                     "used_llm": band == "borderline",
@@ -940,7 +959,9 @@ class Command(BaseCommand):
         return articles
 
     @staticmethod
-    def _band_for_index(index: int, *, relevant_cutoff: int, borderline_cutoff: int) -> str:
+    def _band_for_index(
+        index: int, *, relevant_cutoff: int, borderline_cutoff: int
+    ) -> str:
         if index < relevant_cutoff:
             return "relevant"
         if index < borderline_cutoff:

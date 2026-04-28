@@ -14,7 +14,9 @@ def get_plugin_for_source_config(source_config):
     return _get_plugin_class(source_config.plugin_name)(source_config)
 
 
-def validate_plugin_config(plugin_name: SourcePluginName | str, config: object) -> dict[str, Any]:
+def validate_plugin_config(
+    plugin_name: SourcePluginName | str, config: object
+) -> dict[str, Any]:
     return _get_plugin_class(plugin_name).validate_config(config)
 
 

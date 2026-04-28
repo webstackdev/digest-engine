@@ -29,10 +29,14 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def source_plugin_context(django_user_model):
-    user = django_user_model.objects.create_user(username="plugin-owner", password="testpass123")
+    user = django_user_model.objects.create_user(
+        username="plugin-owner", password="testpass123"
+    )
     group = Group.objects.create(name="plugin-team")
     user.groups.add(group)
-    project = Project.objects.create(name="Plugin Project", group=group, topic_description="Infra")
+    project = Project.objects.create(
+        name="Plugin Project", group=group, topic_description="Infra"
+    )
     entity = Entity.objects.create(
         project=project,
         name="Example",
@@ -47,9 +51,9 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
-            project=source_plugin_context.project,
-            plugin_name=SourcePluginName.RSS,
-            config={"feed_url": "https://example.com/feed.xml"},
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
     )
     parse_mock.return_value = SimpleNamespace(
         entries=[
@@ -58,7 +62,9 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
                 title="Example Post",
                 author="Author",
                 summary="Summary",
-                published_parsed=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc).timetuple(),
+                published_parsed=datetime(
+                    2026, 4, 20, 12, 0, tzinfo=timezone.utc
+                ).timetuple(),
             )
         ]
     )
@@ -73,17 +79,20 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
     upsert_embedding_mock.assert_called_once_with(content)
     process_content_delay_mock.assert_called_once_with(content.id)
     assert SourceConfig.objects.get(pk=source_config.id).last_fetched_at is not None
-    ingestion_run = IngestionRun.objects.get(project=source_plugin_context.project, plugin_name=SourcePluginName.RSS)
+    ingestion_run = IngestionRun.objects.get(
+        project=source_plugin_context.project, plugin_name=SourcePluginName.RSS
+    )
     assert ingestion_run.status == RunStatus.SUCCESS
+
 
 def test_run_ingestion_skips_duplicate_urls(source_plugin_context, mocker):
     upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
-            project=source_plugin_context.project,
-            plugin_name=SourcePluginName.RSS,
-            config={"feed_url": "https://example.com/feed.xml"},
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
     )
     Content.objects.create(
         project=source_plugin_context.project,
@@ -102,7 +111,9 @@ def test_run_ingestion_skips_duplicate_urls(source_plugin_context, mocker):
                 title="Duplicate Post",
                 author="Author",
                 summary="Summary",
-                published_parsed=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc).timetuple(),
+                published_parsed=datetime(
+                    2026, 4, 20, 12, 0, tzinfo=timezone.utc
+                ).timetuple(),
             )
         ]
     )
@@ -115,14 +126,15 @@ def test_run_ingestion_skips_duplicate_urls(source_plugin_context, mocker):
     process_content_delay_mock.assert_not_called()
     assert Content.objects.filter(url="https://example.com/post-1").count() == 1
 
+
 def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, mocker):
     upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     reddit_mock = mocker.patch("core.plugins.reddit.praw.Reddit")
     source_config = SourceConfig.objects.create(
-            project=source_plugin_context.project,
-            plugin_name=SourcePluginName.REDDIT,
-            config={"subreddit": "python", "listing": "new", "limit": 5},
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.REDDIT,
+        config={"subreddit": "python", "listing": "new", "limit": 5},
     )
     submission = SimpleNamespace(
         id="abc123",
@@ -133,7 +145,9 @@ def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, 
         author="redditor",
         created_utc=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc).timestamp(),
     )
-    subreddit = SimpleNamespace(new=lambda limit: iter([submission]), hot=lambda limit: iter([]))
+    subreddit = SimpleNamespace(
+        new=lambda limit: iter([submission]), hot=lambda limit: iter([])
+    )
     reddit_mock.return_value.subreddit.return_value = subreddit
 
     result = run_ingestion(source_config.id)
@@ -146,12 +160,15 @@ def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, 
     assert content.source_plugin == SourcePluginName.REDDIT
     assert content.entity is None
 
-def test_run_all_ingestions_enqueues_active_source_configs(source_plugin_context, mocker):
+
+def test_run_all_ingestions_enqueues_active_source_configs(
+    source_plugin_context, mocker
+):
     delay_mock = mocker.patch("core.tasks.run_ingestion.delay")
     active_one = SourceConfig.objects.create(
-            project=source_plugin_context.project,
-            plugin_name=SourcePluginName.RSS,
-            config={"feed_url": "https://example.com/feed.xml"},
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
     )
     active_two = SourceConfig.objects.create(
         project=source_plugin_context.project,
@@ -173,7 +190,9 @@ def test_run_all_ingestions_enqueues_active_source_configs(source_plugin_context
     assert delay_mock.call_count == 2
 
 
-def test_run_all_ingestions_executes_inline_when_eager(source_plugin_context, settings, mocker):
+def test_run_all_ingestions_executes_inline_when_eager(
+    source_plugin_context, settings, mocker
+):
     settings.CELERY_TASK_ALWAYS_EAGER = True
     run_ingestion_mock = mocker.patch("core.tasks.run_ingestion")
     delay_mock = mocker.patch("core.tasks.run_ingestion.delay")
@@ -196,19 +215,22 @@ def test_run_all_ingestions_executes_inline_when_eager(source_plugin_context, se
     assert run_ingestion_mock.call_count == 2
     delay_mock.assert_not_called()
 
+
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
     parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
-            plugin_name=SourcePluginName.RSS,
-            config={"feed_url": "https://example.com/feed.xml"},
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
     )
     parse_mock.side_effect = RuntimeError("feed unavailable")
 
     with pytest.raises(RuntimeError, match="feed unavailable"):
         run_ingestion(source_config.id)
 
-    ingestion_run = IngestionRun.objects.get(project=source_plugin_context.project, plugin_name=SourcePluginName.RSS)
+    ingestion_run = IngestionRun.objects.get(
+        project=source_plugin_context.project, plugin_name=SourcePluginName.RSS
+    )
     assert ingestion_run.status == RunStatus.FAILED
     assert ingestion_run.error_message == "feed unavailable"
 
@@ -232,7 +254,9 @@ def test_queue_content_skill_enqueues_relevance_task(source_plugin_context, mock
     delay_mock.assert_called_once_with(skill_result.id)
 
 
-def test_queue_content_skill_executes_inline_when_eager(source_plugin_context, settings, mocker):
+def test_queue_content_skill_executes_inline_when_eager(
+    source_plugin_context, settings, mocker
+):
     settings.CELERY_TASK_ALWAYS_EAGER = True
     content = Content.objects.create(
         project=source_plugin_context.project,
@@ -254,7 +278,9 @@ def test_queue_content_skill_executes_inline_when_eager(source_plugin_context, s
     delay_mock.assert_not_called()
 
 
-def test_queue_content_skill_executes_summary_inline_when_eager(source_plugin_context, settings, mocker):
+def test_queue_content_skill_executes_summary_inline_when_eager(
+    source_plugin_context, settings, mocker
+):
     settings.CELERY_TASK_ALWAYS_EAGER = True
     content = Content.objects.create(
         project=source_plugin_context.project,
@@ -277,7 +303,9 @@ def test_queue_content_skill_executes_summary_inline_when_eager(source_plugin_co
     delay_mock.assert_not_called()
 
 
-def test_run_relevance_scoring_skill_updates_pending_result(source_plugin_context, mocker):
+def test_run_relevance_scoring_skill_updates_pending_result(
+    source_plugin_context, mocker
+):
     content = Content.objects.create(
         project=source_plugin_context.project,
         entity=source_plugin_context.entity,
@@ -313,7 +341,9 @@ def test_run_relevance_scoring_skill_updates_pending_result(source_plugin_contex
     assert content.is_active is True
 
 
-def test_run_summarization_skill_marks_result_failed_when_relevance_is_too_low(source_plugin_context, mocker):
+def test_run_summarization_skill_marks_result_failed_when_relevance_is_too_low(
+    source_plugin_context, mocker
+):
     content = Content.objects.create(
         project=source_plugin_context.project,
         entity=source_plugin_context.entity,
@@ -338,7 +368,9 @@ def test_run_summarization_skill_marks_result_failed_when_relevance_is_too_low(s
     assert "Summarization requires relevance_score" in pending_result.error_message
 
 
-def test_ingest_source_config_truncates_fields_and_processes_inline(source_plugin_context, settings, mocker):
+def test_ingest_source_config_truncates_fields_and_processes_inline(
+    source_plugin_context, settings, mocker
+):
     settings.CELERY_TASK_ALWAYS_EAGER = True
     plugin = mocker.Mock()
     plugin.fetch_new_content.return_value = [
