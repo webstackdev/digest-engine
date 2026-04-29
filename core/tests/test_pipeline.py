@@ -742,6 +742,56 @@ def test_execute_ad_hoc_relevance_creates_review_item_for_borderline_scores(
     assert review_item.confidence == pytest.approx(0.55)
 
 
+def test_execute_ad_hoc_relevance_uses_adjusted_score_for_routing(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    pipeline_context.content.entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Authority Anchor",
+        type="organization",
+        authority_score=1.0,
+    )
+    pipeline_context.content.save(update_fields=["entity"])
+    base_score = min(
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD - 0.01,
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD / 1.15 + 0.005,
+    )
+    mocker.patch(
+        "core.pipeline.run_relevance_scoring",
+        return_value={
+            "relevance_score": base_score,
+            "explanation": "Base relevance is borderline until authority is applied.",
+            "used_llm": False,
+            "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+
+    result = execute_ad_hoc_skill(pipeline_context.content, RELEVANCE_SKILL_NAME)
+
+    pipeline_context.content.refresh_from_db()
+    adjusted_score = pipeline_context.content.authority_adjusted_score
+
+    assert result.status == SkillStatus.COMPLETED
+    assert pipeline_context.content.relevance_score == pytest.approx(base_score)
+    assert adjusted_score is not None
+    assert adjusted_score > settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD
+    assert result.confidence == pytest.approx(adjusted_score)
+    assert result.result_data["relevance_score"] == pytest.approx(base_score)
+    assert result.result_data["authority_adjusted_score"] == pytest.approx(
+        adjusted_score
+    )
+    assert result.result_data["final_relevance_score"] == pytest.approx(adjusted_score)
+    assert pipeline_context.content.is_active is True
+    assert not ReviewQueue.objects.filter(
+        content=pipeline_context.content,
+        reason=ReviewReason.BORDERLINE_RELEVANCE,
+        resolved=False,
+    ).exists()
+
+
 def test_execute_ad_hoc_summarization_returns_failed_result_when_relevance_is_too_low(
     pipeline_context,
 ):
@@ -752,6 +802,40 @@ def test_execute_ad_hoc_summarization_returns_failed_result_when_relevance_is_to
 
     assert result.status == SkillStatus.FAILED
     assert "Summarization requires relevance_score" in result.error_message
+
+
+def test_execute_ad_hoc_summarization_allows_adjusted_score_to_pass_gate(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    pipeline_context.content.relevance_score = (
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD - 0.15
+    )
+    pipeline_context.content.authority_adjusted_score = (
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD + 0.05
+    )
+    pipeline_context.content.save(
+        update_fields=["relevance_score", "authority_adjusted_score"]
+    )
+    summarization_mock = mocker.patch(
+        "core.pipeline.run_summarization",
+        return_value={
+            "summary": "Authority-adjusted content is now eligible.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+
+    result = execute_ad_hoc_skill(pipeline_context.content, SUMMARIZATION_SKILL_NAME)
+
+    assert result.status == SkillStatus.COMPLETED
+    assert result.result_data == {
+        "summary": "Authority-adjusted content is now eligible.",
+        "model_used": "heuristic",
+        "latency_ms": 0,
+    }
+    summarization_mock.assert_called_once_with(pipeline_context.content)
 
 
 def test_execute_ad_hoc_related_content_returns_failed_result_on_search_error(
@@ -814,6 +898,103 @@ def test_execute_background_skill_result_completes_summary_when_requirements_are
         "model_used": "heuristic",
         "latency_ms": 0,
     }
+
+
+def test_execute_background_skill_result_uses_adjusted_score_for_relevance_confidence(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    pipeline_context.content.entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Background Authority Anchor",
+        type="organization",
+        authority_score=1.0,
+    )
+    pipeline_context.content.save(update_fields=["entity"])
+    base_score = min(
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD - 0.01,
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD / 1.15 + 0.005,
+    )
+    pending_result = create_pending_skill_result(
+        pipeline_context.content, RELEVANCE_SKILL_NAME
+    )
+    mocker.patch(
+        "core.pipeline.run_relevance_scoring",
+        return_value={
+            "relevance_score": base_score,
+            "explanation": "Background relevance is borderline until authority is applied.",
+            "used_llm": False,
+            "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+
+    result = execute_background_skill_result(pending_result.id, RELEVANCE_SKILL_NAME)
+
+    pending_result.refresh_from_db()
+    pipeline_context.content.refresh_from_db()
+    adjusted_score = pipeline_context.content.authority_adjusted_score
+
+    assert result.status == SkillStatus.COMPLETED
+    assert pending_result.status == SkillStatus.COMPLETED
+    assert pipeline_context.content.relevance_score == pytest.approx(base_score)
+    assert adjusted_score is not None
+    assert adjusted_score > settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD
+    assert pending_result.confidence == pytest.approx(adjusted_score)
+    assert pending_result.result_data["relevance_score"] == pytest.approx(base_score)
+    assert pending_result.result_data["authority_adjusted_score"] == pytest.approx(
+        adjusted_score
+    )
+    assert pending_result.result_data["final_relevance_score"] == pytest.approx(
+        adjusted_score
+    )
+    assert not ReviewQueue.objects.filter(
+        content=pipeline_context.content,
+        reason=ReviewReason.BORDERLINE_RELEVANCE,
+        resolved=False,
+    ).exists()
+
+
+def test_execute_background_skill_result_completes_summary_when_adjusted_score_passes_gate(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    pipeline_context.content.relevance_score = (
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD - 0.15
+    )
+    pipeline_context.content.authority_adjusted_score = (
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD + 0.05
+    )
+    pipeline_context.content.save(
+        update_fields=["relevance_score", "authority_adjusted_score"]
+    )
+    pending_result = create_pending_skill_result(
+        pipeline_context.content, SUMMARIZATION_SKILL_NAME
+    )
+    summarization_mock = mocker.patch(
+        "core.pipeline.run_summarization",
+        return_value={
+            "summary": "Background summary output.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+
+    result = execute_background_skill_result(
+        pending_result.id, SUMMARIZATION_SKILL_NAME
+    )
+
+    pending_result.refresh_from_db()
+    assert result.status == SkillStatus.COMPLETED
+    assert pending_result.status == SkillStatus.COMPLETED
+    assert pending_result.result_data == {
+        "summary": "Background summary output.",
+        "model_used": "heuristic",
+        "latency_ms": 0,
+    }
+    summarization_mock.assert_called_once_with(pipeline_context.content)
 
 
 def test_execute_background_skill_result_marks_relevance_failed_when_execution_errors(
