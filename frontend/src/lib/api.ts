@@ -19,6 +19,7 @@ import type {
   ReviewQueueItem,
   SkillResult,
   SourceConfig,
+  TopicCentroidSnapshot,
   TopicCentroidObservabilitySummary,
   UserFeedback,
 } from "@/lib/types"
@@ -615,6 +616,24 @@ export async function getProjectTopicCentroidSummary(
 ): Promise<TopicCentroidObservabilitySummary> {
   return apiFetch<TopicCentroidObservabilitySummary>(
     `/api/v1/projects/${projectId}/topic-centroid-snapshots/summary/`,
+  )
+}
+
+/**
+ * Fetch persisted topic centroid snapshots for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Persisted centroid snapshots for the project.
+ * @example
+ * ```ts
+ * const snapshots = await getProjectTopicCentroidSnapshots(4)
+ * ```
+ */
+export async function getProjectTopicCentroidSnapshots(
+  projectId: number,
+): Promise<TopicCentroidSnapshot[]> {
+  return apiFetch<TopicCentroidSnapshot[]>(
+    `/api/v1/projects/${projectId}/topic-centroid-snapshots/`,
   )
 }
 
