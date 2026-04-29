@@ -4,7 +4,21 @@ export type Project = {
   group: number
   topic_description: string
   content_retention_days: number
+  intake_token?: string
+  intake_enabled?: boolean
+  has_bluesky_credentials?: boolean
+  bluesky_handle?: string
+  bluesky_is_active?: boolean
+  bluesky_last_verified_at?: string | null
+  bluesky_last_error?: string
   created_at: string
+}
+
+export type ProjectBlueskyVerification = {
+  status: "verified"
+  handle: string
+  last_verified_at: string | null
+  last_error: string
 }
 
 export type Entity = {
@@ -147,7 +161,7 @@ export type IngestionRun = {
 export type SourceConfig = {
   id: number
   project: number
-  plugin_name: "rss" | "reddit"
+  plugin_name: "rss" | "reddit" | "bluesky"
   config: Record<string, unknown>
   is_active: boolean
   last_fetched_at: string | null

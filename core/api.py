@@ -104,6 +104,13 @@ PROJECT_RESPONSE_EXAMPLE = OpenApiExample(
         "group": 3,
         "topic_description": "Coverage of developer tools, model releases, and applied AI workflows.",
         "content_retention_days": 180,
+        "intake_token": "project-token-123",
+        "intake_enabled": True,
+        "has_bluesky_credentials": True,
+        "bluesky_handle": "aiweekly.bsky.social",
+        "bluesky_is_active": True,
+        "bluesky_last_verified_at": "2026-04-26T13:00:00Z",
+        "bluesky_last_error": "",
         "created_at": "2026-04-26T12:00:00Z",
     },
     response_only=True,
@@ -594,7 +601,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     """Manage projects accessible through the current user's group memberships."""
 
     serializer_class = ProjectSerializer
-    queryset = Project.objects.select_related("group")
+    queryset = Project.objects.select_related("group", "bluesky_credentials")
     lookup_url_kwarg = "id"
 
     def get_queryset(self):

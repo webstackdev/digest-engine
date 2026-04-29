@@ -147,11 +147,28 @@ class ProjectScopedApiTests(APITestCase):
         )
 
     def test_project_list_is_scoped_to_request_user_groups(self):
+        BlueskyCredentials.objects.create(
+            project=self.owner_project,
+            handle="owner-project.bsky.social",
+            is_active=True,
+            last_error="",
+        )
+
         response = self.client.get(reverse("v1:project-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], self.owner_project.id)
+        self.assertEqual(
+            response.json()[0]["intake_token"], self.owner_project.intake_token
+        )
+        self.assertFalse(response.json()[0]["intake_enabled"])
+        self.assertTrue(response.json()[0]["has_bluesky_credentials"])
+        self.assertEqual(
+            response.json()[0]["bluesky_handle"], "owner-project.bsky.social"
+        )
+        self.assertTrue(response.json()[0]["bluesky_is_active"])
+        self.assertEqual(response.json()[0]["bluesky_last_error"], "")
 
     def test_entity_list_is_scoped_to_request_user_project(self):
         response = self.client.get(

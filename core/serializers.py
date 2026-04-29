@@ -83,6 +83,12 @@ class ProjectScopedSerializerMixin:
 class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     """Serialize top-level project records."""
 
+    has_bluesky_credentials = serializers.SerializerMethodField()
+    bluesky_handle = serializers.SerializerMethodField()
+    bluesky_is_active = serializers.SerializerMethodField()
+    bluesky_last_verified_at = serializers.SerializerMethodField()
+    bluesky_last_error = serializers.SerializerMethodField()
+
     class Meta:
         model = Project
         fields = [
@@ -93,9 +99,51 @@ class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
             "content_retention_days",
             "intake_token",
             "intake_enabled",
+            "has_bluesky_credentials",
+            "bluesky_handle",
+            "bluesky_is_active",
+            "bluesky_last_verified_at",
+            "bluesky_last_error",
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def _get_bluesky_credentials(self, obj: Project):
+        """Return the project's stored Bluesky credentials, if configured."""
+
+        try:
+            return obj.bluesky_credentials
+        except Project.bluesky_credentials.RelatedObjectDoesNotExist:
+            return None
+
+    def get_has_bluesky_credentials(self, obj: Project) -> bool:
+        """Return whether the project has stored Bluesky credentials."""
+
+        return self._get_bluesky_credentials(obj) is not None
+
+    def get_bluesky_handle(self, obj: Project) -> str:
+        """Return the stored Bluesky handle, or an empty string."""
+
+        credentials = self._get_bluesky_credentials(obj)
+        return credentials.handle if credentials else ""
+
+    def get_bluesky_is_active(self, obj: Project) -> bool:
+        """Return whether the stored Bluesky credentials are currently active."""
+
+        credentials = self._get_bluesky_credentials(obj)
+        return credentials.is_active if credentials else False
+
+    def get_bluesky_last_verified_at(self, obj: Project):
+        """Return the last successful verification timestamp, if available."""
+
+        credentials = self._get_bluesky_credentials(obj)
+        return credentials.last_verified_at if credentials else None
+
+    def get_bluesky_last_error(self, obj: Project) -> str:
+        """Return the latest Bluesky verification error, or an empty string."""
+
+        credentials = self._get_bluesky_credentials(obj)
+        return credentials.last_error if credentials else ""
 
 
 class ProjectConfigSerializer(

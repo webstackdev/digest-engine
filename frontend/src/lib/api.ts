@@ -12,6 +12,7 @@ import type {
   EntityCandidate,
   IngestionRun,
   Project,
+  ProjectBlueskyVerification,
   ReviewQueueItem,
   SkillResult,
   SourceConfig,
@@ -183,6 +184,57 @@ export async function apiFetch<T>(
 export const getProjects = cache(
   async (): Promise<Project[]> => apiFetch<Project[]>("/api/v1/projects/"),
 )
+
+/**
+ * Partially update one project record.
+ *
+ * This helper is currently used for project-level intake settings surfaced in the
+ * custom admin UI. The payload shape stays aligned with the backend project
+ * serializer so future project settings can reuse the same transport.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param payload - Partial project fields accepted by the backend serializer.
+ * @returns The updated project record.
+ * @example
+ * ```ts
+ * await updateProject(4, { intake_enabled: true })
+ * ```
+ */
+export async function updateProject(
+  projectId: number,
+  payload: Partial<
+    Pick<
+      Project,
+      "name" | "group" | "topic_description" | "content_retention_days" | "intake_enabled"
+    >
+  >,
+): Promise<Project> {
+  return apiFetch<Project>(`/api/v1/projects/${projectId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Verify the stored Bluesky credentials for one project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Verification status details for the stored Bluesky account.
+ * @example
+ * ```ts
+ * const result = await verifyProjectBlueskyCredentials(4)
+ * ```
+ */
+export async function verifyProjectBlueskyCredentials(
+  projectId: number,
+): Promise<ProjectBlueskyVerification> {
+  return apiFetch<ProjectBlueskyVerification>(
+    `/api/v1/projects/${projectId}/verify-bluesky-credentials/`,
+    {
+      method: "POST",
+    },
+  )
+}
 
 /**
  * Fetch all content rows for a project dashboard.

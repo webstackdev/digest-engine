@@ -72,6 +72,13 @@ function createProject(overrides: Partial<Project> = {}): Project {
     group: 10,
     topic_description: "AI news",
     content_retention_days: 30,
+    intake_token: "intake-token-123",
+    intake_enabled: false,
+    has_bluesky_credentials: false,
+    bluesky_handle: "",
+    bluesky_is_active: false,
+    bluesky_last_verified_at: null,
+    bluesky_last_error: "",
     created_at: "2026-04-01T00:00:00Z",
     ...overrides,
   }
@@ -203,8 +210,40 @@ describe("SourcesPage", () => {
     expect(
       screen.getByText("No source configurations exist for this project yet."),
     ).toBeInTheDocument()
+    expect(screen.getByDisplayValue("intake-token-123")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Verify credentials" }),
+    ).toBeDisabled()
     expect(getProjectSourceConfigsMock).toHaveBeenCalledWith(1)
     expect(getProjectIngestionRunsMock).toHaveBeenCalledWith(1)
+  })
+
+  it("renders intake controls and Bluesky verification state from the selected project", async () => {
+    const selectedProject = createProject({
+      id: 3,
+      intake_enabled: true,
+      intake_token: "intake-token-xyz",
+      has_bluesky_credentials: true,
+      bluesky_handle: "project.bsky.social",
+      bluesky_is_active: true,
+      bluesky_last_verified_at: "2026-04-29T10:00:00Z",
+    })
+
+    getProjectsMock.mockResolvedValue([selectedProject])
+    selectProjectMock.mockReturnValue(selectedProject)
+
+    await renderSourcesPage({ project: "3" })
+
+    expect(screen.getByText("Project intake settings")).toBeInTheDocument()
+    expect(screen.getByDisplayValue("intake-token-xyz")).toBeInTheDocument()
+    expect(
+      screen.getByDisplayValue("intake+intake-token-xyz@inbox.example.com"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("project.bsky.social")).toBeInTheDocument()
+    expect(screen.getByText("verified")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Verify credentials" }),
+    ).toBeEnabled()
   })
 
   it("renders source cards with badge tones and the latest run summary", async () => {
@@ -258,11 +297,21 @@ describe("SourcesPage", () => {
     expect(screen.getByText("Rate limited")).toBeInTheDocument()
 
     const badges = screen.getAllByTestId("status-badge")
-    expect(badges).toHaveLength(2)
-    expect(badges[0]).toHaveAttribute("data-tone", "positive")
-    expect(badges[0]).toHaveTextContent("active")
-    expect(badges[1]).toHaveAttribute("data-tone", "neutral")
-    expect(badges[1]).toHaveTextContent("disabled")
+    expect(badges).toHaveLength(4)
+    expect(
+      badges.some(
+        (badge) =>
+          badge.getAttribute("data-tone") === "neutral" &&
+          badge.textContent === "disabled",
+      ),
+    ).toBe(true)
+    expect(
+      badges.some(
+        (badge) =>
+          badge.getAttribute("data-tone") === "positive" &&
+          badge.textContent === "active",
+      ),
+    ).toBe(true)
   })
 
   it("shows fallback latest-run text when a source has no ingestion history", async () => {
