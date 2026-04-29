@@ -1,15 +1,7 @@
 import { NextResponse } from "next/server"
 
-import { updateProject } from "@/lib/api"
+import { createProjectIntakeAllowlistEntry } from "@/lib/api"
 
-/**
- * Build a redirect target for the intake-settings form handler.
- *
- * @param request - Incoming request used as the base URL for relative redirects.
- * @param redirectTo - Caller-provided redirect target, or a fallback path.
- * @param params - Query params to append to the redirect target.
- * @returns A redirect URL with the provided flash-message params.
- */
 function buildRedirectUrl(
   request: Request,
   redirectTo: string,
@@ -23,11 +15,11 @@ function buildRedirectUrl(
 }
 
 /**
- * Handle newsletter-intake settings form submissions for one project.
+ * Handle allowlist-create form submissions for one project.
  *
  * @param request - Incoming form submission request.
  * @param context - Route params containing the project id.
- * @returns A redirect response pointing back to the source settings UI.
+ * @returns A redirect response pointing back to the sources UI.
  */
 export async function POST(
   request: Request,
@@ -39,19 +31,18 @@ export async function POST(
 
   try {
     const projectId = Number.parseInt(id, 10)
-    await updateProject(projectId, {
-      intake_enabled: String(formData.get("intake_enabled") || "false") === "true",
-    })
+    const senderEmail = String(formData.get("senderEmail") || "").trim()
+    await createProjectIntakeAllowlistEntry(projectId, senderEmail)
     return NextResponse.redirect(
       buildRedirectUrl(request, redirectTo, {
-        message: "Newsletter intake settings updated.",
+        message: "Sender added to intake allowlist.",
       }),
     )
   } catch (error) {
     const message =
       error instanceof Error
         ? error.message
-        : "Unable to update newsletter intake settings."
+        : "Unable to update intake allowlist."
     return NextResponse.redirect(
       buildRedirectUrl(request, redirectTo, { error: message }),
     )

@@ -2,15 +2,28 @@ import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { IngestionRun, Project, SourceConfig } from "@/lib/types"
+import type {
+  BlueskyCredentials,
+  IngestionRun,
+  IntakeAllowlistEntry,
+  NewsletterIntake,
+  Project,
+  SourceConfig,
+} from "@/lib/types"
 
 const {
+  getProjectBlueskyCredentialsMock,
   getProjectIngestionRunsMock,
+  getProjectIntakeAllowlistMock,
+  getProjectNewsletterIntakesMock,
   getProjectsMock,
   getProjectSourceConfigsMock,
   selectProjectMock,
 } = vi.hoisted(() => ({
+  getProjectBlueskyCredentialsMock: vi.fn(),
   getProjectIngestionRunsMock: vi.fn(),
+  getProjectIntakeAllowlistMock: vi.fn(),
+  getProjectNewsletterIntakesMock: vi.fn(),
   getProjectsMock: vi.fn(),
   getProjectSourceConfigsMock: vi.fn(),
   selectProjectMock: vi.fn(),
@@ -49,7 +62,10 @@ vi.mock("@/components/status-badge", () => ({
 }))
 
 vi.mock("@/lib/api", () => ({
+  getProjectBlueskyCredentials: getProjectBlueskyCredentialsMock,
   getProjectIngestionRuns: getProjectIngestionRunsMock,
+  getProjectIntakeAllowlist: getProjectIntakeAllowlistMock,
+  getProjectNewsletterIntakes: getProjectNewsletterIntakesMock,
   getProjects: getProjectsMock,
   getProjectSourceConfigs: getProjectSourceConfigsMock,
 }))
@@ -115,6 +131,58 @@ function createIngestionRun(
   }
 }
 
+function createAllowlistEntry(
+  overrides: Partial<IntakeAllowlistEntry> = {},
+): IntakeAllowlistEntry {
+  return {
+    id: 11,
+    project: 1,
+    sender_email: "newsletter@example.com",
+    is_confirmed: false,
+    confirmed_at: null,
+    confirmation_token: "confirm-token-123",
+    created_at: "2026-04-28T08:00:00Z",
+    ...overrides,
+  }
+}
+
+function createNewsletterIntake(
+  overrides: Partial<NewsletterIntake> = {},
+): NewsletterIntake {
+  return {
+    id: 31,
+    project: 1,
+    sender_email: "newsletter@example.com",
+    subject: "Morning digest",
+    received_at: "2026-04-29T08:15:00Z",
+    raw_html: "",
+    raw_text: "Top story https://example.com/post",
+    message_id: "msg-31",
+    status: "pending",
+    extraction_result: null,
+    error_message: "",
+    ...overrides,
+  }
+}
+
+function createBlueskyCredentials(
+  overrides: Partial<BlueskyCredentials> = {},
+): BlueskyCredentials {
+  return {
+    id: 6,
+    project: 1,
+    handle: "project.bsky.social",
+    pds_url: "",
+    is_active: true,
+    has_stored_credential: true,
+    last_verified_at: "2026-04-29T10:00:00Z",
+    last_error: "",
+    created_at: "2026-04-29T09:00:00Z",
+    updated_at: "2026-04-29T10:00:00Z",
+    ...overrides,
+  }
+}
+
 async function loadSourcesPageModule() {
   return import("../page")
 }
@@ -151,18 +219,41 @@ describe("buildLatestRunByPlugin", () => {
   })
 })
 
+describe("filterNewsletterIntakes", () => {
+  it("filters newsletter intake rows by status and sender", async () => {
+    const { filterNewsletterIntakes } = await loadSourcesPageModule()
+
+    const filtered = filterNewsletterIntakes(
+      [
+        createNewsletterIntake({ id: 1, status: "pending", sender_email: "first@example.com" }),
+        createNewsletterIntake({ id: 2, status: "extracted", sender_email: "second@example.com" }),
+      ],
+      { status: "extracted", sender: "second" },
+    )
+
+    expect(filtered).toHaveLength(1)
+    expect(filtered[0].id).toBe(2)
+  })
+})
+
 describe("SourcesPage", () => {
   beforeEach(() => {
     const defaultProject = createProject()
 
+    getProjectBlueskyCredentialsMock.mockReset()
     getProjectsMock.mockReset()
     getProjectSourceConfigsMock.mockReset()
     getProjectIngestionRunsMock.mockReset()
+    getProjectIntakeAllowlistMock.mockReset()
+    getProjectNewsletterIntakesMock.mockReset()
     selectProjectMock.mockReset()
 
+  getProjectBlueskyCredentialsMock.mockResolvedValue([])
     getProjectsMock.mockResolvedValue([defaultProject])
     getProjectSourceConfigsMock.mockResolvedValue([])
     getProjectIngestionRunsMock.mockResolvedValue([])
+    getProjectIntakeAllowlistMock.mockResolvedValue([])
+    getProjectNewsletterIntakesMock.mockResolvedValue([])
     selectProjectMock.mockImplementation((projects: Project[]) => {
       return projects[0] ?? null
     })
@@ -183,6 +274,9 @@ describe("SourcesPage", () => {
     ).toBeInTheDocument()
     expect(getProjectSourceConfigsMock).not.toHaveBeenCalled()
     expect(getProjectIngestionRunsMock).not.toHaveBeenCalled()
+    expect(getProjectBlueskyCredentialsMock).not.toHaveBeenCalled()
+    expect(getProjectIntakeAllowlistMock).not.toHaveBeenCalled()
+    expect(getProjectNewsletterIntakesMock).not.toHaveBeenCalled()
   })
 
   it("renders flash messages from the search params", async () => {
@@ -214,8 +308,85 @@ describe("SourcesPage", () => {
     expect(
       screen.getByRole("button", { name: "Verify credentials" }),
     ).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "Rotate token" }),
+    ).toBeInTheDocument()
     expect(getProjectSourceConfigsMock).toHaveBeenCalledWith(1)
     expect(getProjectIngestionRunsMock).toHaveBeenCalledWith(1)
+    expect(getProjectBlueskyCredentialsMock).toHaveBeenCalledWith(1)
+    expect(getProjectIntakeAllowlistMock).toHaveBeenCalledWith(1)
+    expect(getProjectNewsletterIntakesMock).toHaveBeenCalledWith(1)
+  })
+
+  it("renders allowlist management and recent intake history", async () => {
+    getProjectIntakeAllowlistMock.mockResolvedValue([
+      createAllowlistEntry({
+        id: 1,
+        is_confirmed: true,
+        confirmed_at: "2026-04-29T09:00:00Z",
+      }),
+      createAllowlistEntry({
+        id: 2,
+        sender_email: "pending@example.com",
+      }),
+    ])
+    getProjectNewsletterIntakesMock.mockResolvedValue([
+      createNewsletterIntake({
+        id: 1,
+        status: "extracted",
+        extraction_result: {
+          method: "heuristic",
+          items: [
+            {
+              title: "Story one",
+              url: "https://example.com/story-one",
+              excerpt: "First story",
+              position: 1,
+            },
+          ],
+        },
+      }),
+      createNewsletterIntake({
+        id: 2,
+        subject: "Follow-up digest",
+        sender_email: "pending@example.com",
+        status: "pending",
+      }),
+    ])
+
+    await renderSourcesPage({ project: "1" })
+
+    expect(screen.getByText("Sender allowlist")).toBeInTheDocument()
+    expect(screen.getAllByText("newsletter@example.com")).toHaveLength(3)
+    expect(screen.getAllByText("pending@example.com")).toHaveLength(2)
+    expect(screen.getByText("Recent newsletter intake")).toBeInTheDocument()
+    expect(screen.getAllByText("Story one")).toHaveLength(2)
+    expect(screen.getByText("Follow-up digest")).toBeInTheDocument()
+    expect(screen.getAllByRole("link", { name: "Open details" })).toHaveLength(2)
+    expect(screen.getByText("Selected intake")).toBeInTheDocument()
+  })
+
+  it("applies intake filters from the search params", async () => {
+    getProjectNewsletterIntakesMock.mockResolvedValue([
+      createNewsletterIntake({ id: 1, sender_email: "first@example.com", status: "pending" }),
+      createNewsletterIntake({
+        id: 2,
+        sender_email: "editor@example.com",
+        status: "extracted",
+        subject: "Filtered digest",
+      }),
+    ])
+
+    await renderSourcesPage({
+      project: "1",
+      intakeStatus: "extracted",
+      intakeSender: "editor",
+      intakeId: "2",
+    })
+
+    expect(screen.getByDisplayValue("editor")).toBeInTheDocument()
+    expect(screen.getAllByText("Filtered digest")).toHaveLength(2)
+    expect(screen.queryByText("Morning digest")).not.toBeInTheDocument()
   })
 
   it("renders intake controls and Bluesky verification state from the selected project", async () => {
@@ -231,6 +402,9 @@ describe("SourcesPage", () => {
 
     getProjectsMock.mockResolvedValue([selectedProject])
     selectProjectMock.mockReturnValue(selectedProject)
+    getProjectBlueskyCredentialsMock.mockResolvedValue([
+      createBlueskyCredentials({ project: 3 }),
+    ])
 
     await renderSourcesPage({ project: "3" })
 
@@ -244,6 +418,9 @@ describe("SourcesPage", () => {
     expect(
       screen.getByRole("button", { name: "Verify credentials" }),
     ).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "Update credentials" }),
+    ).toBeInTheDocument()
   })
 
   it("renders source cards with badge tones and the latest run summary", async () => {

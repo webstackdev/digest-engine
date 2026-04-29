@@ -5,12 +5,15 @@ import { cache } from "react"
 
 import { authOptions } from "@/lib/auth"
 import type {
+  BlueskyCredentials,
   Content,
   ContentSkillName,
   Entity,
   EntityAuthoritySnapshot,
   EntityCandidate,
   IngestionRun,
+  IntakeAllowlistEntry,
+  NewsletterIntake,
   Project,
   ProjectBlueskyVerification,
   ReviewQueueItem,
@@ -216,6 +219,20 @@ export async function updateProject(
 }
 
 /**
+ * Rotate the newsletter intake token for one project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns The updated project payload containing the new intake token.
+ */
+export async function rotateProjectIntakeToken(
+  projectId: number,
+): Promise<Project> {
+  return apiFetch<Project>(`/api/v1/projects/${projectId}/rotate-intake-token/`, {
+    method: "POST",
+  })
+}
+
+/**
  * Verify the stored Bluesky credentials for one project.
  *
  * @param projectId - Numeric project identifier from the Django API.
@@ -232,6 +249,72 @@ export async function verifyProjectBlueskyCredentials(
     `/api/v1/projects/${projectId}/verify-bluesky-credentials/`,
     {
       method: "POST",
+    },
+  )
+}
+
+/**
+ * Fetch stored Bluesky credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Zero or one stored Bluesky credential rows for the project.
+ */
+export async function getProjectBlueskyCredentials(
+  projectId: number,
+): Promise<BlueskyCredentials[]> {
+  return apiFetch<BlueskyCredentials[]>(
+    `/api/v1/projects/${projectId}/bluesky-credentials/`,
+  )
+}
+
+/**
+ * Create Bluesky credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param payload - Credential fields accepted by the backend serializer.
+ * @returns The created Bluesky credentials row.
+ */
+export async function createProjectBlueskyCredentials(
+  projectId: number,
+  payload: {
+    handle: string
+    pds_url: string
+    is_active: boolean
+    app_password: string
+  },
+): Promise<BlueskyCredentials> {
+  return apiFetch<BlueskyCredentials>(
+    `/api/v1/projects/${projectId}/bluesky-credentials/`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Update stored Bluesky credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param credentialId - Numeric credential identifier inside the project.
+ * @param payload - Partial credential fields accepted by the backend serializer.
+ * @returns The updated Bluesky credentials row.
+ */
+export async function updateProjectBlueskyCredentials(
+  projectId: number,
+  credentialId: number,
+  payload: Partial<{
+    handle: string
+    pds_url: string
+    is_active: boolean
+    app_password: string
+  }>,
+): Promise<BlueskyCredentials> {
+  return apiFetch<BlueskyCredentials>(
+    `/api/v1/projects/${projectId}/bluesky-credentials/${credentialId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
     },
   )
 }
@@ -432,6 +515,73 @@ export async function getProjectIngestionRuns(
   projectId: number,
 ): Promise<IngestionRun[]> {
   return apiFetch<IngestionRun[]>(`/api/v1/projects/${projectId}/ingestion-runs/`)
+}
+
+/**
+ * Fetch newsletter sender allowlist entries for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Allowlist rows for the selected project's intake workflow.
+ */
+export async function getProjectIntakeAllowlist(
+  projectId: number,
+): Promise<IntakeAllowlistEntry[]> {
+  return apiFetch<IntakeAllowlistEntry[]>(
+    `/api/v1/projects/${projectId}/intake-allowlist/`,
+  )
+}
+
+/**
+ * Create a newsletter sender allowlist entry for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param senderEmail - Sender email address to allowlist.
+ * @returns The created allowlist entry.
+ */
+export async function createProjectIntakeAllowlistEntry(
+  projectId: number,
+  senderEmail: string,
+): Promise<IntakeAllowlistEntry> {
+  return apiFetch<IntakeAllowlistEntry>(
+    `/api/v1/projects/${projectId}/intake-allowlist/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ sender_email: senderEmail }),
+    },
+  )
+}
+
+/**
+ * Delete a newsletter sender allowlist entry from a project.
+ *
+ * @param allowlistId - Numeric allowlist identifier to remove.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns `undefined` when the deletion succeeds.
+ */
+export async function deleteProjectIntakeAllowlistEntry(
+  allowlistId: number,
+  projectId: number,
+) {
+  return apiFetch(
+    `/api/v1/projects/${projectId}/intake-allowlist/${allowlistId}/`,
+    {
+      method: "DELETE",
+    },
+  )
+}
+
+/**
+ * Fetch recent newsletter intake rows for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Inbound newsletter rows already captured for the project.
+ */
+export async function getProjectNewsletterIntakes(
+  projectId: number,
+): Promise<NewsletterIntake[]> {
+  return apiFetch<NewsletterIntake[]>(
+    `/api/v1/projects/${projectId}/newsletter-intakes/`,
+  )
 }
 
 /**

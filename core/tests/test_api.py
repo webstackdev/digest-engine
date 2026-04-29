@@ -17,6 +17,9 @@ from core.models import (
     EntityMention,
     FeedbackType,
     IngestionRun,
+    IntakeAllowlist,
+    NewsletterIntake,
+    NewsletterIntakeStatus,
     Project,
     ProjectConfig,
     ReviewQueue,
@@ -99,6 +102,29 @@ class ProjectScopedApiTests(APITestCase):
             items_fetched=5,
             items_ingested=4,
         )
+        self.owner_intake_allowlist = IntakeAllowlist.objects.create(
+            project=self.owner_project,
+            sender_email="sender@example.com",
+        )
+        self.owner_newsletter_intake = NewsletterIntake.objects.create(
+            project=self.owner_project,
+            sender_email="sender@example.com",
+            subject="Owner Digest",
+            raw_text="See https://example.com/post",
+            message_id="owner-intake-1",
+            status=NewsletterIntakeStatus.EXTRACTED,
+            extraction_result={
+                "method": "heuristic",
+                "items": [
+                    {
+                        "url": "https://example.com/post",
+                        "title": "Example Post",
+                        "excerpt": "A short preview",
+                        "position": 1,
+                    }
+                ],
+            },
+        )
         self.owner_review_queue = ReviewQueue.objects.create(
             project=self.owner_project,
             content=self.owner_content,
@@ -169,6 +195,24 @@ class ProjectScopedApiTests(APITestCase):
         )
         self.assertTrue(response.json()[0]["bluesky_is_active"])
         self.assertEqual(response.json()[0]["bluesky_last_error"], "")
+
+    def test_project_rotate_intake_token_returns_updated_project(self):
+        original_token = self.owner_project.intake_token
+
+        response = self.client.post(
+            reverse(
+                "v1:project-rotate-intake-token",
+                kwargs={"id": self.owner_project.id},
+            ),
+            format="json",
+        )
+
+        self.owner_project.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotEqual(self.owner_project.intake_token, original_token)
+        self.assertEqual(
+            response.json()["intake_token"], self.owner_project.intake_token
+        )
 
     def test_entity_list_is_scoped_to_request_user_project(self):
         response = self.client.get(
@@ -251,6 +295,157 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.json()[0]["id"], second_mention.id)
         self.assertEqual(response.json()[1]["id"], first_mention.id)
         self.assertEqual(response.json()[0]["content_title"], second_content.title)
+
+    def test_intake_allowlist_list_is_scoped_to_request_user_project(self):
+        other_allowlist = IntakeAllowlist.objects.create(
+            project=self.other_project,
+            sender_email="other@example.com",
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-intake-allowlist-list",
+                kwargs={"project_id": self.owner_project.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["id"], self.owner_intake_allowlist.id)
+        self.assertFalse(response.json()[0]["is_confirmed"])
+        self.assertNotEqual(response.json()[0]["id"], other_allowlist.id)
+
+    def test_intake_allowlist_create_and_delete_manage_project_senders(self):
+        create_response = self.client.post(
+            reverse(
+                "v1:project-intake-allowlist-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            {"sender_email": "new-sender@example.com"},
+            format="json",
+        )
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        created_allowlist = IntakeAllowlist.objects.get(
+            project=self.owner_project,
+            sender_email="new-sender@example.com",
+        )
+        self.assertEqual(create_response.json()["project"], self.owner_project.id)
+        self.assertFalse(create_response.json()["is_confirmed"])
+
+        delete_response = self.client.delete(
+            reverse(
+                "v1:project-intake-allowlist-detail",
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": created_allowlist.id,
+                },
+            )
+        )
+
+        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(
+            IntakeAllowlist.objects.filter(pk=created_allowlist.id).exists()
+        )
+
+    def test_bluesky_credentials_list_create_and_update_hide_stored_password(self):
+        list_response = self.client.get(
+            reverse(
+                "v1:project-bluesky-credentials-list",
+                kwargs={"project_id": self.owner_project.id},
+            )
+        )
+
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.json(), [])
+
+        create_response = self.client.post(
+            reverse(
+                "v1:project-bluesky-credentials-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            {
+                "handle": "@Owner.Project.BSKY.social",
+                "pds_url": "https://pds.example.com/xrpc/",
+                "is_active": True,
+                "app_password": "app-password",
+            },
+            format="json",
+        )
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        credentials = BlueskyCredentials.objects.get(project=self.owner_project)
+        self.assertEqual(credentials.handle, "owner.project.bsky.social")
+        self.assertEqual(credentials.pds_url, "https://pds.example.com")
+        self.assertEqual(credentials.get_app_password(), "app-password")
+        self.assertTrue(create_response.json()["has_stored_credential"])
+        self.assertNotIn("app_password", create_response.json())
+
+        update_response = self.client.patch(
+            reverse(
+                "v1:project-bluesky-credentials-detail",
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": credentials.id,
+                },
+            ),
+            {
+                "handle": "updated.bsky.social",
+                "pds_url": "",
+                "is_active": False,
+            },
+            format="json",
+        )
+
+        credentials.refresh_from_db()
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(credentials.handle, "updated.bsky.social")
+        self.assertFalse(credentials.is_active)
+        self.assertEqual(credentials.get_app_password(), "app-password")
+
+    def test_bluesky_credentials_create_requires_app_password(self):
+        response = self.client.post(
+            reverse(
+                "v1:project-bluesky-credentials-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            {
+                "handle": "owner.bsky.social",
+                "pds_url": "",
+                "is_active": True,
+                "app_password": "",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assert_standardized_validation_error(response.json(), "app_password")
+
+    def test_newsletter_intake_list_returns_recent_project_history(self):
+        other_intake = NewsletterIntake.objects.create(
+            project=self.other_project,
+            sender_email="other@example.com",
+            subject="Other Digest",
+            raw_text="Another item",
+            message_id="other-intake-1",
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-newsletter-intake-list",
+                kwargs={"project_id": self.owner_project.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["id"], self.owner_newsletter_intake.id)
+        self.assertEqual(response.json()[0]["status"], NewsletterIntakeStatus.EXTRACTED)
+        self.assertEqual(
+            response.json()[0]["extraction_result"]["items"][0]["title"],
+            "Example Post",
+        )
+        self.assertNotEqual(response.json()[0]["id"], other_intake.id)
 
     def test_entity_list_supports_authority_score_ordering(self):
         second_entity = Entity.objects.create(
@@ -712,6 +907,18 @@ class ProjectScopedApiTests(APITestCase):
                 kwargs={"project_id": self.owner_project.id},
             ),
             reverse(
+                "v1:project-bluesky-credentials-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            reverse(
+                "v1:project-intake-allowlist-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            reverse(
+                "v1:project-newsletter-intake-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            reverse(
                 "v1:project-source-config-list",
                 kwargs={"project_id": self.owner_project.id},
             ),
@@ -769,6 +976,20 @@ class ProjectScopedApiTests(APITestCase):
                 },
             ),
             reverse(
+                "v1:project-intake-allowlist-detail",
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_intake_allowlist.id,
+                },
+            ),
+            reverse(
+                "v1:project-newsletter-intake-detail",
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_newsletter_intake.id,
+                },
+            ),
+            reverse(
                 "v1:project-source-config-detail",
                 kwargs={
                     "project_id": self.owner_project.id,
@@ -814,6 +1035,17 @@ class ProjectScopedApiTests(APITestCase):
             reverse(
                 "v1:project-feedback-detail",
                 kwargs={"project_id": self.owner_project.id, "pk": feedback.id},
+            )
+        )
+
+        credentials = BlueskyCredentials.objects.create(
+            project=self.owner_project,
+            handle="owner-project.bsky.social",
+        )
+        detail_endpoints.append(
+            reverse(
+                "v1:project-bluesky-credentials-detail",
+                kwargs={"project_id": self.owner_project.id, "pk": credentials.id},
             )
         )
 

@@ -35,6 +35,8 @@ from core.models import (
     EntityCandidate,
     EntityMention,
     IngestionRun,
+    IntakeAllowlist,
+    NewsletterIntake,
     Project,
     ProjectConfig,
     ReviewQueue,
@@ -42,8 +44,10 @@ from core.models import (
     SourceConfig,
     TopicCentroidSnapshot,
     UserFeedback,
+    generate_project_intake_token,
 )
 from core.serializers import (
+    BlueskyCredentialsSerializer,
     ContentSerializer,
     EntityAuthoritySnapshotSerializer,
     EntityCandidateMergeSerializer,
@@ -51,6 +55,8 @@ from core.serializers import (
     EntityMentionSummarySerializer,
     EntitySerializer,
     IngestionRunSerializer,
+    IntakeAllowlistSerializer,
+    NewsletterIntakeSerializer,
     ProjectConfigSerializer,
     ProjectSerializer,
     ReviewQueueSerializer,
@@ -112,6 +118,23 @@ PROJECT_RESPONSE_EXAMPLE = OpenApiExample(
         "bluesky_last_verified_at": "2026-04-26T13:00:00Z",
         "bluesky_last_error": "",
         "created_at": "2026-04-26T12:00:00Z",
+    },
+    response_only=True,
+)
+
+BLUESKY_CREDENTIALS_RESPONSE_EXAMPLE = OpenApiExample(
+    "Bluesky Credentials Response",
+    value={
+        "id": 1,
+        "project": 1,
+        "handle": "aiweekly.bsky.social",
+        "pds_url": "",
+        "is_active": True,
+        "has_stored_credential": True,
+        "last_verified_at": "2026-04-26T13:00:00Z",
+        "last_error": "",
+        "created_at": "2026-04-26T12:30:00Z",
+        "updated_at": "2026-04-26T13:00:00Z",
     },
     response_only=True,
 )
@@ -610,6 +633,26 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(group__user=self.request.user).distinct()
 
     @extend_schema(
+        summary="Rotate newsletter intake token",
+        description=(
+            "Generate a fresh project-specific newsletter intake token and return the "
+            "updated project payload."
+        ),
+        tags=["Project Management"],
+        request=None,
+        responses={200: ProjectSerializer, 403: AUTHENTICATION_REQUIRED_RESPONSE},
+    )
+    @action(detail=True, methods=["post"], url_path="rotate-intake-token")
+    def rotate_intake_token(self, request, *args, **kwargs):
+        """Generate a fresh intake token for the selected project."""
+
+        project = self.get_object()
+        project.intake_token = generate_project_intake_token()
+        project.save(update_fields=["intake_token"])
+        serializer = self.get_serializer(project)
+        return Response(serializer.data)
+
+    @extend_schema(
         summary="Verify Bluesky credentials",
         description=(
             "Verify the selected project's stored Bluesky credentials by authenticating "
@@ -1018,6 +1061,75 @@ class IngestionRunViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
     serializer_class = IngestionRunSerializer
     queryset = IngestionRun.objects.select_related("project")
+
+
+@document_project_owned_viewset(
+    resource_plural="Bluesky credentials",
+    resource_singular="Bluesky credentials",
+    create_description=(
+        "Create Bluesky credentials for the selected project. The app password is "
+        "accepted write-only and is never returned in API responses."
+    ),
+    tag="Ingestion",
+    action_overrides=build_crud_action_overrides(
+        BlueskyCredentialsSerializer,
+        resource_plural="Bluesky credentials for the selected project",
+        resource_singular="Bluesky credentials",
+        retrieve_examples=[BLUESKY_CREDENTIALS_RESPONSE_EXAMPLE],
+    ),
+)
+class BlueskyCredentialsViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Manage project-scoped Bluesky credentials."""
+
+    serializer_class = BlueskyCredentialsSerializer
+    queryset = BlueskyCredentials.objects.select_related("project")
+
+    def get_queryset(self):
+        """Restrict credentials to the selected project and current user."""
+
+        return super().get_queryset().order_by("-updated_at")
+
+
+@document_project_owned_viewset(
+    resource_plural="intake allowlist entries",
+    resource_singular="intake allowlist entry",
+    create_description=(
+        "Create a new confirmed or pending sender allowlist entry for the selected "
+        "project's newsletter intake workflow."
+    ),
+    tag="Ingestion",
+    action_overrides=build_crud_action_overrides(
+        IntakeAllowlistSerializer,
+        resource_plural="intake allowlist entries for the selected project",
+        resource_singular="intake allowlist entry",
+    ),
+)
+class IntakeAllowlistViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Manage newsletter sender allowlist entries for a project."""
+
+    serializer_class = IntakeAllowlistSerializer
+    queryset = IntakeAllowlist.objects.select_related("project")
+
+
+@document_project_owned_viewset(
+    resource_plural="newsletter intake entries",
+    resource_singular="newsletter intake entry",
+    create_description=(
+        "Newsletter intake entries are created by inbound email processing and are "
+        "exposed read-only for audit and troubleshooting."
+    ),
+    tag="Ingestion",
+    action_overrides=build_crud_action_overrides(
+        NewsletterIntakeSerializer,
+        resource_plural="newsletter intake entries for the selected project",
+        resource_singular="newsletter intake entry",
+    ),
+)
+class NewsletterIntakeViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
+    """Inspect inbound newsletter history for a project."""
+
+    serializer_class = NewsletterIntakeSerializer
+    queryset = NewsletterIntake.objects.select_related("project")
 
 
 @document_project_owned_viewset(

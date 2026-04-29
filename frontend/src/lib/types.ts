@@ -21,6 +21,55 @@ export type ProjectBlueskyVerification = {
   last_error: string
 }
 
+export type BlueskyCredentials = {
+  id: number
+  project: number
+  handle: string
+  pds_url: string
+  is_active: boolean
+  has_stored_credential: boolean
+  last_verified_at: string | null
+  last_error: string
+  created_at: string
+  updated_at: string
+}
+
+export type IntakeAllowlistEntry = {
+  id: number
+  project: number
+  sender_email: string
+  is_confirmed: boolean
+  confirmed_at: string | null
+  confirmation_token: string
+  created_at: string
+}
+
+export type NewsletterExtractionItem = {
+  url: string
+  title: string
+  excerpt: string
+  position: number
+}
+
+export type NewsletterIntakeExtractionResult = {
+  method: string
+  items: NewsletterExtractionItem[]
+}
+
+export type NewsletterIntake = {
+  id: number
+  project: number
+  sender_email: string
+  subject: string
+  received_at: string
+  raw_html: string
+  raw_text: string
+  message_id: string
+  status: "pending" | "extracted" | "failed"
+  extraction_result: NewsletterIntakeExtractionResult | null
+  error_message: string
+}
+
 export type Entity = {
   id: number
   project: number
