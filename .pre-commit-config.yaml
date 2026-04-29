@@ -3,6 +3,7 @@ repos:
     rev: v5.0.0
     hooks:
       - id: check-yaml
+        exclude: ^deploy/helm/.+/templates/.*\.(ya?ml)$
       - id: end-of-file-fixer
       - id: trailing-whitespace
 

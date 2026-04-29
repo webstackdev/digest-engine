@@ -41,11 +41,14 @@ jobs:
           repo: casey/just@1.50.0
           github-token: ${{ github.token }}
 
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
       - name: Install dependencies
         run: just install
 
       - name: Install pre-commit hooks
         run: pre-commit install --install-hooks
 
-      - name: Run lint
+      - name: Run lint and type checks
         run: just lint

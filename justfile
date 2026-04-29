@@ -45,7 +45,7 @@ backend-lint:
     if [ ! -f .env ]; then cp .env.example .env; fi
     ruff check manage.py core newsletter_maker tests
     djlint core/templates --check
-    python3 -m mypy manage.py core newsletter_maker tests
+    python3 -m mypy
     pre-commit run --all-files check-yaml
     pre-commit run --all-files end-of-file-fixer
     pre-commit run --all-files trailing-whitespace
@@ -53,11 +53,13 @@ backend-lint:
 
 frontend-lint:
     if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
+    cd frontend && npm run typecheck
     cd frontend && npm run lint
 
 lint:
     just backend-lint
     just frontend-lint
+    just helm-lint
 
 backend-lint-fix:
     if [ ! -f .env ]; then cp .env.example .env; fi
