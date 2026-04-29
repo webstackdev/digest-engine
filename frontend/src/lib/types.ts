@@ -32,11 +32,14 @@ export type Content = {
   entity: number | null
   source_plugin: string
   content_type: string
+  canonical_url: string
   published_date: string
   ingested_at: string
   content_text: string
   relevance_score: number | null
   embedding_id: string
+  duplicate_of: number | null
+  duplicate_signal_count: number
   is_reference: boolean
   is_active: boolean
 }

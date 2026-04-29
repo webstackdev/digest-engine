@@ -150,6 +150,52 @@ def test_content_serializer_rejects_cross_project_entity(serializer_context):
     }
 
 
+def test_content_serializer_exposes_duplicate_state_as_read_only_fields(
+    serializer_context,
+):
+    duplicate = Content.objects.create(
+        project=serializer_context.project,
+        url="https://example.com/serializer-content?utm_source=reddit",
+        canonical_url="https://example.com/serializer-content",
+        title="Serializer Duplicate",
+        author="Author",
+        entity=serializer_context.entity,
+        source_plugin=SourcePluginName.REDDIT,
+        published_date="2026-04-28T01:00:00Z",
+        content_text="Duplicate serializer content body.",
+        duplicate_of=serializer_context.content,
+    )
+    serializer_context.content.duplicate_signal_count = 1
+    serializer_context.content.canonical_url = "https://example.com/serializer-content"
+    serializer_context.content.save(update_fields=["duplicate_signal_count", "canonical_url"])
+
+    serializer = ContentSerializer(instance=duplicate)
+
+    assert serializer.data["canonical_url"] == "https://example.com/serializer-content"
+    assert serializer.data["duplicate_of"] == serializer_context.content.id
+    assert serializer.data["duplicate_signal_count"] == 0
+
+
+def test_content_serializer_ignores_duplicate_fields_on_update(serializer_context):
+    serializer = ContentSerializer(
+        instance=serializer_context.content,
+        data={
+            "canonical_url": "https://malicious.example/canonical",
+            "duplicate_of": serializer_context.other_content.id,
+            "duplicate_signal_count": 99,
+        },
+        partial=True,
+        context={"project": serializer_context.project},
+    )
+
+    assert serializer.is_valid(), serializer.errors
+    updated = serializer.save()
+
+    assert updated.canonical_url == ""
+    assert updated.duplicate_of is None
+    assert updated.duplicate_signal_count == 0
+
+
 def test_skill_result_serializer_rejects_cross_project_content(serializer_context):
     serializer = SkillResultSerializer(
         data={

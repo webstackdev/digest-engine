@@ -13,11 +13,14 @@ const contents: Content[] = [
     entity: null,
     source_plugin: "rss",
     content_type: "article",
+    canonical_url: "https://example.com/post-1",
     published_date: "2026-04-27T12:00:00Z",
     ingested_at: "2026-04-27T12:10:00Z",
     content_text: "Alpha",
     relevance_score: 0.9,
     embedding_id: "emb-1",
+    duplicate_of: null,
+    duplicate_signal_count: 0,
     is_reference: false,
     is_active: true,
   },
@@ -30,11 +33,14 @@ const contents: Content[] = [
     entity: null,
     source_plugin: "reddit",
     content_type: "article",
+    canonical_url: "https://example.com/post-2",
     published_date: "2026-04-26T12:00:00Z",
     ingested_at: "2026-04-26T12:10:00Z",
     content_text: "Beta",
     relevance_score: 0.8,
     embedding_id: "emb-2",
+    duplicate_of: null,
+    duplicate_signal_count: 2,
     is_reference: false,
     is_active: true,
   },
@@ -47,11 +53,14 @@ const contents: Content[] = [
     entity: null,
     source_plugin: "reddit",
     content_type: "tutorial",
+    canonical_url: "https://example.com/post-3",
     published_date: "2026-04-20T12:00:00Z",
     ingested_at: "2026-04-20T12:10:00Z",
     content_text: "Gamma",
     relevance_score: 0.8,
     embedding_id: "emb-3",
+    duplicate_of: null,
+    duplicate_signal_count: 0,
     is_reference: false,
     is_active: true,
   },
@@ -64,11 +73,14 @@ const contents: Content[] = [
     entity: null,
     source_plugin: "rss",
     content_type: "article",
+    canonical_url: "https://example.com/post-4",
     published_date: "2026-02-01T12:00:00Z",
     ingested_at: "2026-02-01T12:10:00Z",
     content_text: "Delta",
     relevance_score: 1,
     embedding_id: "emb-4",
+    duplicate_of: null,
+    duplicate_signal_count: 0,
     is_reference: false,
     is_active: false,
   },
@@ -142,6 +154,20 @@ describe("buildDashboardView", () => {
 
     expect(result.view).toBe("review")
     expect(result.filteredContents.map((content) => content.id)).toEqual([2])
+  })
+
+  it("applies duplicate-state filtering to both surfaced content and review items", () => {
+    const result = buildDashboardView({
+      contents,
+      reviewQueue,
+      feedback,
+      searchParams: { duplicateState: "duplicate_related" },
+      now: new Date("2026-04-28T00:00:00Z"),
+    })
+
+    expect(result.duplicateStateFilter).toBe("duplicate_related")
+    expect(result.filteredContents.map((content) => content.id)).toEqual([2])
+    expect(result.pendingReviewItems.map((item) => item.id)).toEqual([11])
   })
 
   it("computes pending review items, feedback counts, content types, and sources", () => {

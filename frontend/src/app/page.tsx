@@ -70,6 +70,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     contentTypeFilter,
     contentTypes,
     daysFilter,
+    duplicateStateFilter,
     filteredContents,
     negativeFeedback,
     pendingReviewItems,
@@ -204,6 +205,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <option value="90">90 days</option>
           </select>
         </div>
+        <div className="grid gap-2">
+          <label className="text-sm font-medium text-ink" htmlFor="duplicateState">
+            Duplicate state
+          </label>
+          <select
+            className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+            id="duplicateState"
+            name="duplicateState"
+            defaultValue={duplicateStateFilter}
+          >
+            <option value="">All items</option>
+            <option value="duplicate_related">Duplicate-related</option>
+          </select>
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
             Apply filters
@@ -256,6 +271,15 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                             {content?.source_plugin ?? "unknown source"}
                           </span>
                           <span>{content?.content_type || "unclassified"}</span>
+                          {content?.duplicate_signal_count ? (
+                            <span>
+                              Also seen in {content.duplicate_signal_count} source
+                              {content.duplicate_signal_count === 1 ? "" : "s"}
+                            </span>
+                          ) : null}
+                          {content?.duplicate_of ? (
+                            <span>Duplicate of #{content.duplicate_of}</span>
+                          ) : null}
                         </div>
                       </td>
                       <td className="px-3 py-4 text-sm text-ink">
@@ -359,6 +383,17 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
                     {content.content_type || "unclassified"}
                   </span>
+                  {content.duplicate_signal_count > 0 ? (
+                    <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
+                      Also seen in {content.duplicate_signal_count} source
+                      {content.duplicate_signal_count === 1 ? "" : "s"}
+                    </span>
+                  ) : null}
+                  {content.duplicate_of ? (
+                    <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
+                      Duplicate of #{content.duplicate_of}
+                    </span>
+                  ) : null}
                   {content.is_reference ? (
                     <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">reference</span>
                   ) : null}

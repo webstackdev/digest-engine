@@ -12,6 +12,7 @@ from django.utils import timezone
 from httpx import HTTPError
 from qdrant_client.http.exceptions import ResponseHandlingException
 
+from core.deduplication import canonicalize_url
 from core.embeddings import upsert_content_embedding
 from core.models import (
     Content,
@@ -612,6 +613,7 @@ class Command(BaseCommand):
                 "author": article["author"],
                 "entity": entities_by_name.get(article.get("entity_name", "")),
                 "source_plugin": source_plugin or article["source_plugin"],
+                "canonical_url": canonicalize_url(article["url"]),
                 "published_date": now - timedelta(days=article["days_ago"]),
                 "content_text": article["content_text"],
                 "is_reference": is_reference,
@@ -887,9 +889,35 @@ class Command(BaseCommand):
 
     def _build_demo_content(self) -> list[dict[str, Any]]:
         articles = list(LEGACY_SAMPLE_CONTENT)
-        articles.extend(self._build_generated_rss_content())
-        articles.extend(self._build_generated_reddit_content())
+        generated_rss = self._build_generated_rss_content()
+        generated_reddit = self._build_generated_reddit_content()
+        self._inject_duplicate_variants(articles, generated_rss, generated_reddit)
+        articles.extend(generated_rss)
+        articles.extend(generated_reddit)
         return articles
+
+    @staticmethod
+    def _inject_duplicate_variants(
+        legacy_articles: list[dict[str, Any]],
+        generated_rss: list[dict[str, Any]],
+        generated_reddit: list[dict[str, Any]],
+    ) -> None:
+        duplicate_pairs = [
+            (legacy_articles[0], generated_reddit[0], "reddit"),
+            (generated_rss[2], generated_reddit[1], "community"),
+            (generated_rss[9], generated_reddit[2], "social"),
+        ]
+        for base_article, duplicate_article, source_tag in duplicate_pairs:
+            duplicate_article["url"] = (
+                f"{base_article['url']}?utm_source={source_tag}&ref=seed-demo"
+            )
+            duplicate_article["title"] = (
+                f"{duplicate_article['title']} linking to {base_article['title']}"
+            )
+            duplicate_article["content_text"] = (
+                f"This seeded item points readers to the same underlying article as '{base_article['title']}'. "
+                f"{duplicate_article['content_text']}"
+            )
 
     def _build_generated_rss_content(self) -> list[dict[str, Any]]:
         articles = []

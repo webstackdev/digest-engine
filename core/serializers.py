@@ -141,16 +141,27 @@ class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
             "entity",
             "source_plugin",
             "content_type",
+            "canonical_url",
             "published_date",
             "ingested_at",
             "content_text",
             "relevance_score",
             "embedding_id",
             "source_metadata",
+            "duplicate_of",
+            "duplicate_signal_count",
             "is_reference",
             "is_active",
         ]
-        read_only_fields = ["id", "project", "ingested_at", "embedding_id"]
+        read_only_fields = [
+            "id",
+            "project",
+            "canonical_url",
+            "ingested_at",
+            "embedding_id",
+            "duplicate_of",
+            "duplicate_signal_count",
+        ]
 
     def validate(self, attrs):
         """Reject entity assignments that point at a different project."""

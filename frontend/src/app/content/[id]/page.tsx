@@ -190,6 +190,26 @@ export default async function ContentDetailPage({
               </form>
             </div>
 
+            <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
+              <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
+                Canonical URL {content.canonical_url || content.url}
+              </span>
+              {content.duplicate_signal_count > 0 ? (
+                <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
+                  Also seen in {content.duplicate_signal_count} source
+                  {content.duplicate_signal_count === 1 ? "" : "s"}
+                </span>
+              ) : null}
+              {content.duplicate_of ? (
+                <Link
+                  className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink transition hover:bg-surface-strong/80"
+                  href={`/content/${content.duplicate_of}?project=${selectedProject.id}`}
+                >
+                  Duplicate of #{content.duplicate_of}
+                </Link>
+              ) : null}
+            </div>
+
             <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-muted md:text-base">
               {content.content_text}
             </div>

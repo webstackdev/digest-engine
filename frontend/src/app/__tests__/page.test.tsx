@@ -109,11 +109,14 @@ function createContent(overrides: Partial<Content> = {}): Content {
     entity: null,
     source_plugin: "rss",
     content_type: "article",
+    canonical_url: "https://example.com/post",
     published_date: "2026-04-28T09:00:00Z",
     ingested_at: "2026-04-28T10:00:00Z",
     content_text: "A long article body for the dashboard preview.",
     relevance_score: 0.84,
     embedding_id: "embed-1",
+    duplicate_of: null,
+    duplicate_signal_count: 0,
     is_reference: false,
     is_active: true,
     ...overrides,
@@ -187,6 +190,7 @@ function createDashboardView(overrides: Record<string, unknown> = {}) {
     contentTypeFilter: "",
     contentTypes: [],
     daysFilter: 30,
+    duplicateStateFilter: "",
     filteredContents: [],
     negativeFeedback: 0,
     pendingReviewItems: [],
@@ -316,6 +320,7 @@ describe("HomePage", () => {
 
     await renderHomePage({
       contentType: "article",
+      duplicateState: "duplicate_related",
       error: "Filter failed",
       message: "Filters applied",
       project: "1",
@@ -329,6 +334,7 @@ describe("HomePage", () => {
       reviewQueue: [reviewItem],
       searchParams: {
         contentType: "article",
+          duplicateState: "duplicate_related",
         error: "Filter failed",
         message: "Filters applied",
         project: "1",
@@ -350,6 +356,52 @@ describe("HomePage", () => {
     expect(badges).toHaveLength(1)
     expect(badges[0]).toHaveAttribute("data-tone", "positive")
     expect(badges[0]).toHaveTextContent("Relevance 0.84")
+  })
+
+  it("renders duplicate context inside review rows", async () => {
+    const content = createContent({
+      duplicate_of: 18,
+      duplicate_signal_count: 2,
+    })
+    const reviewItem = createReviewQueueItem({ content: content.id })
+
+    buildDashboardViewMock.mockReturnValue(
+      createDashboardView({
+        contentMap: new Map([[content.id, content]]),
+        pendingReviewItems: [reviewItem],
+        view: "review",
+      }),
+    )
+
+    await renderHomePage({ project: "1", view: "review" })
+
+    expect(screen.getByText("Also seen in 2 sources")).toBeInTheDocument()
+    expect(screen.getByText("Duplicate of #18")).toBeInTheDocument()
+  })
+
+  it("renders duplicate badges on content cards", async () => {
+    const content = createContent({
+      duplicate_of: 19,
+      duplicate_signal_count: 3,
+      is_active: false,
+    })
+
+    getProjectContentsMock.mockResolvedValue([content])
+    buildDashboardViewMock.mockReturnValue(
+      createDashboardView({
+        contentMap: new Map([[content.id, content]]),
+        contentTypes: ["article"],
+        filteredContents: [content],
+        pendingReviewItems: [],
+        sources: ["rss"],
+        view: "content",
+      }),
+    )
+
+    await renderHomePage({ project: "1", view: "content" })
+
+    expect(screen.getByText("Also seen in 3 sources")).toBeInTheDocument()
+    expect(screen.getByText("Duplicate of #19")).toBeInTheDocument()
   })
 
   it("renders the empty content state when no content matches the current filters", async () => {

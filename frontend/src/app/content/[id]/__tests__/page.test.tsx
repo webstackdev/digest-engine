@@ -121,11 +121,14 @@ function createContent(overrides: Partial<Content> = {}): Content {
     entity: null,
     source_plugin: "rss",
     content_type: "article",
+    canonical_url: "https://example.com/article",
     published_date: "2026-04-28T09:00:00Z",
     ingested_at: "2026-04-28T10:00:00Z",
     content_text: "Body copy",
     relevance_score: 0.82,
     embedding_id: "embed-1",
+    duplicate_of: null,
+    duplicate_signal_count: 0,
     is_reference: false,
     is_active: true,
     ...overrides,
@@ -319,6 +322,30 @@ describe("ContentDetailPage", () => {
     const badges = screen.getAllByTestId("status-badge")
     expect(badges[0]).toHaveAttribute("data-tone", "warning")
     expect(badges[0]).toHaveTextContent("Relevance n/a")
+    expect(screen.getByText("Canonical URL https://example.com/article")).toBeInTheDocument()
+  })
+
+  it("renders duplicate metadata and links to the retained canonical item", async () => {
+    const selectedProject = createProject({ id: 3 })
+    selectProjectMock.mockReturnValue(selectedProject)
+    getProjectsMock.mockResolvedValue([selectedProject])
+    getProjectContentMock.mockResolvedValue(
+      createContent({
+        id: 77,
+        project: 3,
+        canonical_url: "https://example.com/canonical-story",
+        duplicate_of: 12,
+        duplicate_signal_count: 2,
+        is_active: false,
+      }),
+    )
+
+    await renderContentDetailPage({ project: "3" }, { id: "77" })
+
+    expect(screen.getByText("Canonical URL https://example.com/canonical-story")).toBeInTheDocument()
+    const retainedLink = screen.getByRole("link", { name: "Duplicate of #12" })
+    expect(retainedLink).toHaveAttribute("href", "/content/12?project=3")
+    expect(screen.getByText("Also seen in 2 sources")).toBeInTheDocument()
   })
 
   it("renders filtered skill results, review items, feedback counts, and action-bar props", async () => {
