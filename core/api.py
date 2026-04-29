@@ -20,6 +20,7 @@ from drf_spectacular.utils import (
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
+from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 
 from core.entity_extraction import (
@@ -31,6 +32,7 @@ from core.models import (
     BlueskyCredentials,
     Content,
     Entity,
+    EntityAuthoritySnapshot,
     EntityCandidate,
     EntityMention,
     IngestionRun,
@@ -43,6 +45,7 @@ from core.models import (
 )
 from core.serializers import (
     ContentSerializer,
+    EntityAuthoritySnapshotSerializer,
     EntityCandidateMergeSerializer,
     EntityCandidateSerializer,
     EntityMentionSummarySerializer,
@@ -193,6 +196,7 @@ CONTENT_RESPONSE_EXAMPLE = OpenApiExample(
         "ingested_at": "2026-04-26T12:05:00Z",
         "content_text": "A walkthrough of short-term and long-term memory patterns for production agents.",
         "relevance_score": 0.92,
+        "authority_adjusted_score": 0.95,
         "embedding_id": "emb_01jabcxyz",
         "duplicate_of": None,
         "duplicate_signal_count": 2,
@@ -641,7 +645,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
             credentials = project.bluesky_credentials
         except BlueskyCredentials.DoesNotExist as exc:
             raise serializers.ValidationError(
-                {"bluesky_credentials": "No Bluesky credentials are configured for this project."}
+                {
+                    "bluesky_credentials": "No Bluesky credentials are configured for this project."
+                }
             ) from exc
 
         try:
@@ -704,6 +710,9 @@ class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     """Manage tracked entities associated with a project."""
 
     serializer_class = EntitySerializer
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["authority_score", "created_at", "name"]
+    ordering = ["name"]
     queryset = (
         Entity.objects.select_related("project")
         .annotate(mention_count=Count("mentions", distinct=True))
@@ -722,7 +731,10 @@ class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
         summary="List entity mentions",
         description="Return the extracted mention history for one tracked entity inside the selected project.",
         request=None,
-        responses={200: EntityMentionSummarySerializer(many=True), 403: AUTHENTICATION_REQUIRED_RESPONSE},
+        responses={
+            200: EntityMentionSummarySerializer(many=True),
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
         tags=["Entity Catalog"],
     )
     @action(detail=True, methods=["get"], url_path="mentions")
@@ -732,6 +744,46 @@ class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
         entity = self.get_object()
         mentions = entity.mentions.select_related("content").order_by("-created_at")
         serializer = EntityMentionSummarySerializer(mentions, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="List authority history",
+        description=(
+            "Return persisted authority-score snapshots for one tracked entity. "
+            "Use the optional limit query parameter to cap the number of snapshots returned."
+        ),
+        parameters=[
+            OpenApiParameter(
+                name="limit",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                description="Maximum number of authority snapshots to return.",
+                required=False,
+            )
+        ],
+        request=None,
+        responses={
+            200: EntityAuthoritySnapshotSerializer(many=True),
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Entity Catalog"],
+    )
+    @action(detail=True, methods=["get"], url_path="authority_history")
+    def authority_history(self, request, *args, **kwargs):
+        """Return recent authority snapshots for the selected entity."""
+
+        entity = self.get_object()
+        snapshots = entity.authority_snapshots.order_by("-computed_at")
+        limit_param = request.query_params.get("limit")
+        if limit_param:
+            try:
+                limit = max(1, min(int(limit_param), 100))
+            except ValueError as exc:
+                raise serializers.ValidationError(
+                    {"limit": "Limit must be an integer between 1 and 100."}
+                ) from exc
+            snapshots = snapshots[:limit]
+        serializer = EntityAuthoritySnapshotSerializer(snapshots, many=True)
         return Response(serializer.data)
 
 
@@ -758,7 +810,10 @@ class EntityCandidateViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
         summary="Accept entity candidate",
         description="Promote a pending entity candidate into a tracked entity and backfill recent mentions.",
         request=None,
-        responses={200: EntityCandidateSerializer, 403: AUTHENTICATION_REQUIRED_RESPONSE},
+        responses={
+            200: EntityCandidateSerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
         tags=["Entity Catalog"],
     )
     @action(detail=True, methods=["post"], url_path="accept")
@@ -775,7 +830,10 @@ class EntityCandidateViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
         summary="Reject entity candidate",
         description="Mark a pending entity candidate as rejected without creating a tracked entity.",
         request=None,
-        responses={200: EntityCandidateSerializer, 403: AUTHENTICATION_REQUIRED_RESPONSE},
+        responses={
+            200: EntityCandidateSerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
         tags=["Entity Catalog"],
     )
     @action(detail=True, methods=["post"], url_path="reject")
@@ -792,7 +850,11 @@ class EntityCandidateViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
         summary="Merge entity candidate",
         description="Merge a pending entity candidate into an existing tracked entity from the same project.",
         request=EntityCandidateMergeSerializer,
-        responses={200: EntityCandidateSerializer, 400: EntityCandidateMergeSerializer, 403: AUTHENTICATION_REQUIRED_RESPONSE},
+        responses={
+            200: EntityCandidateSerializer,
+            400: EntityCandidateMergeSerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
         tags=["Entity Catalog"],
     )
     @action(detail=True, methods=["post"], url_path="merge")

@@ -9,6 +9,7 @@ from core.models import (
     Entity,
     EntityCandidate,
     EntityMention,
+    EntityMentionRole,
     Project,
     ReviewQueue,
     ReviewReason,
@@ -70,6 +71,13 @@ def pipeline_context(django_user_model):
 def test_process_content_runs_full_pipeline_for_relevant_content(
     pipeline_context, mocker
 ):
+    pipeline_context.content.entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Platform Weekly",
+        type="organization",
+        authority_score=0.9,
+    )
+    pipeline_context.content.save(update_fields=["entity"])
     mocker.patch(
         "core.pipeline.run_content_classification",
         return_value={
@@ -91,6 +99,18 @@ def test_process_content_runs_full_pipeline_for_relevant_content(
         },
     )
     mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": pipeline_context.content.entity_id,
+            "confidence": 0.0,
+            "explanation": "No extracted entity mentions.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
         "core.pipeline.run_summarization",
         return_value={
             "summary": "A concise summary for the editor.",
@@ -105,6 +125,7 @@ def test_process_content_runs_full_pipeline_for_relevant_content(
     assert result["status"] == "completed"
     assert pipeline_context.content.content_type == "release_notes"
     assert pipeline_context.content.relevance_score == pytest.approx(0.92)
+    assert pipeline_context.content.authority_adjusted_score == pytest.approx(1.0)
     assert pipeline_context.content.is_active is True
     assert (
         SkillResult.objects.filter(
@@ -127,6 +148,86 @@ def test_process_content_runs_full_pipeline_for_relevant_content(
     assert ReviewQueue.objects.filter(content=pipeline_context.content).count() == 0
 
 
+def test_process_content_uses_top_entity_mention_for_authority_adjustment(
+    pipeline_context, mocker
+):
+    mentioned_entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Mentioned Vendor",
+        type="vendor",
+        authority_score=0.8,
+    )
+    quoted_entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Quoted Source",
+        type="individual",
+        authority_score=0.95,
+    )
+    EntityMention.objects.create(
+        project=pipeline_context.project,
+        content=pipeline_context.content,
+        entity=mentioned_entity,
+        role=EntityMentionRole.MENTIONED,
+        sentiment="neutral",
+        span="Mentioned Vendor",
+        confidence=0.99,
+    )
+    EntityMention.objects.create(
+        project=pipeline_context.project,
+        content=pipeline_context.content,
+        entity=quoted_entity,
+        role=EntityMentionRole.QUOTED,
+        sentiment="neutral",
+        span="Quoted Source",
+        confidence=0.50,
+    )
+    mocker.patch(
+        "core.pipeline.run_content_classification",
+        return_value={
+            "content_type": "release_notes",
+            "confidence": 0.9,
+            "explanation": "High confidence classification.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_relevance_scoring",
+        return_value={
+            "relevance_score": 0.80,
+            "explanation": "Good baseline relevance.",
+            "used_llm": False,
+            "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": None,
+            "confidence": 0.0,
+            "explanation": "Existing mentions are already attached to the content.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_summarization",
+        return_value={
+            "summary": "A concise summary for the editor.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+
+    process_content(pipeline_context.content.id)
+
+    pipeline_context.content.refresh_from_db()
+    assert pipeline_context.content.authority_adjusted_score == pytest.approx(0.872)
+
+
 def test_process_content_queues_borderline_items_for_review(pipeline_context, mocker):
     mocker.patch(
         "core.pipeline.run_content_classification",
@@ -145,6 +246,18 @@ def test_process_content_queues_borderline_items_for_review(pipeline_context, mo
             "explanation": "Borderline similarity to the project baseline.",
             "used_llm": False,
             "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": None,
+            "confidence": 0.0,
+            "explanation": "No extracted entity mentions.",
+            "model_used": "heuristic",
             "latency_ms": 0,
         },
     )
@@ -180,6 +293,18 @@ def test_process_content_archives_irrelevant_items(pipeline_context, mocker):
             "explanation": "Far from the project reference corpus.",
             "used_llm": False,
             "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": None,
+            "confidence": 0.0,
+            "explanation": "No extracted entity mentions.",
+            "model_used": "heuristic",
             "latency_ms": 0,
         },
     )
@@ -219,6 +344,18 @@ def test_process_content_adds_review_item_for_low_confidence_classification(
             "explanation": "Close to the project baseline.",
             "used_llm": False,
             "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": None,
+            "confidence": 0.0,
+            "explanation": "No extracted entity mentions.",
+            "model_used": "heuristic",
             "latency_ms": 0,
         },
     )
@@ -278,9 +415,12 @@ def test_process_content_marks_exact_duplicates_and_skips_downstream_skills(
     assert classify_mock.call_count == 0
     assert relevance_mock.call_count == 0
     assert summarize_mock.call_count == 0
-    assert SkillResult.objects.filter(
-        content=duplicate, skill_name=DEDUPLICATION_SKILL_NAME
-    ).count() == 1
+    assert (
+        SkillResult.objects.filter(
+            content=duplicate, skill_name=DEDUPLICATION_SKILL_NAME
+        ).count()
+        == 1
+    )
 
 
 def test_process_content_marks_semantic_duplicates_with_high_similarity(
@@ -337,7 +477,11 @@ def test_run_deduplication_uses_llm_tiebreak_for_borderline_similarity(
     )
     mocker.patch(
         "core.pipeline.search_similar_content",
-        return_value=[SimpleNamespace(score=0.90, payload={"content_id": pipeline_context.content.id})],
+        return_value=[
+            SimpleNamespace(
+                score=0.90, payload={"content_id": pipeline_context.content.id}
+            )
+        ],
     )
     openrouter_mock = mocker.patch(
         "core.pipeline.openrouter_chat_json",
