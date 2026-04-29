@@ -57,7 +57,6 @@ from core.serializers import (
     SourceConfigSerializer,
     UserFeedbackSerializer,
 )
-from core.tasks import queue_topic_centroid_recompute
 
 CLASSIFICATION_SKILL_NAME = "content_classification"
 RELEVANCE_SKILL_NAME = "relevance_scoring"
@@ -990,8 +989,7 @@ class UserFeedbackViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Attach the authenticated user automatically to new feedback rows."""
 
-        feedback = serializer.save(project=self.get_project(), user=self.request.user)
-        queue_topic_centroid_recompute(feedback.project_id)
+        serializer.save(project=self.get_project(), user=self.request.user)
 
 
 @document_project_owned_viewset(

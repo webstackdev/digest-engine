@@ -288,6 +288,8 @@ class ProjectConfig(models.Model):
 
     These values let the application adjust how strongly upvotes, downvotes, and
     score decay influence entity authority over time without changing code.
+    They also control whether feedback saves should immediately refresh the
+    project's topic centroid.
     """
 
     project = models.OneToOneField(
@@ -296,6 +298,7 @@ class ProjectConfig(models.Model):
     upvote_authority_weight = models.FloatField(default=0.1)
     downvote_authority_weight = models.FloatField(default=-0.05)
     authority_decay_rate = models.FloatField(default=0.95)
+    recompute_topic_centroid_on_feedback_save = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = "Project config"
@@ -368,6 +371,37 @@ class EntityAuthoritySnapshot(models.Model):
 
     def __str__(self) -> str:
         return f"Authority snapshot for {self.entity.name}"
+
+
+class TopicCentroidSnapshot(models.Model):
+    """Captures one recomputed topic-centroid state for a project.
+
+    Snapshot rows preserve the normalized centroid vector and enough derived drift
+    metadata to support future admin widgets without querying historical vectors
+    back out of Qdrant.
+    """
+
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="topic_centroid_snapshots"
+    )
+    computed_at = models.DateTimeField(auto_now_add=True)
+    centroid_active = models.BooleanField(default=False)
+    centroid_vector = models.JSONField(default=list, blank=True)
+    feedback_count = models.PositiveIntegerField(default=0)
+    upvote_count = models.PositiveIntegerField(default=0)
+    downvote_count = models.PositiveIntegerField(default=0)
+    drift_from_previous = models.FloatField(null=True, blank=True)
+    drift_from_week_ago = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-computed_at"]
+        indexes = [
+            models.Index(fields=["project", "-computed_at"]),
+            models.Index(fields=["project", "centroid_active", "-computed_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Topic centroid snapshot for {self.project.name}"
 
 
 class Content(models.Model):

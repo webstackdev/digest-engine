@@ -18,6 +18,7 @@ from core.models import (
     SkillStatus,
     SourceConfig,
     SourcePluginName,
+    TopicCentroidSnapshot,
     UserFeedback,
 )
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
@@ -406,8 +407,9 @@ def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
 
 
 def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
-    source_plugin_context,
+    source_plugin_context, mocker
 ):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     project = source_plugin_context.project
     config = ProjectConfig.objects.create(
         project=project,
@@ -492,6 +494,7 @@ def test_recompute_topic_centroid_upserts_weighted_normalized_centroid(
     source_plugin_context, mocker
 ):
     project = source_plugin_context.project
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
     delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
     vector_lookup = {
@@ -547,6 +550,7 @@ def test_recompute_topic_centroid_upserts_weighted_normalized_centroid(
     )
 
     result = recompute_topic_centroid(project.id)
+    snapshot = TopicCentroidSnapshot.objects.get(project=project)
 
     assert result["centroid_active"] is True
     delete_mock.assert_not_called()
@@ -554,12 +558,83 @@ def test_recompute_topic_centroid_upserts_weighted_normalized_centroid(
     centroid_vector = upsert_mock.call_args.args[1]
     assert centroid_vector[0] > 0.9
     assert centroid_vector[1] < 0.0
+    assert snapshot.centroid_active is True
+    assert snapshot.feedback_count == TOPIC_CENTROID_MIN_UPVOTES + 1
+    assert snapshot.upvote_count == TOPIC_CENTROID_MIN_UPVOTES
+    assert snapshot.downvote_count == 1
+    assert snapshot.centroid_vector == pytest.approx(centroid_vector)
+    assert snapshot.drift_from_previous is None
+    assert snapshot.drift_from_week_ago is None
+
+
+def test_recompute_topic_centroid_persists_drift_from_previous_and_week_old_snapshot(
+    source_plugin_context, mocker
+):
+    project = source_plugin_context.project
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
+    upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
+    delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
+    mocker.patch("core.tasks.embed_text", return_value=[1.0, 0.0])
+
+    recent_snapshot = TopicCentroidSnapshot.objects.create(
+        project=project,
+        centroid_active=True,
+        centroid_vector=[1.0, 0.0],
+        feedback_count=12,
+        upvote_count=12,
+        downvote_count=0,
+    )
+    older_snapshot = TopicCentroidSnapshot.objects.create(
+        project=project,
+        centroid_active=True,
+        centroid_vector=[0.0, 1.0],
+        feedback_count=12,
+        upvote_count=12,
+        downvote_count=0,
+    )
+    TopicCentroidSnapshot.objects.filter(pk=recent_snapshot.pk).update(
+        computed_at=datetime(2026, 4, 28, 12, 0, tzinfo=timezone.utc)
+    )
+    TopicCentroidSnapshot.objects.filter(pk=older_snapshot.pk).update(
+        computed_at=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc)
+    )
+
+    for index in range(TOPIC_CENTROID_MIN_UPVOTES):
+        content = Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url=f"https://example.com/drift-upvote-{index}",
+            title=f"Drift Upvote {index}",
+            author="Author",
+            source_plugin=SourcePluginName.RSS,
+            published_date="2026-04-20T12:00:00Z",
+            content_text="Manual content body",
+        )
+        UserFeedback.objects.create(
+            project=project,
+            content=content,
+            user=source_plugin_context.user,
+            feedback_type=FeedbackType.UPVOTE,
+        )
+
+    result = recompute_topic_centroid(project.id)
+    snapshot = TopicCentroidSnapshot.objects.filter(project=project).latest(
+        "computed_at"
+    )
+
+    assert result["centroid_active"] is True
+    delete_mock.assert_not_called()
+    upsert_mock.assert_called_once()
+    assert snapshot.centroid_active is True
+    assert snapshot.drift_from_previous == pytest.approx(0.0)
+    assert snapshot.drift_from_week_ago == pytest.approx(1.0)
 
 
 def test_recompute_topic_centroid_disables_centroid_below_minimum_upvotes(
     source_plugin_context, mocker
 ):
     project = source_plugin_context.project
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
     delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
     for index in range(TOPIC_CENTROID_MIN_UPVOTES - 1):
@@ -581,10 +656,15 @@ def test_recompute_topic_centroid_disables_centroid_below_minimum_upvotes(
         )
 
     result = recompute_topic_centroid(project.id)
+    snapshot = TopicCentroidSnapshot.objects.get(project=project)
 
     assert result["centroid_active"] is False
     delete_mock.assert_called_once_with(project.id)
     upsert_mock.assert_not_called()
+    assert snapshot.centroid_active is False
+    assert snapshot.centroid_vector == []
+    assert snapshot.upvote_count == TOPIC_CENTROID_MIN_UPVOTES - 1
+    assert snapshot.drift_from_previous is None
 
 
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
@@ -697,6 +777,90 @@ def test_queue_topic_centroid_recompute_skips_duplicate_queue_attempts(
 
     assert queued is False
     delay_mock.assert_not_called()
+
+
+def test_feedback_model_create_queues_topic_centroid_recompute(
+    source_plugin_context, mocker
+):
+    content = Content.objects.create(
+        project=source_plugin_context.project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/direct-feedback-content",
+        title="Direct Feedback Content",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-20T12:00:00Z",
+        content_text="Manual content body",
+    )
+    queue_mock = mocker.patch("core.signals.queue_topic_centroid_recompute")
+
+    UserFeedback.objects.create(
+        project=source_plugin_context.project,
+        content=content,
+        user=source_plugin_context.user,
+        feedback_type=FeedbackType.UPVOTE,
+    )
+
+    queue_mock.assert_called_once_with(source_plugin_context.project.id)
+
+
+def test_feedback_model_update_queues_topic_centroid_recompute(
+    source_plugin_context, mocker
+):
+    content = Content.objects.create(
+        project=source_plugin_context.project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/direct-feedback-update",
+        title="Direct Feedback Update",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-20T12:00:00Z",
+        content_text="Manual content body",
+    )
+    queue_mock = mocker.patch("core.signals.queue_topic_centroid_recompute")
+    feedback = UserFeedback.objects.create(
+        project=source_plugin_context.project,
+        content=content,
+        user=source_plugin_context.user,
+        feedback_type=FeedbackType.UPVOTE,
+    )
+
+    queue_mock.reset_mock()
+    feedback.feedback_type = FeedbackType.DOWNVOTE
+    feedback.save(update_fields=["feedback_type"])
+
+    queue_mock.assert_called_once_with(source_plugin_context.project.id)
+
+
+def test_feedback_save_skips_topic_centroid_recompute_when_project_config_disables_it(
+    source_plugin_context, mocker
+):
+    ProjectConfig.objects.create(
+        project=source_plugin_context.project,
+        recompute_topic_centroid_on_feedback_save=False,
+    )
+    content = Content.objects.create(
+        project=source_plugin_context.project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/direct-feedback-disabled",
+        title="Direct Feedback Disabled",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-20T12:00:00Z",
+        content_text="Manual content body",
+    )
+    queue_mock = mocker.patch("core.signals.queue_topic_centroid_recompute")
+
+    feedback = UserFeedback.objects.create(
+        project=source_plugin_context.project,
+        content=content,
+        user=source_plugin_context.user,
+        feedback_type=FeedbackType.UPVOTE,
+    )
+    feedback.feedback_type = FeedbackType.DOWNVOTE
+    feedback.save(update_fields=["feedback_type"])
+
+    queue_mock.assert_not_called()
 
 
 def test_run_relevance_scoring_skill_updates_pending_result(

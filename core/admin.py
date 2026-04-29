@@ -35,6 +35,7 @@ from core.models import (
     ReviewQueue,
     SkillResult,
     SourceConfig,
+    TopicCentroidSnapshot,
     UserFeedback,
 )
 from core.plugins import get_plugin_for_source_config, validate_plugin_config
@@ -223,6 +224,15 @@ class ProjectConfigAdmin(admin.ModelAdmin):
         "upvote_authority_weight",
         "downvote_authority_weight",
         "authority_decay_rate",
+        "recompute_topic_centroid_on_feedback_save",
+    )
+    list_filter = ("recompute_topic_centroid_on_feedback_save",)
+    fields = (
+        "project",
+        "upvote_authority_weight",
+        "downvote_authority_weight",
+        "authority_decay_rate",
+        "recompute_topic_centroid_on_feedback_save",
     )
 
 
@@ -323,6 +333,43 @@ class EntityAuthoritySnapshotAdmin(admin.ModelAdmin):
             duplicate_value,
             decayed_value,
         )
+
+
+@admin.register(TopicCentroidSnapshot)
+class TopicCentroidSnapshotAdmin(admin.ModelAdmin):
+    """Admin view for persisted topic-centroid history and drift."""
+
+    list_display = (
+        "project",
+        "centroid_active",
+        "feedback_count",
+        "display_drift_from_previous",
+        "display_drift_from_week_ago",
+        "computed_at",
+    )
+    list_filter = (
+        "centroid_active",
+        ("project", admin.RelatedOnlyFieldListFilter),
+        "computed_at",
+    )
+    search_fields = ("project__name",)
+    autocomplete_fields = ("project",)
+
+    @admin.display(description="Drift vs Previous", ordering="drift_from_previous")
+    def display_drift_from_previous(self, obj):
+        """Render cosine-distance drift from the previous active snapshot."""
+
+        if obj.drift_from_previous is None:
+            return "n/a"
+        return f"{_score_to_percent(obj.drift_from_previous):.1f}%"
+
+    @admin.display(description="Drift vs 7d", ordering="drift_from_week_ago")
+    def display_drift_from_week_ago(self, obj):
+        """Render cosine-distance drift from the nearest week-old snapshot."""
+
+        if obj.drift_from_week_ago is None:
+            return "n/a"
+        return f"{_score_to_percent(obj.drift_from_week_ago):.1f}%"
 
 
 @admin.register(EntityMention)

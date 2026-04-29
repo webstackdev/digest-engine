@@ -502,7 +502,7 @@ class ProjectScopedApiTests(APITestCase):
             self.owner_project.id,
         )
 
-    @patch("core.api.queue_topic_centroid_recompute")
+    @patch("core.signals.queue_topic_centroid_recompute")
     def test_feedback_create_assigns_current_user(self, queue_centroid_mock):
         response = self.client.post(
             reverse(
@@ -671,7 +671,8 @@ class ProjectScopedApiTests(APITestCase):
                 response = self.client.get(endpoint)
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_authenticated_nested_detail_endpoints_smoke(self):
+    @patch("core.signals.queue_topic_centroid_recompute")
+    def test_authenticated_nested_detail_endpoints_smoke(self, queue_centroid_mock):
         detail_endpoints = [
             reverse(
                 "v1:project-config-detail",

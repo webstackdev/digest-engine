@@ -35,6 +35,7 @@ from core.models import (
     ProjectConfig,
     RunStatus,
     SourceConfig,
+    TopicCentroidSnapshot,
     UserFeedback,
 )
 from core.newsletter_extraction import extract_newsletter_items
@@ -320,6 +321,15 @@ def recompute_topic_centroid(project_id: int):
     try:
         if upvote_count < TOPIC_CENTROID_MIN_UPVOTES:
             delete_topic_centroid(project_id)
+            _create_topic_centroid_snapshot(
+                project_id=project_id,
+                computed_at=now,
+                centroid_active=False,
+                centroid_vector=[],
+                feedback_count=len(feedback_rows),
+                upvote_count=upvote_count,
+                downvote_count=downvote_count,
+            )
             return {
                 "project_id": project_id,
                 "feedback_count": len(feedback_rows),
@@ -346,6 +356,15 @@ def recompute_topic_centroid(project_id: int):
         upvote_mean, upvote_weight = _weighted_mean_vector(upvote_vectors)
         if not upvote_mean or upvote_weight <= 0:
             delete_topic_centroid(project_id)
+            _create_topic_centroid_snapshot(
+                project_id=project_id,
+                computed_at=now,
+                centroid_active=False,
+                centroid_vector=[],
+                feedback_count=len(feedback_rows),
+                upvote_count=upvote_count,
+                downvote_count=downvote_count,
+            )
             return {
                 "project_id": project_id,
                 "feedback_count": len(feedback_rows),
@@ -371,6 +390,15 @@ def recompute_topic_centroid(project_id: int):
         normalized_centroid = _normalize_vector(centroid_vector)
         if not normalized_centroid:
             delete_topic_centroid(project_id)
+            _create_topic_centroid_snapshot(
+                project_id=project_id,
+                computed_at=now,
+                centroid_active=False,
+                centroid_vector=[],
+                feedback_count=len(feedback_rows),
+                upvote_count=upvote_count,
+                downvote_count=downvote_count,
+            )
             return {
                 "project_id": project_id,
                 "feedback_count": len(feedback_rows),
@@ -385,6 +413,15 @@ def recompute_topic_centroid(project_id: int):
             upvote_count=upvote_count,
             downvote_count=downvote_count,
             feedback_count=len(feedback_rows),
+        )
+        _create_topic_centroid_snapshot(
+            project_id=project_id,
+            computed_at=now,
+            centroid_active=True,
+            centroid_vector=normalized_centroid,
+            feedback_count=len(feedback_rows),
+            upvote_count=upvote_count,
+            downvote_count=downvote_count,
         )
         return {
             "project_id": project_id,
@@ -480,6 +517,78 @@ def _feedback_decay_weight(created_at, now) -> float:
 
     age_days = max(0.0, (now - created_at).total_seconds() / 86400)
     return math.exp(-age_days / TOPIC_CENTROID_DECAY_TAU_DAYS)
+
+
+def _create_topic_centroid_snapshot(
+    *,
+    project_id: int,
+    computed_at,
+    centroid_active: bool,
+    centroid_vector: list[float],
+    feedback_count: int,
+    upvote_count: int,
+    downvote_count: int,
+) -> TopicCentroidSnapshot:
+    """Persist one centroid snapshot and derived drift metrics."""
+
+    previous_active_snapshot = (
+        TopicCentroidSnapshot.objects.filter(
+            project_id=project_id, centroid_active=True
+        )
+        .order_by("-computed_at")
+        .only("centroid_vector", "computed_at")
+        .first()
+    )
+    week_ago_snapshot = (
+        TopicCentroidSnapshot.objects.filter(
+            project_id=project_id,
+            centroid_active=True,
+            computed_at__lte=computed_at - timedelta(days=7),
+        )
+        .order_by("-computed_at")
+        .only("centroid_vector", "computed_at")
+        .first()
+    )
+
+    snapshot = TopicCentroidSnapshot.objects.create(
+        project_id=project_id,
+        centroid_active=centroid_active,
+        centroid_vector=centroid_vector,
+        feedback_count=feedback_count,
+        upvote_count=upvote_count,
+        downvote_count=downvote_count,
+        drift_from_previous=(
+            _cosine_distance(centroid_vector, previous_active_snapshot.centroid_vector)
+            if centroid_active and previous_active_snapshot is not None
+            else None
+        ),
+        drift_from_week_ago=(
+            _cosine_distance(centroid_vector, week_ago_snapshot.centroid_vector)
+            if centroid_active and week_ago_snapshot is not None
+            else None
+        ),
+    )
+    if snapshot.computed_at != computed_at:
+        TopicCentroidSnapshot.objects.filter(pk=snapshot.pk).update(
+            computed_at=computed_at
+        )
+        snapshot.computed_at = computed_at
+    return snapshot
+
+
+def _cosine_distance(left: list[float], right: list[float]) -> float | None:
+    """Return cosine distance between two vectors when both are usable."""
+
+    if not left or not right or len(left) != len(right):
+        return None
+    left_norm = math.sqrt(sum(value * value for value in left))
+    right_norm = math.sqrt(sum(value * value for value in right))
+    if left_norm <= 0 or right_norm <= 0:
+        return None
+    cosine_similarity = sum(
+        left_value * right_value for left_value, right_value in zip(left, right)
+    ) / (left_norm * right_norm)
+    return max(0.0, min(2.0, 1.0 - max(-1.0, min(1.0, cosine_similarity))))
 
 
 def _weighted_mean_vector(

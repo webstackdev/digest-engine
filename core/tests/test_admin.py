@@ -17,9 +17,11 @@ from core.admin import (
     EntityCandidateAdmin,
     HighValueFilter,
     IngestionRunAdmin,
+    ProjectConfigAdmin,
     ReviewQueueAdmin,
     SkillResultAdmin,
     SourceConfigAdmin,
+    TopicCentroidSnapshotAdmin,
     UserFeedbackAdmin,
 )
 from core.models import (
@@ -32,12 +34,14 @@ from core.models import (
     EntityMention,
     IngestionRun,
     Project,
+    ProjectConfig,
     ReviewQueue,
     ReviewReason,
     RunStatus,
     SkillResult,
     SourceConfig,
     SourcePluginName,
+    TopicCentroidSnapshot,
     UserFeedback,
 )
 
@@ -90,6 +94,34 @@ def test_test_source_connection_reports_success(source_admin_context, mocker):
         "Connectivity check passed for 1 source(s).",
         messages.SUCCESS,
     )
+
+
+def test_project_config_admin_exposes_centroid_toggle_field(source_admin_context):
+    config = ProjectConfig.objects.create(project=source_admin_context.project)
+    admin_instance = ProjectConfigAdmin(ProjectConfig, AdminSite())
+
+    assert "recompute_topic_centroid_on_feedback_save" in admin_instance.list_display
+    assert "recompute_topic_centroid_on_feedback_save" in admin_instance.list_filter
+    assert "recompute_topic_centroid_on_feedback_save" in admin_instance.get_fields(
+        request=SimpleNamespace(), obj=config
+    )
+
+
+def test_topic_centroid_snapshot_admin_renders_drift_fields(source_admin_context):
+    snapshot = TopicCentroidSnapshot.objects.create(
+        project=source_admin_context.project,
+        centroid_active=True,
+        centroid_vector=[1.0, 0.0],
+        feedback_count=15,
+        upvote_count=12,
+        downvote_count=3,
+        drift_from_previous=0.125,
+        drift_from_week_ago=0.4,
+    )
+    admin_instance = TopicCentroidSnapshotAdmin(TopicCentroidSnapshot, AdminSite())
+
+    assert admin_instance.display_drift_from_previous(snapshot) == "12.5%"
+    assert admin_instance.display_drift_from_week_ago(snapshot) == "40.0%"
 
 
 def test_test_source_connection_reports_failures(source_admin_context, mocker):
@@ -929,6 +961,7 @@ def test_skill_result_admin_helpers_and_dashboard_stats(source_admin_context, mo
 def test_user_feedback_admin_helpers_and_dashboard_stats(
     source_admin_context, django_user_model, mocker
 ):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     user = django_user_model.objects.create_user(
         username="feedback-user", password="testpass123"
     )
@@ -1160,7 +1193,10 @@ def test_skill_result_changelist_view_uses_warning_and_danger_colors(
     assert response["dashboard_stats"][1]["color"] == "danger"
 
 
-def test_user_feedback_admin_upvote_and_orange_score_branches(source_admin_context):
+def test_user_feedback_admin_upvote_and_orange_score_branches(
+    source_admin_context, mocker
+):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/feedback-orange",
@@ -1186,6 +1222,7 @@ def test_user_feedback_admin_upvote_and_orange_score_branches(source_admin_conte
 def test_user_feedback_changelist_view_uses_success_color_for_high_approval(
     source_admin_context, django_user_model, mocker
 ):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     first_content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/feedback-success-1",

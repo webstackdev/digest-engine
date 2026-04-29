@@ -20,8 +20,8 @@ from core.embeddings import (
     search_similar,
     search_similar_content,
     serialize_published_date,
-    upsert_topic_centroid,
     upsert_content_embedding,
+    upsert_topic_centroid,
 )
 from core.models import (
     Content,
@@ -377,6 +377,7 @@ def test_embedding_smoke_command_can_upsert_content(embedding_context, mocker, c
 
 
 def test_seed_demo_creates_reference_corpus_and_embeds_demo_content(mocker, capsys):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     upsert_mock = mocker.patch(
         "core.management.commands.seed_demo.upsert_content_embedding"
     )
@@ -423,6 +424,7 @@ def test_seed_demo_creates_reference_corpus_and_embeds_demo_content(mocker, caps
 
 
 def test_seed_demo_is_stable_on_rerun(mocker):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     mocker.patch("core.management.commands.seed_demo.upsert_content_embedding")
 
     call_command("seed_demo")
@@ -440,6 +442,7 @@ def test_seed_demo_is_stable_on_rerun(mocker):
 
 
 def test_seed_demo_skips_embeddings_when_vector_stack_is_unavailable(mocker, capsys):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     upsert_mock = mocker.patch(
         "core.management.commands.seed_demo.upsert_content_embedding",
         side_effect=ResponseHandlingException(httpx.ConnectError("connection refused")),
