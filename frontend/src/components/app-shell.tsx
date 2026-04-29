@@ -1,9 +1,8 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 
-import type { Project } from "@/lib/types"
-
 import { UserMenu } from "@/components/user-menu"
+import type { Project } from "@/lib/types"
 
 type AppShellProps = {
   title: string

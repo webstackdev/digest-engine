@@ -19,8 +19,8 @@ import type {
   ReviewQueueItem,
   SkillResult,
   SourceConfig,
-  TopicCentroidSnapshot,
   TopicCentroidObservabilitySummary,
+  TopicCentroidSnapshot,
   UserFeedback,
 } from "@/lib/types"
 

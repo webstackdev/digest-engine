@@ -1,7 +1,7 @@
 "use client"
 
-import { getSession, signOut } from "next-auth/react"
 import type { Session } from "next-auth"
+import { getSession, signOut } from "next-auth/react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 type AccountIdentity = {

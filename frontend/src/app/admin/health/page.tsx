@@ -6,8 +6,8 @@ import {
   getProjectIngestionRuns,
   getProjects,
   getProjectSourceConfigs,
-  getProjectTopicCentroidSummary,
   getProjectTopicCentroidSnapshots,
+  getProjectTopicCentroidSummary,
 } from "@/lib/api"
 import type {
   HealthStatus,

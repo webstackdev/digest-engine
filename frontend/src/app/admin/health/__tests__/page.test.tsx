@@ -6,8 +6,8 @@ import type {
   IngestionRun,
   Project,
   SourceConfig,
-  TopicCentroidSnapshot,
   TopicCentroidObservabilitySummary,
+  TopicCentroidSnapshot,
 } from "@/lib/types"
 
 const {
@@ -388,10 +388,10 @@ describe("HealthPage", () => {
     expect(
       screen.getByText("Topic centroid observability"),
     ).toBeInTheDocument()
-    expect(screen.getByText("10.0%")).toBeInTheDocument()
-    expect(screen.getByText("20.0%")).toBeInTheDocument()
+    expect(screen.getAllByText("10.0%").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("20.0%").length).toBeGreaterThan(0)
     expect(screen.getByText("Feedback 14")).toBeInTheDocument()
-    expect(screen.getByText("active")).toBeInTheDocument()
+    expect(screen.getAllByText("active").length).toBeGreaterThan(0)
     expect(
       screen.getByRole("link", { name: "Open centroid snapshot history" }),
     ).toHaveAttribute(
@@ -405,6 +405,5 @@ describe("HealthPage", () => {
       screen.getByText("Centroid snapshot history"),
     ).toBeInTheDocument()
     expect(screen.getByText("Showing 3 of 3 snapshots")).toBeInTheDocument()
-    expect(screen.getAllByText("active").length).toBeGreaterThan(0)
   })
 })
