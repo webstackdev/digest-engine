@@ -81,15 +81,6 @@ The system is designed for graceful failure, not silent corruption. Unparseable 
 
 **Deployment:** Docker Compose (MVP) · Kubernetes-ready · 12-factor configuration
 
-## Implementation Plan
-
-| Phase | Focus | Key Deliverables |
-| ----- | ----- | ---------------- |
-| **1. MVP** | Content ingestion + basic surfacing | RSS and Reddit plugins · Entity model in Postgres · Qdrant for embeddings · Classification, relevance scoring, and summarization skills · Dashboard with upvote/downvote · Seed script for demo data |
-| **2. Authority** | Newsletter ingestion + authority signals | Resend email intake with LLM extraction · Subscription confirmation flow · Authority scoring from mention frequency · Bluesky plugin · Deduplication and entity extraction skills |
-| **3. Intelligence** | Expanded sources + trend analysis | Mastodon plugin · Trend velocity detection · Theme suggestions · Source diversity analysis · Original content idea generation |
-| **4. Polish** | Advanced features | LinkedIn integration · Automated entity discovery · Full multi-signal authority model · Newsletter draft generation |
-
 ## Project Documentation
 
 - [Developer Guide](docs/DEVELOPER_GUIDE.md) gives a fast "where to look first" map for new contributors.
