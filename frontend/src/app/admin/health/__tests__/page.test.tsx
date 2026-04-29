@@ -2,17 +2,24 @@ import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { IngestionRun, Project, SourceConfig } from "@/lib/types"
+import type {
+  IngestionRun,
+  Project,
+  SourceConfig,
+  TopicCentroidObservabilitySummary,
+} from "@/lib/types"
 
 const {
   getProjectIngestionRunsMock,
   getProjectsMock,
   getProjectSourceConfigsMock,
+  getProjectTopicCentroidSummaryMock,
   selectProjectMock,
 } = vi.hoisted(() => ({
   getProjectIngestionRunsMock: vi.fn(),
   getProjectsMock: vi.fn(),
   getProjectSourceConfigsMock: vi.fn(),
+  getProjectTopicCentroidSummaryMock: vi.fn(),
   selectProjectMock: vi.fn(),
 }))
 
@@ -52,6 +59,7 @@ vi.mock("@/lib/api", () => ({
   getProjectIngestionRuns: getProjectIngestionRunsMock,
   getProjects: getProjectsMock,
   getProjectSourceConfigs: getProjectSourceConfigsMock,
+  getProjectTopicCentroidSummary: getProjectTopicCentroidSummaryMock,
 }))
 
 vi.mock("@/lib/view-helpers", async () => {
@@ -104,6 +112,20 @@ function createIngestionRun(
     items_fetched: 12,
     items_ingested: 9,
     error_message: "",
+    ...overrides,
+  }
+}
+
+function createTopicCentroidSummary(
+  overrides: Partial<TopicCentroidObservabilitySummary> = {},
+): TopicCentroidObservabilitySummary {
+  return {
+    project: 1,
+    snapshot_count: 0,
+    active_snapshot_count: 0,
+    avg_drift_from_previous: null,
+    avg_drift_from_week_ago: null,
+    latest_snapshot: null,
     ...overrides,
   }
 }
@@ -173,11 +195,15 @@ describe("HealthPage", () => {
     getProjectsMock.mockReset()
     getProjectSourceConfigsMock.mockReset()
     getProjectIngestionRunsMock.mockReset()
+    getProjectTopicCentroidSummaryMock.mockReset()
     selectProjectMock.mockReset()
 
     getProjectsMock.mockResolvedValue([defaultProject])
     getProjectSourceConfigsMock.mockResolvedValue([])
     getProjectIngestionRunsMock.mockResolvedValue([])
+    getProjectTopicCentroidSummaryMock.mockResolvedValue(
+      createTopicCentroidSummary(),
+    )
     selectProjectMock.mockImplementation((projects: Project[]) => {
       return projects[0] ?? null
     })
@@ -198,16 +224,21 @@ describe("HealthPage", () => {
     ).toBeInTheDocument()
     expect(getProjectSourceConfigsMock).not.toHaveBeenCalled()
     expect(getProjectIngestionRunsMock).not.toHaveBeenCalled()
+    expect(getProjectTopicCentroidSummaryMock).not.toHaveBeenCalled()
   })
 
   it("renders an empty source-configurations row when the project has no sources", async () => {
     await renderHealthPage()
 
     expect(
+      screen.getByText("No centroid snapshots exist for this project yet."),
+    ).toBeInTheDocument()
+    expect(
       screen.getByText("No source configurations exist for this project yet."),
     ).toBeInTheDocument()
     expect(getProjectSourceConfigsMock).toHaveBeenCalledWith(1)
     expect(getProjectIngestionRunsMock).toHaveBeenCalledWith(1)
+    expect(getProjectTopicCentroidSummaryMock).toHaveBeenCalledWith(1)
   })
 
   it("shows a no-runs message for sources without ingestion history", async () => {
@@ -261,11 +292,42 @@ describe("HealthPage", () => {
     await renderHealthPage({ project: "3" })
 
     const badges = screen.getAllByTestId("status-badge")
+    const healthyBadge = badges.find((badge) => badge.textContent === "healthy")
+    const failingBadge = badges.find((badge) => badge.textContent === "failing")
 
-    expect(badges).toHaveLength(2)
-    expect(badges[0]).toHaveAttribute("data-tone", "positive")
-    expect(badges[0]).toHaveTextContent("healthy")
-    expect(badges[1]).toHaveAttribute("data-tone", "negative")
-    expect(badges[1]).toHaveTextContent("failing")
+    expect(healthyBadge).toHaveAttribute("data-tone", "positive")
+    expect(failingBadge).toHaveAttribute("data-tone", "negative")
+  })
+
+  it("renders centroid summary cards for the selected project", async () => {
+    getProjectTopicCentroidSummaryMock.mockResolvedValue(
+      createTopicCentroidSummary({
+        snapshot_count: 3,
+        active_snapshot_count: 2,
+        avg_drift_from_previous: 0.1,
+        avg_drift_from_week_ago: 0.2,
+        latest_snapshot: {
+          id: 9,
+          project: 1,
+          computed_at: "2026-04-28T08:00:00Z",
+          centroid_active: true,
+          feedback_count: 14,
+          upvote_count: 11,
+          downvote_count: 3,
+          drift_from_previous: 0.1,
+          drift_from_week_ago: 0.2,
+        },
+      }),
+    )
+
+    await renderHealthPage()
+
+    expect(
+      screen.getByText("Topic centroid observability"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("10.0%")).toBeInTheDocument()
+    expect(screen.getByText("20.0%")).toBeInTheDocument()
+    expect(screen.getByText("Feedback 14")).toBeInTheDocument()
+    expect(screen.getByText("active")).toBeInTheDocument()
   })
 })

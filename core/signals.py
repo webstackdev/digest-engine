@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from anymail.signals import inbound
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -23,7 +25,12 @@ def _address_to_string(address) -> str:
 
 
 @receiver(inbound)
-def handle_anymail_inbound(sender, event, esp_name, **kwargs):
+def handle_anymail_inbound(
+    sender: Any,
+    event: Any,
+    esp_name: str,
+    **kwargs: Any,
+) -> None:
     """Translate an inbound Anymail event into the internal intake payload.
 
     Args:

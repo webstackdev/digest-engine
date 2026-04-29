@@ -37,6 +37,27 @@ export type EntityAuthoritySnapshot = {
   final_score: number
 }
 
+export type TopicCentroidSnapshot = {
+  id: number
+  project: number
+  computed_at: string
+  centroid_active: boolean
+  feedback_count: number
+  upvote_count: number
+  downvote_count: number
+  drift_from_previous: number | null
+  drift_from_week_ago: number | null
+}
+
+export type TopicCentroidObservabilitySummary = {
+  project: number
+  snapshot_count: number
+  active_snapshot_count: number
+  avg_drift_from_previous: number | null
+  avg_drift_from_week_ago: number | null
+  latest_snapshot: TopicCentroidSnapshot | null
+}
+
 export type EntityMentionSummary = {
   id: number
   content_id: number

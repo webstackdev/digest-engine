@@ -26,6 +26,7 @@ from core.models import (
     SkillStatus,
     SourceConfig,
     SourcePluginName,
+    TopicCentroidSnapshot,
     UserFeedback,
 )
 
@@ -108,6 +109,16 @@ class ProjectScopedApiTests(APITestCase):
             project=self.owner_project,
             plugin_name=SourcePluginName.RSS,
             config={"feed_url": "https://example.com/feed.xml"},
+        )
+        self.owner_topic_centroid_snapshot = TopicCentroidSnapshot.objects.create(
+            project=self.owner_project,
+            centroid_active=True,
+            centroid_vector=[1.0, 0.0],
+            feedback_count=10,
+            upvote_count=8,
+            downvote_count=2,
+            drift_from_previous=0.1,
+            drift_from_week_ago=0.2,
         )
         self.client.force_authenticate(self.owner)
 
@@ -280,6 +291,33 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], second_snapshot.id)
         self.assertNotEqual(response.json()[0]["id"], first_snapshot.id)
+
+    def test_topic_centroid_summary_action_returns_latest_snapshot_and_averages(self):
+        latest_snapshot = TopicCentroidSnapshot.objects.create(
+            project=self.owner_project,
+            centroid_active=True,
+            centroid_vector=[0.0, 1.0],
+            feedback_count=14,
+            upvote_count=11,
+            downvote_count=3,
+            drift_from_previous=0.3,
+            drift_from_week_ago=0.4,
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-topic-centroid-snapshot-summary",
+                kwargs={"project_id": self.owner_project.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["project"], self.owner_project.id)
+        self.assertEqual(response.json()["snapshot_count"], 2)
+        self.assertEqual(response.json()["active_snapshot_count"], 2)
+        self.assertEqual(response.json()["latest_snapshot"]["id"], latest_snapshot.id)
+        self.assertAlmostEqual(response.json()["avg_drift_from_previous"], 0.2)
+        self.assertAlmostEqual(response.json()["avg_drift_from_week_ago"], 0.3)
 
     def test_content_detail_includes_duplicate_state(self):
         canonical = self.owner_content
@@ -661,6 +699,10 @@ class ProjectScopedApiTests(APITestCase):
                 kwargs={"project_id": self.owner_project.id},
             ),
             reverse(
+                "v1:project-topic-centroid-snapshot-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            reverse(
                 "v1:project-review-queue-list",
                 kwargs={"project_id": self.owner_project.id},
             ),
@@ -714,6 +756,13 @@ class ProjectScopedApiTests(APITestCase):
                 kwargs={
                     "project_id": self.owner_project.id,
                     "pk": self.owner_source_config.id,
+                },
+            ),
+            reverse(
+                "v1:project-topic-centroid-snapshot-detail",
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_topic_centroid_snapshot.id,
                 },
             ),
             reverse(

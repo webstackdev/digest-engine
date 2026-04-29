@@ -11,6 +11,7 @@ from core.api import (
     ReviewQueueViewSet,
     SkillResultViewSet,
     SourceConfigViewSet,
+    TopicCentroidSnapshotViewSet,
     UserFeedbackViewSet,
 )
 
@@ -39,6 +40,11 @@ project_router.register(
 )
 project_router.register(
     r"source-configs", SourceConfigViewSet, basename="project-source-config"
+)
+project_router.register(
+    r"topic-centroid-snapshots",
+    TopicCentroidSnapshotViewSet,
+    basename="project-topic-centroid-snapshot",
 )
 project_router.register(
     r"review-queue", ReviewQueueViewSet, basename="project-review-queue"

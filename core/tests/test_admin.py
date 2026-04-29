@@ -1,3 +1,4 @@
+from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import ANY
 
@@ -122,6 +123,75 @@ def test_topic_centroid_snapshot_admin_renders_drift_fields(source_admin_context
 
     assert admin_instance.display_drift_from_previous(snapshot) == "12.5%"
     assert admin_instance.display_drift_from_week_ago(snapshot) == "40.0%"
+
+
+def test_topic_centroid_snapshot_admin_changelist_view_builds_dashboard_stats(
+    source_admin_context, mocker
+):
+    second_project = Project.objects.create(
+        name="Second Admin Project",
+        group=source_admin_context.group,
+        topic_description="Analytics",
+    )
+    fixed_now = timezone.now()
+    recent_snapshot = TopicCentroidSnapshot.objects.create(
+        project=source_admin_context.project,
+        centroid_active=True,
+        centroid_vector=[1.0, 0.0],
+        feedback_count=18,
+        upvote_count=14,
+        downvote_count=4,
+        drift_from_previous=0.1,
+        drift_from_week_ago=0.2,
+    )
+    stale_snapshot = TopicCentroidSnapshot.objects.create(
+        project=second_project,
+        centroid_active=False,
+        centroid_vector=[],
+        feedback_count=2,
+        upvote_count=1,
+        downvote_count=1,
+    )
+    TopicCentroidSnapshot.objects.filter(pk=recent_snapshot.pk).update(
+        computed_at=fixed_now - timedelta(hours=6)
+    )
+    TopicCentroidSnapshot.objects.filter(pk=stale_snapshot.pk).update(
+        computed_at=fixed_now - timedelta(days=2)
+    )
+    admin_instance = TopicCentroidSnapshotAdmin(TopicCentroidSnapshot, AdminSite())
+    mocker.patch.object(
+        admin_instance,
+        "get_queryset",
+        return_value=TopicCentroidSnapshot.objects.all(),
+    )
+    super_changelist_view = mocker.patch(
+        "django.contrib.admin.options.ModelAdmin.changelist_view",
+        side_effect=lambda request, extra_context=None: extra_context,
+    )
+    mocker.patch("core.admin.timezone.now", return_value=fixed_now)
+
+    response = admin_instance.changelist_view(request=SimpleNamespace())
+
+    super_changelist_view.assert_called_once()
+    assert (
+        admin_instance.list_before_template
+        == "admin/topic_centroid_snapshot_changelist_widget.html"
+    )
+    assert response["dashboard_stats"][0]["value"] == "1 / 2"
+    assert response["dashboard_stats"][0]["color"] == "warning"
+    assert response["dashboard_stats"][1]["value"] == "10.0%"
+    assert response["dashboard_stats"][1]["color"] == "success"
+    assert response["dashboard_stats"][2]["value"] == "20.0%"
+    assert response["dashboard_stats"][2]["color"] == "warning"
+    assert response["dashboard_stats"][3]["value"] == "6h ago"
+    assert response["dashboard_stats"][3]["color"] == "success"
+    assert len(response["centroid_project_drilldowns"]) == 2
+    assert response["centroid_project_drilldowns"][0]["project_name"] == "Admin Project"
+    assert response["centroid_project_drilldowns"][0]["href"] == (
+        "/admin/core/topiccentroidsnapshot/?project__id__exact="
+        f"{source_admin_context.project.id}"
+    )
+    assert response["centroid_project_drilldowns"][0]["drift_from_previous"] == "10.0%"
 
 
 def test_test_source_connection_reports_failures(source_admin_context, mocker):

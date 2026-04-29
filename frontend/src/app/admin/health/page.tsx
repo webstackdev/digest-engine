@@ -4,8 +4,9 @@ import {
   getProjectIngestionRuns,
   getProjects,
   getProjectSourceConfigs,
+  getProjectTopicCentroidSummary,
 } from "@/lib/api"
-import type { HealthStatus } from "@/lib/types"
+import type { HealthStatus, TopicCentroidObservabilitySummary } from "@/lib/types"
 import { formatDate, healthTone, selectProject } from "@/lib/view-helpers"
 
 type HealthPageProps = {
@@ -45,6 +46,40 @@ export function deriveSourceStatus(
 }
 
 /**
+ * Map centroid summary state onto the shared health badge states.
+ *
+ * Projects with no centroid snapshots are idle, inactive latest snapshots are
+ * degraded, and active latest snapshots are healthy.
+ *
+ * @param summary - Project-level centroid observability payload.
+ * @returns The badge state for the centroid section.
+ */
+export function deriveCentroidStatus(
+  summary: TopicCentroidObservabilitySummary,
+): HealthStatus {
+  if (!summary.latest_snapshot) {
+    return "idle"
+  }
+  if (!summary.latest_snapshot.centroid_active) {
+    return "degraded"
+  }
+  return "healthy"
+}
+
+/**
+ * Format a centroid drift value as a one-decimal percentage.
+ *
+ * @param value - Normalized cosine-distance drift or `null` when unavailable.
+ * @returns Percentage text or `n/a`.
+ */
+export function formatDriftPercent(value: number | null) {
+  if (value === null) {
+    return "n/a"
+  }
+  return `${(value * 100).toFixed(1)}%`
+}
+
+/**
  * Render the source-by-source ingestion health view for the selected project.
  *
  * The page resolves the active project from the URL search params, loads source
@@ -76,9 +111,10 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
     )
   }
 
-  const [sourceConfigs, ingestionRuns] = await Promise.all([
+  const [sourceConfigs, ingestionRuns, centroidSummary] = await Promise.all([
     getProjectSourceConfigs(selectedProject.id),
     getProjectIngestionRuns(selectedProject.id),
+    getProjectTopicCentroidSummary(selectedProject.id),
   ])
 
   const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
@@ -95,6 +131,82 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
       projects={projects}
       selectedProjectId={selectedProject.id}
     >
+      <section className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">
+              Topic centroid observability
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              The latest centroid state for this project, plus average drift across
+              persisted snapshot history.
+            </p>
+          </div>
+          <StatusBadge tone={healthTone(deriveCentroidStatus(centroidSummary))}>
+            {centroidSummary.latest_snapshot
+              ? centroidSummary.latest_snapshot.centroid_active
+                ? "active"
+                : "inactive"
+              : "idle"}
+          </StatusBadge>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-panel bg-ink/6 px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Centroid state
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-ink">
+              {centroidSummary.latest_snapshot
+                ? centroidSummary.latest_snapshot.centroid_active
+                  ? "Active"
+                  : "Inactive"
+                : "Not computed"}
+            </p>
+          </div>
+          <div className="rounded-panel bg-ink/6 px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Avg drift vs previous
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-ink">
+              {formatDriftPercent(centroidSummary.avg_drift_from_previous)}
+            </p>
+          </div>
+          <div className="rounded-panel bg-ink/6 px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Avg drift vs 7d
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-ink">
+              {formatDriftPercent(centroidSummary.avg_drift_from_week_ago)}
+            </p>
+          </div>
+          <div className="rounded-panel bg-ink/6 px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Latest snapshot
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-ink">
+              {formatDate(centroidSummary.latest_snapshot?.computed_at ?? null)}
+            </p>
+          </div>
+        </div>
+
+        {centroidSummary.latest_snapshot ? (
+          <div className="mt-4 flex flex-wrap gap-3 text-sm text-ink">
+            <span>{centroidSummary.snapshot_count} snapshots</span>
+            <span>{centroidSummary.active_snapshot_count} active snapshots</span>
+            <span>
+              Feedback {centroidSummary.latest_snapshot.feedback_count}
+            </span>
+            <span>Upvotes {centroidSummary.latest_snapshot.upvote_count}</span>
+            <span>Downvotes {centroidSummary.latest_snapshot.downvote_count}</span>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+            No centroid snapshots exist for this project yet.
+          </div>
+        )}
+      </section>
+
       <section className="overflow-hidden rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
