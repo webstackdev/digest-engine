@@ -502,7 +502,8 @@ class ProjectScopedApiTests(APITestCase):
             self.owner_project.id,
         )
 
-    def test_feedback_create_assigns_current_user(self):
+    @patch("core.api.queue_topic_centroid_recompute")
+    def test_feedback_create_assigns_current_user(self, queue_centroid_mock):
         response = self.client.post(
             reverse(
                 "v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}
@@ -518,6 +519,7 @@ class ProjectScopedApiTests(APITestCase):
         feedback = UserFeedback.objects.get()
         self.assertEqual(feedback.user, self.owner)
         self.assertEqual(feedback.feedback_type, FeedbackType.UPVOTE)
+        queue_centroid_mock.assert_called_once_with(self.owner_project.id)
 
     def test_feedback_rejects_cross_project_content(self):
         response = self.client.post(

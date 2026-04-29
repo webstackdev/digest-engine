@@ -7,12 +7,19 @@ from datetime import timedelta
 
 from celery import shared_task
 from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
 from core.deduplication import canonicalize_url
-from core.embeddings import upsert_content_embedding
+from core.embeddings import (
+    build_content_embedding_text,
+    delete_topic_centroid,
+    embed_text,
+    upsert_content_embedding,
+    upsert_topic_centroid,
+)
 from core.models import (
     Content,
     Entity,
@@ -47,6 +54,11 @@ AUTHORITY_ROLE_SIGNALS = (
     EntityMentionRole.AUTHOR,
     EntityMentionRole.SUBJECT,
 )
+TOPIC_CENTROID_LOOKBACK_DAYS = 90
+TOPIC_CENTROID_MIN_UPVOTES = 10
+TOPIC_CENTROID_DOWNVOTE_WEIGHT = 0.25
+TOPIC_CENTROID_DEBOUNCE_SECONDS = 60 * 5
+TOPIC_CENTROID_DECAY_TAU_DAYS = 45
 
 
 @shared_task(name="core.tasks.run_ingestion")
@@ -123,6 +135,19 @@ def run_all_authority_recomputations():
             recompute_authority_scores(project_id)
         else:
             recompute_authority_scores.delay(project_id)
+    return len(project_ids)
+
+
+@shared_task(name="core.tasks.run_all_topic_centroid_recomputations")
+def run_all_topic_centroid_recomputations():
+    """Queue topic-centroid recomputation for every project."""
+
+    project_ids = list(Project.objects.values_list("id", flat=True))
+    for project_id in project_ids:
+        if settings.CELERY_TASK_ALWAYS_EAGER:
+            recompute_topic_centroid(project_id)
+        else:
+            recompute_topic_centroid.delay(project_id)
     return len(project_ids)
 
 
@@ -274,6 +299,104 @@ def recompute_authority_scores(project_id: int):
     return {"project_id": project_id, "entities_updated": len(entity_updates)}
 
 
+@shared_task(name="core.tasks.recompute_topic_centroid")
+def recompute_topic_centroid(project_id: int):
+    """Rebuild the project's feedback centroid from recent editorial signals."""
+
+    now = timezone.now()
+    window_start = now - timedelta(days=TOPIC_CENTROID_LOOKBACK_DAYS)
+    feedback_rows = list(
+        UserFeedback.objects.filter(project_id=project_id, created_at__gte=window_start)
+        .select_related("content")
+        .order_by("created_at")
+    )
+    upvote_count = sum(
+        1 for row in feedback_rows if row.feedback_type == FeedbackType.UPVOTE
+    )
+    downvote_count = sum(
+        1 for row in feedback_rows if row.feedback_type == FeedbackType.DOWNVOTE
+    )
+
+    try:
+        if upvote_count < TOPIC_CENTROID_MIN_UPVOTES:
+            delete_topic_centroid(project_id)
+            return {
+                "project_id": project_id,
+                "feedback_count": len(feedback_rows),
+                "upvote_count": upvote_count,
+                "downvote_count": downvote_count,
+                "centroid_active": False,
+            }
+
+        vector_cache: dict[int, list[float]] = {}
+        upvote_vectors: list[tuple[list[float], float]] = []
+        downvote_vectors: list[tuple[list[float], float]] = []
+
+        for feedback in feedback_rows:
+            vector = vector_cache.get(feedback.content_id)
+            if vector is None:
+                vector = embed_text(build_content_embedding_text(feedback.content))
+                vector_cache[feedback.content_id] = vector
+            weight = _feedback_decay_weight(feedback.created_at, now)
+            if feedback.feedback_type == FeedbackType.UPVOTE:
+                upvote_vectors.append((vector, weight))
+            else:
+                downvote_vectors.append((vector, weight))
+
+        upvote_mean, upvote_weight = _weighted_mean_vector(upvote_vectors)
+        if not upvote_mean or upvote_weight <= 0:
+            delete_topic_centroid(project_id)
+            return {
+                "project_id": project_id,
+                "feedback_count": len(feedback_rows),
+                "upvote_count": upvote_count,
+                "downvote_count": downvote_count,
+                "centroid_active": False,
+            }
+
+        downvote_mean, downvote_weight = _weighted_mean_vector(downvote_vectors)
+        downvote_scale = 0.0
+        if downvote_mean and downvote_weight > 0:
+            downvote_scale = TOPIC_CENTROID_DOWNVOTE_WEIGHT * min(
+                1.0, upvote_weight / downvote_weight
+            )
+
+        centroid_vector = [
+            upvote_value - downvote_scale * downvote_value
+            for upvote_value, downvote_value in zip(
+                upvote_mean,
+                downvote_mean or [0.0] * len(upvote_mean),
+            )
+        ]
+        normalized_centroid = _normalize_vector(centroid_vector)
+        if not normalized_centroid:
+            delete_topic_centroid(project_id)
+            return {
+                "project_id": project_id,
+                "feedback_count": len(feedback_rows),
+                "upvote_count": upvote_count,
+                "downvote_count": downvote_count,
+                "centroid_active": False,
+            }
+
+        upsert_topic_centroid(
+            project_id,
+            normalized_centroid,
+            upvote_count=upvote_count,
+            downvote_count=downvote_count,
+            feedback_count=len(feedback_rows),
+        )
+        return {
+            "project_id": project_id,
+            "feedback_count": len(feedback_rows),
+            "upvote_count": upvote_count,
+            "downvote_count": downvote_count,
+            "centroid_active": True,
+        }
+    finally:
+        cache.delete(_topic_centroid_debounce_key(project_id))
+
+
 @shared_task(name="core.tasks.run_relevance_scoring_skill", ignore_result=True)
 def run_relevance_scoring_skill(skill_result_id: int):
     """Execute a pending ad hoc relevance skill result in the background."""
@@ -319,6 +442,23 @@ def queue_content_skill(content: Content, skill_name: str):
     return skill_result
 
 
+def queue_topic_centroid_recompute(project_id: int) -> bool:
+    """Debounce and queue topic-centroid recomputation for one project."""
+
+    if not cache.add(
+        _topic_centroid_debounce_key(project_id),
+        timezone.now().isoformat(),
+        timeout=TOPIC_CENTROID_DEBOUNCE_SECONDS,
+    ):
+        return False
+
+    if settings.CELERY_TASK_ALWAYS_EAGER:
+        recompute_topic_centroid(project_id)
+    else:
+        recompute_topic_centroid.delay(project_id)
+    return True
+
+
 def _normalize_log_scaled_component(value: int, max_value: int) -> float:
     """Normalize a non-negative count into the authority component range [0.5, 1]."""
 
@@ -333,6 +473,47 @@ def _normalize_signed_component(value: float, max_abs_value: float) -> float:
     if max_abs_value <= 0:
         return 0.5
     return _clamp_unit_interval(0.5 + 0.5 * (value / max_abs_value))
+
+
+def _feedback_decay_weight(created_at, now) -> float:
+    """Return the EMA-style decay weight for one feedback event."""
+
+    age_days = max(0.0, (now - created_at).total_seconds() / 86400)
+    return math.exp(-age_days / TOPIC_CENTROID_DECAY_TAU_DAYS)
+
+
+def _weighted_mean_vector(
+    weighted_vectors: list[tuple[list[float], float]],
+) -> tuple[list[float], float]:
+    """Compute the weighted mean vector and total contributing weight."""
+
+    if not weighted_vectors:
+        return [], 0.0
+    dimension = len(weighted_vectors[0][0])
+    totals = [0.0] * dimension
+    total_weight = 0.0
+    for vector, weight in weighted_vectors:
+        total_weight += weight
+        for index, value in enumerate(vector):
+            totals[index] += float(value) * weight
+    if total_weight <= 0:
+        return [], 0.0
+    return ([value / total_weight for value in totals], total_weight)
+
+
+def _normalize_vector(vector: list[float]) -> list[float]:
+    """Normalize a dense vector to unit length."""
+
+    magnitude = math.sqrt(sum(value * value for value in vector))
+    if magnitude <= 0:
+        return []
+    return [float(value) / magnitude for value in vector]
+
+
+def _topic_centroid_debounce_key(project_id: int) -> str:
+    """Return the cache key used to debounce centroid recomputations."""
+
+    return f"topic-centroid-recompute:{project_id}"
 
 
 def _get_decayed_prior_score(

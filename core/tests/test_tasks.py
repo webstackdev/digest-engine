@@ -22,11 +22,15 @@ from core.models import (
 )
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
 from core.tasks import (
+    TOPIC_CENTROID_MIN_UPVOTES,
     _ingest_source_config,
     queue_content_skill,
+    queue_topic_centroid_recompute,
     recompute_authority_scores,
+    recompute_topic_centroid,
     run_all_authority_recomputations,
     run_all_ingestions,
+    run_all_topic_centroid_recomputations,
     run_ingestion,
     run_relevance_scoring_skill,
     run_summarization_skill,
@@ -360,6 +364,47 @@ def test_run_all_authority_recomputations_executes_inline_when_eager(
     delay_mock.assert_not_called()
 
 
+def test_run_all_topic_centroid_recomputations_enqueues_all_projects(
+    source_plugin_context, mocker
+):
+    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+    other_group = Group.objects.create(name="second-centroid-team")
+    other_project = Project.objects.create(
+        name="Other Centroid Project",
+        group=other_group,
+        topic_description="Security",
+    )
+
+    enqueued_count = run_all_topic_centroid_recomputations()
+
+    assert enqueued_count == 2
+    delay_mock.assert_any_call(source_plugin_context.project.id)
+    delay_mock.assert_any_call(other_project.id)
+    assert delay_mock.call_count == 2
+
+
+def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
+    source_plugin_context, settings, mocker
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    recompute_mock = mocker.patch("core.tasks.recompute_topic_centroid")
+    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+    other_group = Group.objects.create(name="inline-centroid-team")
+    other_project = Project.objects.create(
+        name="Inline Centroid Project",
+        group=other_group,
+        topic_description="Platform",
+    )
+
+    enqueued_count = run_all_topic_centroid_recomputations()
+
+    assert enqueued_count == 2
+    recompute_mock.assert_any_call(source_plugin_context.project.id)
+    recompute_mock.assert_any_call(other_project.id)
+    assert recompute_mock.call_count == 2
+    delay_mock.assert_not_called()
+
+
 def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
     source_plugin_context,
 ):
@@ -441,6 +486,105 @@ def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
     assert primary_snapshot.decayed_prior == pytest.approx(
         config.authority_decay_rate * 0.5
     )
+
+
+def test_recompute_topic_centroid_upserts_weighted_normalized_centroid(
+    source_plugin_context, mocker
+):
+    project = source_plugin_context.project
+    upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
+    delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
+    vector_lookup = {
+        **{
+            f"Upvote {index}": [1.0, 0.0] for index in range(TOPIC_CENTROID_MIN_UPVOTES)
+        },
+        "Downvote": [0.0, 1.0],
+    }
+    mocker.patch(
+        "core.tasks.embed_text",
+        side_effect=lambda text: vector_lookup[text.split("\n\n", 1)[0]],
+    )
+
+    upvote_contents = []
+    for index in range(TOPIC_CENTROID_MIN_UPVOTES):
+        upvote_contents.append(
+            Content.objects.create(
+                project=project,
+                entity=source_plugin_context.entity,
+                url=f"https://example.com/upvote-{index}",
+                title=f"Upvote {index}",
+                author="Author",
+                source_plugin=SourcePluginName.RSS,
+                published_date="2026-04-20T12:00:00Z",
+                content_text="Manual content body",
+            )
+        )
+    downvote_content = Content.objects.create(
+        project=project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/downvote",
+        title="Downvote",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-20T12:00:00Z",
+        content_text="Manual content body",
+    )
+    for content in upvote_contents:
+        UserFeedback.objects.create(
+            project=project,
+            content=content,
+            user=source_plugin_context.user,
+            feedback_type=FeedbackType.UPVOTE,
+        )
+    second_user = source_plugin_context.user.__class__.objects.create_user(
+        username="downvote-owner", password="testpass123"
+    )
+    UserFeedback.objects.create(
+        project=project,
+        content=downvote_content,
+        user=second_user,
+        feedback_type=FeedbackType.DOWNVOTE,
+    )
+
+    result = recompute_topic_centroid(project.id)
+
+    assert result["centroid_active"] is True
+    delete_mock.assert_not_called()
+    upsert_mock.assert_called_once()
+    centroid_vector = upsert_mock.call_args.args[1]
+    assert centroid_vector[0] > 0.9
+    assert centroid_vector[1] < 0.0
+
+
+def test_recompute_topic_centroid_disables_centroid_below_minimum_upvotes(
+    source_plugin_context, mocker
+):
+    project = source_plugin_context.project
+    upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
+    delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
+    for index in range(TOPIC_CENTROID_MIN_UPVOTES - 1):
+        content = Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url=f"https://example.com/too-few-{index}",
+            title=f"Too Few {index}",
+            author="Author",
+            source_plugin=SourcePluginName.RSS,
+            published_date="2026-04-20T12:00:00Z",
+            content_text="Manual content body",
+        )
+        UserFeedback.objects.create(
+            project=project,
+            content=content,
+            user=source_plugin_context.user,
+            feedback_type=FeedbackType.UPVOTE,
+        )
+
+    result = recompute_topic_centroid(project.id)
+
+    assert result["centroid_active"] is False
+    delete_mock.assert_called_once_with(project.id)
+    upsert_mock.assert_not_called()
 
 
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
@@ -527,6 +671,31 @@ def test_queue_content_skill_executes_summary_inline_when_eager(
 
     assert skill_result.status == SkillStatus.PENDING
     task_mock.assert_called_once_with(skill_result.id)
+    delay_mock.assert_not_called()
+
+
+def test_queue_topic_centroid_recompute_enqueues_background_task(
+    source_plugin_context, mocker
+):
+    cache_add_mock = mocker.patch("core.tasks.cache.add", return_value=True)
+    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+
+    queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
+
+    assert queued is True
+    cache_add_mock.assert_called_once()
+    delay_mock.assert_called_once_with(source_plugin_context.project.id)
+
+
+def test_queue_topic_centroid_recompute_skips_duplicate_queue_attempts(
+    source_plugin_context, mocker
+):
+    mocker.patch("core.tasks.cache.add", return_value=False)
+    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+
+    queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
+
+    assert queued is False
     delay_mock.assert_not_called()
 
 
