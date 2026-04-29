@@ -55,7 +55,13 @@ def normalize_bluesky_pds_url(pds_url: str) -> str:
     if path.endswith("/xrpc"):
         path = path[: -len("/xrpc")]
     return urlunsplit(
-        (parsed_url.scheme, parsed_url.netloc, path, parsed_url.query, parsed_url.fragment)
+        (
+            parsed_url.scheme,
+            parsed_url.netloc,
+            path,
+            parsed_url.query,
+            parsed_url.fragment,
+        )
     ).rstrip("/")
 
 
@@ -242,9 +248,11 @@ class BlueskyCredentials(models.Model):
         if not app_password:
             self.app_password_encrypted = ""
             return
-        self.app_password_encrypted = _bluesky_credentials_fernet().encrypt(
-            app_password.encode("utf-8")
-        ).decode("utf-8")
+        self.app_password_encrypted = (
+            _bluesky_credentials_fernet()
+            .encrypt(app_password.encode("utf-8"))
+            .decode("utf-8")
+        )
 
     def set_stored_credential(self, credential_value: str) -> None:
         """Encrypt and store the given Bluesky credential value."""
@@ -256,9 +264,11 @@ class BlueskyCredentials(models.Model):
 
         if not self.app_password_encrypted:
             return ""
-        return _bluesky_credentials_fernet().decrypt(
-            self.app_password_encrypted.encode("utf-8")
-        ).decode("utf-8")
+        return (
+            _bluesky_credentials_fernet()
+            .decrypt(self.app_password_encrypted.encode("utf-8"))
+            .decode("utf-8")
+        )
 
     def get_stored_credential(self) -> str:
         """Decrypt and return the stored Bluesky credential value."""
@@ -329,6 +339,37 @@ class Entity(models.Model):
         return self.name
 
 
+class EntityAuthoritySnapshot(models.Model):
+    """Captures one authority-score recomputation for a tracked entity.
+
+    Snapshot rows make the score explainable over time by storing the normalized
+    component values and final score produced by the recomputation task.
+    """
+
+    entity = models.ForeignKey(
+        Entity, on_delete=models.CASCADE, related_name="authority_snapshots"
+    )
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="entity_authority_snapshots"
+    )
+    computed_at = models.DateTimeField(auto_now_add=True)
+    mention_component = models.FloatField()
+    feedback_component = models.FloatField()
+    duplicate_component = models.FloatField()
+    decayed_prior = models.FloatField()
+    final_score = models.FloatField()
+
+    class Meta:
+        ordering = ["-computed_at"]
+        indexes = [
+            models.Index(fields=["entity", "-computed_at"]),
+            models.Index(fields=["project", "-computed_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Authority snapshot for {self.entity.name}"
+
+
 class Content(models.Model):
     """Stores an ingested content item that may appear in a newsletter.
 
@@ -358,6 +399,7 @@ class Content(models.Model):
     ingested_at = models.DateTimeField(auto_now_add=True)
     content_text = models.TextField()
     relevance_score = models.FloatField(null=True, blank=True)
+    authority_adjusted_score = models.FloatField(null=True, blank=True)
     embedding_id = models.CharField(max_length=64, blank=True)
     source_metadata = models.JSONField(default=dict, blank=True)
     duplicate_of = models.ForeignKey(
@@ -376,6 +418,7 @@ class Content(models.Model):
         indexes = [
             models.Index(fields=["project", "-published_date"]),
             models.Index(fields=["project", "-relevance_score"]),
+            models.Index(fields=["project", "-authority_adjusted_score"]),
             models.Index(fields=["project", "is_reference"]),
             models.Index(fields=["url"]),
         ]

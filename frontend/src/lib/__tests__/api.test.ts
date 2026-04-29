@@ -248,4 +248,32 @@ describe("api helpers", () => {
 
     expect(skillResults).toEqual([{ id: 1, content: 9, skill_name: "summarization" }])
   })
+
+  it("requests project entities ordered by authority score descending", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { getProjectEntities } = await import("@/lib/api")
+    await getProjectEntities(4)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/projects/4/entities/?ordering=-authority_score",
+      expect.anything(),
+    )
+  })
+
+  it("requests authority history with the requested snapshot limit", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { getProjectEntityAuthorityHistory } = await import("@/lib/api")
+    await getProjectEntityAuthorityHistory(4, 9, 8)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/projects/4/entities/9/authority_history/?limit=8",
+      expect.anything(),
+    )
+  })
 })

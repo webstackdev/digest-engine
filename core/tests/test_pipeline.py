@@ -9,6 +9,7 @@ from core.models import (
     Entity,
     EntityCandidate,
     EntityMention,
+    EntityMentionRole,
     Project,
     ReviewQueue,
     ReviewReason,
@@ -70,6 +71,13 @@ def pipeline_context(django_user_model):
 def test_process_content_runs_full_pipeline_for_relevant_content(
     pipeline_context, mocker
 ):
+    pipeline_context.content.entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Platform Weekly",
+        type="organization",
+        authority_score=0.9,
+    )
+    pipeline_context.content.save(update_fields=["entity"])
     mocker.patch(
         "core.pipeline.run_content_classification",
         return_value={
@@ -91,6 +99,18 @@ def test_process_content_runs_full_pipeline_for_relevant_content(
         },
     )
     mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": pipeline_context.content.entity_id,
+            "confidence": 0.0,
+            "explanation": "No extracted entity mentions.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
         "core.pipeline.run_summarization",
         return_value={
             "summary": "A concise summary for the editor.",
@@ -105,6 +125,7 @@ def test_process_content_runs_full_pipeline_for_relevant_content(
     assert result["status"] == "completed"
     assert pipeline_context.content.content_type == "release_notes"
     assert pipeline_context.content.relevance_score == pytest.approx(0.92)
+    assert pipeline_context.content.authority_adjusted_score == pytest.approx(1.0)
     assert pipeline_context.content.is_active is True
     assert (
         SkillResult.objects.filter(
@@ -127,6 +148,86 @@ def test_process_content_runs_full_pipeline_for_relevant_content(
     assert ReviewQueue.objects.filter(content=pipeline_context.content).count() == 0
 
 
+def test_process_content_uses_top_entity_mention_for_authority_adjustment(
+    pipeline_context, mocker
+):
+    mentioned_entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Mentioned Vendor",
+        type="vendor",
+        authority_score=0.8,
+    )
+    quoted_entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Quoted Source",
+        type="individual",
+        authority_score=0.95,
+    )
+    EntityMention.objects.create(
+        project=pipeline_context.project,
+        content=pipeline_context.content,
+        entity=mentioned_entity,
+        role=EntityMentionRole.MENTIONED,
+        sentiment="neutral",
+        span="Mentioned Vendor",
+        confidence=0.99,
+    )
+    EntityMention.objects.create(
+        project=pipeline_context.project,
+        content=pipeline_context.content,
+        entity=quoted_entity,
+        role=EntityMentionRole.QUOTED,
+        sentiment="neutral",
+        span="Quoted Source",
+        confidence=0.50,
+    )
+    mocker.patch(
+        "core.pipeline.run_content_classification",
+        return_value={
+            "content_type": "release_notes",
+            "confidence": 0.9,
+            "explanation": "High confidence classification.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_relevance_scoring",
+        return_value={
+            "relevance_score": 0.80,
+            "explanation": "Good baseline relevance.",
+            "used_llm": False,
+            "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": None,
+            "confidence": 0.0,
+            "explanation": "Existing mentions are already attached to the content.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_summarization",
+        return_value={
+            "summary": "A concise summary for the editor.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+
+    process_content(pipeline_context.content.id)
+
+    pipeline_context.content.refresh_from_db()
+    assert pipeline_context.content.authority_adjusted_score == pytest.approx(0.872)
+
+
 def test_process_content_queues_borderline_items_for_review(pipeline_context, mocker):
     mocker.patch(
         "core.pipeline.run_content_classification",
@@ -145,6 +246,18 @@ def test_process_content_queues_borderline_items_for_review(pipeline_context, mo
             "explanation": "Borderline similarity to the project baseline.",
             "used_llm": False,
             "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": None,
+            "confidence": 0.0,
+            "explanation": "No extracted entity mentions.",
+            "model_used": "heuristic",
             "latency_ms": 0,
         },
     )
@@ -180,6 +293,18 @@ def test_process_content_archives_irrelevant_items(pipeline_context, mocker):
             "explanation": "Far from the project reference corpus.",
             "used_llm": False,
             "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": None,
+            "confidence": 0.0,
+            "explanation": "No extracted entity mentions.",
+            "model_used": "heuristic",
             "latency_ms": 0,
         },
     )
@@ -219,6 +344,18 @@ def test_process_content_adds_review_item_for_low_confidence_classification(
             "explanation": "Close to the project baseline.",
             "used_llm": False,
             "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [],
+            "candidate_entities": [],
+            "primary_entity_id": None,
+            "confidence": 0.0,
+            "explanation": "No extracted entity mentions.",
+            "model_used": "heuristic",
             "latency_ms": 0,
         },
     )
@@ -278,9 +415,12 @@ def test_process_content_marks_exact_duplicates_and_skips_downstream_skills(
     assert classify_mock.call_count == 0
     assert relevance_mock.call_count == 0
     assert summarize_mock.call_count == 0
-    assert SkillResult.objects.filter(
-        content=duplicate, skill_name=DEDUPLICATION_SKILL_NAME
-    ).count() == 1
+    assert (
+        SkillResult.objects.filter(
+            content=duplicate, skill_name=DEDUPLICATION_SKILL_NAME
+        ).count()
+        == 1
+    )
 
 
 def test_process_content_marks_semantic_duplicates_with_high_similarity(
@@ -337,7 +477,11 @@ def test_run_deduplication_uses_llm_tiebreak_for_borderline_similarity(
     )
     mocker.patch(
         "core.pipeline.search_similar_content",
-        return_value=[SimpleNamespace(score=0.90, payload={"content_id": pipeline_context.content.id})],
+        return_value=[
+            SimpleNamespace(
+                score=0.90, payload={"content_id": pipeline_context.content.id}
+            )
+        ],
     )
     openrouter_mock = mocker.patch(
         "core.pipeline.openrouter_chat_json",
@@ -598,6 +742,56 @@ def test_execute_ad_hoc_relevance_creates_review_item_for_borderline_scores(
     assert review_item.confidence == pytest.approx(0.55)
 
 
+def test_execute_ad_hoc_relevance_uses_adjusted_score_for_routing(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    pipeline_context.content.entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Authority Anchor",
+        type="organization",
+        authority_score=1.0,
+    )
+    pipeline_context.content.save(update_fields=["entity"])
+    base_score = min(
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD - 0.01,
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD / 1.15 + 0.005,
+    )
+    mocker.patch(
+        "core.pipeline.run_relevance_scoring",
+        return_value={
+            "relevance_score": base_score,
+            "explanation": "Base relevance is borderline until authority is applied.",
+            "used_llm": False,
+            "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+
+    result = execute_ad_hoc_skill(pipeline_context.content, RELEVANCE_SKILL_NAME)
+
+    pipeline_context.content.refresh_from_db()
+    adjusted_score = pipeline_context.content.authority_adjusted_score
+
+    assert result.status == SkillStatus.COMPLETED
+    assert pipeline_context.content.relevance_score == pytest.approx(base_score)
+    assert adjusted_score is not None
+    assert adjusted_score > settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD
+    assert result.confidence == pytest.approx(adjusted_score)
+    assert result.result_data["relevance_score"] == pytest.approx(base_score)
+    assert result.result_data["authority_adjusted_score"] == pytest.approx(
+        adjusted_score
+    )
+    assert result.result_data["final_relevance_score"] == pytest.approx(adjusted_score)
+    assert pipeline_context.content.is_active is True
+    assert not ReviewQueue.objects.filter(
+        content=pipeline_context.content,
+        reason=ReviewReason.BORDERLINE_RELEVANCE,
+        resolved=False,
+    ).exists()
+
+
 def test_execute_ad_hoc_summarization_returns_failed_result_when_relevance_is_too_low(
     pipeline_context,
 ):
@@ -608,6 +802,40 @@ def test_execute_ad_hoc_summarization_returns_failed_result_when_relevance_is_to
 
     assert result.status == SkillStatus.FAILED
     assert "Summarization requires relevance_score" in result.error_message
+
+
+def test_execute_ad_hoc_summarization_allows_adjusted_score_to_pass_gate(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    pipeline_context.content.relevance_score = (
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD - 0.15
+    )
+    pipeline_context.content.authority_adjusted_score = (
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD + 0.05
+    )
+    pipeline_context.content.save(
+        update_fields=["relevance_score", "authority_adjusted_score"]
+    )
+    summarization_mock = mocker.patch(
+        "core.pipeline.run_summarization",
+        return_value={
+            "summary": "Authority-adjusted content is now eligible.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+
+    result = execute_ad_hoc_skill(pipeline_context.content, SUMMARIZATION_SKILL_NAME)
+
+    assert result.status == SkillStatus.COMPLETED
+    assert result.result_data == {
+        "summary": "Authority-adjusted content is now eligible.",
+        "model_used": "heuristic",
+        "latency_ms": 0,
+    }
+    summarization_mock.assert_called_once_with(pipeline_context.content)
 
 
 def test_execute_ad_hoc_related_content_returns_failed_result_on_search_error(
@@ -670,6 +898,103 @@ def test_execute_background_skill_result_completes_summary_when_requirements_are
         "model_used": "heuristic",
         "latency_ms": 0,
     }
+
+
+def test_execute_background_skill_result_uses_adjusted_score_for_relevance_confidence(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    pipeline_context.content.entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Background Authority Anchor",
+        type="organization",
+        authority_score=1.0,
+    )
+    pipeline_context.content.save(update_fields=["entity"])
+    base_score = min(
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD - 0.01,
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD / 1.15 + 0.005,
+    )
+    pending_result = create_pending_skill_result(
+        pipeline_context.content, RELEVANCE_SKILL_NAME
+    )
+    mocker.patch(
+        "core.pipeline.run_relevance_scoring",
+        return_value={
+            "relevance_score": base_score,
+            "explanation": "Background relevance is borderline until authority is applied.",
+            "used_llm": False,
+            "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+
+    result = execute_background_skill_result(pending_result.id, RELEVANCE_SKILL_NAME)
+
+    pending_result.refresh_from_db()
+    pipeline_context.content.refresh_from_db()
+    adjusted_score = pipeline_context.content.authority_adjusted_score
+
+    assert result.status == SkillStatus.COMPLETED
+    assert pending_result.status == SkillStatus.COMPLETED
+    assert pipeline_context.content.relevance_score == pytest.approx(base_score)
+    assert adjusted_score is not None
+    assert adjusted_score > settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD
+    assert pending_result.confidence == pytest.approx(adjusted_score)
+    assert pending_result.result_data["relevance_score"] == pytest.approx(base_score)
+    assert pending_result.result_data["authority_adjusted_score"] == pytest.approx(
+        adjusted_score
+    )
+    assert pending_result.result_data["final_relevance_score"] == pytest.approx(
+        adjusted_score
+    )
+    assert not ReviewQueue.objects.filter(
+        content=pipeline_context.content,
+        reason=ReviewReason.BORDERLINE_RELEVANCE,
+        resolved=False,
+    ).exists()
+
+
+def test_execute_background_skill_result_completes_summary_when_adjusted_score_passes_gate(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    pipeline_context.content.relevance_score = (
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD - 0.15
+    )
+    pipeline_context.content.authority_adjusted_score = (
+        settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD + 0.05
+    )
+    pipeline_context.content.save(
+        update_fields=["relevance_score", "authority_adjusted_score"]
+    )
+    pending_result = create_pending_skill_result(
+        pipeline_context.content, SUMMARIZATION_SKILL_NAME
+    )
+    summarization_mock = mocker.patch(
+        "core.pipeline.run_summarization",
+        return_value={
+            "summary": "Background summary output.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+
+    result = execute_background_skill_result(
+        pending_result.id, SUMMARIZATION_SKILL_NAME
+    )
+
+    pending_result.refresh_from_db()
+    assert result.status == SkillStatus.COMPLETED
+    assert pending_result.status == SkillStatus.COMPLETED
+    assert pending_result.result_data == {
+        "summary": "Background summary output.",
+        "model_used": "heuristic",
+        "latency_ms": 0,
+    }
+    summarization_mock.assert_called_once_with(pipeline_context.content)
 
 
 def test_execute_background_skill_result_marks_relevance_failed_when_execution_errors(

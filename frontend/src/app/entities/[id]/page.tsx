@@ -5,11 +5,13 @@ import { StatusBadge } from "@/components/status-badge"
 import {
   getProjectEntities,
   getProjectEntity,
+  getProjectEntityAuthorityHistory,
   getProjectEntityMentions,
   getProjects,
 } from "@/lib/api"
 import {
   formatDate,
+  formatPercentScore,
   getErrorMessage,
   getSuccessMessage,
   selectProject,
@@ -55,14 +57,17 @@ export default async function EntityDetailPage({
   }
 
   const entityId = Number.parseInt(id, 10)
-  const [entity, mentions, projectEntities] = await Promise.all([
+  const [entity, mentions, authorityHistory, projectEntities] = await Promise.all([
     getProjectEntity(selectedProject.id, entityId),
     getProjectEntityMentions(selectedProject.id, entityId),
+    getProjectEntityAuthorityHistory(selectedProject.id, entityId),
     getProjectEntities(selectedProject.id),
   ])
   const errorMessage = getErrorMessage(resolvedSearchParams)
   const successMessage = getSuccessMessage(resolvedSearchParams)
   const siblingEntities = projectEntities.filter((candidate) => candidate.id !== entity.id)
+  const latestSnapshot = authorityHistory[0] ?? null
+  const trendPoints = buildAuthorityTrendPoints(authorityHistory)
 
   return (
     <AppShell
@@ -90,7 +95,7 @@ export default async function EntityDetailPage({
                 <div className="flex flex-wrap gap-2 text-sm text-muted">
                   <span>Created {formatDate(entity.created_at)}</span>
                   <span>{entity.mention_count} mention{entity.mention_count === 1 ? "" : "s"}</span>
-                  <span>Authority {entity.authority_score.toFixed(2)}</span>
+                  <span>Authority {formatPercentScore(entity.authority_score)}</span>
                 </div>
               </div>
               <StatusBadge tone="neutral">{entity.type}</StatusBadge>
@@ -145,6 +150,107 @@ export default async function EntityDetailPage({
                 </ul>
               </div>
             </div>
+          </article>
+
+          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Authority view</p>
+                <h3 className="m-0 font-display text-title-sm font-bold text-ink">
+                  Current score and history
+                </h3>
+              </div>
+              <span className="text-sm text-muted">
+                {authorityHistory.length} snapshot{authorityHistory.length === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
+              <div className="space-y-4 rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+                <div className="space-y-1">
+                  <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">Authority score</p>
+                  <p className="m-0 font-display text-4xl font-bold text-ink">
+                    {formatPercentScore(entity.authority_score)}
+                  </p>
+                  <p className="m-0 text-sm leading-6 text-muted">
+                    This reflects the latest blend of mention frequency, editorial feedback, duplicate corroboration, and carry-forward history.
+                  </p>
+                </div>
+                {authorityHistory.length > 1 ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm text-muted">
+                      <span>Recent trend</span>
+                      <span>Latest {formatDate(authorityHistory[0]?.computed_at ?? null)}</span>
+                    </div>
+                    <svg
+                      aria-label="Authority score trend"
+                      className="h-20 w-full overflow-visible"
+                      viewBox="0 0 220 72"
+                      role="img"
+                    >
+                      <polyline
+                        fill="none"
+                        points={trendPoints}
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="3"
+                      />
+                    </svg>
+                  </div>
+                ) : (
+                  <p className="m-0 text-sm leading-6 text-muted">
+                    More recomputations will draw the trend line here.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+                    Latest components
+                  </h4>
+                  {latestSnapshot ? (
+                    <span className="text-sm text-muted">
+                      Updated {formatDate(latestSnapshot.computed_at)}
+                    </span>
+                  ) : null}
+                </div>
+                {latestSnapshot ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <AuthorityComponentCard label="Mention frequency" value={latestSnapshot.mention_component} />
+                    <AuthorityComponentCard label="Feedback" value={latestSnapshot.feedback_component} />
+                    <AuthorityComponentCard label="Duplicate signal" value={latestSnapshot.duplicate_component} />
+                    <AuthorityComponentCard label="Carry-forward" value={latestSnapshot.decayed_prior} />
+                  </div>
+                ) : (
+                  <p className="m-0 text-sm leading-6 text-muted">
+                    Authority history has not been recomputed for this entity yet.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {authorityHistory.length > 0 ? (
+              <ul className="m-0 grid list-none gap-3 p-0">
+                {authorityHistory.slice(0, 5).map((snapshot) => (
+                  <li key={snapshot.id} className="rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div className="flex flex-wrap gap-2 text-sm text-muted">
+                        <span>{formatDate(snapshot.computed_at)}</span>
+                        <span>Final {formatPercentScore(snapshot.final_score)}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-sm text-muted">
+                        <span>M {formatPercentScore(snapshot.mention_component)}</span>
+                        <span>F {formatPercentScore(snapshot.feedback_component)}</span>
+                        <span>D {formatPercentScore(snapshot.duplicate_component)}</span>
+                        <span>Carry {formatPercentScore(snapshot.decayed_prior)}</span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </article>
 
           <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
@@ -239,5 +345,39 @@ export default async function EntityDetailPage({
         </div>
       </section>
     </AppShell>
+  )
+}
+
+function buildAuthorityTrendPoints(
+  authorityHistory: Awaited<ReturnType<typeof getProjectEntityAuthorityHistory>>,
+) {
+  if (authorityHistory.length <= 1) {
+    return "0,36 220,36"
+  }
+
+  const points = authorityHistory
+    .slice()
+    .reverse()
+    .map((snapshot, index, snapshots) => {
+      const x = (index / (snapshots.length - 1)) * 220
+      const y = 72 - snapshot.final_score * 72
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    })
+
+  return points.join(" ")
+}
+
+function AuthorityComponentCard({
+  label,
+  value,
+}: {
+  label: string
+  value: number
+}) {
+  return (
+    <div className="rounded-2xl border border-ink/10 bg-surface/80 p-4">
+      <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">{label}</p>
+      <p className="mt-2 mb-0 text-2xl font-bold text-ink">{formatPercentScore(value)}</p>
+    </div>
   )
 }

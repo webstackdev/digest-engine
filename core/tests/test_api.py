@@ -11,6 +11,7 @@ from core.models import (
     BlueskyCredentials,
     Content,
     Entity,
+    EntityAuthoritySnapshot,
     EntityCandidate,
     EntityCandidateStatus,
     EntityMention,
@@ -210,7 +211,10 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.get(
             reverse(
                 "v1:project-entity-mentions",
-                kwargs={"project_id": self.owner_project.id, "pk": self.owner_entity.id},
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_entity.id,
+                },
             )
         )
 
@@ -219,6 +223,63 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.json()[0]["id"], second_mention.id)
         self.assertEqual(response.json()[1]["id"], first_mention.id)
         self.assertEqual(response.json()[0]["content_title"], second_content.title)
+
+    def test_entity_list_supports_authority_score_ordering(self):
+        second_entity = Entity.objects.create(
+            project=self.owner_project,
+            name="Second Entity",
+            type="vendor",
+            authority_score=0.9,
+        )
+        self.owner_entity.authority_score = 0.4
+        self.owner_entity.save(update_fields=["authority_score"])
+
+        response = self.client.get(
+            reverse(
+                "v1:project-entity-list", kwargs={"project_id": self.owner_project.id}
+            ),
+            {"ordering": "-authority_score"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()[0]["id"], second_entity.id)
+        self.assertEqual(response.json()[1]["id"], self.owner_entity.id)
+
+    def test_entity_authority_history_action_returns_recent_snapshots(self):
+        first_snapshot = EntityAuthoritySnapshot.objects.create(
+            entity=self.owner_entity,
+            project=self.owner_project,
+            mention_component=0.6,
+            feedback_component=0.5,
+            duplicate_component=0.5,
+            decayed_prior=0.5,
+            final_score=0.53,
+        )
+        second_snapshot = EntityAuthoritySnapshot.objects.create(
+            entity=self.owner_entity,
+            project=self.owner_project,
+            mention_component=0.8,
+            feedback_component=0.7,
+            duplicate_component=0.6,
+            decayed_prior=0.53,
+            final_score=0.66,
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-entity-authority-history",
+                kwargs={
+                    "project_id": self.owner_project.id,
+                    "pk": self.owner_entity.id,
+                },
+            ),
+            {"limit": 1},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["id"], second_snapshot.id)
+        self.assertNotEqual(response.json()[0]["id"], first_snapshot.id)
 
     def test_content_detail_includes_duplicate_state(self):
         canonical = self.owner_content
@@ -387,7 +448,9 @@ class ProjectScopedApiTests(APITestCase):
 
     @patch("core.plugins.bluesky.BlueskySourcePlugin.verify_credentials")
     def test_verify_bluesky_credentials_verifies_project_account(self, verify_mock):
-        credentials = BlueskyCredentials(project=self.owner_project, handle="project.bsky.social")
+        credentials = BlueskyCredentials(
+            project=self.owner_project, handle="project.bsky.social"
+        )
         credentials.set_app_password("app-password")
         credentials.save()
 
@@ -415,7 +478,9 @@ class ProjectScopedApiTests(APITestCase):
     def test_verify_bluesky_credentials_surfaces_verification_errors(
         self, _verify_mock, logger_exception_mock
     ):
-        credentials = BlueskyCredentials(project=self.owner_project, handle="project.bsky.social")
+        credentials = BlueskyCredentials(
+            project=self.owner_project, handle="project.bsky.social"
+        )
         credentials.set_app_password("app-password")
         credentials.save()
 

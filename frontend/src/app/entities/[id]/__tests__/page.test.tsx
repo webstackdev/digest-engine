@@ -5,12 +5,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Entity, Project } from "@/lib/types"
 
 const {
+  getProjectEntityAuthorityHistoryMock,
   getProjectEntitiesMock,
   getProjectEntityMentionsMock,
   getProjectEntityMock,
   getProjectsMock,
   selectProjectMock,
 } = vi.hoisted(() => ({
+  getProjectEntityAuthorityHistoryMock: vi.fn(),
   getProjectEntitiesMock: vi.fn(),
   getProjectEntityMentionsMock: vi.fn(),
   getProjectEntityMock: vi.fn(),
@@ -51,6 +53,7 @@ vi.mock("@/components/status-badge", () => ({
 }))
 
 vi.mock("@/lib/api", () => ({
+  getProjectEntityAuthorityHistory: getProjectEntityAuthorityHistoryMock,
   getProjectEntities: getProjectEntitiesMock,
   getProjectEntity: getProjectEntityMock,
   getProjectEntityMentions: getProjectEntityMentionsMock,
@@ -129,12 +132,14 @@ describe("EntityDetailPage", () => {
     getProjectsMock.mockReset()
     getProjectEntityMock.mockReset()
     getProjectEntityMentionsMock.mockReset()
+    getProjectEntityAuthorityHistoryMock.mockReset()
     getProjectEntitiesMock.mockReset()
     selectProjectMock.mockReset()
 
     getProjectsMock.mockResolvedValue([defaultProject])
     getProjectEntityMock.mockResolvedValue(defaultEntity)
     getProjectEntityMentionsMock.mockResolvedValue([])
+    getProjectEntityAuthorityHistoryMock.mockResolvedValue([])
     getProjectEntitiesMock.mockResolvedValue([defaultEntity])
     selectProjectMock.mockImplementation((projects: Project[]) => {
       return projects[0] ?? null
@@ -153,6 +158,7 @@ describe("EntityDetailPage", () => {
     ).toBeInTheDocument()
     expect(getProjectEntityMock).not.toHaveBeenCalled()
     expect(getProjectEntityMentionsMock).not.toHaveBeenCalled()
+    expect(getProjectEntityAuthorityHistoryMock).not.toHaveBeenCalled()
   })
 
   it("renders entity metadata, identity links, and mention history", async () => {
@@ -197,6 +203,30 @@ describe("EntityDetailPage", () => {
         created_at: "2026-04-28T13:00:00Z",
       },
     ])
+    getProjectEntityAuthorityHistoryMock.mockResolvedValue([
+      {
+        id: 51,
+        entity: 11,
+        project: 3,
+        computed_at: "2026-04-28T14:00:00Z",
+        mention_component: 0.8,
+        feedback_component: 0.7,
+        duplicate_component: 0.5,
+        decayed_prior: 0.6,
+        final_score: 0.91,
+      },
+      {
+        id: 50,
+        entity: 11,
+        project: 3,
+        computed_at: "2026-04-27T14:00:00Z",
+        mention_component: 0.7,
+        feedback_component: 0.6,
+        duplicate_component: 0.4,
+        decayed_prior: 0.5,
+        final_score: 0.82,
+      },
+    ])
     getProjectEntitiesMock.mockResolvedValue([
       entity,
       createEntity({
@@ -211,10 +241,17 @@ describe("EntityDetailPage", () => {
 
     expect(getProjectEntityMock).toHaveBeenCalledWith(3, 11)
     expect(getProjectEntityMentionsMock).toHaveBeenCalledWith(3, 11)
+    expect(getProjectEntityAuthorityHistoryMock).toHaveBeenCalledWith(3, 11)
     expect(screen.getByRole("heading", { name: "Anthropic" })).toBeInTheDocument()
     expect(screen.getByText("2 mentions")).toBeInTheDocument()
-    expect(screen.getByText("Authority 0.91")).toBeInTheDocument()
+    expect(screen.getByText("Authority 91%")).toBeInTheDocument()
     expect(screen.getByText("Safety-focused AI company")).toBeInTheDocument()
+    expect(screen.getByText("Current score and history")).toBeInTheDocument()
+    expect(screen.getByText("Mention frequency")).toBeInTheDocument()
+    expect(screen.getByText("Feedback")).toBeInTheDocument()
+    expect(screen.getByText("Duplicate signal")).toBeInTheDocument()
+    expect(screen.getByText("Carry-forward")).toBeInTheDocument()
+    expect(screen.getByText("Final 91%")).toBeInTheDocument()
     expect(screen.getByText("Website")).toBeInTheDocument()
     expect(screen.getByText("Twitter anthropicai")).toBeInTheDocument()
     expect(
@@ -234,6 +271,9 @@ describe("EntityDetailPage", () => {
 
     expect(
       screen.getByText("No extracted mentions exist for this entity yet."),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Authority history has not been recomputed for this entity yet."),
     ).toBeInTheDocument()
   })
 })

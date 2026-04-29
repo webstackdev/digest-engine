@@ -114,6 +114,7 @@ function createContent(overrides: Partial<Content> = {}): Content {
     ingested_at: "2026-04-28T10:00:00Z",
     content_text: "A long article body for the dashboard preview.",
     relevance_score: 0.84,
+    authority_adjusted_score: 0.88,
     embedding_id: "embed-1",
     duplicate_of: null,
     duplicate_signal_count: 0,
@@ -286,6 +287,7 @@ describe("HomePage", () => {
       is_reference: true,
       is_active: false,
       relevance_score: 0.84,
+      authority_adjusted_score: 0.88,
     })
     const reviewItem = createReviewQueueItem({ content: content.id })
     const feedback = [
@@ -357,7 +359,8 @@ describe("HomePage", () => {
     const badges = screen.getAllByTestId("status-badge")
     expect(badges).toHaveLength(1)
     expect(badges[0]).toHaveAttribute("data-tone", "positive")
-    expect(badges[0]).toHaveTextContent("Relevance 0.84")
+    expect(badges[0]).toHaveTextContent("Adjusted 88%")
+    expect(screen.getByText("Base 84%")).toBeInTheDocument()
   })
 
   it("renders duplicate context inside review rows", async () => {

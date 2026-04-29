@@ -96,11 +96,12 @@ export function buildDashboardView({
   const filteredContents = activeContents
     .filter((content) => matchesContentFilters(content))
     .sort((left, right) => {
-      const relevanceDelta =
-        (right.relevance_score ?? -1) - (left.relevance_score ?? -1)
+      const adjustedDelta =
+        (right.authority_adjusted_score ?? right.relevance_score ?? -1) -
+        (left.authority_adjusted_score ?? left.relevance_score ?? -1)
 
-      if (relevanceDelta !== 0) {
-        return relevanceDelta
+      if (adjustedDelta !== 0) {
+        return adjustedDelta
       }
 
       return (

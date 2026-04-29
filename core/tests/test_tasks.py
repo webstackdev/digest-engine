@@ -7,17 +7,25 @@ from django.contrib.auth.models import Group
 from core.models import (
     Content,
     Entity,
+    EntityAuthoritySnapshot,
+    EntityMention,
+    EntityMentionRole,
+    FeedbackType,
     IngestionRun,
     Project,
+    ProjectConfig,
     RunStatus,
     SkillStatus,
     SourceConfig,
     SourcePluginName,
+    UserFeedback,
 )
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
 from core.tasks import (
     _ingest_source_config,
     queue_content_skill,
+    recompute_authority_scores,
+    run_all_authority_recomputations,
     run_all_ingestions,
     run_ingestion,
     run_relevance_scoring_skill,
@@ -309,6 +317,130 @@ def test_run_all_ingestions_executes_inline_when_eager(
     run_ingestion_mock.assert_any_call(active_two.id)
     assert run_ingestion_mock.call_count == 2
     delay_mock.assert_not_called()
+
+
+def test_run_all_authority_recomputations_enqueues_all_projects(
+    source_plugin_context, mocker
+):
+    delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
+    other_group = Group.objects.create(name="second-authority-team")
+    other_project = Project.objects.create(
+        name="Other Project",
+        group=other_group,
+        topic_description="Security",
+    )
+
+    enqueued_count = run_all_authority_recomputations()
+
+    assert enqueued_count == 2
+    delay_mock.assert_any_call(source_plugin_context.project.id)
+    delay_mock.assert_any_call(other_project.id)
+    assert delay_mock.call_count == 2
+
+
+def test_run_all_authority_recomputations_executes_inline_when_eager(
+    source_plugin_context, settings, mocker
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    recompute_mock = mocker.patch("core.tasks.recompute_authority_scores")
+    delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
+    other_group = Group.objects.create(name="inline-authority-team")
+    other_project = Project.objects.create(
+        name="Inline Project",
+        group=other_group,
+        topic_description="Platform",
+    )
+
+    enqueued_count = run_all_authority_recomputations()
+
+    assert enqueued_count == 2
+    recompute_mock.assert_any_call(source_plugin_context.project.id)
+    recompute_mock.assert_any_call(other_project.id)
+    assert recompute_mock.call_count == 2
+    delay_mock.assert_not_called()
+
+
+def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
+    source_plugin_context,
+):
+    project = source_plugin_context.project
+    config = ProjectConfig.objects.create(
+        project=project,
+        upvote_authority_weight=0.2,
+        downvote_authority_weight=-0.1,
+        authority_decay_rate=0.9,
+    )
+    primary_entity = source_plugin_context.entity
+    secondary_entity = Entity.objects.create(
+        project=project,
+        name="Secondary",
+        type="vendor",
+        authority_score=0.5,
+    )
+    primary_content = Content.objects.create(
+        project=project,
+        entity=primary_entity,
+        url="https://example.com/authority-primary",
+        title="Authority Primary",
+        author="Reporter",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-28T12:00:00Z",
+        content_text="Primary authority content.",
+        duplicate_signal_count=3,
+    )
+    secondary_content = Content.objects.create(
+        project=project,
+        entity=secondary_entity,
+        url="https://example.com/authority-secondary",
+        title="Authority Secondary",
+        author="Reporter",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-28T13:00:00Z",
+        content_text="Secondary authority content.",
+    )
+    EntityMention.objects.create(
+        project=project,
+        content=primary_content,
+        entity=primary_entity,
+        role=EntityMentionRole.SUBJECT,
+        sentiment="positive",
+        span="Example",
+        confidence=0.9,
+    )
+    EntityMention.objects.create(
+        project=project,
+        content=secondary_content,
+        entity=secondary_entity,
+        role=EntityMentionRole.SUBJECT,
+        sentiment="neutral",
+        span="Secondary",
+        confidence=0.8,
+    )
+    UserFeedback.objects.create(
+        project=project,
+        content=primary_content,
+        user=source_plugin_context.user,
+        feedback_type=FeedbackType.UPVOTE,
+    )
+
+    result = recompute_authority_scores(project.id)
+
+    primary_entity.refresh_from_db()
+    secondary_entity.refresh_from_db()
+    primary_snapshot = EntityAuthoritySnapshot.objects.get(entity=primary_entity)
+    secondary_snapshot = EntityAuthoritySnapshot.objects.get(entity=secondary_entity)
+
+    assert result == {"project_id": project.id, "entities_updated": 2}
+    assert primary_entity.authority_score > secondary_entity.authority_score
+    assert primary_snapshot.final_score == pytest.approx(primary_entity.authority_score)
+    assert secondary_snapshot.final_score == pytest.approx(
+        secondary_entity.authority_score
+    )
+    assert primary_snapshot.feedback_component > 0.5
+    assert primary_snapshot.duplicate_component > secondary_snapshot.duplicate_component
+    assert primary_snapshot.decayed_prior == pytest.approx(
+        config.authority_decay_rate * 0.5
+    )
 
 
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):

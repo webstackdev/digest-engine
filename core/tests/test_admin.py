@@ -13,6 +13,7 @@ from core.admin import (
     ContentAdmin,
     DuplicateStateFilter,
     EntityAdmin,
+    EntityAuthoritySnapshotAdmin,
     EntityCandidateAdmin,
     HighValueFilter,
     IngestionRunAdmin,
@@ -25,6 +26,7 @@ from core.models import (
     BlueskyCredentials,
     Content,
     Entity,
+    EntityAuthoritySnapshot,
     EntityCandidate,
     EntityCandidateStatus,
     EntityMention,
@@ -221,7 +223,9 @@ def test_verify_selected_bluesky_credentials_reports_success(
         handle="alice.bsky.social",
         app_password_encrypted="ciphertext",
     )
-    verify_mock = mocker.patch("core.plugins.bluesky.BlueskySourcePlugin.verify_credentials")
+    verify_mock = mocker.patch(
+        "core.plugins.bluesky.BlueskySourcePlugin.verify_credentials"
+    )
     admin_instance = BlueskyCredentialsAdmin(BlueskyCredentials, AdminSite())
     admin_instance.message_user = mocker.Mock()
 
@@ -373,7 +377,8 @@ def test_content_changelist_view_builds_dashboard_stats(source_admin_context, mo
         source_plugin=SourcePluginName.RSS,
         published_date=timezone.now(),
         content_text="Content one.",
-        relevance_score=80,
+        relevance_score=0.8,
+        authority_adjusted_score=0.85,
     )
     Content.objects.create(
         project=source_admin_context.project,
@@ -383,7 +388,8 @@ def test_content_changelist_view_builds_dashboard_stats(source_admin_context, mo
         source_plugin=SourcePluginName.RSS,
         published_date=timezone.now(),
         content_text="Content two.",
-        relevance_score=40,
+        relevance_score=0.4,
+        authority_adjusted_score=0.45,
     )
     admin_instance = ContentAdmin(Content, AdminSite())
     mocker.patch.object(
@@ -398,7 +404,31 @@ def test_content_changelist_view_builds_dashboard_stats(source_admin_context, mo
 
     super_changelist_view.assert_called_once()
     assert response["dashboard_stats"][0]["value"] == "60.0%"
-    assert response["dashboard_stats"][1]["value"] == 2
+    assert response["dashboard_stats"][1]["value"] == "65.0%"
+    assert response["dashboard_stats"][2]["value"] == 2
+
+
+def test_content_admin_score_columns_render_expected_values(source_admin_context):
+    content = Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/admin-scores",
+        title="Admin Scores",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="Score rendering content.",
+        relevance_score=0.8,
+        authority_adjusted_score=0.86,
+    )
+    admin_instance = ContentAdmin(Content, AdminSite())
+
+    rendered_base = admin_instance.display_relevance(content)
+    rendered_adjusted = admin_instance.display_authority_adjusted_score(content)
+
+    assert "80.0%" in rendered_base
+    assert "green" in rendered_base
+    assert "86.0%" in rendered_adjusted
+    assert "green" in rendered_adjusted
 
 
 def test_generate_newsletter_ideas_queues_selected_content(
@@ -476,15 +506,15 @@ def test_content_admin_duplicate_columns_render_expected_values(source_admin_con
 
 
 @pytest.mark.parametrize(
-    ("authority_score", "expected_color"),
+    ("authority_score", "expected_color", "expected_display"),
     [
-        (90, "green"),
-        (60, "orange"),
-        (20, "red"),
+        (0.9, "green", "90.0%"),
+        (0.6, "orange", "60.0%"),
+        (0.2, "red", "20.0%"),
     ],
 )
 def test_entity_colored_score_uses_expected_color(
-    source_admin_context, authority_score, expected_color
+    source_admin_context, authority_score, expected_color, expected_display
 ):
     entity = Entity.objects.create(
         project=source_admin_context.project,
@@ -498,7 +528,62 @@ def test_entity_colored_score_uses_expected_color(
     rendered = admin_instance.colored_score(entity)
 
     assert expected_color in rendered
-    assert str(authority_score) in rendered
+    assert expected_display in rendered
+
+
+def test_entity_admin_latest_snapshot_summary_renders_components(source_admin_context):
+    entity = Entity.objects.create(
+        project=source_admin_context.project,
+        name="Snapshot Entity",
+        type="vendor",
+        authority_score=0.73,
+    )
+    EntityAuthoritySnapshot.objects.create(
+        entity=entity,
+        project=source_admin_context.project,
+        mention_component=0.7,
+        feedback_component=0.55,
+        duplicate_component=0.4,
+        decayed_prior=0.5,
+        final_score=0.73,
+    )
+    admin_instance = EntityAdmin(Entity, AdminSite())
+
+    rendered = admin_instance.latest_snapshot_summary(entity)
+
+    assert "M 70.0%" in rendered
+    assert "F 55.0%" in rendered
+    assert "D 40.0%" in rendered
+    assert "Carry 50.0%" in rendered
+
+
+def test_entity_authority_snapshot_admin_helpers_render_expected_values(
+    source_admin_context,
+):
+    entity = Entity.objects.create(
+        project=source_admin_context.project,
+        name="Snapshot Admin Entity",
+        type="vendor",
+        authority_score=0.81,
+    )
+    snapshot = EntityAuthoritySnapshot.objects.create(
+        entity=entity,
+        project=source_admin_context.project,
+        mention_component=0.8,
+        feedback_component=0.6,
+        duplicate_component=0.4,
+        decayed_prior=0.5,
+        final_score=0.81,
+    )
+    admin_instance = EntityAuthoritySnapshotAdmin(EntityAuthoritySnapshot, AdminSite())
+
+    rendered_score = admin_instance.display_final_score(snapshot)
+    rendered_components = admin_instance.display_components(snapshot)
+
+    assert "81.0%" in rendered_score
+    assert "green" in rendered_score
+    assert "M 80.0%" in rendered_components
+    assert "F 60.0%" in rendered_components
 
 
 def test_accept_selected_entity_candidates_creates_entity_and_backfills_mentions(

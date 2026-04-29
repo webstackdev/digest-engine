@@ -25,6 +25,7 @@ from core.models import (
     BlueskyCredentials,
     Content,
     Entity,
+    EntityAuthoritySnapshot,
     EntityCandidate,
     EntityCandidateStatus,
     EntityMention,
@@ -37,6 +38,30 @@ from core.models import (
     UserFeedback,
 )
 from core.plugins import get_plugin_for_source_config, validate_plugin_config
+
+
+def _score_to_percent(value):
+    """Normalize score-like values for display as percentages."""
+
+    if value is None:
+        return None
+    numeric_value = float(value)
+    if -1.0 <= numeric_value <= 1.0:
+        return numeric_value * 100
+    return numeric_value
+
+
+def _score_color(value) -> str:
+    """Return the admin display color for a score-like value."""
+
+    percent_value = _score_to_percent(value)
+    if percent_value is None:
+        return "inherit"
+    if percent_value >= 75:
+        return "green"
+    if percent_value >= 40:
+        return "orange"
+    return "red"
 
 
 class BlueskyCredentialsAdminForm(forms.ModelForm):
@@ -205,26 +230,98 @@ class ProjectConfigAdmin(admin.ModelAdmin):
 class EntityAdmin(admin.ModelAdmin):
     """Admin configuration for tracked people, vendors, and organizations."""
 
-    # Replace 'authority_score' with your new method name
-    list_display = ("name", "project", "type", "colored_score", "created_at")
+    list_display = (
+        "name",
+        "project",
+        "type",
+        "colored_score",
+        "latest_snapshot_summary",
+        "created_at",
+    )
     search_fields = ("name", "project__name")
 
     @admin.display(description="Authority Score", ordering="authority_score")
     def colored_score(self, obj):
         """Render the authority score with a traffic-light color cue."""
 
-        # Choose a color based on the value
-        if obj.authority_score >= 80:
-            color = "green"
-        elif obj.authority_score >= 50:
-            color = "orange"
-        else:
-            color = "red"
+        percent_value = _score_to_percent(obj.authority_score)
+        color = _score_color(obj.authority_score)
 
         return format_html(
             '<span style="color: {}; font-weight: bold;">{}</span>',
             color,
-            obj.authority_score,
+            f"{percent_value:.1f}%",
+        )
+
+    @admin.display(description="Latest Snapshot")
+    def latest_snapshot_summary(self, obj):
+        """Show the latest authority component breakdown for an entity."""
+
+        latest_snapshot = obj.authority_snapshots.order_by("-computed_at").first()
+        if latest_snapshot is None:
+            return "-"
+        mention_value = f"{_score_to_percent(latest_snapshot.mention_component):.1f}%"
+        feedback_value = f"{_score_to_percent(latest_snapshot.feedback_component):.1f}%"
+        duplicate_value = (
+            f"{_score_to_percent(latest_snapshot.duplicate_component):.1f}%"
+        )
+        decayed_value = f"{_score_to_percent(latest_snapshot.decayed_prior):.1f}%"
+        return format_html(
+            (
+                '<span title="Mention {}, Feedback {}, Duplicate {}, Carry {}">'
+                "M {} | F {} | D {} | Carry {}</span>"
+            ),
+            mention_value,
+            feedback_value,
+            duplicate_value,
+            decayed_value,
+            mention_value,
+            feedback_value,
+            duplicate_value,
+            decayed_value,
+        )
+
+
+@admin.register(EntityAuthoritySnapshot)
+class EntityAuthoritySnapshotAdmin(admin.ModelAdmin):
+    """Admin view for persisted authority-score history."""
+
+    list_display = (
+        "entity",
+        "project",
+        "display_final_score",
+        "display_components",
+        "computed_at",
+    )
+    list_filter = (("project", admin.RelatedOnlyFieldListFilter), "computed_at")
+    search_fields = ("entity__name", "project__name")
+    autocomplete_fields = ("entity", "project")
+
+    @admin.display(description="Final Score", ordering="final_score")
+    def display_final_score(self, obj):
+        """Render the recomputed final authority score as a percentage."""
+
+        percent_value = _score_to_percent(obj.final_score)
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            _score_color(obj.final_score),
+            f"{percent_value:.1f}%",
+        )
+
+    @admin.display(description="Components")
+    def display_components(self, obj):
+        """Render the stored authority components in a compact summary."""
+
+        mention_value = f"{_score_to_percent(obj.mention_component):.1f}%"
+        feedback_value = f"{_score_to_percent(obj.feedback_component):.1f}%"
+        duplicate_value = f"{_score_to_percent(obj.duplicate_component):.1f}%"
+        decayed_value = f"{_score_to_percent(obj.decayed_prior):.1f}%"
+        return format_html(
+            "M {} | F {} | D {} | Carry {}",
+            mention_value,
+            feedback_value,
+            duplicate_value,
+            decayed_value,
         )
 
 
@@ -387,6 +484,7 @@ class ContentAdmin(admin.ModelAdmin):
 
     list_display = (
         "display_relevance",
+        "display_authority_adjusted_score",
         "duplicate_badge",
         "duplicate_parent",
         "is_active",
@@ -510,18 +608,31 @@ class ContentAdmin(admin.ModelAdmin):
             link_label,
         )
 
-    @admin.display(description="Score")
+    @admin.display(description="Base Score")
     def display_relevance(self, obj):
         """Render the relevance score with a coarse color-coded severity band."""
 
         if obj.relevance_score is None:
             return "-"
-        color = (
-            "green"
-            if obj.relevance_score > 75
-            else "orange" if obj.relevance_score > 40 else "red"
+        percent_value = _score_to_percent(obj.relevance_score)
+        return format_html(
+            '<b style="color: {}">{}</b>',
+            _score_color(obj.relevance_score),
+            f"{percent_value:.1f}%",
         )
-        return format_html('<b style="color: {};">{}%</b>', color, obj.relevance_score)
+
+    @admin.display(description="Adjusted")
+    def display_authority_adjusted_score(self, obj):
+        """Render the authority-adjusted relevance score when available."""
+
+        if obj.authority_adjusted_score is None:
+            return "-"
+        percent_value = _score_to_percent(obj.authority_adjusted_score)
+        return format_html(
+            '<b style="color: {}">{}</b>',
+            _score_color(obj.authority_adjusted_score),
+            f"{percent_value:.1f}%",
+        )
 
     @admin.display(description="Duplicates", ordering="duplicate_signal_count")
     def duplicate_badge(self, obj):
@@ -546,15 +657,40 @@ class ContentAdmin(admin.ModelAdmin):
         """Augment the changelist with content dashboard statistics."""
 
         queryset = self.get_queryset(request)
-        metrics = queryset.aggregate(avg_score=Avg("relevance_score"))
+        metrics = queryset.aggregate(
+            avg_score=Avg("relevance_score"),
+            avg_adjusted_score=Avg("authority_adjusted_score"),
+        )
 
         extra_context = extra_context or {}
         extra_context["dashboard_stats"] = [
             {
-                "title": "Avg Relevance",
-                "value": f"{metrics['avg_score'] or 0:.1f}%",
+                "title": "Avg Base Score",
+                "value": (
+                    f"{_score_to_percent(metrics['avg_score']):.1f}%"
+                    if metrics["avg_score"] is not None
+                    else "-"
+                ),
                 "icon": "insights",
-                "color": "success" if (metrics["avg_score"] or 0) > 70 else "warning",
+                "color": (
+                    "success"
+                    if _score_color(metrics["avg_score"]) == "green"
+                    else "warning"
+                ),
+            },
+            {
+                "title": "Avg Adjusted Score",
+                "value": (
+                    f"{_score_to_percent(metrics['avg_adjusted_score']):.1f}%"
+                    if metrics["avg_adjusted_score"] is not None
+                    else "-"
+                ),
+                "icon": "auto_graph",
+                "color": (
+                    "success"
+                    if _score_color(metrics["avg_adjusted_score"]) == "green"
+                    else "warning"
+                ),
             },
             {
                 "title": "Total Filtered",

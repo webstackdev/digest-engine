@@ -11,6 +11,7 @@ from rest_framework import serializers
 from core.models import (
     Content,
     Entity,
+    EntityAuthoritySnapshot,
     EntityCandidate,
     EntityMention,
     IngestionRun,
@@ -149,6 +150,25 @@ class EntitySerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer
         return EntityMentionSummarySerializer(mentions[:3], many=True).data
 
 
+class EntityAuthoritySnapshotSerializer(serializers.ModelSerializer):
+    """Serialize one persisted authority recomputation for an entity."""
+
+    class Meta:
+        model = EntityAuthoritySnapshot
+        fields = [
+            "id",
+            "entity",
+            "project",
+            "computed_at",
+            "mention_component",
+            "feedback_component",
+            "duplicate_component",
+            "decayed_prior",
+            "final_score",
+        ]
+        read_only_fields = fields
+
+
 class EntityMentionSummarySerializer(serializers.ModelSerializer):
     """Serialize a compact entity-mention summary for frontend display."""
 
@@ -170,10 +190,14 @@ class EntityMentionSummarySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class EntityCandidateSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+class EntityCandidateSerializer(
+    ProjectScopedSerializerMixin, serializers.ModelSerializer
+):
     """Serialize extracted entity candidates awaiting editorial review."""
 
-    first_seen_title = serializers.CharField(source="first_seen_in.title", read_only=True)
+    first_seen_title = serializers.CharField(
+        source="first_seen_in.title", read_only=True
+    )
     merged_into_name = serializers.CharField(source="merged_into.name", read_only=True)
 
     class Meta:
@@ -195,7 +219,9 @@ class EntityCandidateSerializer(ProjectScopedSerializerMixin, serializers.ModelS
         read_only_fields = fields
 
 
-class EntityCandidateMergeSerializer(ProjectScopedSerializerMixin, serializers.Serializer):
+class EntityCandidateMergeSerializer(
+    ProjectScopedSerializerMixin, serializers.Serializer
+):
     """Validate merge requests for entity candidates."""
 
     merged_into = serializers.PrimaryKeyRelatedField(queryset=Entity.objects.none())
@@ -220,6 +246,7 @@ class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
             "ingested_at",
             "content_text",
             "relevance_score",
+            "authority_adjusted_score",
             "embedding_id",
             "source_metadata",
             "duplicate_of",
@@ -232,6 +259,7 @@ class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
             "project",
             "canonical_url",
             "ingested_at",
+            "authority_adjusted_score",
             "embedding_id",
             "duplicate_of",
             "duplicate_signal_count",

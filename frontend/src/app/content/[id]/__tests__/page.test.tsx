@@ -126,6 +126,7 @@ function createContent(overrides: Partial<Content> = {}): Content {
     ingested_at: "2026-04-28T10:00:00Z",
     content_text: "Body copy",
     relevance_score: 0.82,
+    authority_adjusted_score: 0.86,
     embedding_id: "embed-1",
     duplicate_of: null,
     duplicate_signal_count: 0,
@@ -290,6 +291,7 @@ describe("ContentDetailPage", () => {
         author: "",
         content_type: "",
         relevance_score: null,
+        authority_adjusted_score: null,
       }),
     )
 
@@ -321,7 +323,7 @@ describe("ContentDetailPage", () => {
 
     const badges = screen.getAllByTestId("status-badge")
     expect(badges[0]).toHaveAttribute("data-tone", "warning")
-    expect(badges[0]).toHaveTextContent("Relevance n/a")
+    expect(badges[0]).toHaveTextContent("Adjusted n/a")
     expect(screen.getByText("Canonical URL https://example.com/article")).toBeInTheDocument()
   })
 
@@ -353,7 +355,12 @@ describe("ContentDetailPage", () => {
     getProjectsMock.mockResolvedValue([selectedProject])
     selectProjectMock.mockReturnValue(selectedProject)
     getProjectContentMock.mockResolvedValue(
-      createContent({ id: 77, project: 3, relevance_score: 0.91 }),
+      createContent({
+        id: 77,
+        project: 3,
+        relevance_score: 0.64,
+        authority_adjusted_score: 0.91,
+      }),
     )
     getProjectSkillResultsMock.mockResolvedValue([
       createSkillResult({
@@ -447,7 +454,8 @@ describe("ContentDetailPage", () => {
 
     const badges = screen.getAllByTestId("status-badge")
     expect(badges[0]).toHaveAttribute("data-tone", "positive")
-    expect(badges[0]).toHaveTextContent("Relevance 0.91")
+  expect(badges[0]).toHaveTextContent("Adjusted 91%")
+  expect(screen.getByText("Base 64%")).toBeInTheDocument()
     expect(badges[1]).toHaveAttribute("data-tone", "warning")
     expect(badges[1]).toHaveTextContent("model pending")
     expect(badges[2]).toHaveAttribute("data-tone", "warning")

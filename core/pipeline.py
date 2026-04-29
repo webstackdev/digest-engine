@@ -43,6 +43,9 @@ DEDUPLICATION_EXACT_CONFIDENCE = 1.0
 DEDUPLICATION_SEMANTIC_THRESHOLD = 0.92
 DEDUPLICATION_LLM_THRESHOLD = 0.88
 DEDUPLICATION_LOOKBACK_DAYS = 14
+AUTHORITY_RELEVANCE_MULTIPLIER = 0.3
+
+AUTHORITY_PRIORITY_ROLES = {"author", "subject"}
 
 CONTENT_TYPES = (
     "technical_article",
@@ -219,9 +222,14 @@ def relevance_node(state: PipelineState) -> PipelineState:
     relevance = _execute_with_retries(
         RELEVANCE_SKILL_NAME, lambda: run_relevance_scoring(content)
     )
+    relevance, effective_relevance_score = _apply_authority_adjustment(
+        content, relevance
+    )
     content.relevance_score = relevance["relevance_score"]
     content.is_active = True
-    content.save(update_fields=["relevance_score", "is_active"])
+    content.save(
+        update_fields=["relevance_score", "authority_adjusted_score", "is_active"]
+    )
     _create_skill_result(
         content,
         skill_name=RELEVANCE_SKILL_NAME,
@@ -229,7 +237,7 @@ def relevance_node(state: PipelineState) -> PipelineState:
         result_data=relevance,
         model_used=relevance["model_used"],
         latency_ms=relevance["latency_ms"],
-        confidence=relevance["relevance_score"],
+        confidence=effective_relevance_score,
     )
     return {"relevance": relevance}
 
@@ -291,7 +299,14 @@ def route_by_relevance(
     """
 
     relevance = state.get("relevance") or {}
-    score = float(relevance.get("relevance_score", 0.0))
+    score = float(
+        relevance.get(
+            "final_relevance_score",
+            relevance.get(
+                "authority_adjusted_score", relevance.get("relevance_score", 0.0)
+            ),
+        )
+    )
     if score >= settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD:
         return "relevant"
     if score < settings.AI_RELEVANCE_REVIEW_THRESHOLD:
@@ -331,7 +346,8 @@ def run_deduplication(content: Content) -> dict[str, Any]:
             project_id=content.project_id,
             is_reference=False,
             is_active=True,
-            published_date__gte=timezone.now() - timedelta(days=DEDUPLICATION_LOOKBACK_DAYS),
+            published_date__gte=timezone.now()
+            - timedelta(days=DEDUPLICATION_LOOKBACK_DAYS),
         )
         .exclude(pk=content.pk)
         .select_related("duplicate_of")
@@ -407,6 +423,8 @@ def run_deduplication(content: Content) -> dict[str, Any]:
         "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
         "latency_ms": 0,
     }
+
+
 def run_content_classification(content: Content) -> dict[str, Any]:
     """Classify a content item into a newsletter-oriented content type.
 
@@ -460,7 +478,9 @@ def _find_exact_duplicate(content: Content, canonical_url: str) -> Content | Non
     """Find a duplicate row by canonical URL, backfilling blank values as needed."""
 
     exact_match = (
-        Content.objects.filter(project_id=content.project_id, canonical_url=canonical_url)
+        Content.objects.filter(
+            project_id=content.project_id, canonical_url=canonical_url
+        )
         .exclude(pk=content.pk)
         .select_related("duplicate_of")
         .order_by("ingested_at", "id")
@@ -910,10 +930,12 @@ def _run_ad_hoc_relevance(content: Content) -> tuple[dict[str, Any], float]:
     relevance = _execute_with_retries(
         RELEVANCE_SKILL_NAME, lambda: run_relevance_scoring(content)
     )
-    relevance_score = float(relevance["relevance_score"])
-    content.relevance_score = relevance_score
+    relevance, relevance_score = _apply_authority_adjustment(content, relevance)
+    content.relevance_score = float(relevance["relevance_score"])
     content.is_active = relevance_score >= settings.AI_RELEVANCE_REVIEW_THRESHOLD
-    content.save(update_fields=["relevance_score", "is_active"])
+    content.save(
+        update_fields=["relevance_score", "authority_adjusted_score", "is_active"]
+    )
     if (
         settings.AI_RELEVANCE_REVIEW_THRESHOLD
         <= relevance_score
@@ -941,7 +963,10 @@ def _run_ad_hoc_summarization(content: Content) -> dict[str, Any]:
             required for summarization.
     """
 
-    if (content.relevance_score or 0.0) < settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD:
+    effective_relevance_score = (
+        content.authority_adjusted_score or content.relevance_score or 0.0
+    )
+    if effective_relevance_score < settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD:
         raise ValueError(
             "Summarization requires relevance_score >= "
             f"{settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD:.2f}. Run relevance scoring first or review the content."
@@ -949,6 +974,56 @@ def _run_ad_hoc_summarization(content: Content) -> dict[str, Any]:
     return _execute_with_retries(
         SUMMARIZATION_SKILL_NAME, lambda: run_summarization(content)
     )
+
+
+def _apply_authority_adjustment(
+    content: Content, relevance: dict[str, Any]
+) -> tuple[dict[str, Any], float]:
+    """Apply the authority bump while preserving the base relevance score."""
+
+    base_relevance_score = _clamp_score(float(relevance["relevance_score"]))
+    primary_entity = _get_primary_authority_entity(content)
+    authority_score = _clamp_score(
+        float(getattr(primary_entity, "authority_score", 0.5) or 0.5)
+    )
+    adjusted_relevance_score = _clamp_score(
+        base_relevance_score
+        * (1 + AUTHORITY_RELEVANCE_MULTIPLIER * (authority_score - 0.5))
+    )
+    relevance["relevance_score"] = base_relevance_score
+    relevance["authority_adjusted_score"] = adjusted_relevance_score
+    relevance["final_relevance_score"] = adjusted_relevance_score
+    relevance["authority_entity_id"] = getattr(primary_entity, "id", None)
+    relevance["authority_score"] = authority_score
+    content.authority_adjusted_score = adjusted_relevance_score
+    return relevance, adjusted_relevance_score
+
+
+def _get_primary_authority_entity(content: Content):
+    """Choose the best entity to use for authority-aware relevance bumping."""
+
+    if content.entity_id:
+        return content.entity
+
+    mentions = list(content.entity_mentions.select_related("entity").all())
+    if not mentions:
+        return None
+
+    priority_mentions = [
+        mention for mention in mentions if mention.role in AUTHORITY_PRIORITY_ROLES
+    ]
+    if priority_mentions:
+        best_mention = max(
+            priority_mentions,
+            key=lambda mention: (float(mention.confidence), mention.created_at),
+        )
+        return best_mention.entity
+
+    best_mention = max(
+        mentions,
+        key=lambda mention: (float(mention.confidence), mention.created_at),
+    )
+    return best_mention.entity
 
 
 def _execute_with_retries(skill_name: str, fn):
