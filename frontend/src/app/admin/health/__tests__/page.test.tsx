@@ -393,7 +393,18 @@ describe("HealthPage", () => {
     expect(screen.getByText("Feedback 14")).toBeInTheDocument()
     expect(screen.getByText("active")).toBeInTheDocument()
     expect(
+      screen.getByRole("link", { name: "Open centroid snapshot history" }),
+    ).toHaveAttribute(
+      "href",
+      "/admin/health?project=1#centroid-snapshot-history",
+    )
+    expect(
       screen.getByLabelText("Centroid drift trend"),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText("Centroid snapshot history"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Showing 3 of 3 snapshots")).toBeInTheDocument()
+    expect(screen.getAllByText("active").length).toBeGreaterThan(0)
   })
 })
