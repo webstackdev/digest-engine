@@ -23,6 +23,7 @@ from core.embeddings import (
     build_content_embedding_text,
     embed_text,
     get_reference_similarity,
+    get_topic_centroid_similarity,
     search_similar_content,
 )
 from core.entity_extraction import run_entity_extraction
@@ -611,14 +612,21 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
     """
 
     vector = embed_text(build_content_embedding_text(content))
-    similarity = float(get_reference_similarity(content.project_id, vector))
+    reference_similarity = float(get_reference_similarity(content.project_id, vector))
+    centroid_similarity = float(
+        get_topic_centroid_similarity(content.project_id, vector)
+    )
+    similarity = max(reference_similarity, centroid_similarity)
     if (
         similarity >= settings.AI_RELEVANCE_HIGH_THRESHOLD
         or similarity < settings.AI_RELEVANCE_LOW_THRESHOLD
     ):
+        explanation = f"Reference corpus similarity score is {similarity:.2f}; no LLM adjudication was required."
+        if centroid_similarity > reference_similarity:
+            explanation = f"Feedback centroid similarity score is {centroid_similarity:.2f}; no LLM adjudication was required."
         return {
             "relevance_score": similarity,
-            "explanation": f"Reference corpus similarity score is {similarity:.2f}; no LLM adjudication was required.",
+            "explanation": explanation,
             "used_llm": False,
             "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
             "latency_ms": 0,
@@ -635,7 +643,9 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
                     RELEVANCE_SKILL_NAME,
                     {
                         "newsletter_topic": content.project.topic_description,
-                        "reference_similarity": f"{similarity:.3f}",
+                        "reference_similarity": f"{reference_similarity:.3f}",
+                        "centroid_similarity": f"{centroid_similarity:.3f}",
+                        "embedding_baseline_similarity": f"{similarity:.3f}",
                         "title": content.title,
                         "content_text": content.content_text[:5000],
                         "url": content.url,
@@ -664,7 +674,7 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
     return {
         "relevance_score": similarity,
         "explanation": (
-            f"Borderline reference similarity of {similarity:.2f} against the project baseline for "
+            f"Borderline embedding similarity of {similarity:.2f} against the project baseline for "
             f"'{content.project.topic_description}'."
         ),
         "used_llm": False,

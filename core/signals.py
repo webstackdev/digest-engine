@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from anymail.signals import inbound
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from core.models import ProjectConfig, UserFeedback
 from core.newsletters import process_inbound_newsletter
+from core.tasks import queue_topic_centroid_recompute
 
 
 def _address_to_string(address) -> str:
@@ -20,7 +25,12 @@ def _address_to_string(address) -> str:
 
 
 @receiver(inbound)
-def handle_anymail_inbound(sender, event, esp_name, **kwargs):
+def handle_anymail_inbound(
+    sender: Any,
+    event: Any,
+    esp_name: str,
+    **kwargs: Any,
+) -> None:
     """Translate an inbound Anymail event into the internal intake payload.
 
     Args:
@@ -50,3 +60,15 @@ def handle_anymail_inbound(sender, event, esp_name, **kwargs):
         raw_text=message.text or "",
         message_id=str(message.get("Message-ID", "") or event.event_id or ""),
     )
+
+
+@receiver(post_save, sender=UserFeedback)
+def queue_topic_centroid_on_feedback_save(sender, instance, created, **kwargs):
+    """Queue centroid recomputation when feedback changes and config allows it."""
+
+    if kwargs.get("raw"):
+        return
+
+    config, _ = ProjectConfig.objects.get_or_create(project=instance.project)
+    if config.recompute_topic_centroid_on_feedback_save:
+        queue_topic_centroid_recompute(instance.project_id)

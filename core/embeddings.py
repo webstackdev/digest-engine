@@ -164,6 +164,12 @@ def entity_collection_name_for_project(project_id: int) -> str:
     return f"project_{project_id}_entities"
 
 
+def centroid_collection_name_for_project(project_id: int) -> str:
+    """Return the Qdrant collection name for a project's feedback centroid."""
+
+    return f"project_{project_id}_centroid"
+
+
 @lru_cache(maxsize=1)
 def get_qdrant_client() -> QdrantClient:
     """Create and cache the shared Qdrant client instance."""
@@ -344,7 +350,9 @@ def search_similar_content(
     )
 
 
-def search_similar_entities(project_id: int, query_vector: list[float], limit: int = 10):
+def search_similar_entities(
+    project_id: int, query_vector: list[float], limit: int = 10
+):
     """Search the tracked-entity collection for nearest matches."""
 
     if not project_entity_collection_exists(project_id):
@@ -390,6 +398,23 @@ def get_reference_similarity(
     return sum(point.score for point in scored_points) / len(scored_points)
 
 
+def get_topic_centroid_similarity(project_id: int, vector: list[float]) -> float:
+    """Return similarity against the project's stored feedback centroid."""
+
+    if not project_centroid_collection_exists(project_id):
+        return 0.0
+    client = cast(Any, get_qdrant_client())
+    scored_points = client.search(
+        collection_name=centroid_collection_name_for_project(project_id),
+        query_vector=vector,
+        limit=1,
+        with_payload=True,
+    )
+    if not scored_points:
+        return 0.0
+    return float(scored_points[0].score)
+
+
 def ensure_project_collection(project_id: int) -> None:
     """Create the per-project Qdrant collection when it does not yet exist."""
 
@@ -420,6 +445,21 @@ def ensure_project_entity_collection(project_id: int) -> None:
     )
 
 
+def ensure_project_centroid_collection(project_id: int) -> None:
+    """Create the per-project centroid collection when it does not yet exist."""
+
+    client = get_qdrant_client()
+    collection_name = centroid_collection_name_for_project(project_id)
+    if project_centroid_collection_exists(project_id):
+        return
+    client.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(
+            size=get_embedding_dimension(), distance=Distance.COSINE
+        ),
+    )
+
+
 def project_collection_exists(project_id: int) -> bool:
     """Return whether the project's Qdrant collection already exists."""
 
@@ -434,10 +474,66 @@ def project_entity_collection_exists(project_id: int) -> bool:
     """Return whether the project's entity collection already exists."""
 
     try:
-        get_qdrant_client().get_collection(entity_collection_name_for_project(project_id))
+        get_qdrant_client().get_collection(
+            entity_collection_name_for_project(project_id)
+        )
     except Exception:
         return False
     return True
+
+
+def project_centroid_collection_exists(project_id: int) -> bool:
+    """Return whether the project's centroid collection already exists."""
+
+    try:
+        get_qdrant_client().get_collection(
+            centroid_collection_name_for_project(project_id)
+        )
+    except Exception:
+        return False
+    return True
+
+
+def upsert_topic_centroid(
+    project_id: int,
+    vector: list[float],
+    *,
+    upvote_count: int,
+    downvote_count: int,
+    feedback_count: int,
+) -> None:
+    """Write or update the project's single feedback-centroid vector."""
+
+    client = get_qdrant_client()
+    ensure_project_centroid_collection(project_id)
+    client.upsert(
+        collection_name=centroid_collection_name_for_project(project_id),
+        points=[
+            PointStruct(
+                id="topic-centroid",
+                vector=vector,
+                payload={
+                    "project_id": project_id,
+                    "upvote_count": upvote_count,
+                    "downvote_count": downvote_count,
+                    "feedback_count": feedback_count,
+                },
+            )
+        ],
+        wait=True,
+    )
+
+
+def delete_topic_centroid(project_id: int) -> None:
+    """Remove the stored centroid point for a project when it is no longer usable."""
+
+    if not project_centroid_collection_exists(project_id):
+        return
+    get_qdrant_client().delete(
+        collection_name=centroid_collection_name_for_project(project_id),
+        points_selector=["topic-centroid"],
+        wait=True,
+    )
 
 
 def build_content_embedding_text(content: Content) -> str:

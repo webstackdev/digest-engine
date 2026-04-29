@@ -634,7 +634,32 @@ def test_run_relevance_scoring_falls_back_when_openrouter_fails(
 
     assert result["relevance_score"] == 0.6
     assert result["used_llm"] is False
-    assert "Borderline reference similarity" in result["explanation"]
+    assert "Borderline embedding similarity" in result["explanation"]
+
+
+def test_run_relevance_scoring_prefers_topic_centroid_similarity(
+    pipeline_context,
+    settings,
+    mocker,
+):
+    mocker.patch(
+        "core.pipeline.build_content_embedding_text", return_value="embedding text"
+    )
+    mocker.patch("core.pipeline.embed_text", return_value=[0.1, 0.2, 0.3])
+    mocker.patch("core.pipeline.get_reference_similarity", return_value=0.34)
+    mocker.patch("core.pipeline.get_topic_centroid_similarity", return_value=0.91)
+    openrouter_mock = mocker.patch("core.pipeline.openrouter_chat_json")
+
+    result = run_relevance_scoring(pipeline_context.content)
+
+    assert result == {
+        "relevance_score": 0.91,
+        "explanation": "Feedback centroid similarity score is 0.91; no LLM adjudication was required.",
+        "used_llm": False,
+        "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
+        "latency_ms": 0,
+    }
+    openrouter_mock.assert_not_called()
 
 
 def test_run_summarization_falls_back_to_heuristic_when_openrouter_fails(

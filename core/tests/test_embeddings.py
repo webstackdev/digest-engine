@@ -15,11 +15,13 @@ from core.embeddings import (
     build_search_filter,
     get_embedding_provider,
     get_reference_similarity,
+    get_topic_centroid_similarity,
     normalize_text,
     search_similar,
     search_similar_content,
     serialize_published_date,
     upsert_content_embedding,
+    upsert_topic_centroid,
 )
 from core.models import (
     Content,
@@ -154,6 +156,43 @@ def test_get_reference_similarity_returns_zero_when_no_reference_matches(
     similarity = get_reference_similarity(embedding_context.project.id, [0.1, 0.2, 0.3])
 
     assert similarity == 0.0
+
+
+def test_upsert_topic_centroid_persists_single_centroid_point(
+    embedding_context, mocker
+):
+    provider_mock = mocker.patch("core.embeddings.get_embedding_provider")
+    client_mock = mocker.patch("core.embeddings.get_qdrant_client")
+    provider_mock.return_value.get_embedding_dimension.return_value = 3
+    client_mock.return_value.get_collection.side_effect = RuntimeError("missing")
+
+    upsert_topic_centroid(
+        embedding_context.project.id,
+        [0.1, 0.2, 0.3],
+        upvote_count=12,
+        downvote_count=2,
+        feedback_count=14,
+    )
+
+    client_mock.return_value.create_collection.assert_called_once()
+    client_mock.return_value.upsert.assert_called_once()
+    upsert_points = client_mock.return_value.upsert.call_args.kwargs["points"]
+    assert upsert_points[0].id == "topic-centroid"
+    assert upsert_points[0].payload["upvote_count"] == 12
+
+
+def test_get_topic_centroid_similarity_returns_top_centroid_score(
+    embedding_context, mocker
+):
+    client_mock = mocker.patch("core.embeddings.get_qdrant_client")
+    client_mock.return_value.get_collection.return_value = SimpleNamespace()
+    client_mock.return_value.search.return_value = [SimpleNamespace(score=0.83)]
+
+    similarity = get_topic_centroid_similarity(
+        embedding_context.project.id, [0.1, 0.2, 0.3]
+    )
+
+    assert similarity == pytest.approx(0.83)
 
 
 def test_get_embedding_provider_uses_sentence_transformer_backend(settings, mocker):
@@ -338,6 +377,7 @@ def test_embedding_smoke_command_can_upsert_content(embedding_context, mocker, c
 
 
 def test_seed_demo_creates_reference_corpus_and_embeds_demo_content(mocker, capsys):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     upsert_mock = mocker.patch(
         "core.management.commands.seed_demo.upsert_content_embedding"
     )
@@ -384,6 +424,7 @@ def test_seed_demo_creates_reference_corpus_and_embeds_demo_content(mocker, caps
 
 
 def test_seed_demo_is_stable_on_rerun(mocker):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     mocker.patch("core.management.commands.seed_demo.upsert_content_embedding")
 
     call_command("seed_demo")
@@ -401,6 +442,7 @@ def test_seed_demo_is_stable_on_rerun(mocker):
 
 
 def test_seed_demo_skips_embeddings_when_vector_stack_is_unavailable(mocker, capsys):
+    mocker.patch("core.signals.queue_topic_centroid_recompute")
     upsert_mock = mocker.patch(
         "core.management.commands.seed_demo.upsert_content_embedding",
         side_effect=ResponseHandlingException(httpx.ConnectError("connection refused")),

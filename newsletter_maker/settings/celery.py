@@ -22,6 +22,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.run_all_authority_recomputations",
         "schedule": crontab(hour=2, minute=0),
     },
+    "run-all-topic-centroid-recomputations-nightly": {
+        "task": "core.tasks.run_all_topic_centroid_recomputations",
+        "schedule": crontab(hour=3, minute=0),
+    },
 }
 
 __all__ = [

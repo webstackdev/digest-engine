@@ -15,6 +15,7 @@ import type {
   ReviewQueueItem,
   SkillResult,
   SourceConfig,
+  TopicCentroidObservabilitySummary,
   UserFeedback,
 } from "@/lib/types"
 
@@ -395,6 +396,24 @@ export async function getProjectSourceConfigs(
   projectId: number,
 ): Promise<SourceConfig[]> {
   return apiFetch<SourceConfig[]>(`/api/v1/projects/${projectId}/source-configs/`)
+}
+
+/**
+ * Fetch project-level centroid observability metrics for the admin health page.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Aggregate centroid drift metrics plus the latest persisted snapshot.
+ * @example
+ * ```ts
+ * const summary = await getProjectTopicCentroidSummary(4)
+ * ```
+ */
+export async function getProjectTopicCentroidSummary(
+  projectId: number,
+): Promise<TopicCentroidObservabilitySummary> {
+  return apiFetch<TopicCentroidObservabilitySummary>(
+    `/api/v1/projects/${projectId}/topic-centroid-snapshots/summary/`,
+  )
 }
 
 /**
