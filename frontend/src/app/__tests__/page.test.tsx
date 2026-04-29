@@ -153,6 +153,8 @@ function createEntity(overrides: Partial<Entity> = {}): Entity {
     bluesky_handle: "",
     mastodon_handle: "",
     twitter_handle: "openai",
+    mention_count: 0,
+    latest_mentions: [],
     created_at: "2026-04-28T09:30:00Z",
     ...overrides,
   }

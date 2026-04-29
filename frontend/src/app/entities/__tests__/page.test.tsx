@@ -2,15 +2,19 @@ import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import type { Entity, Project } from "@/lib/types"
+import type { Entity, EntityCandidate, Project } from "@/lib/types"
 
-const { getProjectEntitiesMock, getProjectsMock, selectProjectMock } = vi.hoisted(
-  () => ({
-    getProjectEntitiesMock: vi.fn(),
-    getProjectsMock: vi.fn(),
-    selectProjectMock: vi.fn(),
-  }),
-)
+const {
+  getProjectEntitiesMock,
+  getProjectEntityCandidatesMock,
+  getProjectsMock,
+  selectProjectMock,
+} = vi.hoisted(() => ({
+  getProjectEntitiesMock: vi.fn(),
+  getProjectEntityCandidatesMock: vi.fn(),
+  getProjectsMock: vi.fn(),
+  selectProjectMock: vi.fn(),
+}))
 
 vi.mock("@/components/app-shell", () => ({
   AppShell: ({
@@ -46,6 +50,7 @@ vi.mock("@/components/status-badge", () => ({
 
 vi.mock("@/lib/api", () => ({
   getProjectEntities: getProjectEntitiesMock,
+  getProjectEntityCandidates: getProjectEntityCandidatesMock,
   getProjects: getProjectsMock,
 }))
 
@@ -86,7 +91,29 @@ function createEntity(overrides: Partial<Entity> = {}): Entity {
     bluesky_handle: "openai.bsky.social",
     mastodon_handle: "@openai@mastodon.social",
     twitter_handle: "openai",
+    mention_count: 0,
+    latest_mentions: [],
     created_at: "2026-04-28T10:00:00Z",
+    ...overrides,
+  }
+}
+
+function createEntityCandidate(
+  overrides: Partial<EntityCandidate> = {},
+): EntityCandidate {
+  return {
+    id: 14,
+    project: 1,
+    name: "River Labs",
+    suggested_type: "vendor",
+    first_seen_in: 21,
+    first_seen_title: "River Labs launches hosted platform",
+    occurrence_count: 2,
+    status: "pending",
+    merged_into: null,
+    merged_into_name: "",
+    created_at: "2026-04-28T10:00:00Z",
+    updated_at: "2026-04-28T11:00:00Z",
     ...overrides,
   }
 }
@@ -115,10 +142,12 @@ describe("EntitiesPage", () => {
 
     getProjectsMock.mockReset()
     getProjectEntitiesMock.mockReset()
+    getProjectEntityCandidatesMock.mockReset()
     selectProjectMock.mockReset()
 
     getProjectsMock.mockResolvedValue([defaultProject])
     getProjectEntitiesMock.mockResolvedValue([])
+    getProjectEntityCandidatesMock.mockResolvedValue([])
     selectProjectMock.mockImplementation((projects: Project[]) => {
       return projects[0] ?? null
     })
@@ -138,6 +167,7 @@ describe("EntitiesPage", () => {
       screen.getByText("Create a project first in Django admin."),
     ).toBeInTheDocument()
     expect(getProjectEntitiesMock).not.toHaveBeenCalled()
+    expect(getProjectEntityCandidatesMock).not.toHaveBeenCalled()
   })
 
   it("renders flash messages and the empty entity state", async () => {
@@ -160,10 +190,14 @@ describe("EntitiesPage", () => {
     expect(
       screen.getByText("No entities exist for this project yet."),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText("No pending entity candidates right now."),
+    ).toBeInTheDocument()
     expect(getProjectEntitiesMock).toHaveBeenCalledWith(1)
+    expect(getProjectEntityCandidatesMock).toHaveBeenCalledWith(1)
   })
 
-  it("renders entity cards, badge tone, and edit form defaults", async () => {
+  it("renders entity cards, mention summaries, and the candidate queue", async () => {
     const selectedProject = createProject({ id: 3, name: "Data Signals" })
     getProjectsMock.mockResolvedValue([selectedProject])
     selectProjectMock.mockReturnValue(selectedProject)
@@ -181,6 +215,25 @@ describe("EntitiesPage", () => {
         bluesky_handle: "",
         mastodon_handle: "",
         twitter_handle: "anthropicai",
+        mention_count: 2,
+        latest_mentions: [
+          {
+            id: 31,
+            content_id: 22,
+            content_title: "Anthropic ships a safety update",
+            role: "subject",
+            sentiment: "positive",
+            span: "Anthropic",
+            confidence: 0.94,
+            created_at: "2026-04-28T12:00:00Z",
+          },
+        ],
+      }),
+    ])
+    getProjectEntityCandidatesMock.mockResolvedValue([
+      createEntityCandidate({
+        project: 3,
+        occurrence_count: 3,
       }),
     ])
 
@@ -192,16 +245,29 @@ describe("EntitiesPage", () => {
     )
     expect(screen.getByRole("heading", { name: "Anthropic" })).toBeInTheDocument()
     expect(screen.getByText("Authority 0.91")).toBeInTheDocument()
+    expect(screen.getByText("2 mentions")).toBeInTheDocument()
+    expect(
+      screen.getByText("Anthropic ships a safety update"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("94% confidence")).toBeInTheDocument()
+    expect(screen.getByText("Pending entity candidates")).toBeInTheDocument()
+    expect(screen.getByText("River Labs")).toBeInTheDocument()
+    expect(screen.getByText("3 occurrences")).toBeInTheDocument()
+    expect(
+      screen.getByText("First seen in River Labs launches hosted platform"),
+    ).toBeInTheDocument()
 
-    const badge = screen.getByTestId("status-badge")
-    expect(badge).toHaveAttribute("data-tone", "neutral")
-    expect(badge).toHaveTextContent("organization")
+    const badges = screen.getAllByTestId("status-badge")
+    expect(badges[0]).toHaveAttribute("data-tone", "warning")
+    expect(badges[0]).toHaveTextContent("pending")
+    expect(badges[1]).toHaveAttribute("data-tone", "neutral")
+    expect(badges[1]).toHaveTextContent("organization")
 
     expect(
       screen.getByDisplayValue("Safety-focused AI company"),
     ).toBeInTheDocument()
     expect(screen.getByDisplayValue("https://anthropic.com")).toBeInTheDocument()
     expect(screen.getByDisplayValue("anthropicai")).toBeInTheDocument()
-    expect(screen.getAllByDisplayValue("/entities?project=3")).toHaveLength(3)
+    expect(screen.getAllByDisplayValue("/entities?project=3")).toHaveLength(6)
   })
 })

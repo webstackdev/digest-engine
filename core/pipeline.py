@@ -25,6 +25,7 @@ from core.embeddings import (
     get_reference_similarity,
     search_similar_content,
 )
+from core.entity_extraction import run_entity_extraction
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
 from core.models import Content, ReviewQueue, ReviewReason, SkillResult, SkillStatus
 
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 DEDUPLICATION_SKILL_NAME = "deduplication"
 CLASSIFICATION_SKILL_NAME = "content_classification"
+ENTITY_EXTRACTION_SKILL_NAME = "entity_extraction"
 RELEVANCE_SKILL_NAME = "relevance_scoring"
 SUMMARIZATION_SKILL_NAME = "summarization"
 RELATED_CONTENT_SKILL_NAME = "find_related"
@@ -60,6 +62,7 @@ class PipelineState(TypedDict, total=False):
     project_id: int
     dedup: dict[str, Any] | None
     classification: dict[str, Any] | None
+    entity_extraction: dict[str, Any] | None
     relevance: dict[str, Any] | None
     summary: dict[str, Any] | None
     status: str
@@ -77,6 +80,7 @@ def get_ingestion_graph():
     graph = StateGraph(PipelineState)
     graph.add_node("deduplicate", deduplicate_node)
     graph.add_node("classify", classify_node)
+    graph.add_node("extract_entities", extract_entities_node)
     graph.add_node("score_relevance", relevance_node)
     graph.add_node("summarize", summarize_node)
     graph.add_node("archive", archive_node)
@@ -90,7 +94,8 @@ def get_ingestion_graph():
             "unique": "classify",
         },
     )
-    graph.add_edge("classify", "score_relevance")
+    graph.add_edge("classify", "extract_entities")
+    graph.add_edge("extract_entities", "score_relevance")
     graph.add_conditional_edges(
         "score_relevance",
         route_by_relevance,
@@ -186,6 +191,25 @@ def classify_node(state: PipelineState) -> PipelineState:
             confidence=float(classification["confidence"]),
         )
     return {"classification": classification}
+
+
+def extract_entities_node(state: PipelineState) -> PipelineState:
+    """Extract tracked-entity mentions before relevance scoring."""
+
+    content = _get_content(state)
+    extraction = _execute_with_retries(
+        ENTITY_EXTRACTION_SKILL_NAME, lambda: run_entity_extraction(content)
+    )
+    _create_skill_result(
+        content,
+        skill_name=ENTITY_EXTRACTION_SKILL_NAME,
+        status=SkillStatus.COMPLETED,
+        result_data=extraction,
+        model_used=extraction["model_used"],
+        latency_ms=extraction["latency_ms"],
+        confidence=extraction["confidence"],
+    )
+    return {"entity_extraction": extraction}
 
 
 def relevance_node(state: PipelineState) -> PipelineState:
@@ -383,8 +407,6 @@ def run_deduplication(content: Content) -> dict[str, Any]:
         "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
         "latency_ms": 0,
     }
-
-
 def run_content_classification(content: Content) -> dict[str, Any]:
     """Classify a content item into a newsletter-oriented content type.
 

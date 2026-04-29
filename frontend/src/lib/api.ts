@@ -8,6 +8,7 @@ import type {
   Content,
   ContentSkillName,
   Entity,
+  EntityCandidate,
   IngestionRun,
   Project,
   ReviewQueueItem,
@@ -228,6 +229,62 @@ export async function getProjectEntities(projectId: number): Promise<Entity[]> {
 }
 
 /**
+ * Fetch a single tracked entity for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param entityId - Numeric entity identifier inside the project.
+ * @returns The requested entity record.
+ * @example
+ * ```ts
+ * const entity = await getProjectEntity(4, 9)
+ * ```
+ */
+export async function getProjectEntity(
+  projectId: number,
+  entityId: number,
+): Promise<Entity> {
+  return apiFetch<Entity>(`/api/v1/projects/${projectId}/entities/${entityId}/`)
+}
+
+/**
+ * Fetch the extracted mention history for one tracked entity.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param entityId - Numeric entity identifier inside the project.
+ * @returns The extracted mention history for the requested entity.
+ * @example
+ * ```ts
+ * const mentions = await getProjectEntityMentions(4, 9)
+ * ```
+ */
+export async function getProjectEntityMentions(
+  projectId: number,
+  entityId: number,
+) {
+  return apiFetch<Entity["latest_mentions"]>(
+    `/api/v1/projects/${projectId}/entities/${entityId}/mentions/`,
+  )
+}
+
+/**
+ * Fetch entity candidates awaiting review for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Pending and resolved entity candidates visible for the project.
+ * @example
+ * ```ts
+ * const candidates = await getProjectEntityCandidates(4)
+ * ```
+ */
+export async function getProjectEntityCandidates(
+  projectId: number,
+): Promise<EntityCandidate[]> {
+  return apiFetch<EntityCandidate[]>(
+    `/api/v1/projects/${projectId}/entity-candidates/`,
+  )
+}
+
+/**
  * Fetch persisted AI skill results for a project.
  *
  * @param projectId - Numeric project identifier from the Django API.
@@ -440,6 +497,68 @@ export async function deleteEntity(entityId: number, projectId: number) {
   return apiFetch(`/api/v1/projects/${projectId}/entities/${entityId}/`, {
     method: "DELETE",
   })
+}
+
+/**
+ * Accept an extracted entity candidate for a project.
+ *
+ * @param candidateId - Numeric candidate identifier to accept.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns The updated entity-candidate payload.
+ */
+export async function acceptEntityCandidate(
+  candidateId: number,
+  projectId: number,
+) {
+  return apiFetch<EntityCandidate>(
+    `/api/v1/projects/${projectId}/entity-candidates/${candidateId}/accept/`,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+  )
+}
+
+/**
+ * Reject an extracted entity candidate for a project.
+ *
+ * @param candidateId - Numeric candidate identifier to reject.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns The updated entity-candidate payload.
+ */
+export async function rejectEntityCandidate(
+  candidateId: number,
+  projectId: number,
+) {
+  return apiFetch<EntityCandidate>(
+    `/api/v1/projects/${projectId}/entity-candidates/${candidateId}/reject/`,
+    {
+      method: "POST",
+      body: JSON.stringify({}),
+    },
+  )
+}
+
+/**
+ * Merge an extracted entity candidate into an existing tracked entity.
+ *
+ * @param candidateId - Numeric candidate identifier to merge.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param mergedInto - Numeric tracked-entity identifier that will absorb the candidate.
+ * @returns The updated entity-candidate payload.
+ */
+export async function mergeEntityCandidate(
+  candidateId: number,
+  projectId: number,
+  mergedInto: number,
+) {
+  return apiFetch<EntityCandidate>(
+    `/api/v1/projects/${projectId}/entity-candidates/${candidateId}/merge/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ merged_into: mergedInto }),
+    },
+  )
 }
 
 /**

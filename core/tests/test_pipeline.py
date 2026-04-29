@@ -6,6 +6,9 @@ from django.contrib.auth.models import Group
 from core.deduplication import canonicalize_url
 from core.models import (
     Content,
+    Entity,
+    EntityCandidate,
+    EntityMention,
     Project,
     ReviewQueue,
     ReviewReason,
@@ -15,6 +18,7 @@ from core.models import (
 from core.pipeline import (
     CLASSIFICATION_SKILL_NAME,
     DEDUPLICATION_SKILL_NAME,
+    ENTITY_EXTRACTION_SKILL_NAME,
     RELATED_CONTENT_SKILL_NAME,
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
@@ -31,6 +35,7 @@ from core.pipeline import (
     route_by_relevance,
     run_content_classification,
     run_deduplication,
+    run_entity_extraction,
     run_relevance_scoring,
     run_summarization,
 )
@@ -813,3 +818,109 @@ def test_pipeline_helper_utilities_cover_serialization_and_summary_edges(
     assert _clamp_score("bad") == 0.0
     assert _clamp_score(2) == 1.0
     assert _clamp_score(-1) == 0.0
+
+
+def test_run_entity_extraction_persists_mentions_and_candidates(
+    pipeline_context, mocker
+):
+    entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Acme Cloud",
+        type="vendor",
+        website_url="https://acme.example.com",
+    )
+    pipeline_context.content.title = "Acme Cloud expands platform team tooling"
+    pipeline_context.content.content_text = (
+        "Acme Cloud announced a new runtime while River Labs joined the launch."
+    )
+    pipeline_context.content.save(update_fields=["title", "content_text"])
+    mocker.patch(
+        "core.entity_extraction.search_similar_entities_for_content",
+        return_value=[SimpleNamespace(score=0.91, payload={"entity_id": entity.id})],
+    )
+
+    result = run_entity_extraction(pipeline_context.content)
+
+    mention = EntityMention.objects.get(content=pipeline_context.content, entity=entity)
+    candidate = EntityCandidate.objects.get(
+        project=pipeline_context.project,
+        name="River Labs",
+    )
+
+    assert mention.role == "subject"
+    assert mention.span == "Acme Cloud"
+    assert result["primary_entity_id"] == entity.id
+    assert pipeline_context.content.entity_id == entity.id
+    assert candidate.suggested_type == "vendor"
+    assert candidate.occurrence_count == 1
+
+
+def test_process_content_records_entity_extraction_skill_result(
+    pipeline_context, mocker
+):
+    entity = Entity.objects.create(
+        project=pipeline_context.project,
+        name="Acme Cloud",
+        type="vendor",
+    )
+    mocker.patch(
+        "core.pipeline.run_content_classification",
+        return_value={
+            "content_type": "technical_article",
+            "confidence": 0.92,
+            "explanation": "Confident classification.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_entity_extraction",
+        return_value={
+            "mentions": [
+                {
+                    "entity_id": entity.id,
+                    "entity_name": entity.name,
+                    "role": "subject",
+                    "sentiment": "neutral",
+                    "span": entity.name,
+                    "confidence": 0.88,
+                }
+            ],
+            "candidate_entities": [],
+            "primary_entity_id": entity.id,
+            "confidence": 0.88,
+            "explanation": "Tracked entity matched in the title.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_relevance_scoring",
+        return_value={
+            "relevance_score": 0.9,
+            "explanation": "Highly relevant.",
+            "used_llm": False,
+            "model_used": "embedding:test",
+            "latency_ms": 0,
+        },
+    )
+    mocker.patch(
+        "core.pipeline.run_summarization",
+        return_value={
+            "summary": "Summary for editors.",
+            "model_used": "heuristic",
+            "latency_ms": 0,
+        },
+    )
+
+    result = process_content(pipeline_context.content.id)
+
+    skill_result = SkillResult.objects.get(
+        content=pipeline_context.content,
+        skill_name=ENTITY_EXTRACTION_SKILL_NAME,
+    )
+
+    assert result["status"] == "completed"
+    assert skill_result.status == SkillStatus.COMPLETED
+    assert skill_result.confidence == pytest.approx(0.88)
+    assert skill_result.result_data["mentions"][0]["entity_name"] == entity.name

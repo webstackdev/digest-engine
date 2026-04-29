@@ -3,6 +3,7 @@ from rest_framework_nested.routers import NestedSimpleRouter
 
 from core.api import (
     ContentViewSet,
+    EntityCandidateViewSet,
     EntityViewSet,
     IngestionRunViewSet,
     ProjectConfigViewSet,
@@ -23,6 +24,11 @@ project_router.register(
     r"project-configs", ProjectConfigViewSet, basename="project-config"
 )
 project_router.register(r"entities", EntityViewSet, basename="project-entity")
+project_router.register(
+    r"entity-candidates",
+    EntityCandidateViewSet,
+    basename="project-entity-candidate",
+)
 project_router.register(r"contents", ContentViewSet, basename="project-content")
 project_router.register(
     r"skill-results", SkillResultViewSet, basename="project-skill-result"
