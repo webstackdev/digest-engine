@@ -1,0 +1,161 @@
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/webstackdev/newsletter-maker
+  tag: latest
+  pullPolicy: IfNotPresent
+
+env:
+  debug: "false"
+  allowedHosts: "localhost,127.0.0.1"
+  csrfTrustedOrigins: "http://localhost,http://127.0.0.1"
+  siteId: "1"
+  newsletterApiBaseUrl: "http://newsletter-maker.local"
+  emailBackend: anymail.backends.resend.EmailBackend
+  defaultFromEmail: onboarding@resend.dev
+  serverEmail: onboarding@resend.dev
+  resendFromEmail: onboarding@resend.dev
+  redditUserAgent: newsletter-maker/0.1
+  logLevel: INFO
+  celeryTaskAlwaysEager: "false"
+  openrouterApiBase: https://openrouter.ai/api/v1
+  openrouterAppUrl: ""
+  openrouterAppName: newsletter-maker
+  aiClassificationModel: meta-llama/llama-3.1-70b-instruct
+  aiRelevanceModel: qwen/qwen-2.5-72b-instruct
+  aiSummarizationModel: google/gemma-3-27b-it
+  aiClassificationReviewThreshold: "0.6"
+  aiRelevanceLowThreshold: "0.5"
+  aiRelevanceHighThreshold: "0.85"
+  aiRelevanceReviewThreshold: "0.4"
+  aiRelevanceSummarizeThreshold: "0.7"
+  aiMaxNodeRetries: "2"
+  aiRequestTimeoutSeconds: "60"
+  embeddingProvider: sentence-transformers
+  embeddingModel: sentence-transformers/all-MiniLM-L6-v2
+  embeddingTrustRemoteCode: "false"
+  ollamaUrl: http://ollama:11434
+
+secrets:
+  secretKey: change-me
+  blueskyCredentialsEncryptionKey: ""
+  openrouterApiKey: ""
+  redditClientId: ""
+  redditClientSecret: ""
+  resendApiKey: ""
+  resendInboundSecret: ""
+  anymailWebhookSecret: ""
+  djangoSuperuserUsername: admin
+  djangoSuperuserEmail: admin@example.com
+  djangoSuperuserPassword: adminpass
+
+django:
+  replicaCount: 1
+  port: 8000
+  command:
+    - gunicorn
+    - newsletter_maker.wsgi:application
+    - --bind
+    - 0.0.0.0:8000
+    - --workers
+    - "2"
+  resources: {}
+
+celeryWorker:
+  replicaCount: 1
+  command:
+    - celery
+    - -A
+    - newsletter_maker
+    - worker
+    - --loglevel=info
+  resources: {}
+
+celeryBeat:
+  replicaCount: 1
+  command:
+    - celery
+    - -A
+    - newsletter_maker
+    - beat
+    - --loglevel=info
+  resources: {}
+
+nginx:
+  image:
+    repository: nginx
+    tag: alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  resources: {}
+
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16"
+    pullPolicy: IfNotPresent
+  database: newsletter_maker
+  username: newsletter
+  password: newsletter
+  service:
+    port: 5432
+  persistence:
+    enabled: true
+    size: 8Gi
+    accessModes:
+      - ReadWriteOnce
+  resources: {}
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+  service:
+    port: 6379
+  persistence:
+    enabled: true
+    size: 2Gi
+    accessModes:
+      - ReadWriteOnce
+  resources: {}
+
+qdrant:
+  enabled: true
+  image:
+    repository: qdrant/qdrant
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    port: 6333
+  persistence:
+    enabled: true
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+  resources: {}
+
+jobs:
+  migrate:
+    enabled: true
+    hook: true
+  seedDemo:
+    enabled: false
+  syncEmbeddings:
+    enabled: false
+
+keda:
+  enabled: false
+  minReplicaCount: 1
+  maxReplicaCount: 5
+  pollingInterval: 30
+  cooldownPeriod: 120
+  redisListName: celery
+
+networkPolicy:
+  enabled: false

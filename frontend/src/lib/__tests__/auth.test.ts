@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+vi.mock("server-only", () => ({}))
+
 const {
   credentialsProviderMock,
   githubProviderMock,
@@ -73,7 +75,8 @@ describe("authOptions", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.unstubAllEnvs()
-    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://api.example.com")
+    vi.stubEnv("NEWSLETTER_API_BASE_URL", "https://api.example.com")
+    vi.stubEnv("NEXT_PUBLIC_API_URL", "https://public.example.com")
     credentialsProviderMock.mockClear()
     githubProviderMock.mockClear()
     googleProviderMock.mockClear()
@@ -175,16 +178,46 @@ describe("authOptions", () => {
     ).rejects.toThrow("Authentication failed.")
   })
 
-  it("throws when NEXT_PUBLIC_API_URL is not configured", async () => {
+  it("prefers the server-side backend base URL for credential auth", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ key: "abc123" }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { authOptions } = await loadAuthModule()
+    const authorize = getCredentialsAuthorize(authOptions)
+
+    await authorize({ username: "alice@example.com", password: "secret" }, {})
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/auth/login/",
+      expect.any(Object),
+    )
+  })
+
+  it("falls back to the local backend default when the server-side backend URL is absent", async () => {
     vi.unstubAllEnvs()
-    vi.stubGlobal("fetch", vi.fn())
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ key: "abc123" }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { authOptions } = await loadAuthModule()
+    const authorize = getCredentialsAuthorize(authOptions)
+
+    await authorize({ username: "alice@example.com", password: "secret" }, {})
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://127.0.0.1:8080/api/auth/login/",
+      expect.any(Object),
+    )
+  })
+
+  it("normalizes backend network failures for credential sign-in", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")))
 
     const { authOptions } = await loadAuthModule()
     const authorize = getCredentialsAuthorize(authOptions)
 
     await expect(
       authorize({ username: "alice@example.com", password: "secret" }, {}),
-    ).rejects.toThrow("NEXT_PUBLIC_API_URL is not configured.")
+    ).rejects.toThrow("Unable to reach the authentication service.")
   })
 
   it("enriches social sign-in users with backend auth when access tokens are present", async () => {

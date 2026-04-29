@@ -1,0 +1,22 @@
+image:
+  repository: newsletter-maker
+  tag: minikube
+  pullPolicy: IfNotPresent
+
+env:
+  debug: "true"
+  allowedHosts: "localhost,127.0.0.1,newsletter-maker.local"
+  csrfTrustedOrigins: "http://localhost,http://127.0.0.1,http://newsletter-maker.local"
+  newsletterApiBaseUrl: "http://newsletter-maker.local"
+
+nginx:
+  service:
+    type: NodePort
+    port: 80
+
+jobs:
+  seedDemo:
+    enabled: true
+
+networkPolicy:
+  enabled: true

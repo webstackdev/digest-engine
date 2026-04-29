@@ -169,3 +169,19 @@ embed-smoke-content content_id:
 shell:
     if [ ! -f .env ]; then cp .env.example .env; fi
     python3 manage.py shell
+
+helm-lint:
+    helm lint deploy/helm/newsletter-maker
+
+helm-template:
+    helm template newsletter-maker deploy/helm/newsletter-maker -f deploy/helm/newsletter-maker/values-minikube.yaml > /tmp/newsletter-maker-helm-template.yaml
+
+k8s-build-minikube:
+    DOCKER_BUILDKIT=1 docker build -t newsletter-maker:minikube -f docker/web/Dockerfile .
+    minikube image load newsletter-maker:minikube
+
+k8s-install-minikube:
+    helm upgrade --install newsletter-maker ./deploy/helm/newsletter-maker -f ./deploy/helm/newsletter-maker/values-minikube.yaml
+
+k8s-uninstall-minikube:
+    helm uninstall newsletter-maker || true

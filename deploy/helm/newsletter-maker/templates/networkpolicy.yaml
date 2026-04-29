@@ -1,0 +1,255 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-default-deny
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "newsletter-maker.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-allow-nginx
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "nginx") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - port: 80
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "django") | nindent 14 }}
+      ports:
+        - port: {{ .Values.django.port }}
+          protocol: TCP
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-allow-django
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "django") | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "nginx") | nindent 14 }}
+      ports:
+        - port: {{ .Values.django.port }}
+          protocol: TCP
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "postgres") | nindent 14 }}
+      ports:
+        - port: {{ .Values.postgres.service.port }}
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "redis") | nindent 14 }}
+      ports:
+        - port: {{ .Values.redis.service.port }}
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "qdrant") | nindent 14 }}
+      ports:
+        - port: {{ .Values.qdrant.service.port }}
+          protocol: TCP
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-allow-worker-and-beat
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - celery-worker
+          - celery-beat
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - {{ include "newsletter-maker.name" . }}
+      - key: app.kubernetes.io/instance
+        operator: In
+        values:
+          - {{ .Release.Name }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "postgres") | nindent 14 }}
+      ports:
+        - port: {{ .Values.postgres.service.port }}
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "redis") | nindent 14 }}
+      ports:
+        - port: {{ .Values.redis.service.port }}
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "qdrant") | nindent 14 }}
+      ports:
+        - port: {{ .Values.qdrant.service.port }}
+          protocol: TCP
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-allow-postgres
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "postgres") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - django
+                  - celery-worker
+                  - celery-beat
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - {{ include "newsletter-maker.name" . }}
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                  - {{ .Release.Name }}
+      ports:
+        - port: {{ .Values.postgres.service.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-allow-redis
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "redis") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - django
+                  - celery-worker
+                  - celery-beat
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - {{ include "newsletter-maker.name" . }}
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                  - {{ .Release.Name }}
+      ports:
+        - port: {{ .Values.redis.service.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-allow-qdrant
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "qdrant") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - django
+                  - celery-worker
+                  - celery-beat
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - {{ include "newsletter-maker.name" . }}
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                  - {{ .Release.Name }}
+      ports:
+        - port: {{ .Values.qdrant.service.port }}
+          protocol: TCP
+{{- end }}

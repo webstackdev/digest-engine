@@ -93,6 +93,7 @@ The system is designed for graceful failure, not silent corruption. Unparseable 
 ## Project Documentation
 
 - [Developer Guide](docs/DEVELOPER_GUIDE.md) gives a fast "where to look first" map for new contributors.
+- [Deployment Guide](docs/DEPLOYMENT.md) covers Docker Compose, Helm, Minikube, and deployment-aware CI.
 - [Implementation Overview](docs/IMPLEMENTATION_OVERVIEW.md) summarizes the main features and current architecture.
 - [Data Models](docs/MODELS.md) describes the purpose of each core model.
 - [Relevance Scoring](docs/RELEVANCE_SCORING.md) explains how similarity scoring and review thresholds work.

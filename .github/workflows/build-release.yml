@@ -1,0 +1,127 @@
+name: Build and Release
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-helm:
+    name: Validate Helm chart
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Lint chart
+        run: helm lint deploy/helm/newsletter-maker
+
+      - name: Render chart
+        run: helm template newsletter-maker deploy/helm/newsletter-maker -f
+          deploy/helm/newsletter-maker/values-minikube.yaml >
+          /tmp/newsletter-maker-chart.yaml
+
+  build-frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Prepare frontend env
+        working-directory: frontend
+        run: |
+          cp .env.example .env.local
+          echo "NEXTAUTH_SECRET=ci-build-secret" >> .env.local
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+          NEXTAUTH_URL: http://localhost:3000
+          NEXTAUTH_SECRET: ci-build-secret
+        run: npm run build
+
+  build-backend:
+    name: Build and scan backend image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build backend image
+        env:
+          DOCKER_BUILDKIT: "1"
+        run: docker build -t newsletter-maker-ci:${{ github.sha }} -f
+          docker/web/Dockerfile .
+
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: newsletter-maker-ci:${{ github.sha }}
+          scan-type: image
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish backend image
+        if: github.event_name == 'push'
+        env:
+          IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/newsletter-maker
+        run: |
+          set -euo pipefail
+
+          docker tag newsletter-maker-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:${GITHUB_SHA}
+          docker push ${IMAGE_REPOSITORY}:${GITHUB_SHA}
+
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            docker tag newsletter-maker-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:main
+            docker push ${IMAGE_REPOSITORY}:main
+          fi
+
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            version_tag="${GITHUB_REF#refs/tags/}"
+            docker tag newsletter-maker-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:${version_tag}
+            docker push ${IMAGE_REPOSITORY}:${version_tag}
+            docker tag newsletter-maker-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:latest
+            docker push ${IMAGE_REPOSITORY}:latest
+          fi

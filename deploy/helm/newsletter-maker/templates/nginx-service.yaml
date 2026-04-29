@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-nginx
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.nginx.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.nginx.service.port }}
+      targetPort: http
+  selector:
+    {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "nginx") | nindent 4 }}
