@@ -149,6 +149,37 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], self.owner_entity.id)
 
+    def test_content_detail_includes_duplicate_state(self):
+        canonical = self.owner_content
+        canonical.canonical_url = "https://example.com/owner"
+        canonical.duplicate_signal_count = 1
+        canonical.save(update_fields=["canonical_url", "duplicate_signal_count"])
+        duplicate = Content.objects.create(
+            project=self.owner_project,
+            url="https://example.com/owner?utm_source=reddit",
+            canonical_url="https://example.com/owner",
+            title="Duplicate Owner Content",
+            author="Owner Author",
+            entity=self.owner_entity,
+            source_plugin="reddit",
+            published_date="2026-04-22T00:00:00Z",
+            content_text="Duplicate content text",
+            duplicate_of=canonical,
+            is_active=False,
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-content-detail",
+                kwargs={"project_id": self.owner_project.id, "pk": duplicate.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["canonical_url"], "https://example.com/owner")
+        self.assertEqual(response.json()["duplicate_of"], canonical.id)
+        self.assertEqual(response.json()["duplicate_signal_count"], 0)
+
     def test_nested_entity_list_rejects_other_users_project(self):
         response = self.client.get(
             reverse(

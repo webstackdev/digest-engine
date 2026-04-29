@@ -11,6 +11,7 @@ from core.admin import (
     BlueskyCredentialsAdmin,
     BlueskyCredentialsAdminForm,
     ContentAdmin,
+    DuplicateStateFilter,
     EntityAdmin,
     HighValueFilter,
     IngestionRunAdmin,
@@ -438,6 +439,38 @@ def test_generate_newsletter_ideas_queues_selected_content(
     )
 
 
+def test_content_admin_duplicate_columns_render_expected_values(source_admin_context):
+    canonical = Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/admin-canonical",
+        canonical_url="https://example.com/admin-canonical",
+        title="Canonical Story",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="Canonical content.",
+        duplicate_signal_count=2,
+    )
+    duplicate = Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/admin-canonical?utm_source=reddit",
+        canonical_url="https://example.com/admin-canonical",
+        title="Duplicate Story",
+        author="Editor",
+        source_plugin=SourcePluginName.REDDIT,
+        published_date=timezone.now(),
+        content_text="Duplicate content.",
+        duplicate_of=canonical,
+        is_active=False,
+    )
+    admin_instance = ContentAdmin(Content, AdminSite())
+
+    assert "Also seen in 2 source(s)" in admin_instance.duplicate_badge(canonical)
+    assert admin_instance.duplicate_badge(duplicate) == "-"
+    assert admin_instance.duplicate_parent(canonical) == "-"
+    assert admin_instance.duplicate_parent(duplicate) == "Canonical Story"
+
+
 @pytest.mark.parametrize(
     ("authority_score", "expected_color"),
     [
@@ -500,6 +533,81 @@ def test_high_value_filter_only_returns_high_value_reference_content(
     filtered = filter_instance.queryset(SimpleNamespace(), Content.objects.all())
 
     assert list(filtered) == [high_value]
+
+
+def test_duplicate_state_filter_returns_canonical_rows_with_duplicate_signals(
+    source_admin_context,
+):
+    canonical = Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/filter-canonical",
+        canonical_url="https://example.com/filter-canonical",
+        title="Canonical",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="Canonical content.",
+        duplicate_signal_count=2,
+    )
+    Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/filter-plain",
+        canonical_url="https://example.com/filter-plain",
+        title="Plain",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="Plain content.",
+    )
+    filter_instance = DuplicateStateFilter(
+        request=SimpleNamespace(GET={}),
+        params={"duplicate_state": "canonical_with_duplicates"},
+        model=Content,
+        model_admin=ContentAdmin(Content, AdminSite()),
+    )
+    filter_instance.value = lambda: "canonical_with_duplicates"
+
+    filtered = filter_instance.queryset(SimpleNamespace(), Content.objects.all())
+
+    assert list(filtered) == [canonical]
+
+
+def test_duplicate_state_filter_returns_suppressed_duplicates(
+    source_admin_context,
+):
+    canonical = Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/filter-parent",
+        canonical_url="https://example.com/filter-parent",
+        title="Canonical",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="Canonical content.",
+    )
+    duplicate = Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/filter-parent?utm_source=reddit",
+        canonical_url="https://example.com/filter-parent",
+        title="Duplicate",
+        author="Editor",
+        source_plugin=SourcePluginName.REDDIT,
+        published_date=timezone.now(),
+        content_text="Duplicate content.",
+        duplicate_of=canonical,
+        is_active=False,
+    )
+    filter_instance = DuplicateStateFilter(
+        request=SimpleNamespace(GET={}),
+        params={"duplicate_state": "suppressed_duplicates"},
+        model=Content,
+        model_admin=ContentAdmin(Content, AdminSite()),
+    )
+    filter_instance.value = lambda: "suppressed_duplicates"
+
+    filtered = filter_instance.queryset(SimpleNamespace(), Content.objects.all())
+
+    assert list(filtered) == [duplicate]
 
 
 def test_content_view_trace_builds_template_trace_url(source_admin_context, settings):

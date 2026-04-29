@@ -238,12 +238,38 @@ class HighValueFilter(admin.SimpleListFilter):
         return queryset
 
 
+class DuplicateStateFilter(admin.SimpleListFilter):
+    """Filter content by duplicate retention and suppression state."""
+
+    title = "Duplicate State"
+    parameter_name = "duplicate_state"
+
+    def lookups(self, request, model_admin):
+        """Return duplicate-state options displayed in the admin sidebar."""
+
+        return (
+            ("canonical_with_duplicates", "Canonical rows with duplicate signals"),
+            ("suppressed_duplicates", "Suppressed duplicate rows"),
+        )
+
+    def queryset(self, request, queryset):
+        """Apply the selected duplicate-state filter."""
+
+        if self.value() == "canonical_with_duplicates":
+            return queryset.filter(duplicate_signal_count__gt=0)
+        if self.value() == "suppressed_duplicates":
+            return queryset.filter(duplicate_of__isnull=False)
+        return queryset
+
+
 @admin.register(Content)
 class ContentAdmin(admin.ModelAdmin):
     """Admin view for curated content plus trace and score context."""
 
     list_display = (
         "display_relevance",
+        "duplicate_badge",
+        "duplicate_parent",
         "is_active",
         "is_reference",
         "preview_content",
@@ -255,6 +281,7 @@ class ContentAdmin(admin.ModelAdmin):
     list_editable = ("is_reference", "is_active")
     list_filter = (
         HighValueFilter,
+        DuplicateStateFilter,
         ("project", admin.RelatedOnlyFieldListFilter),
         "source_plugin",
         "is_active",
@@ -376,6 +403,25 @@ class ContentAdmin(admin.ModelAdmin):
             else "orange" if obj.relevance_score > 40 else "red"
         )
         return format_html('<b style="color: {};">{}%</b>', color, obj.relevance_score)
+
+    @admin.display(description="Duplicates", ordering="duplicate_signal_count")
+    def duplicate_badge(self, obj):
+        """Show how many duplicate sightings point at this content row."""
+
+        if obj.duplicate_signal_count <= 0:
+            return "-"
+        return format_html(
+            '<span style="font-weight: bold; color: #0f766e;">Also seen in {} source(s)</span>',
+            obj.duplicate_signal_count,
+        )
+
+    @admin.display(description="Duplicate Of", ordering="duplicate_of")
+    def duplicate_parent(self, obj):
+        """Show the retained canonical content row when this item is a duplicate."""
+
+        if obj.duplicate_of is None:
+            return "-"
+        return obj.duplicate_of.title
 
     def changelist_view(self, request, extra_context=None):
         """Augment the changelist with content dashboard statistics."""

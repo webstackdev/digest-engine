@@ -4,8 +4,10 @@ import logging
 
 from celery import shared_task
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 
+from core.deduplication import canonicalize_url
 from core.embeddings import upsert_content_embedding
 from core.models import (
     Content,
@@ -155,6 +157,7 @@ def _ingest_source_config(source_config: SourceConfig) -> tuple[int, int]:
             project=source_config.project,
             entity=_match_entity_for_item(plugin, item),
             url=item.url,
+            canonical_url=canonicalize_url(item.url),
             title=item.title[:512],
             author=item.author[:255],
             source_plugin=item.source_plugin,
@@ -179,7 +182,11 @@ def _content_exists_for_item(source_config: SourceConfig, item) -> bool:
             source_plugin=item.source_plugin,
             source_metadata__post_uri=post_uri,
         ).exists()
-    return Content.objects.filter(project=source_config.project, url=item.url).exists()
+    canonical_url = canonicalize_url(item.url)
+    return Content.objects.filter(
+        project=source_config.project,
+        source_plugin=item.source_plugin,
+    ).filter(Q(canonical_url=canonical_url) | Q(url=item.url)).exists()
 
 
 def _match_entity_for_item(plugin, item):
@@ -221,11 +228,16 @@ def process_newsletter_intake(intake_id: int):
     )
     ingested_count = 0
     for item in extracted_items:
-        if Content.objects.filter(project=intake.project, url=item.url).exists():
+        canonical_url = canonicalize_url(item.url)
+        if Content.objects.filter(
+            project=intake.project,
+            source_plugin="newsletter",
+        ).filter(Q(canonical_url=canonical_url) | Q(url=item.url)).exists():
             continue
         content = Content.objects.create(
             project=intake.project,
             url=item.url,
+            canonical_url=canonical_url,
             title=item.title[:512],
             author=intake.sender_email[:255],
             source_plugin="newsletter",

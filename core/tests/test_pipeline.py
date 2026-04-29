@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 from django.contrib.auth.models import Group
 
+from core.deduplication import canonicalize_url
 from core.models import (
     Content,
     Project,
@@ -13,6 +14,7 @@ from core.models import (
 )
 from core.pipeline import (
     CLASSIFICATION_SKILL_NAME,
+    DEDUPLICATION_SKILL_NAME,
     RELATED_CONTENT_SKILL_NAME,
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
@@ -25,8 +27,10 @@ from core.pipeline import (
     create_pending_skill_result,
     execute_ad_hoc_skill,
     execute_background_skill_result,
+    get_skill_definition,
     route_by_relevance,
     run_content_classification,
+    run_deduplication,
     run_relevance_scoring,
     run_summarization,
 )
@@ -230,6 +234,128 @@ def test_process_content_adds_review_item_for_low_confidence_classification(
         reason=ReviewReason.LOW_CONFIDENCE_CLASSIFICATION,
     )
     assert review_item.confidence == pytest.approx(0.3)
+
+
+def test_process_content_marks_exact_duplicates_and_skips_downstream_skills(
+    pipeline_context, mocker
+):
+    existing = Content.objects.create(
+        project=pipeline_context.project,
+        url="https://example.com/source-story",
+        canonical_url=canonicalize_url("https://example.com/source-story"),
+        title="Original Story",
+        author="Editor",
+        source_plugin="rss",
+        published_date="2026-04-25T00:00:00Z",
+        content_text="Original reporting for the same story.",
+    )
+    duplicate = Content.objects.create(
+        project=pipeline_context.project,
+        url="https://example.com/source-story?utm_source=reddit&ref=thread",
+        title="Reddit thread about the same story",
+        author="Editor",
+        source_plugin="reddit",
+        published_date="2026-04-26T00:00:00Z",
+        content_text="A social post linking back to the same article.",
+    )
+    classify_mock = mocker.patch("core.pipeline.run_content_classification")
+    relevance_mock = mocker.patch("core.pipeline.run_relevance_scoring")
+    summarize_mock = mocker.patch("core.pipeline.run_summarization")
+
+    result = process_content(duplicate.id)
+
+    duplicate.refresh_from_db()
+    existing.refresh_from_db()
+    assert result["status"] == "duplicate"
+    assert duplicate.duplicate_of_id == existing.id
+    assert duplicate.is_active is False
+    assert existing.duplicate_signal_count == 1
+    assert classify_mock.call_count == 0
+    assert relevance_mock.call_count == 0
+    assert summarize_mock.call_count == 0
+    assert SkillResult.objects.filter(
+        content=duplicate, skill_name=DEDUPLICATION_SKILL_NAME
+    ).count() == 1
+
+
+def test_process_content_marks_semantic_duplicates_with_high_similarity(
+    pipeline_context, mocker
+):
+    existing = Content.objects.create(
+        project=pipeline_context.project,
+        url="https://example.com/existing-semantic-story",
+        canonical_url=canonicalize_url("https://example.com/existing-semantic-story"),
+        title="Platform teams cut toil with golden paths",
+        author="Editor",
+        source_plugin="rss",
+        published_date="2026-04-25T00:00:00Z",
+        content_text="Golden paths and reusable workflows reduce toil for platform teams.",
+    )
+    candidate = Content.objects.create(
+        project=pipeline_context.project,
+        url="https://example.com/new-semantic-story",
+        title="Golden paths reduce toil for platform orgs",
+        author="Editor",
+        source_plugin="newsletter",
+        published_date="2026-04-26T00:00:00Z",
+        content_text="Reusable platform workflows lower cognitive load for engineering teams.",
+    )
+    mocker.patch(
+        "core.pipeline.search_similar_content",
+        return_value=[SimpleNamespace(score=0.95, payload={"content_id": existing.id})],
+    )
+    classify_mock = mocker.patch("core.pipeline.run_content_classification")
+
+    result = process_content(candidate.id)
+
+    candidate.refresh_from_db()
+    existing.refresh_from_db()
+    assert result["status"] == "duplicate"
+    assert candidate.duplicate_of_id == existing.id
+    assert candidate.is_active is False
+    assert existing.duplicate_signal_count == 1
+    assert classify_mock.call_count == 0
+
+
+def test_run_deduplication_uses_llm_tiebreak_for_borderline_similarity(
+    pipeline_context, settings, mocker
+):
+    settings.OPENROUTER_API_KEY = "test-key"
+    candidate = Content.objects.create(
+        project=pipeline_context.project,
+        url="https://example.com/candidate-story",
+        title="A discussion thread about release policies",
+        author="Editor",
+        source_plugin="reddit",
+        published_date="2026-04-26T00:00:00Z",
+        content_text="Community discussion about the same release policy changes.",
+    )
+    mocker.patch(
+        "core.pipeline.search_similar_content",
+        return_value=[SimpleNamespace(score=0.90, payload={"content_id": pipeline_context.content.id})],
+    )
+    openrouter_mock = mocker.patch(
+        "core.pipeline.openrouter_chat_json",
+        return_value=SimpleNamespace(
+            payload={
+                "is_duplicate": True,
+                "confidence": 0.94,
+                "explanation": "Both items refer to the same underlying release-policy article.",
+            },
+            model="openrouter/relevance-model",
+            latency_ms=66,
+        ),
+    )
+
+    result = run_deduplication(candidate)
+
+    assert result["is_duplicate"] is True
+    assert result["matched_stage"] == "llm"
+    assert result["model_used"] == "openrouter/relevance-model"
+    assert (
+        openrouter_mock.call_args.kwargs["system_prompt"]
+        == get_skill_definition(DEDUPLICATION_SKILL_NAME).instructions_markdown
+    )
 
 
 def test_run_content_classification_uses_openrouter_response_and_normalizes_values(

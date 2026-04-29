@@ -85,7 +85,7 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
     assert ingestion_run.status == RunStatus.SUCCESS
 
 
-def test_run_ingestion_skips_duplicate_urls(source_plugin_context, mocker):
+def test_run_ingestion_skips_same_source_duplicate_urls(source_plugin_context, mocker):
     upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
@@ -125,6 +125,52 @@ def test_run_ingestion_skips_duplicate_urls(source_plugin_context, mocker):
     upsert_embedding_mock.assert_not_called()
     process_content_delay_mock.assert_not_called()
     assert Content.objects.filter(url="https://example.com/post-1").count() == 1
+
+
+def test_ingest_source_config_allows_cross_plugin_duplicate_urls_for_pipeline_dedup(
+    source_plugin_context, mocker
+):
+    upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    source_config = SourceConfig.objects.create(
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.REDDIT,
+        config={"subreddit": "python", "listing": "new", "limit": 5},
+    )
+    Content.objects.create(
+        project=source_plugin_context.project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/post-1",
+        canonical_url="https://example.com/post-1",
+        title="Existing RSS Item",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-20T12:00:00Z",
+        content_text="Existing content",
+    )
+    plugin = SimpleNamespace(
+        fetch_new_content=lambda since: [
+            SimpleNamespace(
+                url="https://example.com/post-1",
+                title="Reddit duplicate that should still enter the pipeline",
+                author="redditor",
+                published_date=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+                content_text="A community post linking to the same article.",
+                source_plugin=SourcePluginName.REDDIT,
+                source_metadata={},
+            )
+        ],
+        match_entity_for_url=lambda url: None,
+    )
+    mocker.patch("core.tasks.get_plugin_for_source_config", return_value=plugin)
+
+    items_fetched, items_ingested = _ingest_source_config(source_config)
+
+    assert items_fetched == 1
+    assert items_ingested == 1
+    assert Content.objects.filter(project=source_plugin_context.project).count() == 2
+    upsert_embedding_mock.assert_called_once()
+    process_content_delay_mock.assert_called_once()
 
 
 def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, mocker):

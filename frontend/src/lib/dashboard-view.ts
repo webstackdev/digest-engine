@@ -12,6 +12,7 @@ import { getSearchParam, type SearchParams } from "@/lib/view-helpers"
  * ```
  */
 export type DashboardView = "content" | "review"
+export type DuplicateStateFilter = "" | "duplicate_related"
 
 type BuildDashboardViewArgs = {
   contents: Content[]
@@ -62,6 +63,9 @@ export function buildDashboardView({
   const view: DashboardView = requestedView === "review" ? "review" : "content"
   const contentTypeFilter = getSearchParam(searchParams, "contentType")
   const sourceFilter = getSearchParam(searchParams, "source")
+  const requestedDuplicateState = getSearchParam(searchParams, "duplicateState")
+  const duplicateStateFilter: DuplicateStateFilter =
+    requestedDuplicateState === "duplicate_related" ? "duplicate_related" : ""
   const parsedDaysFilter = Number.parseInt(
     getSearchParam(searchParams, "days") || "30",
     10,
@@ -72,13 +76,25 @@ export function buildDashboardView({
   const thresholdDate = new Date(now)
   thresholdDate.setDate(thresholdDate.getDate() - daysFilter)
 
+  const matchesContentFilters = (content: Content) => {
+    if (contentTypeFilter && content.content_type !== contentTypeFilter) {
+      return false
+    }
+    if (sourceFilter && content.source_plugin !== sourceFilter) {
+      return false
+    }
+    if (
+      duplicateStateFilter === "duplicate_related" &&
+      content.duplicate_signal_count <= 0 &&
+      content.duplicate_of === null
+    ) {
+      return false
+    }
+    return new Date(content.published_date) >= thresholdDate
+  }
+
   const filteredContents = activeContents
-    .filter(
-      (content) =>
-        !contentTypeFilter || content.content_type === contentTypeFilter,
-    )
-    .filter((content) => !sourceFilter || content.source_plugin === sourceFilter)
-    .filter((content) => new Date(content.published_date) >= thresholdDate)
+    .filter((content) => matchesContentFilters(content))
     .sort((left, right) => {
       const relevanceDelta =
         (right.relevance_score ?? -1) - (left.relevance_score ?? -1)
@@ -94,7 +110,21 @@ export function buildDashboardView({
     })
 
   const contentMap = new Map(contents.map((content) => [content.id, content]))
-  const pendingReviewItems = reviewQueue.filter((item) => !item.resolved)
+  const pendingReviewItems = reviewQueue.filter((item) => {
+    if (item.resolved) {
+      return false
+    }
+    const content = contentMap.get(item.content)
+    if (!content) {
+      return (
+        !contentTypeFilter &&
+        !sourceFilter &&
+        duplicateStateFilter === "" &&
+        daysFilter === 30
+      )
+    }
+    return matchesContentFilters(content)
+  })
   const contentTypes = Array.from(
     new Set(
       activeContents.map((content) => content.content_type).filter(Boolean),
@@ -115,6 +145,7 @@ export function buildDashboardView({
     contentTypeFilter,
     contentTypes,
     daysFilter,
+    duplicateStateFilter,
     filteredContents,
     negativeFeedback,
     pendingReviewItems,

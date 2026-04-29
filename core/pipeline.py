@@ -9,28 +9,38 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import timedelta
 from functools import lru_cache
 from typing import Any, Literal, TypedDict
 
 from django.conf import settings
+from django.db.models import F
+from django.utils import timezone
 from langgraph.graph import END, StateGraph
 
+from core.deduplication import canonicalize_url
 from core.embeddings import (
     build_content_embedding_text,
     embed_text,
     get_reference_similarity,
     search_similar_content,
 )
-from core.llm import openrouter_chat_json
+from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
 from core.models import Content, ReviewQueue, ReviewReason, SkillResult, SkillStatus
 
 logger = logging.getLogger(__name__)
 
+DEDUPLICATION_SKILL_NAME = "deduplication"
 CLASSIFICATION_SKILL_NAME = "content_classification"
 RELEVANCE_SKILL_NAME = "relevance_scoring"
 SUMMARIZATION_SKILL_NAME = "summarization"
 RELATED_CONTENT_SKILL_NAME = "find_related"
 ASYNC_AD_HOC_SKILL_NAMES = frozenset({RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME})
+
+DEDUPLICATION_EXACT_CONFIDENCE = 1.0
+DEDUPLICATION_SEMANTIC_THRESHOLD = 0.92
+DEDUPLICATION_LLM_THRESHOLD = 0.88
+DEDUPLICATION_LOOKBACK_DAYS = 14
 
 CONTENT_TYPES = (
     "technical_article",
@@ -48,6 +58,7 @@ class PipelineState(TypedDict, total=False):
 
     content_id: int
     project_id: int
+    dedup: dict[str, Any] | None
     classification: dict[str, Any] | None
     relevance: dict[str, Any] | None
     summary: dict[str, Any] | None
@@ -64,12 +75,21 @@ def get_ingestion_graph():
     """
 
     graph = StateGraph(PipelineState)
+    graph.add_node("deduplicate", deduplicate_node)
     graph.add_node("classify", classify_node)
     graph.add_node("score_relevance", relevance_node)
     graph.add_node("summarize", summarize_node)
     graph.add_node("archive", archive_node)
     graph.add_node("queue_review", queue_review_node)
-    graph.set_entry_point("classify")
+    graph.set_entry_point("deduplicate")
+    graph.add_conditional_edges(
+        "deduplicate",
+        route_after_dedup,
+        {
+            "duplicate": END,
+            "unique": "classify",
+        },
+    )
     graph.add_edge("classify", "score_relevance")
     graph.add_conditional_edges(
         "score_relevance",
@@ -103,6 +123,42 @@ def process_content_pipeline(content_id: int) -> PipelineState:
         "status": "processing",
     }
     return get_ingestion_graph().invoke(initial_state)
+
+
+def deduplicate_node(state: PipelineState) -> PipelineState:
+    """Detect duplicates before downstream skills consume the content."""
+
+    content = _get_content(state)
+    dedup = _execute_with_retries(
+        DEDUPLICATION_SKILL_NAME, lambda: run_deduplication(content)
+    )
+
+    update_fields = ["canonical_url"]
+    content.canonical_url = dedup["canonical_url"]
+    if dedup["is_duplicate"]:
+        duplicate_target = Content.objects.get(pk=dedup["matched_content_id"])
+        duplicate_target = _root_duplicate_target(duplicate_target)
+        Content.objects.filter(pk=duplicate_target.pk).update(
+            duplicate_signal_count=F("duplicate_signal_count") + 1
+        )
+        content.duplicate_of = duplicate_target
+        content.is_active = False
+        update_fields.extend(["duplicate_of", "is_active"])
+    content.save(update_fields=update_fields)
+
+    _create_skill_result(
+        content,
+        skill_name=DEDUPLICATION_SKILL_NAME,
+        status=SkillStatus.COMPLETED,
+        result_data=dedup,
+        model_used=dedup["model_used"],
+        latency_ms=dedup["latency_ms"],
+        confidence=dedup["confidence"],
+    )
+    return {
+        "dedup": dedup,
+        "status": "duplicate" if dedup["is_duplicate"] else "processing",
+    }
 
 
 def classify_node(state: PipelineState) -> PipelineState:
@@ -219,6 +275,116 @@ def route_by_relevance(
     return "borderline"
 
 
+def route_after_dedup(state: PipelineState) -> Literal["duplicate", "unique"]:
+    """Choose whether deduplication should short-circuit the pipeline."""
+
+    dedup = state.get("dedup") or {}
+    return "duplicate" if dedup.get("is_duplicate", False) else "unique"
+
+
+def run_deduplication(content: Content) -> dict[str, Any]:
+    """Detect whether the content row duplicates an existing project item."""
+
+    canonical_url = canonicalize_url(content.url)
+    exact_duplicate = _find_exact_duplicate(content, canonical_url)
+    if exact_duplicate is not None:
+        return {
+            "is_duplicate": True,
+            "canonical_url": canonical_url,
+            "matched_content_id": exact_duplicate.id,
+            "matched_stage": "exact",
+            "similarity_score": None,
+            "used_llm": False,
+            "explanation": "Canonical URL matched an existing content row.",
+            "confidence": DEDUPLICATION_EXACT_CONFIDENCE,
+            "model_used": "deterministic",
+            "latency_ms": 0,
+        }
+
+    recent_candidates = {
+        candidate.id: _root_duplicate_target(candidate)
+        for candidate in Content.objects.filter(
+            project_id=content.project_id,
+            is_reference=False,
+            is_active=True,
+            published_date__gte=timezone.now() - timedelta(days=DEDUPLICATION_LOOKBACK_DAYS),
+        )
+        .exclude(pk=content.pk)
+        .select_related("duplicate_of")
+    }
+    if not recent_candidates:
+        return {
+            "is_duplicate": False,
+            "canonical_url": canonical_url,
+            "matched_content_id": None,
+            "matched_stage": "none",
+            "similarity_score": None,
+            "used_llm": False,
+            "explanation": "No recent active content was available for semantic deduplication.",
+            "confidence": 0.0,
+            "model_used": "deterministic",
+            "latency_ms": 0,
+        }
+
+    best_similarity = 0.0
+    for match in search_similar_content(content, limit=8, is_reference=False):
+        match_id = _coerce_content_id(getattr(match, "payload", {}).get("content_id"))
+        if match_id is None or match_id not in recent_candidates:
+            continue
+
+        similarity = float(getattr(match, "score", 0.0))
+        best_similarity = max(best_similarity, similarity)
+        duplicate_target = recent_candidates[match_id]
+        if similarity >= DEDUPLICATION_SEMANTIC_THRESHOLD:
+            return {
+                "is_duplicate": True,
+                "canonical_url": canonical_url,
+                "matched_content_id": duplicate_target.id,
+                "matched_stage": "semantic",
+                "similarity_score": similarity,
+                "used_llm": False,
+                "explanation": f"Semantic similarity of {similarity:.2f} cleared the duplicate threshold.",
+                "confidence": similarity,
+                "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
+                "latency_ms": 0,
+            }
+
+        if similarity < DEDUPLICATION_LLM_THRESHOLD:
+            continue
+        if _normalize_title(content.title) == _normalize_title(duplicate_target.title):
+            continue
+
+        llm_decision = _run_deduplication_tiebreak(
+            content, duplicate_target, canonical_url, similarity
+        )
+        if llm_decision["is_duplicate"]:
+            return {
+                "is_duplicate": True,
+                "canonical_url": canonical_url,
+                "matched_content_id": duplicate_target.id,
+                "matched_stage": "llm",
+                "similarity_score": similarity,
+                "used_llm": True,
+                "explanation": llm_decision["explanation"],
+                "confidence": llm_decision["confidence"],
+                "model_used": llm_decision["model_used"],
+                "latency_ms": llm_decision["latency_ms"],
+            }
+
+    return {
+        "is_duplicate": False,
+        "canonical_url": canonical_url,
+        "matched_content_id": None,
+        "matched_stage": "semantic",
+        "similarity_score": best_similarity or None,
+        "used_llm": False,
+        "explanation": "No duplicate candidate cleared the canonical, semantic, or LLM duplicate checks.",
+        "confidence": best_similarity,
+        "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
+        "latency_ms": 0,
+    }
+
+
 def run_content_classification(content: Content) -> dict[str, Any]:
     """Classify a content item into a newsletter-oriented content type.
 
@@ -234,12 +400,17 @@ def run_content_classification(content: Content) -> dict[str, Any]:
         try:
             response = openrouter_chat_json(
                 model=settings.AI_CLASSIFICATION_MODEL,
-                system_prompt=(
-                    "You classify newsletter content into one of these categories: "
-                    "technical_article, tutorial, opinion, product_announcement, event, release_notes, other. "
-                    "Return JSON with content_type, confidence, and explanation."
+                system_prompt=get_skill_definition(
+                    CLASSIFICATION_SKILL_NAME
+                ).instructions_markdown,
+                user_prompt=build_skill_user_prompt(
+                    CLASSIFICATION_SKILL_NAME,
+                    {
+                        "title": content.title,
+                        "content_text": content.content_text[:5000],
+                        "url": content.url,
+                    },
                 ),
-                user_prompt=f"Title: {content.title}\nURL: {content.url}\n\nContent:\n{content.content_text[:5000]}",
             )
             payload = response.payload
             content_type = str(payload.get("content_type", "other"))
@@ -261,6 +432,127 @@ def run_content_classification(content: Content) -> dict[str, Any]:
                 extra={"content_id": content.id},
             )
     return _heuristic_classification(content)
+
+
+def _find_exact_duplicate(content: Content, canonical_url: str) -> Content | None:
+    """Find a duplicate row by canonical URL, backfilling blank values as needed."""
+
+    exact_match = (
+        Content.objects.filter(project_id=content.project_id, canonical_url=canonical_url)
+        .exclude(pk=content.pk)
+        .select_related("duplicate_of")
+        .order_by("ingested_at", "id")
+        .first()
+    )
+    if exact_match is not None:
+        return _root_duplicate_target(exact_match)
+
+    for candidate in (
+        Content.objects.filter(project_id=content.project_id, canonical_url="")
+        .exclude(pk=content.pk)
+        .select_related("duplicate_of")
+        .order_by("ingested_at", "id")
+    ):
+        candidate_canonical_url = canonicalize_url(candidate.url)
+        if candidate.canonical_url != candidate_canonical_url:
+            candidate.canonical_url = candidate_canonical_url
+            candidate.save(update_fields=["canonical_url"])
+        if candidate_canonical_url == canonical_url:
+            return _root_duplicate_target(candidate)
+    return None
+
+
+def _root_duplicate_target(content: Content) -> Content:
+    """Resolve a duplicate chain to its retained canonical content row."""
+
+    current = content
+    while current.duplicate_of_id:
+        duplicate_of = current.duplicate_of
+        if duplicate_of is None:
+            break
+        current = duplicate_of
+    return current
+
+
+def _run_deduplication_tiebreak(
+    content: Content,
+    candidate: Content,
+    canonical_url: str,
+    similarity: float,
+) -> dict[str, Any]:
+    """Use the deduplication skill markdown as an LLM tiebreak."""
+
+    if not settings.OPENROUTER_API_KEY:
+        return {
+            "is_duplicate": False,
+            "confidence": similarity,
+            "explanation": "Borderline semantic match skipped LLM tiebreak because OpenRouter is not configured.",
+            "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
+            "latency_ms": 0,
+        }
+
+    try:
+        response = openrouter_chat_json(
+            model=settings.AI_RELEVANCE_MODEL,
+            system_prompt=get_skill_definition(
+                DEDUPLICATION_SKILL_NAME
+            ).instructions_markdown,
+            user_prompt=build_skill_user_prompt(
+                DEDUPLICATION_SKILL_NAME,
+                {
+                    "title": content.title,
+                    "content_text": content.content_text[:4000],
+                    "canonical_url": canonical_url,
+                    "candidate_title": candidate.title,
+                    "candidate_content_text": candidate.content_text[:4000],
+                    "candidate_canonical_url": candidate.canonical_url
+                    or canonicalize_url(candidate.url),
+                    "similarity_score": f"{similarity:.3f}",
+                },
+            ),
+        )
+    except Exception:
+        logger.exception(
+            "Deduplication tiebreak model call failed; treating the borderline pair as distinct",
+            extra={"content_id": content.id, "candidate_content_id": candidate.id},
+        )
+        return {
+            "is_duplicate": False,
+            "confidence": similarity,
+            "explanation": "Borderline semantic match remained distinct after the LLM tiebreak failed.",
+            "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
+            "latency_ms": 0,
+        }
+
+    payload = response.payload
+    return {
+        "is_duplicate": bool(payload.get("is_duplicate", False)),
+        "confidence": _clamp_score(payload.get("confidence", similarity)),
+        "explanation": str(
+            payload.get(
+                "explanation", "LLM deduplication tiebreak compared the candidate pair."
+            )
+        ),
+        "model_used": response.model,
+        "latency_ms": response.latency_ms,
+    }
+
+
+def _coerce_content_id(value: Any) -> int | None:
+    """Convert a vector-search payload content ID into an integer when possible."""
+
+    if isinstance(value, int):
+        return value
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_title(value: str) -> str:
+    """Normalize titles for lightweight duplicate comparisons."""
+
+    return " ".join(value.lower().split())
 
 
 def run_relevance_scoring(content: Content) -> dict[str, Any]:
@@ -294,15 +586,19 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
         try:
             response = openrouter_chat_json(
                 model=settings.AI_RELEVANCE_MODEL,
-                system_prompt=(
-                    "You score how relevant a candidate article is for a newsletter topic. "
-                    "Return JSON with relevance_score between 0 and 1, explanation, and used_llm=true."
-                ),
-                user_prompt=(
-                    f"Newsletter topic: {content.project.topic_description}\n"
-                    f"Reference similarity score: {similarity:.3f}\n"
-                    f"Title: {content.title}\n"
-                    f"Content:\n{content.content_text[:5000]}"
+                system_prompt=get_skill_definition(
+                    RELEVANCE_SKILL_NAME
+                ).instructions_markdown,
+                user_prompt=build_skill_user_prompt(
+                    RELEVANCE_SKILL_NAME,
+                    {
+                        "newsletter_topic": content.project.topic_description,
+                        "reference_similarity": f"{similarity:.3f}",
+                        "title": content.title,
+                        "content_text": content.content_text[:5000],
+                        "url": content.url,
+                        "source_plugin": content.source_plugin,
+                    },
                 ),
             )
             payload = response.payload
@@ -349,13 +645,17 @@ def run_summarization(content: Content) -> dict[str, Any]:
         try:
             response = openrouter_chat_json(
                 model=settings.AI_SUMMARIZATION_MODEL,
-                system_prompt=(
-                    "You write concise newsletter-ready summaries. Return JSON with a single key named summary."
-                ),
-                user_prompt=(
-                    f"Newsletter topic: {content.project.topic_description}\n"
-                    f"Title: {content.title}\n"
-                    f"Content:\n{content.content_text[:5000]}"
+                system_prompt=get_skill_definition(
+                    SUMMARIZATION_SKILL_NAME
+                ).instructions_markdown,
+                user_prompt=build_skill_user_prompt(
+                    SUMMARIZATION_SKILL_NAME,
+                    {
+                        "newsletter_topic": content.project.topic_description,
+                        "title": content.title,
+                        "content_text": content.content_text[:5000],
+                        "url": content.url,
+                    },
                 ),
             )
             return {

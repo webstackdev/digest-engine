@@ -308,8 +308,8 @@ class Content(models.Model):
 
     A content row is the canonical record for fetched articles, newsletter links,
     or other source items. It keeps the raw text used for embedding, skill output,
-    and editorial review, and it also links the row to its Qdrant vector via
-    ``embedding_id``.
+    editorial review, duplicate tracking, and it also links the row to its Qdrant
+    vector via ``embedding_id``.
     """
 
     project = models.ForeignKey(
@@ -327,12 +327,21 @@ class Content(models.Model):
     )
     source_plugin = models.CharField(max_length=64)
     content_type = models.CharField(max_length=64, blank=True)
+    canonical_url = models.URLField(blank=True, default="", db_index=True)
     published_date = models.DateTimeField()
     ingested_at = models.DateTimeField(auto_now_add=True)
     content_text = models.TextField()
     relevance_score = models.FloatField(null=True, blank=True)
     embedding_id = models.CharField(max_length=64, blank=True)
     source_metadata = models.JSONField(default=dict, blank=True)
+    duplicate_of = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="duplicates",
+    )
+    duplicate_signal_count = models.IntegerField(default=0)
     is_reference = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 

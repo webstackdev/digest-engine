@@ -6,6 +6,7 @@ import httpx
 import pytest
 from django.contrib.auth.models import Group
 from django.core.management import CommandError, call_command
+from django.db.models import Count
 from qdrant_client.http.exceptions import ResponseHandlingException
 
 from core import embeddings
@@ -370,6 +371,13 @@ def test_seed_demo_creates_reference_corpus_and_embeds_demo_content(mocker, caps
     assert UserFeedback.objects.filter(project=project).count() == 45
     assert IngestionRun.objects.filter(project=project).count() == 6
     assert upsert_mock.call_count == 250
+    assert (
+        Content.objects.filter(project=project, is_reference=False)
+        .values("canonical_url")
+        .annotate(total=Count("id"))
+        .filter(total__gt=1)
+        .exists()
+    )
     output = capsys.readouterr().out
     assert "Reference corpus items: 50" in output
     assert "Demo content items: 200" in output
