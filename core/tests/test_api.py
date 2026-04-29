@@ -11,6 +11,9 @@ from core.models import (
     BlueskyCredentials,
     Content,
     Entity,
+    EntityCandidate,
+    EntityCandidateStatus,
+    EntityMention,
     FeedbackType,
     IngestionRun,
     Project,
@@ -149,6 +152,74 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], self.owner_entity.id)
 
+    def test_entity_list_includes_recent_mentions(self):
+        mention = EntityMention.objects.create(
+            project=self.owner_project,
+            content=self.owner_content,
+            entity=self.owner_entity,
+            role="subject",
+            sentiment="neutral",
+            span="Owner Entity",
+            confidence=0.88,
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-entity-list", kwargs={"project_id": self.owner_project.id}
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()[0]["mention_count"], 1)
+        self.assertEqual(response.json()[0]["latest_mentions"][0]["id"], mention.id)
+        self.assertEqual(
+            response.json()[0]["latest_mentions"][0]["content_title"],
+            self.owner_content.title,
+        )
+
+    def test_entity_mentions_action_returns_full_mention_history(self):
+        first_mention = EntityMention.objects.create(
+            project=self.owner_project,
+            content=self.owner_content,
+            entity=self.owner_entity,
+            role="subject",
+            sentiment="neutral",
+            span="Owner Entity",
+            confidence=0.88,
+        )
+        second_content = Content.objects.create(
+            project=self.owner_project,
+            url="https://example.com/owner-second",
+            title="Second Owner Content",
+            author="Owner Author",
+            entity=self.owner_entity,
+            source_plugin="rss",
+            published_date="2026-04-22T00:00:00Z",
+            content_text="Another owner content text",
+        )
+        second_mention = EntityMention.objects.create(
+            project=self.owner_project,
+            content=second_content,
+            entity=self.owner_entity,
+            role="mentioned",
+            sentiment="positive",
+            span="Owner Entity",
+            confidence=0.67,
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-entity-mentions",
+                kwargs={"project_id": self.owner_project.id, "pk": self.owner_entity.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 2)
+        self.assertEqual(response.json()[0]["id"], second_mention.id)
+        self.assertEqual(response.json()[1]["id"], first_mention.id)
+        self.assertEqual(response.json()[0]["content_title"], second_content.title)
+
     def test_content_detail_includes_duplicate_state(self):
         canonical = self.owner_content
         canonical.canonical_url = "https://example.com/owner"
@@ -188,6 +259,117 @@ class ProjectScopedApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_entity_candidate_list_is_scoped_to_request_user_project(self):
+        owner_candidate = EntityCandidate.objects.create(
+            project=self.owner_project,
+            name="Owner Candidate",
+            suggested_type="vendor",
+            first_seen_in=self.owner_content,
+        )
+        EntityCandidate.objects.create(
+            project=self.other_project,
+            name="Other Candidate",
+            suggested_type="organization",
+            first_seen_in=self.other_content,
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-entity-candidate-list",
+                kwargs={"project_id": self.owner_project.id},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["id"], owner_candidate.id)
+
+    def test_entity_candidate_accept_action_returns_updated_candidate(self):
+        candidate = EntityCandidate.objects.create(
+            project=self.owner_project,
+            name="River Labs",
+            suggested_type="vendor",
+            first_seen_in=self.owner_content,
+        )
+
+        response = self.client.post(
+            reverse(
+                "v1:project-entity-candidate-accept",
+                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+            ),
+            format="json",
+        )
+
+        candidate.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(candidate.status, EntityCandidateStatus.ACCEPTED)
+        self.assertIsNotNone(candidate.merged_into_id)
+        self.assertEqual(response.json()["status"], EntityCandidateStatus.ACCEPTED)
+
+    def test_entity_candidate_reject_action_returns_updated_candidate(self):
+        candidate = EntityCandidate.objects.create(
+            project=self.owner_project,
+            name="Rejected Candidate",
+            suggested_type="organization",
+            first_seen_in=self.owner_content,
+        )
+
+        response = self.client.post(
+            reverse(
+                "v1:project-entity-candidate-reject",
+                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+            ),
+            format="json",
+        )
+
+        candidate.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(candidate.status, EntityCandidateStatus.REJECTED)
+        self.assertEqual(response.json()["status"], EntityCandidateStatus.REJECTED)
+
+    def test_entity_candidate_merge_rejects_cross_project_entity(self):
+        candidate = EntityCandidate.objects.create(
+            project=self.owner_project,
+            name="Merge Candidate",
+            suggested_type="vendor",
+            first_seen_in=self.owner_content,
+        )
+
+        response = self.client.post(
+            reverse(
+                "v1:project-entity-candidate-merge",
+                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+            ),
+            {"merged_into": self.other_entity.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assert_standardized_validation_error(response.json(), "merged_into")
+
+    def test_entity_candidate_merge_action_returns_updated_candidate(self):
+        candidate = EntityCandidate.objects.create(
+            project=self.owner_project,
+            name="Owner Entity Alias",
+            suggested_type="vendor",
+            first_seen_in=self.owner_content,
+        )
+
+        response = self.client.post(
+            reverse(
+                "v1:project-entity-candidate-merge",
+                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+            ),
+            {"merged_into": self.owner_entity.id},
+            format="json",
+        )
+
+        candidate.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(candidate.status, EntityCandidateStatus.MERGED)
+        self.assertEqual(candidate.merged_into_id, self.owner_entity.id)
+        self.assertEqual(response.json()["merged_into"], self.owner_entity.id)
 
     def test_verify_bluesky_credentials_requires_project_credentials(self):
         response = self.client.post(
@@ -390,6 +572,10 @@ class ProjectScopedApiTests(APITestCase):
                 "v1:project-entity-list", kwargs={"project_id": self.owner_project.id}
             ),
             reverse(
+                "v1:project-entity-candidate-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            reverse(
                 "v1:project-content-list", kwargs={"project_id": self.owner_project.id}
             ),
             reverse(
@@ -470,6 +656,19 @@ class ProjectScopedApiTests(APITestCase):
                 },
             ),
         ]
+
+        candidate = EntityCandidate.objects.create(
+            project=self.owner_project,
+            name="Smoke Candidate",
+            suggested_type="organization",
+            first_seen_in=self.owner_content,
+        )
+        detail_endpoints.append(
+            reverse(
+                "v1:project-entity-candidate-detail",
+                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+            )
+        )
 
         feedback = UserFeedback.objects.create(
             project=self.owner_project,

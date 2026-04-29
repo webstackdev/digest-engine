@@ -16,10 +16,18 @@ from django.utils.safestring import mark_safe
 from import_export.admin import ExportActionMixin
 from unfold.admin import ModelAdmin
 
+from core.entity_extraction import (
+    accept_entity_candidate,
+    merge_entity_candidate,
+    reject_entity_candidate,
+)
 from core.models import (
     BlueskyCredentials,
     Content,
     Entity,
+    EntityCandidate,
+    EntityCandidateStatus,
+    EntityMention,
     IngestionRun,
     Project,
     ProjectConfig,
@@ -199,6 +207,7 @@ class EntityAdmin(admin.ModelAdmin):
 
     # Replace 'authority_score' with your new method name
     list_display = ("name", "project", "type", "colored_score", "created_at")
+    search_fields = ("name", "project__name")
 
     @admin.display(description="Authority Score", ordering="authority_score")
     def colored_score(self, obj):
@@ -217,6 +226,116 @@ class EntityAdmin(admin.ModelAdmin):
             color,
             obj.authority_score,
         )
+
+
+@admin.register(EntityMention)
+class EntityMentionAdmin(admin.ModelAdmin):
+    """Admin view for extracted tracked-entity mentions."""
+
+    list_display = (
+        "entity",
+        "project",
+        "content",
+        "role",
+        "sentiment",
+        "confidence",
+        "created_at",
+    )
+    list_filter = ("role", "sentiment", ("project", admin.RelatedOnlyFieldListFilter))
+    search_fields = ("entity__name", "content__title", "span")
+    autocomplete_fields = ("entity", "content", "project")
+
+
+@admin.register(EntityCandidate)
+class EntityCandidateAdmin(admin.ModelAdmin):
+    """Admin view for candidate entities awaiting human review."""
+
+    actions = [
+        "accept_selected_candidates",
+        "reject_selected_candidates",
+        "merge_into_existing_entities",
+    ]
+    list_display = (
+        "name",
+        "project",
+        "suggested_type",
+        "occurrence_count",
+        "status",
+        "merged_into",
+        "first_seen_in",
+        "created_at",
+    )
+    list_filter = (
+        "status",
+        "suggested_type",
+        ("project", admin.RelatedOnlyFieldListFilter),
+    )
+    search_fields = ("name", "project__name", "merged_into__name")
+    autocomplete_fields = ("project", "first_seen_in", "merged_into")
+    ordering = ("-occurrence_count", "name")
+
+    @admin.action(description="Accept selected candidates")
+    def accept_selected_candidates(self, request, queryset):
+        """Promote selected candidates into tracked entities."""
+
+        accepted_count = 0
+        for candidate in queryset.select_related("project"):
+            if candidate.status == EntityCandidateStatus.ACCEPTED:
+                continue
+            accept_entity_candidate(candidate)
+            accepted_count += 1
+        self.message_user(
+            request,
+            f"Accepted {accepted_count} entity candidate(s).",
+            messages.SUCCESS,
+        )
+
+    @admin.action(description="Reject selected candidates")
+    def reject_selected_candidates(self, request, queryset):
+        """Mark selected candidates as rejected."""
+
+        rejected_count = 0
+        for candidate in queryset:
+            if candidate.status == EntityCandidateStatus.REJECTED:
+                continue
+            reject_entity_candidate(candidate)
+            rejected_count += 1
+        self.message_user(
+            request,
+            f"Rejected {rejected_count} entity candidate(s).",
+            messages.SUCCESS,
+        )
+
+    @admin.action(description="Merge selected candidates into existing entities")
+    def merge_into_existing_entities(self, request, queryset):
+        """Merge candidates when a same-name entity already exists in the project."""
+
+        merged_count = 0
+        unresolved_names: list[str] = []
+        for candidate in queryset.select_related("project"):
+            matching_entities = Entity.objects.filter(
+                project=candidate.project,
+                name__iexact=candidate.name,
+            )
+            if matching_entities.count() != 1:
+                unresolved_names.append(candidate.name)
+                continue
+            merge_entity_candidate(candidate, matching_entities.get())
+            merged_count += 1
+
+        if merged_count:
+            self.message_user(
+                request,
+                f"Merged {merged_count} entity candidate(s) into existing entities.",
+                messages.SUCCESS,
+            )
+        if unresolved_names:
+            self.message_user(
+                request,
+                "No unique same-name entity match was available for: "
+                + ", ".join(sorted(unresolved_names)),
+                messages.WARNING,
+            )
 
 
 class HighValueFilter(admin.SimpleListFilter):

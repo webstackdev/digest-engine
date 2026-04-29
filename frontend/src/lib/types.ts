@@ -20,7 +20,35 @@ export type Entity = {
   bluesky_handle: string
   mastodon_handle: string
   twitter_handle: string
+  mention_count: number
+  latest_mentions: EntityMentionSummary[]
   created_at: string
+}
+
+export type EntityMentionSummary = {
+  id: number
+  content_id: number
+  content_title: string
+  role: "author" | "subject" | "quoted" | "mentioned"
+  sentiment: "positive" | "neutral" | "negative" | ""
+  span: string
+  confidence: number
+  created_at: string
+}
+
+export type EntityCandidate = {
+  id: number
+  project: number
+  name: string
+  suggested_type: "individual" | "vendor" | "organization"
+  first_seen_in: number | null
+  first_seen_title: string
+  occurrence_count: number
+  status: "pending" | "accepted" | "rejected" | "merged"
+  merged_into: number | null
+  merged_into_name: string
+  created_at: string
+  updated_at: string
 }
 
 export type Content = {

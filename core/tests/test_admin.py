@@ -13,6 +13,7 @@ from core.admin import (
     ContentAdmin,
     DuplicateStateFilter,
     EntityAdmin,
+    EntityCandidateAdmin,
     HighValueFilter,
     IngestionRunAdmin,
     ReviewQueueAdmin,
@@ -24,6 +25,9 @@ from core.models import (
     BlueskyCredentials,
     Content,
     Entity,
+    EntityCandidate,
+    EntityCandidateStatus,
+    EntityMention,
     IngestionRun,
     Project,
     ReviewQueue,
@@ -495,6 +499,105 @@ def test_entity_colored_score_uses_expected_color(
 
     assert expected_color in rendered
     assert str(authority_score) in rendered
+
+
+def test_accept_selected_entity_candidates_creates_entity_and_backfills_mentions(
+    source_admin_context, mocker
+):
+    content = Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/river-labs-launch",
+        title="River Labs ships a new platform release",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="River Labs announced a new hosted control plane.",
+    )
+    candidate = EntityCandidate.objects.create(
+        project=source_admin_context.project,
+        name="River Labs",
+        suggested_type="vendor",
+        first_seen_in=content,
+        occurrence_count=2,
+    )
+    admin_instance = EntityCandidateAdmin(EntityCandidate, AdminSite())
+    admin_instance.message_user = mocker.Mock()
+
+    admin_instance.accept_selected_candidates(
+        request=SimpleNamespace(),
+        queryset=EntityCandidate.objects.filter(pk=candidate.pk),
+    )
+
+    candidate.refresh_from_db()
+    content.refresh_from_db()
+    entity = Entity.objects.get(
+        project=source_admin_context.project,
+        name="River Labs",
+    )
+    mention = EntityMention.objects.get(content=content, entity=entity)
+
+    assert candidate.status == EntityCandidateStatus.ACCEPTED
+    assert candidate.merged_into_id == entity.id
+    assert mention.role == "subject"
+    assert content.entity_id == entity.id
+
+
+def test_reject_selected_entity_candidates_marks_candidates_rejected(
+    source_admin_context, mocker
+):
+    candidate = EntityCandidate.objects.create(
+        project=source_admin_context.project,
+        name="Rejected Vendor",
+        suggested_type="vendor",
+    )
+    admin_instance = EntityCandidateAdmin(EntityCandidate, AdminSite())
+    admin_instance.message_user = mocker.Mock()
+
+    admin_instance.reject_selected_candidates(
+        request=SimpleNamespace(),
+        queryset=EntityCandidate.objects.filter(pk=candidate.pk),
+    )
+
+    candidate.refresh_from_db()
+
+    assert candidate.status == EntityCandidateStatus.REJECTED
+
+
+def test_merge_selected_entity_candidates_uses_existing_same_name_entity(
+    source_admin_context, mocker
+):
+    content = Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/acme-merge",
+        title="Acme ships a new platform feature",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="Acme expanded its hosted platform product.",
+    )
+    entity = Entity.objects.create(
+        project=source_admin_context.project,
+        name="Acme",
+        type="vendor",
+    )
+    candidate = EntityCandidate.objects.create(
+        project=source_admin_context.project,
+        name="Acme",
+        suggested_type="vendor",
+        first_seen_in=content,
+    )
+    admin_instance = EntityCandidateAdmin(EntityCandidate, AdminSite())
+    admin_instance.message_user = mocker.Mock()
+
+    admin_instance.merge_into_existing_entities(
+        request=SimpleNamespace(),
+        queryset=EntityCandidate.objects.filter(pk=candidate.pk),
+    )
+
+    candidate.refresh_from_db()
+
+    assert candidate.status == EntityCandidateStatus.MERGED
+    assert candidate.merged_into_id == entity.id
 
 
 def test_high_value_filter_only_returns_high_value_reference_content(

@@ -26,7 +26,7 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from core.models import Content
+from core.models import Content, Entity
 from core.settings_types import CoreSettings
 
 SentenceTransformer = None
@@ -158,6 +158,12 @@ def collection_name_for_project(project_id: int) -> str:
     return f"project_{project_id}_content"
 
 
+def entity_collection_name_for_project(project_id: int) -> str:
+    """Return the Qdrant collection name for a project's tracked entities."""
+
+    return f"project_{project_id}_entities"
+
+
 @lru_cache(maxsize=1)
 def get_qdrant_client() -> QdrantClient:
     """Create and cache the shared Qdrant client instance."""
@@ -237,6 +243,55 @@ def upsert_content_embedding(content: Content) -> str:
     return embedding_id
 
 
+def upsert_entity_embedding(entity: Entity) -> str:
+    """Write or update an entity embedding in the project's entity collection."""
+
+    client = get_qdrant_client()
+    ensure_project_entity_collection(entity.project_id)
+    vector = embed_text(build_entity_embedding_text(entity))
+    embedding_id = f"entity-{entity.id}"
+    client.upsert(
+        collection_name=entity_collection_name_for_project(entity.project_id),
+        points=[
+            PointStruct(
+                id=embedding_id,
+                vector=vector,
+                payload={
+                    "entity_id": entity.id,
+                    "project_id": entity.project_id,
+                    "name": entity.name,
+                    "type": entity.type,
+                },
+            )
+        ],
+        wait=True,
+    )
+    return embedding_id
+
+
+def sync_project_entity_embeddings(project_id: int) -> None:
+    """Ensure all tracked entities for a project are present in Qdrant."""
+
+    entities = Entity.objects.filter(project_id=project_id).only(
+        "id",
+        "project_id",
+        "name",
+        "type",
+        "description",
+        "website_url",
+        "github_url",
+        "linkedin_url",
+        "bluesky_handle",
+        "mastodon_handle",
+        "twitter_handle",
+    )
+    if not entities.exists():
+        return
+    ensure_project_entity_collection(project_id)
+    for entity in entities:
+        upsert_entity_embedding(entity)
+
+
 def search_similar(
     project_id: int,
     query_vector: list[float],
@@ -289,6 +344,31 @@ def search_similar_content(
     )
 
 
+def search_similar_entities(project_id: int, query_vector: list[float], limit: int = 10):
+    """Search the tracked-entity collection for nearest matches."""
+
+    if not project_entity_collection_exists(project_id):
+        return []
+    client = cast(Any, get_qdrant_client())
+    return client.search(
+        collection_name=entity_collection_name_for_project(project_id),
+        query_vector=query_vector,
+        limit=limit,
+        with_payload=True,
+    )
+
+
+def search_similar_entities_for_content(content: Content, limit: int = 8):
+    """Find tracked entities whose embeddings are close to a content item."""
+
+    sync_project_entity_embeddings(content.project_id)
+    return search_similar_entities(
+        content.project_id,
+        embed_text(build_content_embedding_text(content)),
+        limit=limit,
+    )
+
+
 def get_reference_similarity(
     project_id: int, vector: list[float], limit: int = 5
 ) -> float:
@@ -325,6 +405,21 @@ def ensure_project_collection(project_id: int) -> None:
     )
 
 
+def ensure_project_entity_collection(project_id: int) -> None:
+    """Create the per-project entity collection when it does not yet exist."""
+
+    client = get_qdrant_client()
+    collection_name = entity_collection_name_for_project(project_id)
+    if project_entity_collection_exists(project_id):
+        return
+    client.create_collection(
+        collection_name=collection_name,
+        vectors_config=VectorParams(
+            size=get_embedding_dimension(), distance=Distance.COSINE
+        ),
+    )
+
+
 def project_collection_exists(project_id: int) -> bool:
     """Return whether the project's Qdrant collection already exists."""
 
@@ -335,10 +430,38 @@ def project_collection_exists(project_id: int) -> bool:
     return True
 
 
+def project_entity_collection_exists(project_id: int) -> bool:
+    """Return whether the project's entity collection already exists."""
+
+    try:
+        get_qdrant_client().get_collection(entity_collection_name_for_project(project_id))
+    except Exception:
+        return False
+    return True
+
+
 def build_content_embedding_text(content: Content) -> str:
     """Build the text blob used to generate content embeddings."""
 
     return "\n\n".join(part for part in [content.title, content.content_text] if part)
+
+
+def build_entity_embedding_text(entity: Entity) -> str:
+    """Build the text blob used to generate entity embeddings."""
+
+    aliases = [
+        entity.bluesky_handle,
+        entity.mastodon_handle,
+        entity.twitter_handle,
+        entity.website_url,
+        entity.github_url,
+        entity.linkedin_url,
+    ]
+    return "\n\n".join(
+        part
+        for part in [entity.name, entity.type, entity.description, *aliases]
+        if part
+    )
 
 
 def normalize_text(text: str) -> str:
