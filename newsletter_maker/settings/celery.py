@@ -1,5 +1,7 @@
 import os
 
+from celery.schedules import crontab
+
 from .base import env_bool
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
@@ -15,6 +17,10 @@ CELERY_BEAT_SCHEDULE = {
     "run-all-source-ingestions-every-6-hours": {
         "task": "core.tasks.run_all_ingestions",
         "schedule": 60 * 60 * 6,
+    },
+    "run-all-authority-recomputations-nightly": {
+        "task": "core.tasks.run_all_authority_recomputations",
+        "schedule": crontab(hour=2, minute=0),
     },
 }
 

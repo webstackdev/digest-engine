@@ -32,7 +32,6 @@ from core.models import (
     BlueskyCredentials,
     Content,
     Entity,
-    EntityAuthoritySnapshot,
     EntityCandidate,
     EntityMention,
     IngestionRun,

@@ -25,6 +25,7 @@ from core.tasks import (
     _ingest_source_config,
     queue_content_skill,
     recompute_authority_scores,
+    run_all_authority_recomputations,
     run_all_ingestions,
     run_ingestion,
     run_relevance_scoring_skill,
@@ -315,6 +316,47 @@ def test_run_all_ingestions_executes_inline_when_eager(
     run_ingestion_mock.assert_any_call(active_one.id)
     run_ingestion_mock.assert_any_call(active_two.id)
     assert run_ingestion_mock.call_count == 2
+    delay_mock.assert_not_called()
+
+
+def test_run_all_authority_recomputations_enqueues_all_projects(
+    source_plugin_context, mocker
+):
+    delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
+    other_group = Group.objects.create(name="second-authority-team")
+    other_project = Project.objects.create(
+        name="Other Project",
+        group=other_group,
+        topic_description="Security",
+    )
+
+    enqueued_count = run_all_authority_recomputations()
+
+    assert enqueued_count == 2
+    delay_mock.assert_any_call(source_plugin_context.project.id)
+    delay_mock.assert_any_call(other_project.id)
+    assert delay_mock.call_count == 2
+
+
+def test_run_all_authority_recomputations_executes_inline_when_eager(
+    source_plugin_context, settings, mocker
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    recompute_mock = mocker.patch("core.tasks.recompute_authority_scores")
+    delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
+    other_group = Group.objects.create(name="inline-authority-team")
+    other_project = Project.objects.create(
+        name="Inline Project",
+        group=other_group,
+        topic_description="Platform",
+    )
+
+    enqueued_count = run_all_authority_recomputations()
+
+    assert enqueued_count == 2
+    recompute_mock.assert_any_call(source_plugin_context.project.id)
+    recompute_mock.assert_any_call(other_project.id)
+    assert recompute_mock.call_count == 2
     delay_mock.assert_not_called()
 
 

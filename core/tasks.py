@@ -1,7 +1,7 @@
 """Celery tasks that drive ingestion, AI processing, and newsletter extraction."""
 
-import math
 import logging
+import math
 from collections import defaultdict
 from datetime import timedelta
 
@@ -107,6 +107,23 @@ def run_all_ingestions():
         else:
             run_ingestion.delay(source_config_id)
     return len(source_config_ids)
+
+
+@shared_task(name="core.tasks.run_all_authority_recomputations")
+def run_all_authority_recomputations():
+    """Queue authority recomputation for every project.
+
+    Returns:
+        The number of projects scheduled for authority recomputation.
+    """
+
+    project_ids = list(Project.objects.values_list("id", flat=True))
+    for project_id in project_ids:
+        if settings.CELERY_TASK_ALWAYS_EAGER:
+            recompute_authority_scores(project_id)
+        else:
+            recompute_authority_scores.delay(project_id)
+    return len(project_ids)
 
 
 @shared_task(name="core.tasks.process_content")
