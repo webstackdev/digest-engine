@@ -1,6 +1,7 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 
+import { UserMenu } from "@/components/user-menu"
 import type { Project } from "@/lib/types"
 
 type AppShellProps = {
@@ -93,14 +94,17 @@ export function AppShell({
       </aside>
 
       <main className="p-5 md:p-8">
-        <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between md:gap-6">
-          <div>
+        <header className="mb-6 space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">
               Minimal dashboard
             </p>
             <h2 className="font-display text-display-page font-bold">
               {title}
             </h2>
+            </div>
+            <UserMenu />
           </div>
           <p className="max-w-xl text-sm leading-6 text-muted md:text-base">
             {description}

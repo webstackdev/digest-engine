@@ -4,7 +4,70 @@ export type Project = {
   group: number
   topic_description: string
   content_retention_days: number
+  intake_token?: string
+  intake_enabled?: boolean
+  has_bluesky_credentials?: boolean
+  bluesky_handle?: string
+  bluesky_is_active?: boolean
+  bluesky_last_verified_at?: string | null
+  bluesky_last_error?: string
   created_at: string
+}
+
+export type ProjectBlueskyVerification = {
+  status: "verified"
+  handle: string
+  last_verified_at: string | null
+  last_error: string
+}
+
+export type BlueskyCredentials = {
+  id: number
+  project: number
+  handle: string
+  pds_url: string
+  is_active: boolean
+  has_stored_credential: boolean
+  last_verified_at: string | null
+  last_error: string
+  created_at: string
+  updated_at: string
+}
+
+export type IntakeAllowlistEntry = {
+  id: number
+  project: number
+  sender_email: string
+  is_confirmed: boolean
+  confirmed_at: string | null
+  confirmation_token: string
+  created_at: string
+}
+
+export type NewsletterExtractionItem = {
+  url: string
+  title: string
+  excerpt: string
+  position: number
+}
+
+export type NewsletterIntakeExtractionResult = {
+  method: string
+  items: NewsletterExtractionItem[]
+}
+
+export type NewsletterIntake = {
+  id: number
+  project: number
+  sender_email: string
+  subject: string
+  received_at: string
+  raw_html: string
+  raw_text: string
+  message_id: string
+  status: "pending" | "extracted" | "failed"
+  extraction_result: NewsletterIntakeExtractionResult | null
+  error_message: string
 }
 
 export type Entity = {
@@ -147,7 +210,7 @@ export type IngestionRun = {
 export type SourceConfig = {
   id: number
   project: number
-  plugin_name: "rss" | "reddit"
+  plugin_name: "rss" | "reddit" | "bluesky"
   config: Record<string, unknown>
   is_active: boolean
   last_fetched_at: string | null

@@ -7,18 +7,21 @@ import type {
   Project,
   SourceConfig,
   TopicCentroidObservabilitySummary,
+  TopicCentroidSnapshot,
 } from "@/lib/types"
 
 const {
   getProjectIngestionRunsMock,
   getProjectsMock,
   getProjectSourceConfigsMock,
+  getProjectTopicCentroidSnapshotsMock,
   getProjectTopicCentroidSummaryMock,
   selectProjectMock,
 } = vi.hoisted(() => ({
   getProjectIngestionRunsMock: vi.fn(),
   getProjectsMock: vi.fn(),
   getProjectSourceConfigsMock: vi.fn(),
+  getProjectTopicCentroidSnapshotsMock: vi.fn(),
   getProjectTopicCentroidSummaryMock: vi.fn(),
   selectProjectMock: vi.fn(),
 }))
@@ -59,6 +62,7 @@ vi.mock("@/lib/api", () => ({
   getProjectIngestionRuns: getProjectIngestionRunsMock,
   getProjects: getProjectsMock,
   getProjectSourceConfigs: getProjectSourceConfigsMock,
+  getProjectTopicCentroidSnapshots: getProjectTopicCentroidSnapshotsMock,
   getProjectTopicCentroidSummary: getProjectTopicCentroidSummaryMock,
 }))
 
@@ -130,6 +134,23 @@ function createTopicCentroidSummary(
   }
 }
 
+function createTopicCentroidSnapshot(
+  overrides: Partial<TopicCentroidSnapshot> = {},
+): TopicCentroidSnapshot {
+  return {
+    id: 5,
+    project: 1,
+    computed_at: "2026-04-28T08:00:00Z",
+    centroid_active: true,
+    feedback_count: 12,
+    upvote_count: 10,
+    downvote_count: 2,
+    drift_from_previous: 0.1,
+    drift_from_week_ago: 0.2,
+    ...overrides,
+  }
+}
+
 async function loadHealthPageModule() {
   return import("../page")
 }
@@ -188,6 +209,27 @@ describe("deriveSourceStatus", () => {
   })
 })
 
+describe("buildCentroidDriftTrendPoints", () => {
+  it("returns a sparkline across ordered centroid snapshots", async () => {
+    const { buildCentroidDriftTrendPoints } = await loadHealthPageModule()
+
+    expect(
+      buildCentroidDriftTrendPoints([
+        createTopicCentroidSnapshot({
+          id: 2,
+          computed_at: "2026-04-29T08:00:00Z",
+          drift_from_previous: 0.3,
+        }),
+        createTopicCentroidSnapshot({
+          id: 1,
+          computed_at: "2026-04-28T08:00:00Z",
+          drift_from_previous: 0.1,
+        }),
+      ]),
+    ).toBe("0.0,64.8 220.0,50.4")
+  })
+})
+
 describe("HealthPage", () => {
   beforeEach(() => {
     const defaultProject = createProject()
@@ -195,12 +237,14 @@ describe("HealthPage", () => {
     getProjectsMock.mockReset()
     getProjectSourceConfigsMock.mockReset()
     getProjectIngestionRunsMock.mockReset()
+    getProjectTopicCentroidSnapshotsMock.mockReset()
     getProjectTopicCentroidSummaryMock.mockReset()
     selectProjectMock.mockReset()
 
     getProjectsMock.mockResolvedValue([defaultProject])
     getProjectSourceConfigsMock.mockResolvedValue([])
     getProjectIngestionRunsMock.mockResolvedValue([])
+    getProjectTopicCentroidSnapshotsMock.mockResolvedValue([])
     getProjectTopicCentroidSummaryMock.mockResolvedValue(
       createTopicCentroidSummary(),
     )
@@ -224,6 +268,7 @@ describe("HealthPage", () => {
     ).toBeInTheDocument()
     expect(getProjectSourceConfigsMock).not.toHaveBeenCalled()
     expect(getProjectIngestionRunsMock).not.toHaveBeenCalled()
+    expect(getProjectTopicCentroidSnapshotsMock).not.toHaveBeenCalled()
     expect(getProjectTopicCentroidSummaryMock).not.toHaveBeenCalled()
   })
 
@@ -238,6 +283,7 @@ describe("HealthPage", () => {
     ).toBeInTheDocument()
     expect(getProjectSourceConfigsMock).toHaveBeenCalledWith(1)
     expect(getProjectIngestionRunsMock).toHaveBeenCalledWith(1)
+    expect(getProjectTopicCentroidSnapshotsMock).toHaveBeenCalledWith(1)
     expect(getProjectTopicCentroidSummaryMock).toHaveBeenCalledWith(1)
   })
 
@@ -300,6 +346,23 @@ describe("HealthPage", () => {
   })
 
   it("renders centroid summary cards for the selected project", async () => {
+    getProjectTopicCentroidSnapshotsMock.mockResolvedValue([
+      createTopicCentroidSnapshot({
+        id: 7,
+        computed_at: "2026-04-26T08:00:00Z",
+        drift_from_previous: 0.05,
+      }),
+      createTopicCentroidSnapshot({
+        id: 8,
+        computed_at: "2026-04-27T08:00:00Z",
+        drift_from_previous: 0.1,
+      }),
+      createTopicCentroidSnapshot({
+        id: 9,
+        computed_at: "2026-04-28T08:00:00Z",
+        drift_from_previous: 0.2,
+      }),
+    ])
     getProjectTopicCentroidSummaryMock.mockResolvedValue(
       createTopicCentroidSummary({
         snapshot_count: 3,
@@ -325,9 +388,22 @@ describe("HealthPage", () => {
     expect(
       screen.getByText("Topic centroid observability"),
     ).toBeInTheDocument()
-    expect(screen.getByText("10.0%")).toBeInTheDocument()
-    expect(screen.getByText("20.0%")).toBeInTheDocument()
+    expect(screen.getAllByText("10.0%").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("20.0%").length).toBeGreaterThan(0)
     expect(screen.getByText("Feedback 14")).toBeInTheDocument()
-    expect(screen.getByText("active")).toBeInTheDocument()
+    expect(screen.getAllByText("active").length).toBeGreaterThan(0)
+    expect(
+      screen.getByRole("link", { name: "Open centroid snapshot history" }),
+    ).toHaveAttribute(
+      "href",
+      "/admin/health?project=1#centroid-snapshot-history",
+    )
+    expect(
+      screen.getByLabelText("Centroid drift trend"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Centroid snapshot history"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Showing 3 of 3 snapshots")).toBeInTheDocument()
   })
 })

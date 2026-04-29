@@ -1,12 +1,19 @@
+import Link from "next/link"
+
 import { AppShell } from "@/components/app-shell"
 import { StatusBadge } from "@/components/status-badge"
 import {
   getProjectIngestionRuns,
   getProjects,
   getProjectSourceConfigs,
+  getProjectTopicCentroidSnapshots,
   getProjectTopicCentroidSummary,
 } from "@/lib/api"
-import type { HealthStatus, TopicCentroidObservabilitySummary } from "@/lib/types"
+import type {
+  HealthStatus,
+  TopicCentroidObservabilitySummary,
+  TopicCentroidSnapshot,
+} from "@/lib/types"
 import { formatDate, healthTone, selectProject } from "@/lib/view-helpers"
 
 type HealthPageProps = {
@@ -80,6 +87,35 @@ export function formatDriftPercent(value: number | null) {
 }
 
 /**
+ * Build sparkline points for centroid drift across recent snapshots.
+ *
+ * @param snapshots - Persisted centroid snapshots for the selected project.
+ * @returns SVG polyline points spanning the recent drift history.
+ */
+export function buildCentroidDriftTrendPoints(
+  snapshots: TopicCentroidSnapshot[],
+) {
+  if (snapshots.length <= 1) {
+    return "0,36 220,36"
+  }
+
+  const points = snapshots
+    .slice()
+    .sort(
+      (left, right) =>
+        new Date(left.computed_at).getTime() - new Date(right.computed_at).getTime(),
+    )
+    .map((snapshot, index, orderedSnapshots) => {
+      const x = (index / (orderedSnapshots.length - 1)) * 220
+      const drift = snapshot.drift_from_previous ?? 0
+      const y = 72 - drift * 72
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    })
+
+  return points.join(" ")
+}
+
+/**
  * Render the source-by-source ingestion health view for the selected project.
  *
  * The page resolves the active project from the URL search params, loads source
@@ -111,11 +147,22 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
     )
   }
 
-  const [sourceConfigs, ingestionRuns, centroidSummary] = await Promise.all([
+  const [sourceConfigs, ingestionRuns, centroidSummary, centroidSnapshots] = await Promise.all([
     getProjectSourceConfigs(selectedProject.id),
     getProjectIngestionRuns(selectedProject.id),
     getProjectTopicCentroidSummary(selectedProject.id),
+    getProjectTopicCentroidSnapshots(selectedProject.id),
   ])
+  const sortedCentroidSnapshots = centroidSnapshots
+    .slice()
+    .sort(
+      (left, right) =>
+        new Date(right.computed_at).getTime() - new Date(left.computed_at).getTime(),
+    )
+  const visibleCentroidSnapshots = sortedCentroidSnapshots.slice(0, 12)
+  const centroidDriftTrendPoints = buildCentroidDriftTrendPoints(
+    visibleCentroidSnapshots,
+  )
 
   const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
   for (const ingestionRun of ingestionRuns) {
@@ -190,6 +237,34 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
           </div>
         </div>
 
+        {visibleCentroidSnapshots.length > 1 ? (
+          <Link
+            aria-label="Open centroid snapshot history"
+            className="mt-4 block rounded-panel bg-ink/6 px-4 py-4 transition hover:bg-ink/8"
+            href={`/admin/health?project=${selectedProject.id}#centroid-snapshot-history`}
+          >
+            <div className="flex items-center justify-between gap-3 text-sm text-muted">
+              <span>Recent drift trend</span>
+              <span>Last {visibleCentroidSnapshots.length} snapshots</span>
+            </div>
+            <svg
+              aria-label="Centroid drift trend"
+              className="mt-3 h-20 w-full overflow-visible text-ink"
+              role="img"
+              viewBox="0 0 220 72"
+            >
+              <polyline
+                fill="none"
+                points={centroidDriftTrendPoints}
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="3"
+              />
+            </svg>
+          </Link>
+        ) : null}
+
         {centroidSummary.latest_snapshot ? (
           <div className="mt-4 flex flex-wrap gap-3 text-sm text-ink">
             <span>{centroidSummary.snapshot_count} snapshots</span>
@@ -203,6 +278,71 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         ) : (
           <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
             No centroid snapshots exist for this project yet.
+          </div>
+        )}
+      </section>
+
+      <section
+        className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl"
+        id="centroid-snapshot-history"
+      >
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">
+              Centroid snapshot history
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Recent centroid recomputations for this project, including feedback volume and drift between snapshots.
+            </p>
+          </div>
+          <span className="text-sm text-muted">
+            Showing {visibleCentroidSnapshots.length} of {centroidSummary.snapshot_count} snapshots
+          </span>
+        </div>
+
+        {visibleCentroidSnapshots.length === 0 ? (
+          <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+            No centroid snapshot history exists for this project yet.
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-ink/12 text-sm text-muted">
+                  <th className="px-3 py-4 font-medium">Computed</th>
+                  <th className="px-3 py-4 font-medium">State</th>
+                  <th className="px-3 py-4 font-medium">Feedback</th>
+                  <th className="px-3 py-4 font-medium">Drift vs previous</th>
+                  <th className="px-3 py-4 font-medium">Drift vs 7d</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleCentroidSnapshots.map((snapshot) => (
+                  <tr
+                    key={snapshot.id}
+                    className="border-b border-ink/12 align-top last:border-b-0"
+                  >
+                    <td className="px-3 py-4 text-sm text-ink">
+                      {formatDate(snapshot.computed_at)}
+                    </td>
+                    <td className="px-3 py-4">
+                      <StatusBadge tone={snapshot.centroid_active ? "positive" : "warning"}>
+                        {snapshot.centroid_active ? "active" : "inactive"}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-3 py-4 text-sm text-ink">
+                      {snapshot.feedback_count} total
+                    </td>
+                    <td className="px-3 py-4 text-sm text-ink">
+                      {formatDriftPercent(snapshot.drift_from_previous)}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-ink">
+                      {formatDriftPercent(snapshot.drift_from_week_ago)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

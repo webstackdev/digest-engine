@@ -2,10 +2,13 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_nested.routers import NestedSimpleRouter
 
 from core.api import (
+    BlueskyCredentialsViewSet,
     ContentViewSet,
     EntityCandidateViewSet,
     EntityViewSet,
     IngestionRunViewSet,
+    IntakeAllowlistViewSet,
+    NewsletterIntakeViewSet,
     ProjectConfigViewSet,
     ProjectViewSet,
     ReviewQueueViewSet,
@@ -37,6 +40,21 @@ project_router.register(
 project_router.register(r"feedback", UserFeedbackViewSet, basename="project-feedback")
 project_router.register(
     r"ingestion-runs", IngestionRunViewSet, basename="project-ingestion-run"
+)
+project_router.register(
+    r"bluesky-credentials",
+    BlueskyCredentialsViewSet,
+    basename="project-bluesky-credentials",
+)
+project_router.register(
+    r"intake-allowlist",
+    IntakeAllowlistViewSet,
+    basename="project-intake-allowlist",
+)
+project_router.register(
+    r"newsletter-intakes",
+    NewsletterIntakeViewSet,
+    basename="project-newsletter-intake",
 )
 project_router.register(
     r"source-configs", SourceConfigViewSet, basename="project-source-config"

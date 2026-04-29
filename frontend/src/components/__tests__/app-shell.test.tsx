@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest"
 import { AppShell } from "@/components/app-shell"
 import type { Project } from "@/lib/types"
 
+vi.mock("@/components/user-menu", () => ({
+  UserMenu: () => <div>User menu</div>,
+}))
+
 const projects: Project[] = [
   {
     id: 1,

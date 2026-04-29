@@ -5,17 +5,22 @@ import { cache } from "react"
 
 import { authOptions } from "@/lib/auth"
 import type {
+  BlueskyCredentials,
   Content,
   ContentSkillName,
   Entity,
   EntityAuthoritySnapshot,
   EntityCandidate,
   IngestionRun,
+  IntakeAllowlistEntry,
+  NewsletterIntake,
   Project,
+  ProjectBlueskyVerification,
   ReviewQueueItem,
   SkillResult,
   SourceConfig,
   TopicCentroidObservabilitySummary,
+  TopicCentroidSnapshot,
   UserFeedback,
 } from "@/lib/types"
 
@@ -183,6 +188,137 @@ export async function apiFetch<T>(
 export const getProjects = cache(
   async (): Promise<Project[]> => apiFetch<Project[]>("/api/v1/projects/"),
 )
+
+/**
+ * Partially update one project record.
+ *
+ * This helper is currently used for project-level intake settings surfaced in the
+ * custom admin UI. The payload shape stays aligned with the backend project
+ * serializer so future project settings can reuse the same transport.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param payload - Partial project fields accepted by the backend serializer.
+ * @returns The updated project record.
+ * @example
+ * ```ts
+ * await updateProject(4, { intake_enabled: true })
+ * ```
+ */
+export async function updateProject(
+  projectId: number,
+  payload: Partial<
+    Pick<
+      Project,
+      "name" | "group" | "topic_description" | "content_retention_days" | "intake_enabled"
+    >
+  >,
+): Promise<Project> {
+  return apiFetch<Project>(`/api/v1/projects/${projectId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Rotate the newsletter intake token for one project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns The updated project payload containing the new intake token.
+ */
+export async function rotateProjectIntakeToken(
+  projectId: number,
+): Promise<Project> {
+  return apiFetch<Project>(`/api/v1/projects/${projectId}/rotate-intake-token/`, {
+    method: "POST",
+  })
+}
+
+/**
+ * Verify the stored Bluesky credentials for one project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Verification status details for the stored Bluesky account.
+ * @example
+ * ```ts
+ * const result = await verifyProjectBlueskyCredentials(4)
+ * ```
+ */
+export async function verifyProjectBlueskyCredentials(
+  projectId: number,
+): Promise<ProjectBlueskyVerification> {
+  return apiFetch<ProjectBlueskyVerification>(
+    `/api/v1/projects/${projectId}/verify-bluesky-credentials/`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+/**
+ * Fetch stored Bluesky credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Zero or one stored Bluesky credential rows for the project.
+ */
+export async function getProjectBlueskyCredentials(
+  projectId: number,
+): Promise<BlueskyCredentials[]> {
+  return apiFetch<BlueskyCredentials[]>(
+    `/api/v1/projects/${projectId}/bluesky-credentials/`,
+  )
+}
+
+/**
+ * Create Bluesky credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param payload - Credential fields accepted by the backend serializer.
+ * @returns The created Bluesky credentials row.
+ */
+export async function createProjectBlueskyCredentials(
+  projectId: number,
+  payload: {
+    handle: string
+    pds_url: string
+    is_active: boolean
+    app_password: string
+  },
+): Promise<BlueskyCredentials> {
+  return apiFetch<BlueskyCredentials>(
+    `/api/v1/projects/${projectId}/bluesky-credentials/`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Update stored Bluesky credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param credentialId - Numeric credential identifier inside the project.
+ * @param payload - Partial credential fields accepted by the backend serializer.
+ * @returns The updated Bluesky credentials row.
+ */
+export async function updateProjectBlueskyCredentials(
+  projectId: number,
+  credentialId: number,
+  payload: Partial<{
+    handle: string
+    pds_url: string
+    is_active: boolean
+    app_password: string
+  }>,
+): Promise<BlueskyCredentials> {
+  return apiFetch<BlueskyCredentials>(
+    `/api/v1/projects/${projectId}/bluesky-credentials/${credentialId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  )
+}
 
 /**
  * Fetch all content rows for a project dashboard.
@@ -383,6 +519,73 @@ export async function getProjectIngestionRuns(
 }
 
 /**
+ * Fetch newsletter sender allowlist entries for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Allowlist rows for the selected project's intake workflow.
+ */
+export async function getProjectIntakeAllowlist(
+  projectId: number,
+): Promise<IntakeAllowlistEntry[]> {
+  return apiFetch<IntakeAllowlistEntry[]>(
+    `/api/v1/projects/${projectId}/intake-allowlist/`,
+  )
+}
+
+/**
+ * Create a newsletter sender allowlist entry for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param senderEmail - Sender email address to allowlist.
+ * @returns The created allowlist entry.
+ */
+export async function createProjectIntakeAllowlistEntry(
+  projectId: number,
+  senderEmail: string,
+): Promise<IntakeAllowlistEntry> {
+  return apiFetch<IntakeAllowlistEntry>(
+    `/api/v1/projects/${projectId}/intake-allowlist/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ sender_email: senderEmail }),
+    },
+  )
+}
+
+/**
+ * Delete a newsletter sender allowlist entry from a project.
+ *
+ * @param allowlistId - Numeric allowlist identifier to remove.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns `undefined` when the deletion succeeds.
+ */
+export async function deleteProjectIntakeAllowlistEntry(
+  allowlistId: number,
+  projectId: number,
+) {
+  return apiFetch(
+    `/api/v1/projects/${projectId}/intake-allowlist/${allowlistId}/`,
+    {
+      method: "DELETE",
+    },
+  )
+}
+
+/**
+ * Fetch recent newsletter intake rows for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Inbound newsletter rows already captured for the project.
+ */
+export async function getProjectNewsletterIntakes(
+  projectId: number,
+): Promise<NewsletterIntake[]> {
+  return apiFetch<NewsletterIntake[]>(
+    `/api/v1/projects/${projectId}/newsletter-intakes/`,
+  )
+}
+
+/**
  * Fetch source-plugin configurations for a project.
  *
  * @param projectId - Numeric project identifier from the Django API.
@@ -413,6 +616,24 @@ export async function getProjectTopicCentroidSummary(
 ): Promise<TopicCentroidObservabilitySummary> {
   return apiFetch<TopicCentroidObservabilitySummary>(
     `/api/v1/projects/${projectId}/topic-centroid-snapshots/summary/`,
+  )
+}
+
+/**
+ * Fetch persisted topic centroid snapshots for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Persisted centroid snapshots for the project.
+ * @example
+ * ```ts
+ * const snapshots = await getProjectTopicCentroidSnapshots(4)
+ * ```
+ */
+export async function getProjectTopicCentroidSnapshots(
+  projectId: number,
+): Promise<TopicCentroidSnapshot[]> {
+  return apiFetch<TopicCentroidSnapshot[]>(
+    `/api/v1/projects/${projectId}/topic-centroid-snapshots/`,
   )
 }
 
