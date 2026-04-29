@@ -12,6 +12,7 @@ import {
 } from "@/lib/api"
 import {
   formatDate,
+  formatPercentScore,
   formatScore,
   getErrorMessage,
   getSuccessMessage,
@@ -106,7 +107,9 @@ export default async function ContentDetailPage({
   const downvotes = contentFeedback.filter(
     (item) => item.feedback_type === "downvote",
   ).length
-  const canSummarize = (content.relevance_score ?? 0) >= 0.7
+  const effectiveRelevanceScore =
+    content.authority_adjusted_score ?? content.relevance_score
+  const canSummarize = (effectiveRelevanceScore ?? 0) >= 0.7
   const initialPendingSkills = deriveInitialPendingSkills(contentSkillResults)
 
   return (
@@ -139,10 +142,10 @@ export default async function ContentDetailPage({
               </div>
               <StatusBadge
                 tone={
-                  (content.relevance_score ?? 0) >= 0.7 ? "positive" : "warning"
+                  (effectiveRelevanceScore ?? 0) >= 0.7 ? "positive" : "warning"
                 }
               >
-                Relevance {formatScore(content.relevance_score)}
+                Adjusted {formatPercentScore(effectiveRelevanceScore)}
               </StatusBadge>
             </div>
 
@@ -194,6 +197,11 @@ export default async function ContentDetailPage({
               <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
                 Canonical URL {content.canonical_url || content.url}
               </span>
+              {content.authority_adjusted_score !== null ? (
+                <span className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink">
+                  Base {formatPercentScore(content.relevance_score)}
+                </span>
+              ) : null}
               {content.duplicate_signal_count > 0 ? (
                 <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
                   Also seen in {content.duplicate_signal_count} source
@@ -245,7 +253,7 @@ export default async function ContentDetailPage({
             <p className="text-sm leading-6 text-muted">
               These controls create new persisted SkillResult records.
               Summarization is only available once a content item has reached a
-              relevance score of at least 0.70.
+              final adjusted relevance score of at least 70%.
             </p>
           </article>
 

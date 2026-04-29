@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import type { Project } from "@/lib/types"
 import {
   formatDate,
+  formatPercentScore,
   formatScore,
   getErrorMessage,
   getSearchParam,
@@ -57,6 +58,12 @@ describe("view helpers", () => {
     expect(formatScore(0.825)).toBe("0.82")
     expect(formatScore(null)).toBe("n/a")
     expect(formatScore(undefined)).toBe("n/a")
+  })
+
+  it("formats normalized scores as percentages", () => {
+    expect(formatPercentScore(0.825)).toBe("83%")
+    expect(formatPercentScore(null)).toBe("n/a")
+    expect(formatPercentScore(undefined)).toBe("n/a")
   })
 
   it("formats dates and falls back to Never for missing timestamps", () => {

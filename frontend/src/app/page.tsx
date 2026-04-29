@@ -13,6 +13,7 @@ import {
 import { buildDashboardView } from "@/lib/dashboard-view"
 import {
   formatDate,
+  formatPercentScore,
   formatScore,
   getErrorMessage,
   getSuccessMessage,
@@ -370,16 +371,21 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   </div>
                   <StatusBadge
                     tone={
-                      (content.relevance_score ?? 0) >= 0.7
+                      (content.authority_adjusted_score ?? content.relevance_score ?? 0) >= 0.7
                         ? "positive"
                         : "warning"
                     }
                   >
-                    Relevance {formatScore(content.relevance_score)}
+                    Adjusted {formatPercentScore(content.authority_adjusted_score ?? content.relevance_score)}
                   </StatusBadge>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  {content.authority_adjusted_score !== null ? (
+                    <span className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink">
+                      Base {formatPercentScore(content.relevance_score)}
+                    </span>
+                  ) : null}
                   <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
                     {content.content_type || "unclassified"}
                   </span>

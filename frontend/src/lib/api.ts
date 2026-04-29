@@ -8,6 +8,7 @@ import type {
   Content,
   ContentSkillName,
   Entity,
+  EntityAuthoritySnapshot,
   EntityCandidate,
   IngestionRun,
   Project,
@@ -225,7 +226,9 @@ export async function getProjectContent(
  * ```
  */
 export async function getProjectEntities(projectId: number): Promise<Entity[]> {
-  return apiFetch<Entity[]>(`/api/v1/projects/${projectId}/entities/`)
+  return apiFetch<Entity[]>(
+    `/api/v1/projects/${projectId}/entities/?ordering=-authority_score`,
+  )
 }
 
 /**
@@ -263,6 +266,28 @@ export async function getProjectEntityMentions(
 ) {
   return apiFetch<Entity["latest_mentions"]>(
     `/api/v1/projects/${projectId}/entities/${entityId}/mentions/`,
+  )
+}
+
+/**
+ * Fetch persisted authority-score history for one tracked entity.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param entityId - Numeric entity identifier inside the project.
+ * @param limit - Maximum number of recent snapshots to fetch.
+ * @returns Recent authority snapshots for the requested entity.
+ * @example
+ * ```ts
+ * const history = await getProjectEntityAuthorityHistory(4, 9, 12)
+ * ```
+ */
+export async function getProjectEntityAuthorityHistory(
+  projectId: number,
+  entityId: number,
+  limit = 12,
+): Promise<EntityAuthoritySnapshot[]> {
+  return apiFetch<EntityAuthoritySnapshot[]>(
+    `/api/v1/projects/${projectId}/entities/${entityId}/authority_history/?limit=${limit}`,
   )
 }
 

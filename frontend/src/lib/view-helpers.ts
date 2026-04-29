@@ -110,6 +110,26 @@ export function formatScore(value: number | null | undefined) {
 }
 
 /**
+ * Format a normalized score as a whole-number percentage.
+ *
+ * Missing scores return `"n/a"`. Values are clamped only by the browser-facing
+ * rounding step because the backend already stores normalized values.
+ *
+ * @param value - Numeric score, or `null`/`undefined` when unavailable.
+ * @returns A whole-number percentage label or `"n/a"` for missing scores.
+ * @example
+ * ```ts
+ * const label = formatPercentScore(0.825)
+ * ```
+ */
+export function formatPercentScore(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "n/a"
+  }
+  return `${Math.round(value * 100)}%`
+}
+
+/**
  * Shorten long content previews without leaving trailing whitespace before ellipses.
  *
  * Strings at or below the maximum length are returned unchanged.

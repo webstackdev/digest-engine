@@ -18,6 +18,7 @@ const contents: Content[] = [
     ingested_at: "2026-04-27T12:10:00Z",
     content_text: "Alpha",
     relevance_score: 0.9,
+    authority_adjusted_score: 0.85,
     embedding_id: "emb-1",
     duplicate_of: null,
     duplicate_signal_count: 0,
@@ -38,6 +39,7 @@ const contents: Content[] = [
     ingested_at: "2026-04-26T12:10:00Z",
     content_text: "Beta",
     relevance_score: 0.8,
+    authority_adjusted_score: 0.92,
     embedding_id: "emb-2",
     duplicate_of: null,
     duplicate_signal_count: 2,
@@ -58,6 +60,7 @@ const contents: Content[] = [
     ingested_at: "2026-04-20T12:10:00Z",
     content_text: "Gamma",
     relevance_score: 0.8,
+    authority_adjusted_score: 0.8,
     embedding_id: "emb-3",
     duplicate_of: null,
     duplicate_signal_count: 0,
@@ -78,6 +81,7 @@ const contents: Content[] = [
     ingested_at: "2026-02-01T12:10:00Z",
     content_text: "Delta",
     relevance_score: 1,
+    authority_adjusted_score: 1,
     embedding_id: "emb-4",
     duplicate_of: null,
     duplicate_signal_count: 0,
@@ -129,7 +133,7 @@ const feedback: UserFeedback[] = [
 ]
 
 describe("buildDashboardView", () => {
-  it("filters active content, defaults invalid days to 30, and sorts by relevance then recency", () => {
+  it("filters active content, defaults invalid days to 30, and sorts by adjusted score then recency", () => {
     const result = buildDashboardView({
       contents,
       reviewQueue,
@@ -140,7 +144,7 @@ describe("buildDashboardView", () => {
 
     expect(result.daysFilter).toBe(30)
     expect(result.view).toBe("content")
-    expect(result.filteredContents.map((content) => content.id)).toEqual([1, 2, 3])
+    expect(result.filteredContents.map((content) => content.id)).toEqual([2, 1, 3])
   })
 
   it("applies content type and source filters", () => {

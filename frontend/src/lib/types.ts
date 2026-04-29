@@ -25,6 +25,18 @@ export type Entity = {
   created_at: string
 }
 
+export type EntityAuthoritySnapshot = {
+  id: number
+  entity: number
+  project: number
+  computed_at: string
+  mention_component: number
+  feedback_component: number
+  duplicate_component: number
+  decayed_prior: number
+  final_score: number
+}
+
 export type EntityMentionSummary = {
   id: number
   content_id: number
@@ -65,6 +77,7 @@ export type Content = {
   ingested_at: string
   content_text: string
   relevance_score: number | null
+  authority_adjusted_score: number | null
   embedding_id: string
   duplicate_of: number | null
   duplicate_signal_count: number
