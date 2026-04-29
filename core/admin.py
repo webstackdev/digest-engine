@@ -7,6 +7,7 @@ running ingestion and AI-assisted content curation.
 
 import json
 
+from django import forms
 from django.contrib import admin, messages
 from django.db.models import Avg
 from django.utils import timezone
@@ -16,6 +17,7 @@ from import_export.admin import ExportActionMixin
 from unfold.admin import ModelAdmin
 
 from core.models import (
+    BlueskyCredentials,
     Content,
     Entity,
     IngestionRun,
@@ -27,6 +29,44 @@ from core.models import (
     UserFeedback,
 )
 from core.plugins import get_plugin_for_source_config, validate_plugin_config
+
+
+class BlueskyCredentialsAdminForm(forms.ModelForm):
+    """Admin form that accepts a plaintext app password without exposing ciphertext."""
+
+    app_password = forms.CharField(
+        required=False,
+        strip=False,
+        widget=forms.PasswordInput(render_value=False),
+        help_text=(
+            "Leave blank to keep the existing app password. Stored encrypted at rest."
+        ),
+        label="App password",
+    )
+
+    class Meta:
+        model = BlueskyCredentials
+        fields = ["project", "handle", "app_password", "pds_url", "is_active"]
+
+    def clean(self):
+        """Require an app password when creating credentials for the first time."""
+
+        cleaned_data = super().clean()
+        app_password = cleaned_data.get("app_password", "")
+        if not self.instance.has_app_password() and not app_password:
+            self.add_error("app_password", "App password is required.")
+        return cleaned_data
+
+    def save(self, commit=True):
+        """Encrypt a new app password before saving the model instance."""
+
+        instance = super().save(commit=False)
+        app_password = self.cleaned_data.get("app_password", "")
+        if app_password:
+            instance.set_app_password(app_password)
+        if commit:
+            instance.save()
+        return instance
 
 
 @admin.register(Project)
@@ -47,6 +87,100 @@ class ProjectAdmin(ExportActionMixin, admin.ModelAdmin):
 
     # Quick editing
     list_editable = ("content_retention_days",)
+
+
+@admin.register(BlueskyCredentials)
+class BlueskyCredentialsAdmin(ModelAdmin):
+    """Admin view for project-scoped Bluesky authentication settings."""
+
+    form = BlueskyCredentialsAdminForm
+    actions = ["verify_selected_credentials"]
+    list_display = (
+        "project",
+        "handle",
+        "display_pds_host",
+        "has_stored_app_password",
+        "is_active",
+        "last_verified_at",
+    )
+    list_filter = ("is_active", ("project", admin.RelatedOnlyFieldListFilter))
+    search_fields = ("project__name", "handle", "pds_url")
+    autocomplete_fields = ("project",)
+    readonly_fields = (
+        "has_stored_app_password",
+        "last_verified_at",
+        "last_error",
+        "created_at",
+        "updated_at",
+    )
+    fieldsets = (
+        (
+            "Account",
+            {"fields": ("project", "handle", "app_password", "is_active")},
+        ),
+        (
+            "PDS Override",
+            {
+                "fields": ("pds_url",),
+                "description": "Leave blank to use the default Bluesky-hosted account flow.",
+            },
+        ),
+        (
+            "Verification",
+            {
+                "fields": (
+                    "has_stored_app_password",
+                    "last_verified_at",
+                    "last_error",
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+    @admin.display(description="PDS")
+    def display_pds_host(self, obj):
+        """Show whether the credentials use the hosted default or a custom PDS."""
+
+        return obj.pds_url or "Bluesky hosted default"
+
+    @admin.display(boolean=True, description="Stored App Password")
+    def has_stored_app_password(self, obj):
+        """Return whether an encrypted app password has been configured."""
+
+        return obj.has_app_password()
+
+    @admin.action(description="Verify Selected Credentials")
+    def verify_selected_credentials(self, request, queryset):
+        """Authenticate the selected Bluesky accounts and report the outcome."""
+
+        from core.plugins.bluesky import BlueskySourcePlugin
+
+        verified_credentials = []
+        failed_credentials = []
+
+        for credentials in queryset.select_related("project"):
+            try:
+                BlueskySourcePlugin.verify_credentials(credentials)
+            except Exception as exc:
+                failed_credentials.append(f"{credentials}: {exc}")
+            else:
+                verified_credentials.append(str(credentials))
+
+        if verified_credentials:
+            self.message_user(
+                request,
+                f"Credential verification passed for {len(verified_credentials)} account(s).",
+                messages.SUCCESS,
+            )
+
+        if failed_credentials:
+            self.message_user(
+                request,
+                "Credential verification failed for: " + "; ".join(failed_credentials),
+                messages.ERROR,
+            )
 
 
 @admin.register(ProjectConfig)
