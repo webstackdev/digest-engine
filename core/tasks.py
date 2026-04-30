@@ -22,10 +22,6 @@ from core.embeddings import (
 )
 from core.models import (
     Content,
-    Entity,
-    EntityAuthoritySnapshot,
-    EntityMention,
-    EntityMentionRole,
     FeedbackType,
     IngestionRun,
     IntakeAllowlist,
@@ -44,6 +40,12 @@ from core.pipeline import (
     process_content_pipeline,
 )
 from core.plugins import get_plugin_for_source_config
+from entities.models import (
+    Entity,
+    EntityAuthoritySnapshot,
+    EntityMention,
+    EntityMentionRole,
+)
 from projects.models import Project, ProjectConfig, SourceConfig
 
 logger = logging.getLogger(__name__)

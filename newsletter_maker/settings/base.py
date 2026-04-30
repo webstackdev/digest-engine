@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     # 6. Project Apps
     "users",
     "projects",
+    "entities",
     "core",
 ]
 

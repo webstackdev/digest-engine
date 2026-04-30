@@ -10,9 +10,6 @@ from django.utils import timezone
 from core.admin import (
     ContentAdmin,
     DuplicateStateFilter,
-    EntityAdmin,
-    EntityAuthoritySnapshotAdmin,
-    EntityCandidateAdmin,
     HighValueFilter,
     IngestionRunAdmin,
     ReviewQueueAdmin,
@@ -34,6 +31,11 @@ from core.models import (
     SkillResult,
     TopicCentroidSnapshot,
     UserFeedback,
+)
+from entities.admin import (
+    EntityAdmin,
+    EntityAuthoritySnapshotAdmin,
+    EntityCandidateAdmin,
 )
 from projects.admin import (
     BlueskyCredentialsAdmin,

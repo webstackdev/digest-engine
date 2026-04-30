@@ -15,6 +15,10 @@ from core.embeddings import search_similar_entities_for_content
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
 from core.models import (
     Content,
+    SkillResult,
+    SkillStatus,
+)
+from entities.models import (
     Entity,
     EntityCandidate,
     EntityCandidateStatus,
@@ -22,8 +26,6 @@ from core.models import (
     EntityMentionRole,
     EntityMentionSentiment,
     EntityType,
-    SkillResult,
-    SkillStatus,
 )
 
 ENTITY_EXTRACTION_SKILL_NAME = "entity_extraction"
@@ -121,7 +123,9 @@ def run_entity_extraction(content: Content) -> dict[str, Any]:
     confidence = max((mention.confidence for mention in mentions), default=0.0)
     return {
         "mentions": [_serialize_mention(mention) for mention in mentions],
-        "candidate_entities": [_serialize_candidate(candidate) for candidate in candidates],
+        "candidate_entities": [
+            _serialize_candidate(candidate) for candidate in candidates
+        ],
         "primary_entity_id": primary_entity.id if primary_entity is not None else None,
         "confidence": confidence,
         "explanation": extraction.get(
@@ -211,7 +215,8 @@ def persist_entity_candidates(
         if not created:
             update_fields: list[str] = []
             suggested_type = candidate_payload.get(
-                "suggested_type", candidate.suggested_type or _guess_candidate_type(name)
+                "suggested_type",
+                candidate.suggested_type or _guess_candidate_type(name),
             )
             if candidate.suggested_type != suggested_type:
                 candidate.suggested_type = suggested_type
@@ -264,7 +269,9 @@ def reject_entity_candidate(candidate: EntityCandidate) -> None:
     candidate.save(update_fields=["status", "updated_at"])
 
 
-def backfill_entity_mentions(entity: Entity, *, candidate_name: str | None = None) -> None:
+def backfill_entity_mentions(
+    entity: Entity, *, candidate_name: str | None = None
+) -> None:
     """Retroactively attach recent content rows to an accepted or merged entity."""
 
     cutoff = timezone.now() - timedelta(days=RETROACTIVE_MENTION_WINDOW_DAYS)
@@ -312,7 +319,10 @@ def _run_entity_extraction_with_fallback(
                     "title": content.title,
                     "content_text": content.content_text[:5000],
                     "project_id": content.project_id,
-                    "tracked_entities": [_serialize_tracked_entity(entity) for entity in candidate_entities],
+                    "tracked_entities": [
+                        _serialize_tracked_entity(entity)
+                        for entity in candidate_entities
+                    ],
                 },
             ),
         )
@@ -393,7 +403,11 @@ def _retrieve_candidate_entities(
             ordered_ids.append(entity_id)
     if not ordered_ids:
         return tracked_entities
-    return [entities_by_id[entity_id] for entity_id in ordered_ids if entity_id in entities_by_id]
+    return [
+        entities_by_id[entity_id]
+        for entity_id in ordered_ids
+        if entity_id in entities_by_id
+    ]
 
 
 def _normalize_mentions(
@@ -423,7 +437,9 @@ def _normalize_mentions(
                 "role": _normalize_role(raw_mention.get("role")),
                 "sentiment": _normalize_sentiment(raw_mention.get("sentiment")),
                 "span": str(raw_mention.get("span", entity_name)).strip(),
-                "confidence": _normalize_confidence(raw_mention.get("confidence", 0.75)),
+                "confidence": _normalize_confidence(
+                    raw_mention.get("confidence", 0.75)
+                ),
             }
         )
     return normalized_mentions, unresolved_names
@@ -447,7 +463,9 @@ def _normalize_candidates(
         elif isinstance(raw_candidate, dict):
             candidate_name = _clean_candidate_name(str(raw_candidate.get("name", "")))
             suggested_type = str(
-                raw_candidate.get("suggested_type", _guess_candidate_type(candidate_name))
+                raw_candidate.get(
+                    "suggested_type", _guess_candidate_type(candidate_name)
+                )
             )
         else:
             continue
@@ -477,7 +495,9 @@ def _discover_candidates(
     discovered: list[dict[str, str]] = []
     seen_names: set[str] = set()
     candidate_text = "\n".join(
-        part for part in [content.author, content.title, content.content_text[:2000]] if part
+        part
+        for part in [content.author, content.title, content.content_text[:2000]]
+        if part
     )
     for match in PROPER_NOUN_PATTERN.findall(candidate_text):
         name = _clean_candidate_name(match)
@@ -490,9 +510,7 @@ def _discover_candidates(
         ):
             continue
         seen_names.add(normalized_name)
-        discovered.append(
-            {"name": name, "suggested_type": _guess_candidate_type(name)}
-        )
+        discovered.append({"name": name, "suggested_type": _guess_candidate_type(name)})
     return discovered
 
 
@@ -536,7 +554,9 @@ def _find_entity_span(
         stripped_label = label.strip()
         if not stripped_label:
             continue
-        pattern = re.compile(rf"(?<!\w){re.escape(stripped_label)}(?!\w)", re.IGNORECASE)
+        pattern = re.compile(
+            rf"(?<!\w){re.escape(stripped_label)}(?!\w)", re.IGNORECASE
+        )
         for haystack in haystacks:
             if pattern.search(haystack):
                 return stripped_label
@@ -590,7 +610,11 @@ def _detect_role(content: Content, span: str) -> str:
         return EntityMentionRole.AUTHOR
     if content.title and span_lower in content.title.lower():
         return EntityMentionRole.SUBJECT
-    if re.search(rf'"[^\n]{{0,120}}{re.escape(span)}[^\n]{{0,120}}"', content.content_text, re.IGNORECASE):
+    if re.search(
+        rf'"[^\n]{{0,120}}{re.escape(span)}[^\n]{{0,120}}"',
+        content.content_text,
+        re.IGNORECASE,
+    ):
         return EntityMentionRole.QUOTED
     return EntityMentionRole.MENTIONED
 
@@ -714,7 +738,9 @@ def _guess_candidate_type(name: str) -> str:
         return EntityType.VENDOR
     if any(token in ORGANIZATION_SUFFIXES for token in tokens):
         return EntityType.ORGANIZATION
-    title_case_tokens = [token for token in name.split() if token and token[:1].isupper()]
+    title_case_tokens = [
+        token for token in name.split() if token and token[:1].isupper()
+    ]
     if 2 <= len(title_case_tokens) <= 3:
         return EntityType.INDIVIDUAL
     return EntityType.ORGANIZATION

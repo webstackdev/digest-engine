@@ -3,8 +3,6 @@ from rest_framework_nested.routers import NestedSimpleRouter
 
 from core.api import (
     ContentViewSet,
-    EntityCandidateViewSet,
-    EntityViewSet,
     IngestionRunViewSet,
     IntakeAllowlistViewSet,
     NewsletterIntakeViewSet,
@@ -13,6 +11,7 @@ from core.api import (
     TopicCentroidSnapshotViewSet,
     UserFeedbackViewSet,
 )
+from entities.api import EntityCandidateViewSet, EntityViewSet
 from projects.api import (
     BlueskyCredentialsViewSet,
     ProjectConfigViewSet,

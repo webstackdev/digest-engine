@@ -15,8 +15,6 @@ from core.deduplication import canonicalize_url
 from core.embeddings import upsert_content_embedding
 from core.models import (
     Content,
-    Entity,
-    EntityType,
     FeedbackType,
     IngestionRun,
     ReviewQueue,
@@ -32,6 +30,7 @@ from core.pipeline import (
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
 )
+from entities.models import Entity, EntityType
 from projects.model_support import SourcePluginName
 from projects.models import (
     Project,

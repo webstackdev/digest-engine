@@ -26,8 +26,9 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from core.models import Content, Entity
+from core.models import Content
 from core.settings_types import CoreSettings
+from entities.models import Entity
 
 SentenceTransformer = None
 settings = cast(CoreSettings, django_settings)
