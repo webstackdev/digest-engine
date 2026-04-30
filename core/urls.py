@@ -1,6 +1,7 @@
 from django.urls import path
 
-from core.views import confirm_newsletter_sender_view, healthz_view, readyz_view
+from core.views import healthz_view, readyz_view
+from newsletters.views import confirm_newsletter_sender_view
 
 urlpatterns = [
     path("healthz/", healthz_view, name="healthz"),

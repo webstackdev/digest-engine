@@ -109,6 +109,77 @@ describe("api helpers", () => {
     )
   })
 
+  it("retries once with basic auth when a session token has gone stale", async () => {
+    getServerSessionMock.mockResolvedValue({ backendAuth: { key: "stale-token" } })
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            type: "client_error",
+            errors: [
+              {
+                code: "authentication_failed",
+                detail: "Invalid token.",
+                attr: null,
+              },
+            ],
+          },
+          { status: 403 },
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse([{ id: 1 }]))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { apiFetch } = await import("@/lib/api")
+    const result = await apiFetch<Array<{ id: number }>>("/api/v1/projects/")
+
+    expect(result).toEqual([{ id: 1 }])
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.com/api/v1/projects/",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Token stale-token" }),
+      }),
+    )
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "https://api.example.com/api/v1/projects/",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: getExpectedBasicAuthHeader(),
+        }),
+      }),
+    )
+  })
+
+  it("does not retry with basic auth for non-authentication 403 responses", async () => {
+    getServerSessionMock.mockResolvedValue({ backendAuth: { key: "active-token" } })
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse(
+        {
+          type: "client_error",
+          errors: [
+            {
+              code: "permission_denied",
+              detail: "You do not have permission to perform this action.",
+              attr: null,
+            },
+          ],
+        },
+        { status: 403 },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { apiFetch } = await import("@/lib/api")
+
+    await expect(apiFetch("/api/v1/projects/")).rejects.toThrow(
+      "API request failed (403) from https://api.example.com/api/v1/projects/ with application/json: {\"type\":\"client_error\",\"errors\":[{\"code\":\"permission_denied\",\"detail\":\"You do not have permission to perform this action.\",\"attr\":null}]}",
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it("surfaces a normalized error preview for failed requests", async () => {
     getServerSessionMock.mockResolvedValue(null)
     const fetchMock = vi
@@ -163,6 +234,57 @@ describe("api helpers", () => {
     const result = await apiFetch("/api/v1/projects/")
 
     expect(result).toBeUndefined()
+  })
+
+  it("fetches one invitation token payload from the public invite endpoint", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        token: "invite-token",
+        project_id: 9,
+        project_name: "Invited Project",
+        email: "invitee@example.com",
+        role: "member",
+        status: "pending",
+        accepted_at: null,
+        revoked_at: null,
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { getMembershipInvitation } = await import("@/lib/api")
+    const invitation = await getMembershipInvitation("invite-token")
+
+    expect(invitation.project_id).toBe(9)
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/invitations/invite-token/",
+      expect.objectContaining({}),
+    )
+  })
+
+  it("omits the JSON content type when sending form data", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { uploadCurrentUserAvatar } = await import("@/lib/api")
+    const formData = new FormData()
+    formData.set(
+      "avatar",
+      new File(["avatar"], "avatar.png", { type: "image/png" }),
+    )
+
+    await uploadCurrentUserAvatar(formData)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/profile/avatar/",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.not.objectContaining({
+          "Content-Type": "application/json",
+        }),
+      }),
+    )
   })
 
   it("throws when a successful response is not JSON", async () => {

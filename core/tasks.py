@@ -4,41 +4,23 @@ import logging
 import math
 from collections import defaultdict
 from datetime import timedelta
+from importlib import import_module
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from celery import shared_task
 from django.conf import settings
-from django.core.cache import cache
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Model
 from django.utils import timezone
 
-from core.deduplication import canonicalize_url
 from core.embeddings import (
-    build_content_embedding_text,
-    delete_topic_centroid,
-    embed_text,
     upsert_content_embedding,
-    upsert_topic_centroid,
 )
 from core.models import (
     Content,
-    Entity,
-    EntityAuthoritySnapshot,
-    EntityMention,
-    EntityMentionRole,
     FeedbackType,
-    IngestionRun,
-    IntakeAllowlist,
-    NewsletterIntake,
-    NewsletterIntakeStatus,
-    Project,
-    ProjectConfig,
-    RunStatus,
-    SourceConfig,
-    TopicCentroidSnapshot,
     UserFeedback,
 )
-from core.newsletter_extraction import extract_newsletter_items
 from core.pipeline import (
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
@@ -46,7 +28,13 @@ from core.pipeline import (
     execute_background_skill_result,
     process_content_pipeline,
 )
-from core.plugins import get_plugin_for_source_config
+from entities.models import (
+    Entity,
+    EntityAuthoritySnapshot,
+    EntityMention,
+    EntityMentionRole,
+)
+from projects.models import Project, ProjectConfig
 
 logger = logging.getLogger(__name__)
 
@@ -55,71 +43,95 @@ AUTHORITY_ROLE_SIGNALS = (
     EntityMentionRole.AUTHOR,
     EntityMentionRole.SUBJECT,
 )
-TOPIC_CENTROID_LOOKBACK_DAYS = 90
-TOPIC_CENTROID_MIN_UPVOTES = 10
-TOPIC_CENTROID_DOWNVOTE_WEIGHT = 0.25
-TOPIC_CENTROID_DEBOUNCE_SECONDS = 60 * 5
-TOPIC_CENTROID_DECAY_TAU_DAYS = 45
 
-
-@shared_task(name="core.tasks.run_ingestion")
-def run_ingestion(source_config_id: int):
-    """Fetch new content for one source config and record an ingestion run.
-
-    Args:
-        source_config_id: Primary key of the source configuration to ingest.
-
-    Returns:
-        A summary containing fetched and ingested item counts.
-    """
-
-    source_config = SourceConfig.objects.select_related("project").get(
-        pk=source_config_id
+if TYPE_CHECKING:
+    from ingestion.tasks import run_all_ingestions, run_ingestion
+    from newsletters.tasks import process_newsletter_intake
+    from trends.tasks import (
+        TOPIC_CENTROID_MIN_UPVOTES,
+        queue_topic_centroid_recompute,
+        recompute_topic_centroid,
+        run_all_topic_centroid_recomputations,
     )
-    ingestion_run = IngestionRun.objects.create(
-        project=source_config.project,
-        plugin_name=source_config.plugin_name,
-        status=RunStatus.RUNNING,
-    )
+
+_COMPAT_TASK_EXPORTS = {
+    "process_newsletter_intake": (
+        "newsletters.tasks",
+        "process_newsletter_intake",
+    ),
+    "run_all_ingestions": ("ingestion.tasks", "run_all_ingestions"),
+    "run_ingestion": ("ingestion.tasks", "run_ingestion"),
+    "TOPIC_CENTROID_MIN_UPVOTES": (
+        "trends.tasks",
+        "TOPIC_CENTROID_MIN_UPVOTES",
+    ),
+    "queue_topic_centroid_recompute": (
+        "trends.tasks",
+        "queue_topic_centroid_recompute",
+    ),
+    "recompute_topic_centroid": ("trends.tasks", "recompute_topic_centroid"),
+    "run_all_topic_centroid_recomputations": (
+        "trends.tasks",
+        "run_all_topic_centroid_recomputations",
+    ),
+}
+
+__all__ = [
+    "process_newsletter_intake",
+    "run_all_ingestions",
+    "run_ingestion",
+    "TOPIC_CENTROID_MIN_UPVOTES",
+    "queue_topic_centroid_recompute",
+    "recompute_authority_scores",
+    "recompute_topic_centroid",
+    "run_all_authority_recomputations",
+    "run_all_topic_centroid_recomputations",
+    "run_relevance_scoring_skill",
+    "run_summarization_skill",
+    "queue_content_skill",
+    "process_content",
+    "upsert_content_embedding",
+]
+
+
+def __getattr__(name: str) -> Any:
+    """Resolve compatibility task re-exports lazily."""
+
     try:
-        items_fetched, items_ingested = _ingest_source_config(source_config)
-    except Exception as exc:
-        ingestion_run.status = RunStatus.FAILED
-        ingestion_run.completed_at = timezone.now()
-        ingestion_run.error_message = str(exc)
-        ingestion_run.save(update_fields=["status", "completed_at", "error_message"])
-        logger.exception(
-            "Source ingestion failed", extra={"source_config_id": source_config_id}
+        module_name, attribute_name = _COMPAT_TASK_EXPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+
+    value = getattr(import_module(module_name), attribute_name)
+    globals()[name] = value
+    return value
+
+
+class DelayedTask(Protocol):
+    """Protocol for Celery tasks that can run eagerly or via ``delay``."""
+
+    def __call__(self, *args: object, **kwargs: object) -> object:
+        pass
+
+    def delay(self, *args: object, **kwargs: object) -> object:
+        pass
+
+
+def _enqueue_task(task: object, *args: object) -> None:
+    """Dispatch a Celery task through a typed ``delay`` seam."""
+
+    cast(DelayedTask, task).delay(*args)
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key as an ``int``."""
+
+    pk = instance.pk
+    if pk is None:
+        raise ValueError(
+            f"{instance.__class__.__name__} must be saved before task dispatch"
         )
-        raise
-
-    ingestion_run.status = RunStatus.SUCCESS
-    ingestion_run.completed_at = timezone.now()
-    ingestion_run.items_fetched = items_fetched
-    ingestion_run.items_ingested = items_ingested
-    ingestion_run.save(
-        update_fields=["status", "completed_at", "items_fetched", "items_ingested"]
-    )
-    return {"items_fetched": items_fetched, "items_ingested": items_ingested}
-
-
-@shared_task(name="core.tasks.run_all_ingestions")
-def run_all_ingestions():
-    """Queue ingestion for every active source configuration.
-
-    Returns:
-        The number of source configurations scheduled.
-    """
-
-    source_config_ids = list(
-        SourceConfig.objects.filter(is_active=True).values_list("id", flat=True)
-    )
-    for source_config_id in source_config_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
-            run_ingestion(source_config_id)
-        else:
-            run_ingestion.delay(source_config_id)
-    return len(source_config_ids)
+    return int(pk)
 
 
 @shared_task(name="core.tasks.run_all_authority_recomputations")
@@ -135,20 +147,8 @@ def run_all_authority_recomputations():
         if settings.CELERY_TASK_ALWAYS_EAGER:
             recompute_authority_scores(project_id)
         else:
-            recompute_authority_scores.delay(project_id)
-    return len(project_ids)
+            _enqueue_task(recompute_authority_scores, project_id)
 
-
-@shared_task(name="core.tasks.run_all_topic_centroid_recomputations")
-def run_all_topic_centroid_recomputations():
-    """Queue topic-centroid recomputation for every project."""
-
-    project_ids = list(Project.objects.values_list("id", flat=True))
-    for project_id in project_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
-            recompute_topic_centroid(project_id)
-        else:
-            recompute_topic_centroid.delay(project_id)
     return len(project_ids)
 
 
@@ -239,36 +239,37 @@ def recompute_authority_scores(project_id: int):
         (abs(value) for value in feedback_totals.values()), default=0.0
     )
 
+    entity_rows = [(_require_pk(entity), entity) for entity in entities]
     entity_updates = []
     snapshots = []
     snapshot_history = {
-        entity.id: list(
+        entity_pk: list(
             EntityAuthoritySnapshot.objects.filter(entity=entity)
             .order_by("-computed_at")
             .only("computed_at", "final_score")
         )
-        for entity in entities
+        for entity_pk, entity in entity_rows
     }
 
     with transaction.atomic():
-        for entity in entities:
+        for entity_pk, entity in entity_rows:
             mention_component = _normalize_log_scaled_component(
-                mention_counts.get(entity.id, 0),
+                mention_counts.get(entity_pk, 0),
                 max_mention_count,
             )
             feedback_component = _normalize_signed_component(
-                feedback_totals.get(entity.id, 0.0),
+                feedback_totals.get(entity_pk, 0.0),
                 max_abs_feedback,
             )
             duplicate_component = _normalize_log_scaled_component(
-                duplicate_totals.get(entity.id, 0),
+                duplicate_totals.get(entity_pk, 0),
                 max_duplicate_count,
             )
             decayed_prior = _get_decayed_prior_score(
                 entity=entity,
                 month_start=month_start,
                 authority_decay_rate=config.authority_decay_rate,
-                snapshot_history=snapshot_history.get(entity.id, []),
+                snapshot_history=snapshot_history.get(entity_pk, []),
             )
             final_score = _clamp_unit_interval(
                 (
@@ -300,140 +301,6 @@ def recompute_authority_scores(project_id: int):
     return {"project_id": project_id, "entities_updated": len(entity_updates)}
 
 
-@shared_task(name="core.tasks.recompute_topic_centroid")
-def recompute_topic_centroid(project_id: int):
-    """Rebuild the project's feedback centroid from recent editorial signals."""
-
-    now = timezone.now()
-    window_start = now - timedelta(days=TOPIC_CENTROID_LOOKBACK_DAYS)
-    feedback_rows = list(
-        UserFeedback.objects.filter(project_id=project_id, created_at__gte=window_start)
-        .select_related("content")
-        .order_by("created_at")
-    )
-    upvote_count = sum(
-        1 for row in feedback_rows if row.feedback_type == FeedbackType.UPVOTE
-    )
-    downvote_count = sum(
-        1 for row in feedback_rows if row.feedback_type == FeedbackType.DOWNVOTE
-    )
-
-    try:
-        if upvote_count < TOPIC_CENTROID_MIN_UPVOTES:
-            delete_topic_centroid(project_id)
-            _create_topic_centroid_snapshot(
-                project_id=project_id,
-                computed_at=now,
-                centroid_active=False,
-                centroid_vector=[],
-                feedback_count=len(feedback_rows),
-                upvote_count=upvote_count,
-                downvote_count=downvote_count,
-            )
-            return {
-                "project_id": project_id,
-                "feedback_count": len(feedback_rows),
-                "upvote_count": upvote_count,
-                "downvote_count": downvote_count,
-                "centroid_active": False,
-            }
-
-        vector_cache: dict[int, list[float]] = {}
-        upvote_vectors: list[tuple[list[float], float]] = []
-        downvote_vectors: list[tuple[list[float], float]] = []
-
-        for feedback in feedback_rows:
-            vector = vector_cache.get(feedback.content_id)
-            if vector is None:
-                vector = embed_text(build_content_embedding_text(feedback.content))
-                vector_cache[feedback.content_id] = vector
-            weight = _feedback_decay_weight(feedback.created_at, now)
-            if feedback.feedback_type == FeedbackType.UPVOTE:
-                upvote_vectors.append((vector, weight))
-            else:
-                downvote_vectors.append((vector, weight))
-
-        upvote_mean, upvote_weight = _weighted_mean_vector(upvote_vectors)
-        if not upvote_mean or upvote_weight <= 0:
-            delete_topic_centroid(project_id)
-            _create_topic_centroid_snapshot(
-                project_id=project_id,
-                computed_at=now,
-                centroid_active=False,
-                centroid_vector=[],
-                feedback_count=len(feedback_rows),
-                upvote_count=upvote_count,
-                downvote_count=downvote_count,
-            )
-            return {
-                "project_id": project_id,
-                "feedback_count": len(feedback_rows),
-                "upvote_count": upvote_count,
-                "downvote_count": downvote_count,
-                "centroid_active": False,
-            }
-
-        downvote_mean, downvote_weight = _weighted_mean_vector(downvote_vectors)
-        downvote_scale = 0.0
-        if downvote_mean and downvote_weight > 0:
-            downvote_scale = TOPIC_CENTROID_DOWNVOTE_WEIGHT * min(
-                1.0, upvote_weight / downvote_weight
-            )
-
-        centroid_vector = [
-            upvote_value - downvote_scale * downvote_value
-            for upvote_value, downvote_value in zip(
-                upvote_mean,
-                downvote_mean or [0.0] * len(upvote_mean),
-            )
-        ]
-        normalized_centroid = _normalize_vector(centroid_vector)
-        if not normalized_centroid:
-            delete_topic_centroid(project_id)
-            _create_topic_centroid_snapshot(
-                project_id=project_id,
-                computed_at=now,
-                centroid_active=False,
-                centroid_vector=[],
-                feedback_count=len(feedback_rows),
-                upvote_count=upvote_count,
-                downvote_count=downvote_count,
-            )
-            return {
-                "project_id": project_id,
-                "feedback_count": len(feedback_rows),
-                "upvote_count": upvote_count,
-                "downvote_count": downvote_count,
-                "centroid_active": False,
-            }
-
-        upsert_topic_centroid(
-            project_id,
-            normalized_centroid,
-            upvote_count=upvote_count,
-            downvote_count=downvote_count,
-            feedback_count=len(feedback_rows),
-        )
-        _create_topic_centroid_snapshot(
-            project_id=project_id,
-            computed_at=now,
-            centroid_active=True,
-            centroid_vector=normalized_centroid,
-            feedback_count=len(feedback_rows),
-            upvote_count=upvote_count,
-            downvote_count=downvote_count,
-        )
-        return {
-            "project_id": project_id,
-            "feedback_count": len(feedback_rows),
-            "upvote_count": upvote_count,
-            "downvote_count": downvote_count,
-            "centroid_active": True,
-        }
-    finally:
-        cache.delete(_topic_centroid_debounce_key(project_id))
-
-
 @shared_task(name="core.tasks.run_relevance_scoring_skill", ignore_result=True)
 def run_relevance_scoring_skill(skill_result_id: int):
     """Execute a pending ad hoc relevance skill result in the background."""
@@ -463,37 +330,22 @@ def queue_content_skill(content: Content, skill_name: str):
     skill_result = create_pending_skill_result(content, skill_name)
 
     if skill_name == RELEVANCE_SKILL_NAME:
+        skill_result_pk = _require_pk(skill_result)
         if settings.CELERY_TASK_ALWAYS_EAGER:
-            run_relevance_scoring_skill(skill_result.id)
+            run_relevance_scoring_skill(skill_result_pk)
         else:
-            run_relevance_scoring_skill.delay(skill_result.id)
+            _enqueue_task(run_relevance_scoring_skill, skill_result_pk)
     elif skill_name == SUMMARIZATION_SKILL_NAME:
+        skill_result_pk = _require_pk(skill_result)
         if settings.CELERY_TASK_ALWAYS_EAGER:
-            run_summarization_skill(skill_result.id)
+            run_summarization_skill(skill_result_pk)
         else:
-            run_summarization_skill.delay(skill_result.id)
+            _enqueue_task(run_summarization_skill, skill_result_pk)
     else:
         raise ValueError(f"Unsupported async skill name: {skill_name}")
 
     skill_result.refresh_from_db()
     return skill_result
-
-
-def queue_topic_centroid_recompute(project_id: int) -> bool:
-    """Debounce and queue topic-centroid recomputation for one project."""
-
-    if not cache.add(
-        _topic_centroid_debounce_key(project_id),
-        timezone.now().isoformat(),
-        timeout=TOPIC_CENTROID_DEBOUNCE_SECONDS,
-    ):
-        return False
-
-    if settings.CELERY_TASK_ALWAYS_EAGER:
-        recompute_topic_centroid(project_id)
-    else:
-        recompute_topic_centroid.delay(project_id)
-    return True
 
 
 def _normalize_log_scaled_component(value: int, max_value: int) -> float:
@@ -510,119 +362,6 @@ def _normalize_signed_component(value: float, max_abs_value: float) -> float:
     if max_abs_value <= 0:
         return 0.5
     return _clamp_unit_interval(0.5 + 0.5 * (value / max_abs_value))
-
-
-def _feedback_decay_weight(created_at, now) -> float:
-    """Return the EMA-style decay weight for one feedback event."""
-
-    age_days = max(0.0, (now - created_at).total_seconds() / 86400)
-    return math.exp(-age_days / TOPIC_CENTROID_DECAY_TAU_DAYS)
-
-
-def _create_topic_centroid_snapshot(
-    *,
-    project_id: int,
-    computed_at,
-    centroid_active: bool,
-    centroid_vector: list[float],
-    feedback_count: int,
-    upvote_count: int,
-    downvote_count: int,
-) -> TopicCentroidSnapshot:
-    """Persist one centroid snapshot and derived drift metrics."""
-
-    previous_active_snapshot = (
-        TopicCentroidSnapshot.objects.filter(
-            project_id=project_id, centroid_active=True
-        )
-        .order_by("-computed_at")
-        .only("centroid_vector", "computed_at")
-        .first()
-    )
-    week_ago_snapshot = (
-        TopicCentroidSnapshot.objects.filter(
-            project_id=project_id,
-            centroid_active=True,
-            computed_at__lte=computed_at - timedelta(days=7),
-        )
-        .order_by("-computed_at")
-        .only("centroid_vector", "computed_at")
-        .first()
-    )
-
-    snapshot = TopicCentroidSnapshot.objects.create(
-        project_id=project_id,
-        centroid_active=centroid_active,
-        centroid_vector=centroid_vector,
-        feedback_count=feedback_count,
-        upvote_count=upvote_count,
-        downvote_count=downvote_count,
-        drift_from_previous=(
-            _cosine_distance(centroid_vector, previous_active_snapshot.centroid_vector)
-            if centroid_active and previous_active_snapshot is not None
-            else None
-        ),
-        drift_from_week_ago=(
-            _cosine_distance(centroid_vector, week_ago_snapshot.centroid_vector)
-            if centroid_active and week_ago_snapshot is not None
-            else None
-        ),
-    )
-    if snapshot.computed_at != computed_at:
-        TopicCentroidSnapshot.objects.filter(pk=snapshot.pk).update(
-            computed_at=computed_at
-        )
-        snapshot.computed_at = computed_at
-    return snapshot
-
-
-def _cosine_distance(left: list[float], right: list[float]) -> float | None:
-    """Return cosine distance between two vectors when both are usable."""
-
-    if not left or not right or len(left) != len(right):
-        return None
-    left_norm = math.sqrt(sum(value * value for value in left))
-    right_norm = math.sqrt(sum(value * value for value in right))
-    if left_norm <= 0 or right_norm <= 0:
-        return None
-    cosine_similarity = sum(
-        left_value * right_value for left_value, right_value in zip(left, right)
-    ) / (left_norm * right_norm)
-    return max(0.0, min(2.0, 1.0 - max(-1.0, min(1.0, cosine_similarity))))
-
-
-def _weighted_mean_vector(
-    weighted_vectors: list[tuple[list[float], float]],
-) -> tuple[list[float], float]:
-    """Compute the weighted mean vector and total contributing weight."""
-
-    if not weighted_vectors:
-        return [], 0.0
-    dimension = len(weighted_vectors[0][0])
-    totals = [0.0] * dimension
-    total_weight = 0.0
-    for vector, weight in weighted_vectors:
-        total_weight += weight
-        for index, value in enumerate(vector):
-            totals[index] += float(value) * weight
-    if total_weight <= 0:
-        return [], 0.0
-    return ([value / total_weight for value in totals], total_weight)
-
-
-def _normalize_vector(vector: list[float]) -> list[float]:
-    """Normalize a dense vector to unit length."""
-
-    magnitude = math.sqrt(sum(value * value for value in vector))
-    if magnitude <= 0:
-        return []
-    return [float(value) / magnitude for value in vector]
-
-
-def _topic_centroid_debounce_key(project_id: int) -> str:
-    """Return the cache key used to debounce centroid recomputations."""
-
-    return f"topic-centroid-recompute:{project_id}"
 
 
 def _get_decayed_prior_score(
@@ -659,146 +398,12 @@ def _clamp_unit_interval(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
 
 
-def _ingest_source_config(source_config: SourceConfig) -> tuple[int, int]:
-    """Fetch items from a configured source and create new content rows."""
-
-    plugin = get_plugin_for_source_config(source_config)
-    fetched_items = plugin.fetch_new_content(source_config.last_fetched_at)
-    ingested_count = 0
-    for item in fetched_items:
-        if _content_exists_for_item(source_config, item):
-            continue
-        source_metadata = getattr(item, "source_metadata", None) or {}
-        content = Content.objects.create(
-            project=source_config.project,
-            entity=_match_entity_for_item(plugin, item),
-            url=item.url,
-            canonical_url=canonicalize_url(item.url),
-            title=item.title[:512],
-            author=item.author[:255],
-            source_plugin=item.source_plugin,
-            published_date=item.published_date,
-            content_text=item.content_text,
-            source_metadata=source_metadata,
-        )
-        _schedule_content_processing(content)
-        ingested_count += 1
-    source_config.last_fetched_at = timezone.now()
-    source_config.save(update_fields=["last_fetched_at"])
-    return len(fetched_items), ingested_count
-
-
-def _content_exists_for_item(source_config: SourceConfig, item) -> bool:
-    """Check whether a fetched item already exists for the project."""
-
-    post_uri = (getattr(item, "source_metadata", None) or {}).get("post_uri")
-    if post_uri:
-        return Content.objects.filter(
-            project=source_config.project,
-            source_plugin=item.source_plugin,
-            source_metadata__post_uri=post_uri,
-        ).exists()
-    canonical_url = canonicalize_url(item.url)
-    return (
-        Content.objects.filter(
-            project=source_config.project,
-            source_plugin=item.source_plugin,
-        )
-        .filter(Q(canonical_url=canonical_url) | Q(url=item.url))
-        .exists()
-    )
-
-
-def _match_entity_for_item(plugin, item):
-    """Resolve the entity for an item while preserving older plugin mocks."""
-
-    if callable(getattr(type(plugin), "match_entity_for_item", None)):
-        return plugin.match_entity_for_item(item)
-    return plugin.match_entity_for_url(item.url)
-
-
-@shared_task(name="core.tasks.process_newsletter_intake")
-def process_newsletter_intake(intake_id: int):
-    """Convert a stored newsletter email into content rows.
-
-    Args:
-        intake_id: Primary key of the ``NewsletterIntake`` row to process.
-
-    Returns:
-        A summary containing the final intake status and ingested item count.
-    """
-
-    intake = NewsletterIntake.objects.select_related("project").get(pk=intake_id)
-
-    allowlist = IntakeAllowlist.objects.filter(
-        project=intake.project,
-        sender_email=intake.sender_email,
-        confirmed_at__isnull=False,
-    ).first()
-    if allowlist is None:
-        intake.status = NewsletterIntakeStatus.PENDING
-        intake.error_message = "Sender has not confirmed newsletter intake."
-        intake.save(update_fields=["status", "error_message"])
-        return {"status": intake.status, "items_ingested": 0}
-
-    extracted_items = extract_newsletter_items(
-        subject=intake.subject,
-        raw_html=intake.raw_html,
-        raw_text=intake.raw_text,
-    )
-    ingested_count = 0
-    for item in extracted_items:
-        canonical_url = canonicalize_url(item.url)
-        if (
-            Content.objects.filter(
-                project=intake.project,
-                source_plugin="newsletter",
-            )
-            .filter(Q(canonical_url=canonical_url) | Q(url=item.url))
-            .exists()
-        ):
-            continue
-        content = Content.objects.create(
-            project=intake.project,
-            url=item.url,
-            canonical_url=canonical_url,
-            title=item.title[:512],
-            author=intake.sender_email[:255],
-            source_plugin="newsletter",
-            published_date=timezone.now(),
-            content_text=item.excerpt or intake.raw_text,
-            source_metadata={
-                "newsletter_intake_id": intake.id,
-                "sender_email": intake.sender_email,
-                "position": item.position,
-            },
-        )
-        _schedule_content_processing(content)
-        ingested_count += 1
-
-    intake.status = NewsletterIntakeStatus.EXTRACTED
-    intake.error_message = ""
-    intake.extraction_result = {
-        "method": "heuristic",
-        "items": [
-            {
-                "url": item.url,
-                "title": item.title,
-                "excerpt": item.excerpt,
-                "position": item.position,
-            }
-            for item in extracted_items
-        ],
-    }
-    intake.save(update_fields=["status", "error_message", "extraction_result"])
-    return {"status": intake.status, "items_ingested": ingested_count}
-
-
 def _schedule_content_processing(content: Content) -> None:
     """Ensure a content row is embedded before it enters the AI pipeline."""
 
     upsert_content_embedding(content)
+    content_pk = _require_pk(content)
     if settings.CELERY_TASK_ALWAYS_EAGER:
-        process_content(content.id)
+        process_content(content_pk)
     else:
-        process_content.delay(content.id)
+        _enqueue_task(process_content, content_pk)

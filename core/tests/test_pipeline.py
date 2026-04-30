@@ -1,7 +1,6 @@
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import Group
 
 from core.deduplication import canonicalize_url
 from core.models import (
@@ -50,10 +49,8 @@ def pipeline_context(django_user_model):
     user = django_user_model.objects.create_user(
         username="pipeline-owner", password="testpass123"
     )
-    group = Group.objects.create(name="pipeline-team")
-    user.groups.add(group)
     project = Project.objects.create(
-        name="Pipeline Project", group=group, topic_description="Platform engineering"
+        name="Pipeline Project", topic_description="Platform engineering"
     )
     content = Content.objects.create(
         project=project,
@@ -65,7 +62,7 @@ def pipeline_context(django_user_model):
         content_text="This article covers a new Kubernetes release and what changed for platform teams.",
         embedding_id="emb_123",
     )
-    return SimpleNamespace(user=user, group=group, project=project, content=content)
+    return SimpleNamespace(user=user, project=project, content=content)
 
 
 def test_process_content_runs_full_pipeline_for_relevant_content(

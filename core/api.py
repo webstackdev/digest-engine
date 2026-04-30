@@ -8,7 +8,6 @@ generated schema consistent across similar viewsets.
 import logging
 from typing import Any
 
-from django.db.models import Avg, Count, Prefetch, Q
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiParameter,
@@ -20,52 +19,32 @@ from drf_spectacular.utils import (
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
-from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 
-from core.entity_extraction import (
-    accept_entity_candidate,
-    merge_entity_candidate,
-    reject_entity_candidate,
-)
 from core.models import (
-    BlueskyCredentials,
     Content,
-    Entity,
-    EntityCandidate,
-    EntityMention,
     IngestionRun,
     IntakeAllowlist,
     NewsletterIntake,
-    Project,
-    ProjectConfig,
-    ReviewQueue,
-    SkillResult,
-    SourceConfig,
-    TopicCentroidSnapshot,
     UserFeedback,
-    generate_project_intake_token,
+)
+from core.permissions import (
+    IsProjectAdmin,
+    IsProjectContributor,
+    IsProjectFeedbackEditor,
+    IsProjectMember,
+    IsProjectMemberWritable,
+    get_visible_projects_queryset,
 )
 from core.serializers import (
-    BlueskyCredentialsSerializer,
     ContentSerializer,
-    EntityAuthoritySnapshotSerializer,
-    EntityCandidateMergeSerializer,
-    EntityCandidateSerializer,
-    EntityMentionSummarySerializer,
-    EntitySerializer,
     IngestionRunSerializer,
     IntakeAllowlistSerializer,
     NewsletterIntakeSerializer,
-    ProjectConfigSerializer,
-    ProjectSerializer,
-    ReviewQueueSerializer,
     SkillResultSerializer,
-    SourceConfigSerializer,
-    TopicCentroidObservabilitySummarySerializer,
-    TopicCentroidSnapshotSerializer,
     UserFeedbackSerializer,
 )
+from projects.models import Project
 
 CLASSIFICATION_SKILL_NAME = "content_classification"
 RELEVANCE_SKILL_NAME = "relevance_scoring"
@@ -95,7 +74,6 @@ PROJECT_CREATE_REQUEST_EXAMPLE = OpenApiExample(
     "Create Project Request",
     value={
         "name": "AI Weekly",
-        "group": 3,
         "topic_description": "Coverage of developer tools, model releases, and applied AI workflows.",
         "content_retention_days": 180,
     },
@@ -107,11 +85,11 @@ PROJECT_RESPONSE_EXAMPLE = OpenApiExample(
     value={
         "id": 1,
         "name": "AI Weekly",
-        "group": 3,
         "topic_description": "Coverage of developer tools, model releases, and applied AI workflows.",
         "content_retention_days": 180,
         "intake_token": "project-token-123",
         "intake_enabled": True,
+        "user_role": "admin",
         "has_bluesky_credentials": True,
         "bluesky_handle": "aiweekly.bsky.social",
         "bluesky_is_active": True,
@@ -424,7 +402,7 @@ def document_group_access_viewset(
     tag: str,
     action_overrides: dict[str, dict] | None = None,
 ):
-    """Decorate a viewset with schema metadata for group-access resources.
+    """Decorate a viewset with schema metadata for membership-scoped resources.
 
     Args:
         resource_plural: Human-readable plural label for the resource.
@@ -456,12 +434,12 @@ def document_group_access_viewset(
         list=schema(
             "list",
             summary=f"List {resource_plural}",
-            description=f"Return all {resource_plural} available to the authenticated user through group membership.",
+            description=f"Return all {resource_plural} available to the authenticated user through project membership.",
         ),
         retrieve=schema(
             "retrieve",
             summary=f"Get {resource_singular}",
-            description=f"Return a single {resource_singular} available to the authenticated user through group membership.",
+            description=f"Return a single {resource_singular} available to the authenticated user through project membership.",
         ),
         create=schema(
             "create",
@@ -471,17 +449,17 @@ def document_group_access_viewset(
         update=schema(
             "update",
             summary=f"Replace {resource_singular}",
-            description=f"Replace an existing {resource_singular} available to the authenticated user through group membership.",
+            description=f"Replace an existing {resource_singular} available to the authenticated user through project membership.",
         ),
         partial_update=schema(
             "partial_update",
             summary=f"Update {resource_singular}",
-            description=f"Update one or more fields on an existing {resource_singular} available to the authenticated user through group membership.",
+            description=f"Update one or more fields on an existing {resource_singular} available to the authenticated user through project membership.",
         ),
         destroy=schema(
             "destroy",
             summary=f"Delete {resource_singular}",
-            description=f"Delete an existing {resource_singular} available to the authenticated user through group membership.",
+            description=f"Delete an existing {resource_singular} available to the authenticated user through project membership.",
         ),
     )
 
@@ -581,7 +559,7 @@ class ProjectOwnedQuerysetMixin:
                 "project_id must be present in nested project-scoped routes"
             )
         try:
-            return Project.objects.get(pk=project_id, group__user=self.request.user)
+            return get_visible_projects_queryset(self.request.user).get(pk=project_id)
         except Project.DoesNotExist as exc:
             raise NotFound("Project not found.") from exc
 
@@ -606,325 +584,6 @@ class ProjectOwnedQuerysetMixin:
         serializer.save(project=self.get_project())
 
 
-@document_group_access_viewset(
-    resource_plural="projects",
-    resource_singular="project",
-    create_description="Create a new project for one of the authenticated user's groups.",
-    tag="Project Management",
-    action_overrides=build_crud_action_overrides(
-        ProjectSerializer,
-        resource_plural="projects available to the authenticated user",
-        resource_singular="project",
-        create_examples=[PROJECT_CREATE_REQUEST_EXAMPLE, PROJECT_RESPONSE_EXAMPLE],
-        create_response_examples=[PROJECT_RESPONSE_EXAMPLE],
-        retrieve_examples=[PROJECT_RESPONSE_EXAMPLE],
-    ),
-)
-class ProjectViewSet(viewsets.ModelViewSet):
-    """Manage projects accessible through the current user's group memberships."""
-
-    serializer_class = ProjectSerializer
-    queryset = Project.objects.select_related("group", "bluesky_credentials")
-    lookup_url_kwarg = "id"
-
-    def get_queryset(self):
-        """Limit projects to those visible through the authenticated user."""
-
-        return self.queryset.filter(group__user=self.request.user).distinct()
-
-    @extend_schema(
-        summary="Rotate newsletter intake token",
-        description=(
-            "Generate a fresh project-specific newsletter intake token and return the "
-            "updated project payload."
-        ),
-        tags=["Project Management"],
-        request=None,
-        responses={200: ProjectSerializer, 403: AUTHENTICATION_REQUIRED_RESPONSE},
-    )
-    @action(detail=True, methods=["post"], url_path="rotate-intake-token")
-    def rotate_intake_token(self, request, *args, **kwargs):
-        """Generate a fresh intake token for the selected project."""
-
-        project = self.get_object()
-        project.intake_token = generate_project_intake_token()
-        project.save(update_fields=["intake_token"])
-        serializer = self.get_serializer(project)
-        return Response(serializer.data)
-
-    @extend_schema(
-        summary="Verify Bluesky credentials",
-        description=(
-            "Verify the selected project's stored Bluesky credentials by authenticating "
-            "the account and checking the current session."
-        ),
-        tags=["Ingestion"],
-        request=None,
-        responses={
-            200: build_success_response(
-                BLUESKY_CREDENTIALS_VERIFY_RESPONSE,
-                "The project's Bluesky credentials were verified successfully.",
-            ),
-            400: OpenApiResponse(
-                response=inline_serializer(
-                    name="BlueskyCredentialsVerifyErrorResponse",
-                    fields={
-                        "type": serializers.CharField(),
-                        "errors": inline_serializer(
-                            name="BlueskyCredentialsVerifyError",
-                            fields={
-                                "code": serializers.CharField(),
-                                "detail": serializers.CharField(),
-                                "attr": serializers.CharField(allow_null=True),
-                            },
-                            many=True,
-                        ),
-                    },
-                ),
-                description="The project is missing Bluesky credentials or verification failed.",
-            ),
-            403: AUTHENTICATION_REQUIRED_RESPONSE,
-        },
-    )
-    @action(detail=True, methods=["post"], url_path="verify-bluesky-credentials")
-    def verify_bluesky_credentials(self, request, *args, **kwargs):
-        """Verify the Bluesky credentials stored for the selected project."""
-
-        from core.plugins.bluesky import BlueskySourcePlugin
-
-        project = self.get_object()
-        try:
-            credentials = project.bluesky_credentials
-        except BlueskyCredentials.DoesNotExist as exc:
-            raise serializers.ValidationError(
-                {
-                    "bluesky_credentials": "No Bluesky credentials are configured for this project."
-                }
-            ) from exc
-
-        try:
-            BlueskySourcePlugin.verify_credentials(credentials)
-        except Exception as exc:
-            logger.exception(
-                "Bluesky credential verification failed for project id=%s",
-                project.id,
-            )
-            raise serializers.ValidationError(
-                {
-                    "bluesky_credentials": (
-                        "Credential verification failed. Please re-check the credentials "
-                        "and try again."
-                    )
-                }
-            ) from exc
-
-        credentials.refresh_from_db()
-        return Response(
-            {
-                "status": "verified",
-                "handle": credentials.handle,
-                "last_verified_at": credentials.last_verified_at,
-                "last_error": "",
-            }
-        )
-
-
-@document_project_owned_viewset(
-    resource_plural="project configurations",
-    resource_singular="project configuration",
-    create_description="Create a new project configuration record for the selected project, including authority weighting and decay settings.",
-    tag="Project Management",
-    action_overrides=build_crud_action_overrides(
-        ProjectConfigSerializer,
-        resource_plural="project configurations for the selected project",
-        resource_singular="project configuration",
-    ),
-)
-class ProjectConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
-    """Manage per-project scoring and authority configuration."""
-
-    serializer_class = ProjectConfigSerializer
-    queryset = ProjectConfig.objects.select_related("project")
-
-
-@document_project_owned_viewset(
-    resource_plural="entities",
-    resource_singular="entity",
-    create_description="Create a new tracked entity for the selected project, such as a company, person, or organization.",
-    tag="Entity Catalog",
-    action_overrides=build_crud_action_overrides(
-        EntitySerializer,
-        resource_plural="entities for the selected project",
-        resource_singular="entity",
-    ),
-)
-class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
-    """Manage tracked entities associated with a project."""
-
-    serializer_class = EntitySerializer
-    filter_backends = [OrderingFilter]
-    ordering_fields = ["authority_score", "created_at", "name"]
-    ordering = ["name"]
-    queryset = (
-        Entity.objects.select_related("project")
-        .annotate(mention_count=Count("mentions", distinct=True))
-        .prefetch_related(
-            Prefetch(
-                "mentions",
-                queryset=EntityMention.objects.select_related("content").order_by(
-                    "-created_at"
-                ),
-                to_attr="prefetched_mentions",
-            )
-        )
-    )
-
-    @extend_schema(
-        summary="List entity mentions",
-        description="Return the extracted mention history for one tracked entity inside the selected project.",
-        request=None,
-        responses={
-            200: EntityMentionSummarySerializer(many=True),
-            403: AUTHENTICATION_REQUIRED_RESPONSE,
-        },
-        tags=["Entity Catalog"],
-    )
-    @action(detail=True, methods=["get"], url_path="mentions")
-    def mentions(self, request, *args, **kwargs):
-        """Return the extracted mentions for the selected entity."""
-
-        entity = self.get_object()
-        mentions = entity.mentions.select_related("content").order_by("-created_at")
-        serializer = EntityMentionSummarySerializer(mentions, many=True)
-        return Response(serializer.data)
-
-    @extend_schema(
-        summary="List authority history",
-        description=(
-            "Return persisted authority-score snapshots for one tracked entity. "
-            "Use the optional limit query parameter to cap the number of snapshots returned."
-        ),
-        parameters=[
-            OpenApiParameter(
-                name="limit",
-                type=int,
-                location=OpenApiParameter.QUERY,
-                description="Maximum number of authority snapshots to return.",
-                required=False,
-            )
-        ],
-        request=None,
-        responses={
-            200: EntityAuthoritySnapshotSerializer(many=True),
-            403: AUTHENTICATION_REQUIRED_RESPONSE,
-        },
-        tags=["Entity Catalog"],
-    )
-    @action(detail=True, methods=["get"], url_path="authority_history")
-    def authority_history(self, request, *args, **kwargs):
-        """Return recent authority snapshots for the selected entity."""
-
-        entity = self.get_object()
-        snapshots = entity.authority_snapshots.order_by("-computed_at")
-        limit_param = request.query_params.get("limit")
-        if limit_param:
-            try:
-                limit = max(1, min(int(limit_param), 100))
-            except ValueError as exc:
-                raise serializers.ValidationError(
-                    {"limit": "Limit must be an integer between 1 and 100."}
-                ) from exc
-            snapshots = snapshots[:limit]
-        serializer = EntityAuthoritySnapshotSerializer(snapshots, many=True)
-        return Response(serializer.data)
-
-
-@document_project_owned_viewset(
-    resource_plural="entity candidates",
-    resource_singular="entity candidate",
-    create_description="Entity candidates are created by the pipeline and can be reviewed through dedicated actions.",
-    tag="Entity Catalog",
-    action_overrides=build_crud_action_overrides(
-        EntityCandidateSerializer,
-        resource_plural="entity candidates for the selected project",
-        resource_singular="entity candidate",
-    ),
-)
-class EntityCandidateViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
-    """Inspect and resolve entity candidates surfaced by entity extraction."""
-
-    serializer_class = EntityCandidateSerializer
-    queryset = EntityCandidate.objects.select_related(
-        "project", "first_seen_in", "merged_into"
-    )
-
-    @extend_schema(
-        summary="Accept entity candidate",
-        description="Promote a pending entity candidate into a tracked entity and backfill recent mentions.",
-        request=None,
-        responses={
-            200: EntityCandidateSerializer,
-            403: AUTHENTICATION_REQUIRED_RESPONSE,
-        },
-        tags=["Entity Catalog"],
-    )
-    @action(detail=True, methods=["post"], url_path="accept")
-    def accept(self, request, *args, **kwargs):
-        """Accept an entity candidate and return its updated representation."""
-
-        candidate = self.get_object()
-        accept_entity_candidate(candidate)
-        candidate.refresh_from_db()
-        serializer = self.get_serializer(candidate)
-        return Response(serializer.data)
-
-    @extend_schema(
-        summary="Reject entity candidate",
-        description="Mark a pending entity candidate as rejected without creating a tracked entity.",
-        request=None,
-        responses={
-            200: EntityCandidateSerializer,
-            403: AUTHENTICATION_REQUIRED_RESPONSE,
-        },
-        tags=["Entity Catalog"],
-    )
-    @action(detail=True, methods=["post"], url_path="reject")
-    def reject(self, request, *args, **kwargs):
-        """Reject an entity candidate and return its updated representation."""
-
-        candidate = self.get_object()
-        reject_entity_candidate(candidate)
-        candidate.refresh_from_db()
-        serializer = self.get_serializer(candidate)
-        return Response(serializer.data)
-
-    @extend_schema(
-        summary="Merge entity candidate",
-        description="Merge a pending entity candidate into an existing tracked entity from the same project.",
-        request=EntityCandidateMergeSerializer,
-        responses={
-            200: EntityCandidateSerializer,
-            400: EntityCandidateMergeSerializer,
-            403: AUTHENTICATION_REQUIRED_RESPONSE,
-        },
-        tags=["Entity Catalog"],
-    )
-    @action(detail=True, methods=["post"], url_path="merge")
-    def merge(self, request, *args, **kwargs):
-        """Merge an entity candidate into an existing tracked entity."""
-
-        candidate = self.get_object()
-        serializer = EntityCandidateMergeSerializer(
-            data=request.data,
-            context=self.get_serializer_context(),
-        )
-        serializer.is_valid(raise_exception=True)
-        merge_entity_candidate(candidate, serializer.validated_data["merged_into"])
-        candidate.refresh_from_db()
-        response_serializer = self.get_serializer(candidate)
-        return Response(response_serializer.data)
-
-
 @document_project_owned_viewset(
     resource_plural="content items",
     resource_singular="content item",
@@ -944,6 +603,17 @@ class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
     serializer_class = ContentSerializer
     queryset = Content.objects.select_related("project", "entity")
+
+    def get_permissions(self):
+        """Allow all members to read content, contributors to edit, and admins to delete."""
+
+        if self.action == "destroy":
+            permission_classes = [IsProjectAdmin]
+        elif self.action in {"create", "update", "partial_update", "run_skill"}:
+            permission_classes = [IsProjectMemberWritable]
+        else:
+            permission_classes = [IsProjectMember]
+        return [permission() for permission in permission_classes]
 
     @extend_schema(
         summary="Run content skill",
@@ -1004,25 +674,6 @@ class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
 
 @document_project_owned_viewset(
-    resource_plural="skill results",
-    resource_singular="skill result",
-    create_description="Create a new skill result for project content. The referenced content must belong to the selected project.",
-    tag="AI Processing",
-    action_overrides=build_crud_action_overrides(
-        SkillResultSerializer,
-        resource_plural="skill results for the selected project",
-        resource_singular="skill result",
-        retrieve_examples=[SKILL_RESULT_RESPONSE_EXAMPLE],
-    ),
-)
-class SkillResultViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
-    """Inspect persisted AI skill outputs for project content."""
-
-    serializer_class = SkillResultSerializer
-    queryset = SkillResult.objects.select_related("content", "project", "superseded_by")
-
-
-@document_project_owned_viewset(
     resource_plural="user feedback entries",
     resource_singular="user feedback entry",
     create_description="Create a new feedback entry for content in the selected project. The authenticated user is recorded automatically.",
@@ -1038,6 +689,11 @@ class UserFeedbackViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
     serializer_class = UserFeedbackSerializer
     queryset = UserFeedback.objects.select_related("content", "project", "user")
+
+    def get_permissions(self):
+        """Allow all members to read feedback and owners or admins to modify it."""
+
+        return [IsProjectFeedbackEditor()]
 
     def perform_create(self, serializer):
         """Attach the authenticated user automatically to new feedback rows."""
@@ -1062,32 +718,14 @@ class IngestionRunViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = IngestionRunSerializer
     queryset = IngestionRun.objects.select_related("project")
 
+    def get_permissions(self):
+        """Allow all members to read ingestion runs and contributors to manage them."""
 
-@document_project_owned_viewset(
-    resource_plural="Bluesky credentials",
-    resource_singular="Bluesky credentials",
-    create_description=(
-        "Create Bluesky credentials for the selected project. The app password is "
-        "accepted write-only and is never returned in API responses."
-    ),
-    tag="Ingestion",
-    action_overrides=build_crud_action_overrides(
-        BlueskyCredentialsSerializer,
-        resource_plural="Bluesky credentials for the selected project",
-        resource_singular="Bluesky credentials",
-        retrieve_examples=[BLUESKY_CREDENTIALS_RESPONSE_EXAMPLE],
-    ),
-)
-class BlueskyCredentialsViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
-    """Manage project-scoped Bluesky credentials."""
-
-    serializer_class = BlueskyCredentialsSerializer
-    queryset = BlueskyCredentials.objects.select_related("project")
-
-    def get_queryset(self):
-        """Restrict credentials to the selected project and current user."""
-
-        return super().get_queryset().order_by("-updated_at")
+        if self.action in {"create", "update", "partial_update", "destroy"}:
+            permission_classes = [IsProjectMemberWritable]
+        else:
+            permission_classes = [IsProjectMember]
+        return [permission() for permission in permission_classes]
 
 
 @document_project_owned_viewset(
@@ -1110,6 +748,11 @@ class IntakeAllowlistViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = IntakeAllowlistSerializer
     queryset = IntakeAllowlist.objects.select_related("project")
 
+    def get_permissions(self):
+        """Restrict intake allowlist access to project contributors."""
+
+        return [IsProjectContributor()]
+
 
 @document_project_owned_viewset(
     resource_plural="newsletter intake entries",
@@ -1131,103 +774,7 @@ class NewsletterIntakeViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelV
     serializer_class = NewsletterIntakeSerializer
     queryset = NewsletterIntake.objects.select_related("project")
 
+    def get_permissions(self):
+        """Allow any project member to inspect newsletter intake history."""
 
-@document_project_owned_viewset(
-    resource_plural="source configurations",
-    resource_singular="source configuration",
-    create_description="Create a new source configuration for the selected project. Plugin-specific configuration is validated before the record is saved.",
-    tag="Ingestion",
-    action_overrides=build_crud_action_overrides(
-        SourceConfigSerializer,
-        resource_plural="source configurations for the selected project",
-        resource_singular="source configuration",
-        create_examples=[
-            SOURCE_CONFIG_CREATE_REQUEST_EXAMPLE,
-            SOURCE_CONFIG_REDDIT_REQUEST_EXAMPLE,
-            SOURCE_CONFIG_BLUESKY_REQUEST_EXAMPLE,
-            SOURCE_CONFIG_RESPONSE_EXAMPLE,
-        ],
-        create_response_examples=[SOURCE_CONFIG_RESPONSE_EXAMPLE],
-        retrieve_examples=[SOURCE_CONFIG_RESPONSE_EXAMPLE],
-    ),
-)
-class SourceConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
-    """Manage source-plugin configuration for a project."""
-
-    serializer_class = SourceConfigSerializer
-    queryset = SourceConfig.objects.select_related("project")
-
-
-@document_project_owned_viewset(
-    resource_plural="topic centroid snapshots",
-    resource_singular="topic centroid snapshot",
-    create_description="Topic centroid snapshots are pipeline-managed history rows and are exposed read-only for observability.",
-    tag="Observability",
-    action_overrides=build_crud_action_overrides(
-        TopicCentroidSnapshotSerializer,
-        resource_plural="topic centroid snapshots for the selected project",
-        resource_singular="topic centroid snapshot",
-    ),
-)
-class TopicCentroidSnapshotViewSet(
-    ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewSet
-):
-    """Inspect persisted centroid history and aggregate drift for a project."""
-
-    serializer_class = TopicCentroidSnapshotSerializer
-    queryset = TopicCentroidSnapshot.objects.select_related("project")
-
-    @extend_schema(
-        summary="Get topic centroid summary",
-        description=(
-            "Return aggregate centroid observability metrics for the selected project, "
-            "including average drift and the latest persisted snapshot."
-        ),
-        request=None,
-        responses={
-            200: TopicCentroidObservabilitySummarySerializer,
-            403: AUTHENTICATION_REQUIRED_RESPONSE,
-        },
-        tags=["Observability"],
-    )
-    @action(detail=False, methods=["get"], url_path="summary")
-    def summary(self, request, *args, **kwargs):
-        """Return centroid observability summary metrics for the current project."""
-
-        queryset = self.get_queryset()
-        metrics = queryset.aggregate(
-            snapshot_count=Count("id"),
-            active_snapshot_count=Count("id", filter=Q(centroid_active=True)),
-            avg_drift_from_previous=Avg("drift_from_previous"),
-            avg_drift_from_week_ago=Avg("drift_from_week_ago"),
-        )
-        serializer = TopicCentroidObservabilitySummarySerializer(
-            {
-                "project": self.get_project().id,
-                "snapshot_count": metrics["snapshot_count"],
-                "active_snapshot_count": metrics["active_snapshot_count"],
-                "avg_drift_from_previous": metrics["avg_drift_from_previous"],
-                "avg_drift_from_week_ago": metrics["avg_drift_from_week_ago"],
-                "latest_snapshot": queryset.order_by("-computed_at").first(),
-            },
-            context=self.get_serializer_context(),
-        )
-        return Response(serializer.data)
-
-
-@document_project_owned_viewset(
-    resource_plural="review queue entries",
-    resource_singular="review queue entry",
-    create_description="Create a new review queue entry for the selected project. The referenced content must belong to the same project.",
-    tag="Review Queue",
-    action_overrides=build_crud_action_overrides(
-        ReviewQueueSerializer,
-        resource_plural="review queue entries for the selected project",
-        resource_singular="review queue entry",
-    ),
-)
-class ReviewQueueViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
-    """Inspect and manage content awaiting manual review."""
-
-    serializer_class = ReviewQueueSerializer
-    queryset = ReviewQueue.objects.select_related("content", "project")
+        return [IsProjectMember()]

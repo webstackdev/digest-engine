@@ -1,27 +1,25 @@
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import AnonymousUser, Group
+from django.contrib.auth.models import AnonymousUser
 
 from core.models import (
     Content,
     Entity,
-    Project,
     ReviewReason,
     SkillResult,
-    SourceConfig,
-    SourcePluginName,
 )
 from core.serializers import (
     ContentSerializer,
     EntitySerializer,
     IngestionRunSerializer,
-    ProjectSerializer,
     ReviewQueueSerializer,
     SkillResultSerializer,
-    SourceConfigSerializer,
     UserFeedbackSerializer,
 )
+from projects.model_support import SourcePluginName
+from projects.models import Project, ProjectMembership, ProjectRole, SourceConfig
+from projects.serializers import ProjectSerializer, SourceConfigSerializer
 
 pytestmark = pytest.mark.django_db
 
@@ -34,15 +32,17 @@ def serializer_context(django_user_model):
     other_user = django_user_model.objects.create_user(
         username="serializer-other", password="testpass123"
     )
-    group = Group.objects.create(name="serializer-team")
-    other_group = Group.objects.create(name="serializer-other-team")
-    user.groups.add(group)
-    other_user.groups.add(other_group)
     project = Project.objects.create(
-        name="Serializer Project", group=group, topic_description="Infra"
+        name="Serializer Project", topic_description="Infra"
     )
     other_project = Project.objects.create(
-        name="Other Serializer Project", group=other_group, topic_description="Data"
+        name="Other Serializer Project", topic_description="Data"
+    )
+    ProjectMembership.objects.create(user=user, project=project, role=ProjectRole.ADMIN)
+    ProjectMembership.objects.create(
+        user=other_user,
+        project=other_project,
+        role=ProjectRole.ADMIN,
     )
     entity = Entity.objects.create(
         project=project, name="Serializer Entity", type="vendor"
@@ -133,7 +133,7 @@ def test_project_scoped_serializer_filters_related_querysets_without_project_con
 def test_project_scoped_serializer_skips_filtering_for_anonymous_user():
     serializer = ProjectSerializer(context={"request": _request_for(AnonymousUser())})
 
-    assert serializer.fields["group"].queryset.count() == Group.objects.count()
+    assert "project" not in serializer.fields
 
 
 def test_content_serializer_rejects_cross_project_entity(serializer_context):
@@ -167,7 +167,9 @@ def test_content_serializer_exposes_duplicate_state_as_read_only_fields(
     )
     serializer_context.content.duplicate_signal_count = 1
     serializer_context.content.canonical_url = "https://example.com/serializer-content"
-    serializer_context.content.save(update_fields=["duplicate_signal_count", "canonical_url"])
+    serializer_context.content.save(
+        update_fields=["duplicate_signal_count", "canonical_url"]
+    )
 
     serializer = ContentSerializer(instance=duplicate)
 
@@ -267,7 +269,7 @@ def test_source_config_serializer_surfaces_plugin_validation_errors(serializer_c
     )
 
     assert serializer.is_valid() is False
-    assert serializer.errors == {"config": ["Missing required config field: feed_url"]}
+    assert serializer.errors == {"config": ["Invalid source configuration."]}
 
 
 def test_source_config_serializer_normalizes_bluesky_author_handle_config(

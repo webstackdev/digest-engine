@@ -5,7 +5,6 @@ from typing import Any, cast
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -16,20 +15,14 @@ from core.deduplication import canonicalize_url
 from core.embeddings import upsert_content_embedding
 from core.models import (
     Content,
-    Entity,
-    EntityType,
     FeedbackType,
     IngestionRun,
-    Project,
-    ProjectConfig,
     ReviewQueue,
     ReviewReason,
     ReviewResolution,
     RunStatus,
     SkillResult,
     SkillStatus,
-    SourceConfig,
-    SourcePluginName,
     UserFeedback,
 )
 from core.pipeline import (
@@ -37,9 +30,17 @@ from core.pipeline import (
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
 )
+from entities.models import Entity, EntityType
+from projects.model_support import SourcePluginName
+from projects.models import (
+    Project,
+    ProjectConfig,
+    ProjectMembership,
+    ProjectRole,
+    SourceConfig,
+)
 
 DEMO_PROJECT_NAME = "Platform Engineering Weekly"
-DEMO_GROUP_NAME = "platform-engineering-editors"
 DEMO_TOPIC_DESCRIPTION = (
     "Platform engineering, DevOps, cloud infrastructure, reliability, and "
     "developer experience."
@@ -537,17 +538,19 @@ class Command(BaseCommand):
         )
         user.set_password("demo-password")
         user.save(update_fields=["password"])
-        group, _ = Group.objects.get_or_create(name=DEMO_GROUP_NAME)
-        user.groups.add(group)
 
         project, created = Project.objects.get_or_create(
-            group=group,
             name=DEMO_PROJECT_NAME,
             defaults={"topic_description": DEMO_TOPIC_DESCRIPTION},
         )
         if not created and project.topic_description != DEMO_TOPIC_DESCRIPTION:
             project.topic_description = DEMO_TOPIC_DESCRIPTION
             project.save(update_fields=["topic_description"])
+        ProjectMembership.objects.get_or_create(
+            user=user,
+            project=project,
+            defaults={"role": ProjectRole.ADMIN},
+        )
         ProjectConfig.objects.get_or_create(project=project)
         return project
 

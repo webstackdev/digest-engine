@@ -1,17 +1,69 @@
+export type ProjectRole = "admin" | "member" | "reader"
+
 export type Project = {
   id: number
   name: string
-  group: number
   topic_description: string
   content_retention_days: number
   intake_token?: string
   intake_enabled?: boolean
+  user_role: ProjectRole | null
   has_bluesky_credentials?: boolean
   bluesky_handle?: string
   bluesky_is_active?: boolean
   bluesky_last_verified_at?: string | null
   bluesky_last_error?: string
   created_at: string
+}
+
+export type UserProfile = {
+  id: number
+  username: string
+  email: string
+  display_name: string
+  avatar_url: string | null
+  avatar_thumbnail_url: string | null
+  bio: string
+  timezone: string
+  first_name: string
+  last_name: string
+}
+
+export type ProjectMembership = {
+  id: number
+  project: number
+  user: number
+  username: string
+  email: string
+  display_name: string
+  role: ProjectRole
+  invited_by: number | null
+  joined_at: string
+}
+
+export type MembershipInvitation = {
+  id: number
+  project: number
+  email: string
+  role: ProjectRole
+  token: string
+  invited_by: number | null
+  invited_by_email: string
+  invite_url: string
+  created_at: string
+  accepted_at: string | null
+  revoked_at: string | null
+}
+
+export type PublicMembershipInvitation = {
+  token: string
+  project_id: number
+  project_name: string
+  email: string
+  role: ProjectRole
+  status: "pending" | "accepted" | "revoked"
+  accepted_at: string | null
+  revoked_at: string | null
 }
 
 export type ProjectBlueskyVerification = {

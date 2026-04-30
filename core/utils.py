@@ -1,6 +1,6 @@
 from django.db.models import Avg
 
-from .models import ProjectConfig
+from projects.models import ProjectConfig
 
 
 def dashboard_callback(request, context):

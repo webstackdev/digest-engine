@@ -37,6 +37,7 @@
     "pyyaml",
     "QDRANT",
     "readyz",
+    "recomputations",
     "Referer",
     "scaffolder",
     "simplejwt",

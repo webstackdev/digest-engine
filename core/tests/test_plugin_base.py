@@ -2,7 +2,6 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import Group
 
 from core.models import Entity, Project
 from core.plugins.base import ContentItem, SourcePlugin
@@ -30,15 +29,8 @@ class DummySourcePlugin(SourcePlugin):
 
 
 @pytest.fixture
-def plugin_context(django_user_model):
-    user = django_user_model.objects.create_user(
-        username="plugin-owner", password="testpass123"
-    )
-    group = Group.objects.create(name="plugin-team")
-    user.groups.add(group)
-    project = Project.objects.create(
-        name="Plugin Project", group=group, topic_description="Infra"
-    )
+def plugin_context():
+    project = Project.objects.create(name="Plugin Project", topic_description="Infra")
     source_config = SimpleNamespace(project=project, config={"api_key": "secret"})
     return SimpleNamespace(project=project, source_config=source_config)
 

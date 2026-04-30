@@ -42,9 +42,8 @@ CSRF_TRUSTED_ORIGINS = env_list(
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 SITE_ID = int(os.getenv("SITE_ID", "1"))
 NEWSLETTER_API_BASE_URL = os.getenv("NEWSLETTER_API_BASE_URL", "http://127.0.0.1:8080")
-BLUESKY_CREDENTIALS_ENCRYPTION_KEY = os.getenv(
-    "BLUESKY_CREDENTIALS_ENCRYPTION_KEY", ""
-)
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://127.0.0.1:3000")
+BLUESKY_CREDENTIALS_ENCRYPTION_KEY = os.getenv("BLUESKY_CREDENTIALS_ENCRYPTION_KEY", "")
 
 REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
 REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
@@ -97,6 +96,14 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "drf_standardized_errors",
     # 6. Project Apps
+    "users",
+    "projects",
+    "content",
+    "entities",
+    "ingestion",
+    "newsletters",
+    "pipeline",
+    "trends",
     "core",
 ]
 
@@ -152,6 +159,8 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
+AUTH_USER_MODEL = "users.AppUser"
+
 ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
@@ -163,6 +172,27 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "default": {
+        "BACKEND": os.environ.get(
+            "DEFAULT_FILE_STORAGE",
+            "django.core.files.storage.FileSystemStorage",
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "")
+AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL", "")
+AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN", "")
+AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = None
+AWS_S3_FILE_OVERWRITE = False
+MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "var" / "media")))
 
 # DRF: the API defaults to authenticated access so browser sessions and basic
 # auth work locally, but anonymous requests are rejected.
@@ -197,6 +227,7 @@ __all__ = [
     "DATABASE_URL",
     "SITE_ID",
     "NEWSLETTER_API_BASE_URL",
+    "FRONTEND_BASE_URL",
     "BLUESKY_CREDENTIALS_ENCRYPTION_KEY",
     "REDDIT_CLIENT_ID",
     "REDDIT_CLIENT_SECRET",
@@ -216,6 +247,7 @@ __all__ = [
     "WSGI_APPLICATION",
     "DATABASES",
     "AUTH_PASSWORD_VALIDATORS",
+    "AUTH_USER_MODEL",
     "AUTHENTICATION_BACKENDS",
     "ACCOUNT_EMAIL_VERIFICATION",
     "ACCOUNT_LOGIN_METHODS",
@@ -226,6 +258,16 @@ __all__ = [
     "USE_TZ",
     "STATIC_URL",
     "STATIC_ROOT",
+    "STORAGES",
+    "AWS_STORAGE_BUCKET_NAME",
+    "AWS_S3_REGION_NAME",
+    "AWS_S3_ENDPOINT_URL",
+    "AWS_S3_CUSTOM_DOMAIN",
+    "AWS_QUERYSTRING_AUTH",
+    "AWS_DEFAULT_ACL",
+    "AWS_S3_FILE_OVERWRITE",
+    "MEDIA_URL",
+    "MEDIA_ROOT",
     "REST_FRAMEWORK",
     "DRF_STANDARDIZED_ERRORS",
     "SECURE_PROXY_SSL_HEADER",

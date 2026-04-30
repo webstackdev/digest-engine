@@ -2,13 +2,11 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.models import (
-    BlueskyCredentials,
     Content,
     Entity,
     EntityAuthoritySnapshot,
@@ -20,17 +18,22 @@ from core.models import (
     IntakeAllowlist,
     NewsletterIntake,
     NewsletterIntakeStatus,
-    Project,
-    ProjectConfig,
     ReviewQueue,
     ReviewReason,
     RunStatus,
     SkillResult,
     SkillStatus,
-    SourceConfig,
-    SourcePluginName,
     TopicCentroidSnapshot,
     UserFeedback,
+)
+from projects.model_support import SourcePluginName
+from projects.models import (
+    BlueskyCredentials,
+    Project,
+    ProjectConfig,
+    ProjectMembership,
+    ProjectRole,
+    SourceConfig,
 )
 
 
@@ -43,19 +46,23 @@ class ProjectScopedApiTests(APITestCase):
         self.other_user = user_model.objects.create_user(
             username="other", password="testpass123"
         )
-        self.owner_group = Group.objects.create(name="owner-team")
-        self.owner.groups.add(self.owner_group)
-        self.other_group = Group.objects.create(name="other-team")
-        self.other_user.groups.add(self.other_group)
         self.owner_project = Project.objects.create(
             name="Owner Project",
-            group=self.owner_group,
             topic_description="Platform engineering",
         )
         self.other_project = Project.objects.create(
             name="Other Project",
-            group=self.other_group,
             topic_description="Frontend",
+        )
+        ProjectMembership.objects.create(
+            user=self.owner,
+            project=self.owner_project,
+            role=ProjectRole.ADMIN,
+        )
+        ProjectMembership.objects.create(
+            user=self.other_user,
+            project=self.other_project,
+            role=ProjectRole.ADMIN,
         )
         self.owner_entity = Entity.objects.create(
             project=self.owner_project,
@@ -172,7 +179,7 @@ class ProjectScopedApiTests(APITestCase):
             },
         )
 
-    def test_project_list_is_scoped_to_request_user_groups(self):
+    def test_project_list_is_scoped_to_request_user_memberships(self):
         BlueskyCredentials.objects.create(
             project=self.owner_project,
             handle="owner-project.bsky.social",
@@ -185,6 +192,7 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], self.owner_project.id)
+        self.assertEqual(response.json()[0]["user_role"], ProjectRole.ADMIN)
         self.assertEqual(
             response.json()[0]["intake_token"], self.owner_project.intake_token
         )

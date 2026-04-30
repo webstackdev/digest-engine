@@ -13,19 +13,25 @@ import type {
   EntityCandidate,
   IngestionRun,
   IntakeAllowlistEntry,
+  MembershipInvitation,
   NewsletterIntake,
   Project,
   ProjectBlueskyVerification,
+  ProjectMembership,
+  PublicMembershipInvitation,
   ReviewQueueItem,
   SkillResult,
   SourceConfig,
   TopicCentroidObservabilitySummary,
   TopicCentroidSnapshot,
   UserFeedback,
+  UserProfile,
 } from "@/lib/types"
 
 const API_BASE_URL =
   process.env.NEWSLETTER_API_BASE_URL ?? "http://127.0.0.1:8080"
+
+type AuthorizationSource = "token" | "bearer" | "basic"
 
 type SessionWithBackendAuth = {
   backendAuth?: {
@@ -87,14 +93,80 @@ async function getAuthorizationHeader() {
   const session = (await getServerSession(authOptions)) as SessionWithBackendAuth | null
 
   if (session?.backendAuth?.key) {
-    return `Token ${session.backendAuth.key}`
+    return {
+      authorization: `Token ${session.backendAuth.key}`,
+      source: "token" as const,
+    }
   }
 
   if (session?.backendAuth?.access) {
-    return `Bearer ${session.backendAuth.access}`
+    return {
+      authorization: `Bearer ${session.backendAuth.access}`,
+      source: "bearer" as const,
+    }
   }
 
-  return getBasicAuthHeader()
+  return {
+    authorization: getBasicAuthHeader(),
+    source: "basic" as const,
+  }
+}
+
+function tryGetBasicAuthHeader() {
+  try {
+    return getBasicAuthHeader()
+  } catch {
+    return null
+  }
+}
+
+function isAuthenticationFailure(
+  status: number,
+  contentType: string,
+  text: string,
+  source: AuthorizationSource,
+) {
+  if (source === "basic" || ![401, 403].includes(status) || !contentType.includes("json")) {
+    return false
+  }
+
+  try {
+    const payload = JSON.parse(text) as {
+      detail?: string
+      errors?: Array<{ code?: string; detail?: string }>
+    }
+    const details = [payload.detail, ...(payload.errors ?? []).map((error) => error.detail)]
+      .filter((detail): detail is string => Boolean(detail))
+      .join(" ")
+    const codes = new Set((payload.errors ?? []).map((error) => error.code))
+
+    return (
+      codes.has("authentication_failed") ||
+      codes.has("not_authenticated") ||
+      /invalid token|authentication credentials were not provided/i.test(details)
+    )
+  } catch {
+    return false
+  }
+}
+
+async function performApiRequest(
+  path: string,
+  init: RequestInit,
+  authorization: string,
+) {
+  const isFormDataBody =
+    typeof FormData !== "undefined" && init.body instanceof FormData
+
+  return fetch(buildUrl(path), {
+    ...init,
+    headers: {
+      Authorization: authorization,
+      ...(init.headers ?? {}),
+      ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
+    },
+    cache: "no-store",
+  })
 }
 
 /**
@@ -133,24 +205,32 @@ export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const authorization = await getAuthorizationHeader()
+  const { authorization, source } = await getAuthorizationHeader()
 
-  const response = await fetch(buildUrl(path), {
-    ...init,
-    headers: {
-      Authorization: authorization,
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
-    cache: "no-store",
-  })
+  let response = await performApiRequest(path, init, authorization)
 
   if (response.status === 204) {
     return undefined as T
   }
 
-  const contentType = response.headers.get("content-type") ?? ""
-  const text = await response.text()
+  let contentType = response.headers.get("content-type") ?? ""
+  let text = await response.text()
+
+  if (isAuthenticationFailure(response.status, contentType, text, source)) {
+    const basicAuthorization = tryGetBasicAuthHeader()
+
+    if (basicAuthorization && basicAuthorization !== authorization) {
+      response = await performApiRequest(path, init, basicAuthorization)
+
+      if (response.status === 204) {
+        return undefined as T
+      }
+
+      contentType = response.headers.get("content-type") ?? ""
+      text = await response.text()
+    }
+  }
+
   if (!response.ok) {
     throw new Error(
       `API request failed (${response.status}) from ${buildUrl(path)} with ${contentType || "unknown content type"}: ${previewResponseBody(text)}`,
@@ -190,6 +270,194 @@ export const getProjects = cache(
 )
 
 /**
+ * Create a new project and return the creator-scoped response payload.
+ *
+ * @param payload - Minimal project fields accepted during creation.
+ * @returns The created project payload.
+ */
+export async function createProject(payload: {
+  name: string
+  topic_description: string
+  content_retention_days: number
+}): Promise<Project> {
+  return apiFetch<Project>("/api/v1/projects/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Fetch the membership roster for one project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @returns The project's membership rows.
+ */
+export async function getProjectMemberships(
+  projectId: number,
+): Promise<ProjectMembership[]> {
+  return apiFetch<ProjectMembership[]>(`/api/v1/projects/${projectId}/memberships/`)
+}
+
+/**
+ * Update one membership row for the selected project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @param membershipId - Numeric membership identifier.
+ * @param payload - Editable membership fields.
+ * @returns The updated membership payload.
+ */
+export async function updateProjectMembership(
+  projectId: number,
+  membershipId: number,
+  payload: Pick<ProjectMembership, "role">,
+): Promise<ProjectMembership> {
+  return apiFetch<ProjectMembership>(
+    `/api/v1/projects/${projectId}/memberships/${membershipId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Remove one membership row from the selected project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @param membershipId - Numeric membership identifier.
+ * @returns No content on success.
+ */
+export async function deleteProjectMembership(
+  projectId: number,
+  membershipId: number,
+): Promise<void> {
+  return apiFetch<void>(`/api/v1/projects/${projectId}/memberships/${membershipId}/`, {
+    method: "DELETE",
+  })
+}
+
+/**
+ * Fetch invitation rows for one project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @returns The project's invitation rows.
+ */
+export async function getProjectInvitations(
+  projectId: number,
+): Promise<MembershipInvitation[]> {
+  return apiFetch<MembershipInvitation[]>(`/api/v1/projects/${projectId}/invitations/`)
+}
+
+/**
+ * Create a new project invitation.
+ *
+ * @param projectId - Numeric project identifier.
+ * @param payload - Invitation request fields.
+ * @returns The created invitation payload.
+ */
+export async function createProjectInvitation(
+  projectId: number,
+  payload: { email: string; role: "admin" | "member" | "reader" },
+): Promise<MembershipInvitation> {
+  return apiFetch<MembershipInvitation>(`/api/v1/projects/${projectId}/invitations/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Revoke one invitation row for the selected project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @param invitationId - Numeric invitation identifier.
+ * @returns No content on success.
+ */
+export async function revokeProjectInvitation(
+  projectId: number,
+  invitationId: number,
+): Promise<void> {
+  return apiFetch<void>(`/api/v1/projects/${projectId}/invitations/${invitationId}/`, {
+    method: "DELETE",
+  })
+}
+
+/**
+ * Fetch one public invitation-token payload.
+ *
+ * @param token - One-time invitation token.
+ * @returns Public invitation details used by the invite acceptance page.
+ */
+export async function getMembershipInvitation(
+  token: string,
+): Promise<PublicMembershipInvitation> {
+  return apiFetch<PublicMembershipInvitation>(`/api/v1/invitations/${token}/`)
+}
+
+/**
+ * Accept one invitation token for the current authenticated user.
+ *
+ * @param token - One-time invitation token.
+ * @returns The updated invitation payload.
+ */
+export async function acceptMembershipInvitation(
+  token: string,
+): Promise<PublicMembershipInvitation> {
+  return apiFetch<PublicMembershipInvitation>(`/api/v1/invitations/${token}/`, {
+    method: "POST",
+  })
+}
+
+/**
+ * Fetch the current authenticated user's profile payload.
+ *
+ * @returns The current user's editable profile fields.
+ */
+export async function getCurrentUserProfile(): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/v1/profile/")
+}
+
+/**
+ * Update the current user's editable profile fields.
+ *
+ * @param payload - Partial profile fields accepted by the backend.
+ * @returns The updated profile payload.
+ */
+export async function updateCurrentUserProfile(
+  payload: Partial<Pick<UserProfile, "display_name" | "bio" | "timezone">>,
+): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/v1/profile/", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Upload a new avatar image for the current user.
+ *
+ * @param formData - Multipart body containing the selected avatar image.
+ * @returns The updated profile payload.
+ */
+export async function uploadCurrentUserAvatar(
+  formData: FormData,
+): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/v1/profile/avatar/", {
+    method: "POST",
+    body: formData,
+  })
+}
+
+/**
+ * Remove the current user's stored avatar image.
+ *
+ * @returns The updated profile payload without avatar URLs.
+ */
+export async function deleteCurrentUserAvatar(): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/v1/profile/avatar/", {
+    method: "DELETE",
+  })
+}
+
+/**
  * Partially update one project record.
  *
  * This helper is currently used for project-level intake settings surfaced in the
@@ -207,10 +475,7 @@ export const getProjects = cache(
 export async function updateProject(
   projectId: number,
   payload: Partial<
-    Pick<
-      Project,
-      "name" | "group" | "topic_description" | "content_retention_days" | "intake_enabled"
-    >
+    Pick<Project, "name" | "topic_description" | "content_retention_days" | "intake_enabled">
   >,
 ): Promise<Project> {
   return apiFetch<Project>(`/api/v1/projects/${projectId}/`, {

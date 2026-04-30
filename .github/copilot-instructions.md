@@ -4,9 +4,9 @@ You are working in Newsletter Maker, a Django + DRF + Celery + Qdrant backend wi
 
 ## Repository Shape
 
-- Backend runtime code lives in `core/`.
+- Backend runtime code is split across `core/`, `projects/`, `content/`, `entities/`, `ingestion/`, `newsletters/`, `pipeline/`, `trends/`, and `users/`.
 - Django project settings and top-level URLs live in `newsletter_maker/`.
-- Backend tests live primarily in `core/tests/` and `tests/`.
+- Backend tests live primarily in `core/tests/`, app-local `tests/` packages, and `tests/`.
 - Frontend application code lives in `frontend/src/app/`, shared UI in `frontend/src/components/`, and shared API/types/helpers in `frontend/src/lib/`.
 - Operational and architecture docs live in `docs/`.
 

@@ -5,28 +5,17 @@ from unittest.mock import ANY
 import pytest
 from django.contrib import messages
 from django.contrib.admin.sites import AdminSite
-from django.contrib.auth.models import Group
 from django.utils import timezone
 
+from content.admin import ContentAdmin, UserFeedbackAdmin
 from core.admin import (
-    BlueskyCredentialsAdmin,
-    BlueskyCredentialsAdminForm,
-    ContentAdmin,
     DuplicateStateFilter,
-    EntityAdmin,
-    EntityAuthoritySnapshotAdmin,
-    EntityCandidateAdmin,
     HighValueFilter,
-    IngestionRunAdmin,
-    ProjectConfigAdmin,
     ReviewQueueAdmin,
     SkillResultAdmin,
-    SourceConfigAdmin,
     TopicCentroidSnapshotAdmin,
-    UserFeedbackAdmin,
 )
 from core.models import (
-    BlueskyCredentials,
     Content,
     Entity,
     EntityAuthoritySnapshot,
@@ -34,17 +23,27 @@ from core.models import (
     EntityCandidateStatus,
     EntityMention,
     IngestionRun,
-    Project,
-    ProjectConfig,
     ReviewQueue,
     ReviewReason,
     RunStatus,
     SkillResult,
-    SourceConfig,
-    SourcePluginName,
     TopicCentroidSnapshot,
     UserFeedback,
 )
+from entities.admin import (
+    EntityAdmin,
+    EntityAuthoritySnapshotAdmin,
+    EntityCandidateAdmin,
+)
+from ingestion.admin import IngestionRunAdmin
+from projects.admin import (
+    BlueskyCredentialsAdmin,
+    BlueskyCredentialsAdminForm,
+    ProjectConfigAdmin,
+    SourceConfigAdmin,
+)
+from projects.model_support import SourcePluginName
+from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
 
 pytestmark = pytest.mark.django_db
 
@@ -54,12 +53,8 @@ def source_admin_context(django_user_model):
     user = django_user_model.objects.create_user(
         username="admin-owner", password="testpass123"
     )
-    group = Group.objects.create(name="admin-team")
-    user.groups.add(group)
-    project = Project.objects.create(
-        name="Admin Project", group=group, topic_description="Infra"
-    )
-    return SimpleNamespace(user=user, group=group, project=project)
+    project = Project.objects.create(name="Admin Project", topic_description="Infra")
+    return SimpleNamespace(user=user, project=project)
 
 
 def test_test_source_connection_reports_success(source_admin_context, mocker):
@@ -71,11 +66,11 @@ def test_test_source_connection_reports_success(source_admin_context, mocker):
     plugin = mocker.Mock()
     plugin.health_check.return_value = True
     validate_mock = mocker.patch(
-        "core.admin.validate_plugin_config",
+        "projects.admin.validate_plugin_config",
         return_value={"feed_url": "https://example.com/feed.xml"},
     )
     get_plugin_mock = mocker.patch(
-        "core.admin.get_plugin_for_source_config", return_value=plugin
+        "projects.admin.get_plugin_for_source_config", return_value=plugin
     )
     admin_instance = SourceConfigAdmin(SourceConfig, AdminSite())
     admin_instance.message_user = mocker.Mock()
@@ -130,7 +125,6 @@ def test_topic_centroid_snapshot_admin_changelist_view_builds_dashboard_stats(
 ):
     second_project = Project.objects.create(
         name="Second Admin Project",
-        group=source_admin_context.group,
         topic_description="Analytics",
     )
     fixed_now = timezone.now()
@@ -168,7 +162,7 @@ def test_topic_centroid_snapshot_admin_changelist_view_builds_dashboard_stats(
         "django.contrib.admin.options.ModelAdmin.changelist_view",
         side_effect=lambda request, extra_context=None: extra_context,
     )
-    mocker.patch("core.admin.timezone.now", return_value=fixed_now)
+    mocker.patch("trends.admin.timezone.now", return_value=fixed_now)
 
     response = admin_instance.changelist_view(request=SimpleNamespace())
 
@@ -188,7 +182,7 @@ def test_topic_centroid_snapshot_admin_changelist_view_builds_dashboard_stats(
     assert len(response["centroid_project_drilldowns"]) == 2
     assert response["centroid_project_drilldowns"][0]["project_name"] == "Admin Project"
     assert response["centroid_project_drilldowns"][0]["href"] == (
-        "/admin/core/topiccentroidsnapshot/?project__id__exact="
+        "/admin/trends/topiccentroidsnapshot/?project__id__exact="
         f"{source_admin_context.project.id}"
     )
     assert response["centroid_project_drilldowns"][0]["drift_from_previous"] == "10.0%"
@@ -201,7 +195,7 @@ def test_test_source_connection_reports_failures(source_admin_context, mocker):
         config={"feed_url": "https://example.com/feed.xml"},
     )
     mocker.patch(
-        "core.admin.validate_plugin_config",
+        "projects.admin.validate_plugin_config",
         side_effect=ValueError("Missing required config field: feed_url"),
     )
     admin_instance = SourceConfigAdmin(SourceConfig, AdminSite())

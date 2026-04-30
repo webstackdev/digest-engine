@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import Group
 
 from core.models import (
     Content,
@@ -12,29 +11,27 @@ from core.models import (
     EntityMentionRole,
     FeedbackType,
     IngestionRun,
-    Project,
-    ProjectConfig,
     RunStatus,
     SkillStatus,
-    SourceConfig,
-    SourcePluginName,
     TopicCentroidSnapshot,
     UserFeedback,
 )
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
 from core.tasks import (
-    TOPIC_CENTROID_MIN_UPVOTES,
-    _ingest_source_config,
     queue_content_skill,
-    queue_topic_centroid_recompute,
     recompute_authority_scores,
-    recompute_topic_centroid,
     run_all_authority_recomputations,
-    run_all_ingestions,
-    run_all_topic_centroid_recomputations,
-    run_ingestion,
     run_relevance_scoring_skill,
     run_summarization_skill,
+)
+from ingestion.tasks import _ingest_source_config, run_all_ingestions, run_ingestion
+from projects.model_support import SourcePluginName
+from projects.models import Project, ProjectConfig, SourceConfig
+from trends.tasks import (
+    TOPIC_CENTROID_MIN_UPVOTES,
+    queue_topic_centroid_recompute,
+    recompute_topic_centroid,
+    run_all_topic_centroid_recomputations,
 )
 
 pytestmark = pytest.mark.django_db
@@ -45,18 +42,14 @@ def source_plugin_context(django_user_model):
     user = django_user_model.objects.create_user(
         username="plugin-owner", password="testpass123"
     )
-    group = Group.objects.create(name="plugin-team")
-    user.groups.add(group)
-    project = Project.objects.create(
-        name="Plugin Project", group=group, topic_description="Infra"
-    )
+    project = Project.objects.create(name="Plugin Project", topic_description="Infra")
     entity = Entity.objects.create(
         project=project,
         name="Example",
         type="vendor",
         website_url="https://example.com",
     )
-    return SimpleNamespace(user=user, group=group, project=project, entity=entity)
+    return SimpleNamespace(user=user, project=project, entity=entity)
 
 
 def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, mocker):
@@ -175,7 +168,7 @@ def test_ingest_source_config_allows_cross_plugin_duplicate_urls_for_pipeline_de
         ],
         match_entity_for_url=lambda url: None,
     )
-    mocker.patch("core.tasks.get_plugin_for_source_config", return_value=plugin)
+    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
 
     items_fetched, items_ingested = _ingest_source_config(source_config)
 
@@ -258,7 +251,7 @@ def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
         ],
         match_entity_for_item=lambda item: source_plugin_context.entity,
     )
-    mocker.patch("core.tasks.get_plugin_for_source_config", return_value=plugin)
+    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
 
     items_fetched, items_ingested = _ingest_source_config(source_config)
 
@@ -272,7 +265,7 @@ def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
 def test_run_all_ingestions_enqueues_active_source_configs(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("core.tasks.run_ingestion.delay")
+    delay_mock = mocker.patch("ingestion.tasks.run_ingestion.delay")
     active_one = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -302,8 +295,8 @@ def test_run_all_ingestions_executes_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
     settings.CELERY_TASK_ALWAYS_EAGER = True
-    run_ingestion_mock = mocker.patch("core.tasks.run_ingestion")
-    delay_mock = mocker.patch("core.tasks.run_ingestion.delay")
+    run_ingestion_mock = mocker.patch("ingestion.tasks.run_ingestion")
+    delay_mock = mocker.patch("ingestion.tasks.run_ingestion.delay")
     active_one = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -328,10 +321,8 @@ def test_run_all_authority_recomputations_enqueues_all_projects(
     source_plugin_context, mocker
 ):
     delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
-    other_group = Group.objects.create(name="second-authority-team")
     other_project = Project.objects.create(
         name="Other Project",
-        group=other_group,
         topic_description="Security",
     )
 
@@ -349,10 +340,8 @@ def test_run_all_authority_recomputations_executes_inline_when_eager(
     settings.CELERY_TASK_ALWAYS_EAGER = True
     recompute_mock = mocker.patch("core.tasks.recompute_authority_scores")
     delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
-    other_group = Group.objects.create(name="inline-authority-team")
     other_project = Project.objects.create(
         name="Inline Project",
-        group=other_group,
         topic_description="Platform",
     )
 
@@ -368,11 +357,9 @@ def test_run_all_authority_recomputations_executes_inline_when_eager(
 def test_run_all_topic_centroid_recomputations_enqueues_all_projects(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
-    other_group = Group.objects.create(name="second-centroid-team")
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
     other_project = Project.objects.create(
         name="Other Centroid Project",
-        group=other_group,
         topic_description="Security",
     )
 
@@ -388,12 +375,10 @@ def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
     settings.CELERY_TASK_ALWAYS_EAGER = True
-    recompute_mock = mocker.patch("core.tasks.recompute_topic_centroid")
-    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
-    other_group = Group.objects.create(name="inline-centroid-team")
+    recompute_mock = mocker.patch("trends.tasks.recompute_topic_centroid")
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
     other_project = Project.objects.create(
         name="Inline Centroid Project",
-        group=other_group,
         topic_description="Platform",
     )
 
@@ -495,8 +480,8 @@ def test_recompute_topic_centroid_upserts_weighted_normalized_centroid(
 ):
     project = source_plugin_context.project
     mocker.patch("core.signals.queue_topic_centroid_recompute")
-    upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
-    delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
+    upsert_mock = mocker.patch("trends.tasks.upsert_topic_centroid")
+    delete_mock = mocker.patch("trends.tasks.delete_topic_centroid")
     vector_lookup = {
         **{
             f"Upvote {index}": [1.0, 0.0] for index in range(TOPIC_CENTROID_MIN_UPVOTES)
@@ -504,7 +489,7 @@ def test_recompute_topic_centroid_upserts_weighted_normalized_centroid(
         "Downvote": [0.0, 1.0],
     }
     mocker.patch(
-        "core.tasks.embed_text",
+        "trends.tasks.embed_text",
         side_effect=lambda text: vector_lookup[text.split("\n\n", 1)[0]],
     )
 
@@ -572,9 +557,9 @@ def test_recompute_topic_centroid_persists_drift_from_previous_and_week_old_snap
 ):
     project = source_plugin_context.project
     mocker.patch("core.signals.queue_topic_centroid_recompute")
-    upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
-    delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
-    mocker.patch("core.tasks.embed_text", return_value=[1.0, 0.0])
+    upsert_mock = mocker.patch("trends.tasks.upsert_topic_centroid")
+    delete_mock = mocker.patch("trends.tasks.delete_topic_centroid")
+    mocker.patch("trends.tasks.embed_text", return_value=[1.0, 0.0])
 
     recent_snapshot = TopicCentroidSnapshot.objects.create(
         project=project,
@@ -635,8 +620,8 @@ def test_recompute_topic_centroid_disables_centroid_below_minimum_upvotes(
 ):
     project = source_plugin_context.project
     mocker.patch("core.signals.queue_topic_centroid_recompute")
-    upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
-    delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
+    upsert_mock = mocker.patch("trends.tasks.upsert_topic_centroid")
+    delete_mock = mocker.patch("trends.tasks.delete_topic_centroid")
     for index in range(TOPIC_CENTROID_MIN_UPVOTES - 1):
         content = Content.objects.create(
             project=project,
@@ -757,8 +742,8 @@ def test_queue_content_skill_executes_summary_inline_when_eager(
 def test_queue_topic_centroid_recompute_enqueues_background_task(
     source_plugin_context, mocker
 ):
-    cache_add_mock = mocker.patch("core.tasks.cache.add", return_value=True)
-    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+    cache_add_mock = mocker.patch("trends.tasks.cache.add", return_value=True)
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
 
     queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
 
@@ -770,8 +755,8 @@ def test_queue_topic_centroid_recompute_enqueues_background_task(
 def test_queue_topic_centroid_recompute_skips_duplicate_queue_attempts(
     source_plugin_context, mocker
 ):
-    mocker.patch("core.tasks.cache.add", return_value=False)
-    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+    mocker.patch("trends.tasks.cache.add", return_value=False)
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
 
     queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
 
@@ -949,7 +934,7 @@ def test_ingest_source_config_truncates_fields_and_processes_inline(
         plugin_name=SourcePluginName.RSS,
         config={"feed_url": "https://example.com/feed.xml"},
     )
-    mocker.patch("core.tasks.get_plugin_for_source_config", return_value=plugin)
+    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
     upsert_mock = mocker.patch("core.tasks.upsert_content_embedding")
     process_mock = mocker.patch("core.tasks.process_content")
     delay_mock = mocker.patch("core.tasks.process_content.delay")
