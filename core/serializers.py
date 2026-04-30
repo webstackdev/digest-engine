@@ -5,6 +5,8 @@ more than simple field translation: several serializers limit related querysets 
 the active project and validate that cross-project relationships cannot be posted.
 """
 
+from importlib import import_module
+
 from rest_framework import serializers
 
 from core.models import (
@@ -12,9 +14,7 @@ from core.models import (
     IngestionRun,
     IntakeAllowlist,
     NewsletterIntake,
-    ReviewQueue,
     SkillResult,
-    TopicCentroidSnapshot,
     UserFeedback,
 )
 from core.permissions import get_visible_projects_queryset
@@ -81,6 +81,16 @@ from entities.serializers import (  # noqa: E402
     EntitySerializer,
 )
 
+_pipeline_serializers = import_module("pipeline.serializers")
+_trends_serializers = import_module("trends.serializers")
+
+ReviewQueueSerializer = _pipeline_serializers.ReviewQueueSerializer
+SkillResultSerializer = _pipeline_serializers.SkillResultSerializer
+TopicCentroidObservabilitySummarySerializer = (
+    _trends_serializers.TopicCentroidObservabilitySummarySerializer
+)
+TopicCentroidSnapshotSerializer = _trends_serializers.TopicCentroidSnapshotSerializer
+
 __all__ = [
     "EntityAuthoritySnapshotSerializer",
     "EntityCandidateMergeSerializer",
@@ -88,36 +98,6 @@ __all__ = [
     "EntityMentionSummarySerializer",
     "EntitySerializer",
 ]
-
-
-class TopicCentroidSnapshotSerializer(serializers.ModelSerializer):
-    """Serialize one persisted topic-centroid recomputation for a project."""
-
-    class Meta:
-        model = TopicCentroidSnapshot
-        fields = [
-            "id",
-            "project",
-            "computed_at",
-            "centroid_active",
-            "feedback_count",
-            "upvote_count",
-            "downvote_count",
-            "drift_from_previous",
-            "drift_from_week_ago",
-        ]
-        read_only_fields = fields
-
-
-class TopicCentroidObservabilitySummarySerializer(serializers.Serializer):
-    """Serialize project-level centroid observability summary metrics."""
-
-    project = serializers.IntegerField()
-    snapshot_count = serializers.IntegerField()
-    active_snapshot_count = serializers.IntegerField()
-    avg_drift_from_previous = serializers.FloatField(allow_null=True)
-    avg_drift_from_week_ago = serializers.FloatField(allow_null=True)
-    latest_snapshot = TopicCentroidSnapshotSerializer(allow_null=True)
 
 
 class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
@@ -174,43 +154,6 @@ class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
         return attrs
 
 
-class SkillResultSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
-    """Serialize persisted AI skill executions for content."""
-
-    class Meta:
-        model = SkillResult
-        fields = [
-            "id",
-            "content",
-            "project",
-            "skill_name",
-            "status",
-            "result_data",
-            "error_message",
-            "model_used",
-            "latency_ms",
-            "confidence",
-            "created_at",
-            "superseded_by",
-        ]
-        read_only_fields = ["id", "project", "created_at"]
-
-    def validate(self, attrs):
-        """Reject skill results whose content does not belong to the active project."""
-
-        project = (
-            self.context.get("project")
-            or attrs.get("project")
-            or getattr(self.instance, "project", None)
-        )
-        content = attrs.get("content") or getattr(self.instance, "content", None)
-        if project and content and content.project_id != project.id:
-            raise serializers.ValidationError(
-                {"content": "Content must belong to the selected project."}
-            )
-        return attrs
-
-
 class UserFeedbackSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     """Serialize editor feedback attached to a content item."""
 
@@ -254,39 +197,6 @@ class IngestionRunSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
             "error_message",
         ]
         read_only_fields = ["id", "project", "started_at"]
-
-
-class ReviewQueueSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
-    """Serialize manual-review queue items for project content."""
-
-    class Meta:
-        model = ReviewQueue
-        fields = [
-            "id",
-            "project",
-            "content",
-            "reason",
-            "confidence",
-            "created_at",
-            "resolved",
-            "resolution",
-        ]
-        read_only_fields = ["id", "project", "created_at"]
-
-    def validate(self, attrs):
-        """Reject review items whose content does not belong to the active project."""
-
-        project = (
-            self.context.get("project")
-            or attrs.get("project")
-            or getattr(self.instance, "project", None)
-        )
-        content = attrs.get("content") or getattr(self.instance, "content", None)
-        if project and content and content.project_id != project.id:
-            raise serializers.ValidationError(
-                {"content": "Content must belong to the selected project."}
-            )
-        return attrs
 
 
 class IntakeAllowlistSerializer(

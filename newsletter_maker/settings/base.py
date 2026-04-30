@@ -98,7 +98,12 @@ INSTALLED_APPS = [
     # 6. Project Apps
     "users",
     "projects",
+    "content",
     "entities",
+    "ingestion",
+    "newsletters",
+    "pipeline",
+    "trends",
     "core",
 ]
 

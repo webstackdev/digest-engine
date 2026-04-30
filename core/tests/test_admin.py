@@ -7,15 +7,13 @@ from django.contrib import messages
 from django.contrib.admin.sites import AdminSite
 from django.utils import timezone
 
+from content.admin import ContentAdmin, UserFeedbackAdmin
 from core.admin import (
-    ContentAdmin,
     DuplicateStateFilter,
     HighValueFilter,
-    IngestionRunAdmin,
     ReviewQueueAdmin,
     SkillResultAdmin,
     TopicCentroidSnapshotAdmin,
-    UserFeedbackAdmin,
 )
 from core.models import (
     Content,
@@ -37,6 +35,7 @@ from entities.admin import (
     EntityAuthoritySnapshotAdmin,
     EntityCandidateAdmin,
 )
+from ingestion.admin import IngestionRunAdmin
 from projects.admin import (
     BlueskyCredentialsAdmin,
     BlueskyCredentialsAdminForm,
@@ -163,7 +162,7 @@ def test_topic_centroid_snapshot_admin_changelist_view_builds_dashboard_stats(
         "django.contrib.admin.options.ModelAdmin.changelist_view",
         side_effect=lambda request, extra_context=None: extra_context,
     )
-    mocker.patch("core.admin.timezone.now", return_value=fixed_now)
+    mocker.patch("trends.admin.timezone.now", return_value=fixed_now)
 
     response = admin_instance.changelist_view(request=SimpleNamespace())
 
@@ -183,7 +182,7 @@ def test_topic_centroid_snapshot_admin_changelist_view_builds_dashboard_stats(
     assert len(response["centroid_project_drilldowns"]) == 2
     assert response["centroid_project_drilldowns"][0]["project_name"] == "Admin Project"
     assert response["centroid_project_drilldowns"][0]["href"] == (
-        "/admin/core/topiccentroidsnapshot/?project__id__exact="
+        "/admin/trends/topiccentroidsnapshot/?project__id__exact="
         f"{source_admin_context.project.id}"
     )
     assert response["centroid_project_drilldowns"][0]["drift_from_previous"] == "10.0%"

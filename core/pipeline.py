@@ -18,6 +18,7 @@ from django.db.models import F
 from django.utils import timezone
 from langgraph.graph import END, StateGraph
 
+from content.models import Content
 from core.deduplication import canonicalize_url
 from core.embeddings import (
     build_content_embedding_text,
@@ -28,7 +29,7 @@ from core.embeddings import (
 )
 from core.entity_extraction import run_entity_extraction
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
-from core.models import Content, ReviewQueue, ReviewReason, SkillResult, SkillStatus
+from pipeline.models import ReviewQueue, ReviewReason, SkillResult, SkillStatus
 
 logger = logging.getLogger(__name__)
 

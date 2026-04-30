@@ -19,18 +19,16 @@ from core.models import (
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
 from core.tasks import (
     TOPIC_CENTROID_MIN_UPVOTES,
-    _ingest_source_config,
     queue_content_skill,
     queue_topic_centroid_recompute,
     recompute_authority_scores,
     recompute_topic_centroid,
     run_all_authority_recomputations,
-    run_all_ingestions,
     run_all_topic_centroid_recomputations,
-    run_ingestion,
     run_relevance_scoring_skill,
     run_summarization_skill,
 )
+from ingestion.tasks import _ingest_source_config, run_all_ingestions, run_ingestion
 from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectConfig, SourceConfig
 
@@ -168,7 +166,7 @@ def test_ingest_source_config_allows_cross_plugin_duplicate_urls_for_pipeline_de
         ],
         match_entity_for_url=lambda url: None,
     )
-    mocker.patch("core.tasks.get_plugin_for_source_config", return_value=plugin)
+    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
 
     items_fetched, items_ingested = _ingest_source_config(source_config)
 
@@ -251,7 +249,7 @@ def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
         ],
         match_entity_for_item=lambda item: source_plugin_context.entity,
     )
-    mocker.patch("core.tasks.get_plugin_for_source_config", return_value=plugin)
+    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
 
     items_fetched, items_ingested = _ingest_source_config(source_config)
 
@@ -265,7 +263,7 @@ def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
 def test_run_all_ingestions_enqueues_active_source_configs(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("core.tasks.run_ingestion.delay")
+    delay_mock = mocker.patch("ingestion.tasks.run_ingestion.delay")
     active_one = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -295,8 +293,8 @@ def test_run_all_ingestions_executes_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
     settings.CELERY_TASK_ALWAYS_EAGER = True
-    run_ingestion_mock = mocker.patch("core.tasks.run_ingestion")
-    delay_mock = mocker.patch("core.tasks.run_ingestion.delay")
+    run_ingestion_mock = mocker.patch("ingestion.tasks.run_ingestion")
+    delay_mock = mocker.patch("ingestion.tasks.run_ingestion.delay")
     active_one = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -934,7 +932,7 @@ def test_ingest_source_config_truncates_fields_and_processes_inline(
         plugin_name=SourcePluginName.RSS,
         config={"feed_url": "https://example.com/feed.xml"},
     )
-    mocker.patch("core.tasks.get_plugin_for_source_config", return_value=plugin)
+    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
     upsert_mock = mocker.patch("core.tasks.upsert_content_embedding")
     process_mock = mocker.patch("core.tasks.process_content")
     delay_mock = mocker.patch("core.tasks.process_content.delay")

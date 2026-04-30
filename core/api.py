@@ -8,7 +8,6 @@ generated schema consistent across similar viewsets.
 import logging
 from typing import Any
 
-from django.db.models import Avg, Count, Q
 from drf_spectacular.utils import (
     OpenApiExample,
     OpenApiParameter,
@@ -27,9 +26,6 @@ from core.models import (
     IngestionRun,
     IntakeAllowlist,
     NewsletterIntake,
-    ReviewQueue,
-    SkillResult,
-    TopicCentroidSnapshot,
     UserFeedback,
 )
 from core.permissions import (
@@ -45,10 +41,7 @@ from core.serializers import (
     IngestionRunSerializer,
     IntakeAllowlistSerializer,
     NewsletterIntakeSerializer,
-    ReviewQueueSerializer,
     SkillResultSerializer,
-    TopicCentroidObservabilitySummarySerializer,
-    TopicCentroidSnapshotSerializer,
     UserFeedbackSerializer,
 )
 from projects.models import Project
@@ -681,34 +674,6 @@ class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
 
 @document_project_owned_viewset(
-    resource_plural="skill results",
-    resource_singular="skill result",
-    create_description="Create a new skill result for project content. The referenced content must belong to the selected project.",
-    tag="AI Processing",
-    action_overrides=build_crud_action_overrides(
-        SkillResultSerializer,
-        resource_plural="skill results for the selected project",
-        resource_singular="skill result",
-        retrieve_examples=[SKILL_RESULT_RESPONSE_EXAMPLE],
-    ),
-)
-class SkillResultViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
-    """Inspect persisted AI skill outputs for project content."""
-
-    serializer_class = SkillResultSerializer
-    queryset = SkillResult.objects.select_related("content", "project", "superseded_by")
-
-    def get_permissions(self):
-        """Allow all members to read skill results and contributors to modify them."""
-
-        if self.action in {"create", "update", "partial_update", "destroy"}:
-            permission_classes = [IsProjectMemberWritable]
-        else:
-            permission_classes = [IsProjectMember]
-        return [permission() for permission in permission_classes]
-
-
-@document_project_owned_viewset(
     resource_plural="user feedback entries",
     resource_singular="user feedback entry",
     create_description="Create a new feedback entry for content in the selected project. The authenticated user is recorded automatically.",
@@ -813,88 +778,3 @@ class NewsletterIntakeViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelV
         """Allow any project member to inspect newsletter intake history."""
 
         return [IsProjectMember()]
-
-
-@document_project_owned_viewset(
-    resource_plural="topic centroid snapshots",
-    resource_singular="topic centroid snapshot",
-    create_description="Topic centroid snapshots are pipeline-managed history rows and are exposed read-only for observability.",
-    tag="Observability",
-    action_overrides=build_crud_action_overrides(
-        TopicCentroidSnapshotSerializer,
-        resource_plural="topic centroid snapshots for the selected project",
-        resource_singular="topic centroid snapshot",
-    ),
-)
-class TopicCentroidSnapshotViewSet(
-    ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewSet
-):
-    """Inspect persisted centroid history and aggregate drift for a project."""
-
-    serializer_class = TopicCentroidSnapshotSerializer
-    queryset = TopicCentroidSnapshot.objects.select_related("project")
-
-    def get_permissions(self):
-        """Restrict centroid observability to project contributors."""
-
-        return [IsProjectContributor()]
-
-    @extend_schema(
-        summary="Get topic centroid summary",
-        description=(
-            "Return aggregate centroid observability metrics for the selected project, "
-            "including average drift and the latest persisted snapshot."
-        ),
-        request=None,
-        responses={
-            200: TopicCentroidObservabilitySummarySerializer,
-            403: AUTHENTICATION_REQUIRED_RESPONSE,
-        },
-        tags=["Observability"],
-    )
-    @action(detail=False, methods=["get"], url_path="summary")
-    def summary(self, request, *args, **kwargs):
-        """Return centroid observability summary metrics for the current project."""
-
-        queryset = self.get_queryset()
-        metrics = queryset.aggregate(
-            snapshot_count=Count("id"),
-            active_snapshot_count=Count("id", filter=Q(centroid_active=True)),
-            avg_drift_from_previous=Avg("drift_from_previous"),
-            avg_drift_from_week_ago=Avg("drift_from_week_ago"),
-        )
-        serializer = TopicCentroidObservabilitySummarySerializer(
-            {
-                "project": self.get_project().id,
-                "snapshot_count": metrics["snapshot_count"],
-                "active_snapshot_count": metrics["active_snapshot_count"],
-                "avg_drift_from_previous": metrics["avg_drift_from_previous"],
-                "avg_drift_from_week_ago": metrics["avg_drift_from_week_ago"],
-                "latest_snapshot": queryset.order_by("-computed_at").first(),
-            },
-            context=self.get_serializer_context(),
-        )
-        return Response(serializer.data)
-
-
-@document_project_owned_viewset(
-    resource_plural="review queue entries",
-    resource_singular="review queue entry",
-    create_description="Create a new review queue entry for the selected project. The referenced content must belong to the same project.",
-    tag="Review Queue",
-    action_overrides=build_crud_action_overrides(
-        ReviewQueueSerializer,
-        resource_plural="review queue entries for the selected project",
-        resource_singular="review queue entry",
-    ),
-)
-class ReviewQueueViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
-    """Inspect and manage content awaiting manual review."""
-
-    serializer_class = ReviewQueueSerializer
-    queryset = ReviewQueue.objects.select_related("content", "project")
-
-    def get_permissions(self):
-        """Restrict review-queue access to project contributors."""
-
-        return [IsProjectContributor()]

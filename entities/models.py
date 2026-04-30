@@ -110,7 +110,7 @@ class EntityMention(models.Model):
     """Represents one tracked-entity mention detected in a content item."""
 
     content = models.ForeignKey(
-        "core.Content", on_delete=models.CASCADE, related_name="entity_mentions"
+        "content.Content", on_delete=models.CASCADE, related_name="entity_mentions"
     )
     entity = models.ForeignKey(
         Entity, on_delete=models.CASCADE, related_name="mentions"
@@ -162,7 +162,7 @@ class EntityCandidate(models.Model):
     name = models.CharField(max_length=255)
     suggested_type = models.CharField(max_length=32, choices=EntityType.choices)
     first_seen_in = models.ForeignKey(
-        "core.Content",
+        "content.Content",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
