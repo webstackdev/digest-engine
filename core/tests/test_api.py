@@ -199,6 +199,7 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], self.owner_project.id)
+        self.assertEqual(response.json()[0]["user_role"], ProjectRole.ADMIN)
         self.assertEqual(
             response.json()[0]["intake_token"], self.owner_project.intake_token
         )

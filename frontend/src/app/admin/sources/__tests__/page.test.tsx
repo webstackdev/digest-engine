@@ -90,6 +90,7 @@ function createProject(overrides: Partial<Project> = {}): Project {
     content_retention_days: 30,
     intake_token: "intake-token-123",
     intake_enabled: false,
+    user_role: "admin",
     has_bluesky_credentials: false,
     bluesky_handle: "",
     bluesky_is_active: false,

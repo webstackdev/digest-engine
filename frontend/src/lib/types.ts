@@ -1,11 +1,14 @@
+export type ProjectRole = "admin" | "member" | "reader"
+
 export type Project = {
   id: number
   name: string
-  group: number
+  group: number | null
   topic_description: string
   content_retention_days: number
   intake_token?: string
   intake_enabled?: boolean
+  user_role: ProjectRole | null
   has_bluesky_credentials?: boolean
   bluesky_handle?: string
   bluesky_is_active?: boolean

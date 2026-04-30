@@ -41,7 +41,14 @@ from core.models import (
     TopicCentroidSnapshot,
     UserFeedback,
 )
-from core.permissions import get_visible_projects_queryset
+from core.permissions import (
+    IsProjectAdmin,
+    IsProjectContributor,
+    IsProjectFeedbackEditor,
+    IsProjectMember,
+    IsProjectMemberWritable,
+    get_visible_projects_queryset,
+)
 from core.serializers import (
     ContentSerializer,
     EntityAuthoritySnapshotSerializer,
@@ -105,6 +112,7 @@ PROJECT_RESPONSE_EXAMPLE = OpenApiExample(
         "content_retention_days": 180,
         "intake_token": "project-token-123",
         "intake_enabled": True,
+        "user_role": "admin",
         "has_bluesky_credentials": True,
         "bluesky_handle": "aiweekly.bsky.social",
         "bluesky_is_active": True,
@@ -631,6 +639,17 @@ class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
         )
     )
 
+    def get_permissions(self):
+        """Apply read, contributor-write, and admin-delete permissions for entities."""
+
+        if self.action == "destroy":
+            permission_classes = [IsProjectAdmin]
+        elif self.action in {"create", "update", "partial_update"}:
+            permission_classes = [IsProjectMemberWritable]
+        else:
+            permission_classes = [IsProjectMember]
+        return [permission() for permission in permission_classes]
+
     @extend_schema(
         summary="List entity mentions",
         description="Return the extracted mention history for one tracked entity inside the selected project.",
@@ -709,6 +728,15 @@ class EntityCandidateViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
     queryset = EntityCandidate.objects.select_related(
         "project", "first_seen_in", "merged_into"
     )
+
+    def get_permissions(self):
+        """Allow all members to read candidates and contributors to resolve them."""
+
+        if self.action in {"accept", "reject", "merge"}:
+            permission_classes = [IsProjectContributor]
+        else:
+            permission_classes = [IsProjectMember]
+        return [permission() for permission in permission_classes]
 
     @extend_schema(
         summary="Accept entity candidate",
@@ -797,6 +825,17 @@ class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = ContentSerializer
     queryset = Content.objects.select_related("project", "entity")
 
+    def get_permissions(self):
+        """Allow all members to read content, contributors to edit, and admins to delete."""
+
+        if self.action == "destroy":
+            permission_classes = [IsProjectAdmin]
+        elif self.action in {"create", "update", "partial_update", "run_skill"}:
+            permission_classes = [IsProjectMemberWritable]
+        else:
+            permission_classes = [IsProjectMember]
+        return [permission() for permission in permission_classes]
+
     @extend_schema(
         summary="Run content skill",
         description=(
@@ -873,6 +912,15 @@ class SkillResultViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = SkillResultSerializer
     queryset = SkillResult.objects.select_related("content", "project", "superseded_by")
 
+    def get_permissions(self):
+        """Allow all members to read skill results and contributors to modify them."""
+
+        if self.action in {"create", "update", "partial_update", "destroy"}:
+            permission_classes = [IsProjectMemberWritable]
+        else:
+            permission_classes = [IsProjectMember]
+        return [permission() for permission in permission_classes]
+
 
 @document_project_owned_viewset(
     resource_plural="user feedback entries",
@@ -890,6 +938,11 @@ class UserFeedbackViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
     serializer_class = UserFeedbackSerializer
     queryset = UserFeedback.objects.select_related("content", "project", "user")
+
+    def get_permissions(self):
+        """Allow all members to read feedback and owners or admins to modify it."""
+
+        return [IsProjectFeedbackEditor()]
 
     def perform_create(self, serializer):
         """Attach the authenticated user automatically to new feedback rows."""
@@ -914,6 +967,15 @@ class IngestionRunViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = IngestionRunSerializer
     queryset = IngestionRun.objects.select_related("project")
 
+    def get_permissions(self):
+        """Allow all members to read ingestion runs and contributors to manage them."""
+
+        if self.action in {"create", "update", "partial_update", "destroy"}:
+            permission_classes = [IsProjectMemberWritable]
+        else:
+            permission_classes = [IsProjectMember]
+        return [permission() for permission in permission_classes]
+
 
 @document_project_owned_viewset(
     resource_plural="intake allowlist entries",
@@ -934,6 +996,11 @@ class IntakeAllowlistViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
     serializer_class = IntakeAllowlistSerializer
     queryset = IntakeAllowlist.objects.select_related("project")
+
+    def get_permissions(self):
+        """Restrict intake allowlist access to project contributors."""
+
+        return [IsProjectContributor()]
 
 
 @document_project_owned_viewset(
@@ -956,6 +1023,11 @@ class NewsletterIntakeViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelV
     serializer_class = NewsletterIntakeSerializer
     queryset = NewsletterIntake.objects.select_related("project")
 
+    def get_permissions(self):
+        """Allow any project member to inspect newsletter intake history."""
+
+        return [IsProjectMember()]
+
 
 @document_project_owned_viewset(
     resource_plural="topic centroid snapshots",
@@ -975,6 +1047,11 @@ class TopicCentroidSnapshotViewSet(
 
     serializer_class = TopicCentroidSnapshotSerializer
     queryset = TopicCentroidSnapshot.objects.select_related("project")
+
+    def get_permissions(self):
+        """Restrict centroid observability to project contributors."""
+
+        return [IsProjectContributor()]
 
     @extend_schema(
         summary="Get topic centroid summary",
@@ -1030,3 +1107,8 @@ class ReviewQueueViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
     serializer_class = ReviewQueueSerializer
     queryset = ReviewQueue.objects.select_related("content", "project")
+
+    def get_permissions(self):
+        """Restrict review-queue access to project contributors."""
+
+        return [IsProjectContributor()]

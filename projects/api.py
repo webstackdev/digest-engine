@@ -22,7 +22,12 @@ from core.api import (
     document_project_owned_viewset,
     logger,
 )
-from core.permissions import get_visible_projects_queryset
+from core.permissions import (
+    IsProjectAdmin,
+    IsProjectMember,
+    IsProjectMemberWritable,
+    get_visible_projects_queryset,
+)
 from core.plugins.bluesky import BlueskySourcePlugin
 from projects.models import (
     BlueskyCredentials,
@@ -59,6 +64,23 @@ class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
     queryset = Project.objects.select_related("group", "bluesky_credentials")
     lookup_url_kwarg = "id"
+
+    def get_permissions(self):
+        """Apply role-aware permissions by action for project-level operations."""
+
+        if self.action in {
+            "update",
+            "partial_update",
+            "destroy",
+            "rotate_intake_token",
+            "verify_bluesky_credentials",
+        }:
+            permission_classes = [IsProjectAdmin]
+        elif self.action in {"list", "retrieve"}:
+            permission_classes = [IsProjectMember]
+        else:
+            permission_classes = self.permission_classes
+        return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         """Limit projects to those visible through the authenticated user."""
@@ -179,6 +201,15 @@ class ProjectConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     serializer_class = ProjectConfigSerializer
     queryset = ProjectConfig.objects.select_related("project")
 
+    def get_permissions(self):
+        """Allow all members to read project config, but only admins to modify it."""
+
+        if self.action in {"update", "partial_update", "create", "destroy"}:
+            permission_classes = [IsProjectAdmin]
+        else:
+            permission_classes = [IsProjectMember]
+        return [permission() for permission in permission_classes]
+
 
 @document_project_owned_viewset(
     resource_plural="Bluesky credentials",
@@ -200,6 +231,11 @@ class BlueskyCredentialsViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet
 
     serializer_class = BlueskyCredentialsSerializer
     queryset = BlueskyCredentials.objects.select_related("project")
+
+    def get_permissions(self):
+        """Restrict Bluesky credential access to project admins."""
+
+        return [IsProjectAdmin()]
 
     def get_queryset(self):
         """Restrict credentials to the selected project and current user."""
@@ -231,3 +267,14 @@ class SourceConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
     serializer_class = SourceConfigSerializer
     queryset = SourceConfig.objects.select_related("project")
+
+    def get_permissions(self):
+        """Allow all members to read source configs, but only contributors to modify them."""
+
+        if self.action == "destroy":
+            permission_classes = [IsProjectMemberWritable]
+        elif self.action in {"create", "update", "partial_update"}:
+            permission_classes = [IsProjectMemberWritable]
+        else:
+            permission_classes = [IsProjectMember]
+        return [permission() for permission in permission_classes]

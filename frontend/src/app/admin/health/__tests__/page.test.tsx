@@ -84,6 +84,7 @@ function createProject(overrides: Partial<Project> = {}): Project {
     group: 10,
     topic_description: "AI news",
     content_retention_days: 30,
+    user_role: "admin",
     created_at: "2026-04-01T00:00:00Z",
     ...overrides,
   }

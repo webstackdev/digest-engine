@@ -3,6 +3,7 @@
 from rest_framework import serializers
 
 from core.plugins import validate_plugin_config
+from core.permissions import get_user_role
 from core.serializers import ProjectScopedSerializerMixin
 from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
 
@@ -10,6 +11,7 @@ from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceCo
 class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     """Serialize top-level project records."""
 
+    user_role = serializers.SerializerMethodField()
     has_bluesky_credentials = serializers.SerializerMethodField()
     bluesky_handle = serializers.SerializerMethodField()
     bluesky_is_active = serializers.SerializerMethodField()
@@ -26,6 +28,7 @@ class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
             "content_retention_days",
             "intake_token",
             "intake_enabled",
+            "user_role",
             "has_bluesky_credentials",
             "bluesky_handle",
             "bluesky_is_active",
@@ -34,6 +37,14 @@ class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    def get_user_role(self, obj: Project) -> str | None:
+        """Return the current request user's role for this project."""
+
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return None
+        return get_user_role(request.user, obj)
 
     def _get_bluesky_credentials(self, obj: Project):
         """Return the project's stored Bluesky credentials, if configured."""

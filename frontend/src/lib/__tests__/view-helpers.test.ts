@@ -20,6 +20,7 @@ const projects: Project[] = [
     group: 3,
     topic_description: "Applied AI",
     content_retention_days: 30,
+    user_role: "admin",
     created_at: "2026-04-27T00:00:00Z",
   },
   {
@@ -28,6 +29,7 @@ const projects: Project[] = [
     group: 3,
     topic_description: "Platform engineering",
     content_retention_days: 30,
+    user_role: "member",
     created_at: "2026-04-27T00:00:00Z",
   },
 ]
