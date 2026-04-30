@@ -9,6 +9,7 @@ from core.permissions import get_user_role
 from core.serializer_mixins import ProjectScopedSerializerMixin
 from projects.models import (
     BlueskyCredentials,
+    MastodonCredentials,
     Project,
     ProjectConfig,
     ProjectMembership,
@@ -175,14 +176,79 @@ class BlueskyCredentialsSerializer(
             instance.save(update_fields=["app_password_encrypted", "updated_at"])
         return instance
 
-    def update(self, instance, validated_data):
-        """Keep the stored credential unless a replacement app password is submitted."""
 
-        app_password = validated_data.pop("app_password", "")
+class MastodonCredentialsSerializer(
+    ProjectScopedSerializerMixin, serializers.ModelSerializer
+):
+    """Serialize project-scoped Mastodon credentials without exposing secrets."""
+
+    access_token = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=False,
+    )
+    has_stored_credential = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MastodonCredentials
+        fields = [
+            "id",
+            "project",
+            "instance_url",
+            "account_acct",
+            "is_active",
+            "has_stored_credential",
+            "access_token",
+            "last_verified_at",
+            "last_error",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "project",
+            "has_stored_credential",
+            "last_verified_at",
+            "last_error",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_has_stored_credential(self, obj: MastodonCredentials) -> bool:
+        """Return whether the project has an encrypted Mastodon token stored."""
+
+        return obj.has_stored_credential()
+
+    def validate(self, attrs):
+        """Require an access token when creating a credential record."""
+
+        attrs = super().validate(attrs)
+        access_token = attrs.get("access_token", "")
+        if self.instance is None and not access_token:
+            raise serializers.ValidationError(
+                {"access_token": "A Mastodon access token is required."}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        """Encrypt the submitted Mastodon access token before saving the record."""
+
+        access_token = validated_data.pop("access_token", "")
+        instance = super().create(validated_data)
+        if access_token:
+            instance.set_access_token(access_token)
+            instance.save(update_fields=["access_token_encrypted", "updated_at"])
+        return instance
+
+    def update(self, instance, validated_data):
+        """Keep the stored token unless a replacement access token is submitted."""
+
+        access_token = validated_data.pop("access_token", "")
         instance = super().update(instance, validated_data)
-        if app_password:
-            instance.set_app_password(app_password)
-            instance.save(update_fields=["app_password_encrypted", "updated_at"])
+        if access_token:
+            instance.set_access_token(access_token)
+            instance.save(update_fields=["access_token_encrypted", "updated_at"])
         return instance
 
 

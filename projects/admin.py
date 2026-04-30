@@ -13,6 +13,7 @@ from unfold.admin import ModelAdmin
 from core.plugins import get_plugin_for_source_config, validate_plugin_config
 from projects.models import (
     BlueskyCredentials,
+    MastodonCredentials,
     Project,
     ProjectConfig,
     ProjectMembership,
@@ -54,6 +55,42 @@ class BlueskyCredentialsAdminForm(forms.ModelForm):
 
     def save(self, commit=True):
         """Encrypt a new credential value before saving the model instance."""
+
+        instance = super().save(commit=False)
+        credential_input = self.cleaned_data.get("credential_input", "")
+        if credential_input:
+            instance.set_stored_credential(credential_input)
+        if commit:
+            instance.save()
+        return instance
+
+
+class MastodonCredentialsAdminForm(forms.ModelForm):
+    """Admin form that accepts a plaintext Mastodon access token input."""
+
+    credential_input = forms.CharField(
+        required=False,
+        strip=False,
+        widget=forms.PasswordInput(render_value=False),
+        help_text="Leave blank to keep the existing stored access token.",
+        label="Mastodon access token",
+    )
+
+    class Meta:
+        model = MastodonCredentials
+        fields = ["project", "instance_url", "account_acct", "is_active"]
+
+    def clean(self):
+        """Require a token when creating the record for the first time."""
+
+        cleaned_data = super().clean()
+        credential_input = cleaned_data.get("credential_input", "")
+        if not self.instance.has_stored_credential() and not credential_input:
+            self.add_error("credential_input", "A Mastodon access token is required.")
+        return cleaned_data
+
+    def save(self, commit=True):
+        """Encrypt a new token value before saving the model instance."""
 
         instance = super().save(commit=False)
         credential_input = self.cleaned_data.get("credential_input", "")
@@ -150,6 +187,95 @@ class BlueskyCredentialsAdmin(ModelAdmin):
         for credentials in queryset.select_related("project"):
             try:
                 BlueskySourcePlugin.verify_credentials(credentials)
+            except Exception as exc:
+                failed_credentials.append(f"{credentials}: {exc}")
+            else:
+                verified_credentials.append(str(credentials))
+
+        if verified_credentials:
+            self.message_user(
+                request,
+                f"Credential verification passed for {len(verified_credentials)} account(s).",
+                messages.SUCCESS,
+            )
+
+        if failed_credentials:
+            self.message_user(
+                request,
+                "Credential verification failed for: " + "; ".join(failed_credentials),
+                messages.ERROR,
+            )
+
+
+@admin.register(MastodonCredentials)
+class MastodonCredentialsAdmin(ModelAdmin):
+    """Admin view for project-scoped Mastodon authentication settings."""
+
+    form = MastodonCredentialsAdminForm
+    actions = ["verify_selected_credentials"]
+    list_display = (
+        "project",
+        "account_acct",
+        "instance_url",
+        "has_stored_credential",
+        "is_active",
+        "last_verified_at",
+    )
+    list_filter = ("is_active", ("project", admin.RelatedOnlyFieldListFilter))
+    search_fields = ("project__name", "account_acct", "instance_url")
+    autocomplete_fields = ("project",)
+    readonly_fields = (
+        "has_stored_credential",
+        "last_verified_at",
+        "last_error",
+        "created_at",
+        "updated_at",
+    )
+    fieldsets = (
+        (
+            "Account",
+            {
+                "fields": (
+                    "project",
+                    "instance_url",
+                    "account_acct",
+                    "credential_input",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Verification",
+            {
+                "fields": (
+                    "has_stored_credential",
+                    "last_verified_at",
+                    "last_error",
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+    @admin.display(boolean=True, description="Stored Credential")
+    def has_stored_credential(self, obj):
+        """Return whether an encrypted Mastodon token has been configured."""
+
+        return obj.has_stored_credential()
+
+    @admin.action(description="Verify Selected Credentials")
+    def verify_selected_credentials(self, request, queryset):
+        """Authenticate the selected Mastodon tokens and report the outcome."""
+
+        from core.plugins.mastodon import MastodonSourcePlugin
+
+        verified_credentials = []
+        failed_credentials = []
+
+        for credentials in queryset.select_related("project"):
+            try:
+                MastodonSourcePlugin.verify_credentials(credentials)
             except Exception as exc:
                 failed_credentials.append(f"{credentials}: {exc}")
             else:

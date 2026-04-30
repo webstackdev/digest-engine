@@ -12,6 +12,10 @@ frontend-install:
 install:
     just backend-install
     just frontend-install
+    just install-hooks
+
+install-hooks:
+    if git rev-parse --git-dir >/dev/null 2>&1; then pre-commit install --install-hooks; fi
 
 backend-dev:
     if [ ! -f .env ]; then cp .env.example .env; fi
@@ -47,8 +51,6 @@ backend-lint:
     djlint core/templates --check
     python3 -m mypy
     pre-commit run --all-files check-yaml
-    pre-commit run --all-files end-of-file-fixer
-    pre-commit run --all-files trailing-whitespace
     python3 manage.py check
 
 frontend-lint:

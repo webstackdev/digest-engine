@@ -19,7 +19,11 @@ from core.serializers import (
 )
 from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectMembership, ProjectRole, SourceConfig
-from projects.serializers import ProjectSerializer, SourceConfigSerializer
+from projects.serializers import (
+    MastodonCredentialsSerializer,
+    ProjectSerializer,
+    SourceConfigSerializer,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -293,6 +297,57 @@ def test_source_config_serializer_normalizes_bluesky_author_handle_config(
         "include_replies": False,
         "max_posts_per_fetch": 100,
     }
+
+
+def test_source_config_serializer_normalizes_mastodon_hashtag_config(
+    serializer_context,
+):
+    serializer = SourceConfigSerializer(
+        data={
+            "plugin_name": SourcePluginName.MASTODON,
+            "config": {
+                "instance_url": "https://hachyderm.io/",
+                "hashtag": "#PlatformEngineering",
+            },
+            "is_active": True,
+        },
+        context={
+            "request": _request_for(serializer_context.user),
+            "project": serializer_context.project,
+        },
+    )
+
+    assert serializer.is_valid(), serializer.errors
+    assert serializer.validated_data["config"] == {
+        "instance_url": "https://hachyderm.io",
+        "hashtag": "platformengineering",
+        "include_replies": False,
+        "include_reblogs": True,
+        "max_statuses_per_fetch": 100,
+    }
+
+
+def test_mastodon_credentials_serializer_encrypts_access_token(serializer_context):
+    serializer = MastodonCredentialsSerializer(
+        data={
+            "instance_url": "https://hachyderm.io/",
+            "account_acct": "@Alice",
+            "access_token": "secret-token",
+            "is_active": True,
+        },
+        context={
+            "request": _request_for(serializer_context.user),
+            "project": serializer_context.project,
+        },
+    )
+
+    assert serializer.is_valid(), serializer.errors
+    credentials = serializer.save(project=serializer_context.project)
+
+    assert credentials.instance_url == "https://hachyderm.io"
+    assert credentials.account_acct == "alice@hachyderm.io"
+    assert credentials.has_stored_credential() is True
+    assert credentials.get_access_token() == "secret-token"
 
 
 def test_entity_serializer_filters_project_queryset_to_request_user(serializer_context):

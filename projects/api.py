@@ -12,11 +12,14 @@ from core.api import (
     AUTHENTICATION_REQUIRED_RESPONSE,
     BLUESKY_CREDENTIALS_RESPONSE_EXAMPLE,
     BLUESKY_CREDENTIALS_VERIFY_RESPONSE,
+    MASTODON_CREDENTIALS_RESPONSE_EXAMPLE,
+    MASTODON_CREDENTIALS_VERIFY_RESPONSE,
     PROJECT_CREATE_REQUEST_EXAMPLE,
     PROJECT_RESPONSE_EXAMPLE,
     ProjectOwnedQuerysetMixin,
     SOURCE_CONFIG_BLUESKY_REQUEST_EXAMPLE,
     SOURCE_CONFIG_CREATE_REQUEST_EXAMPLE,
+    SOURCE_CONFIG_MASTODON_REQUEST_EXAMPLE,
     SOURCE_CONFIG_REDDIT_REQUEST_EXAMPLE,
     SOURCE_CONFIG_RESPONSE_EXAMPLE,
     build_crud_action_overrides,
@@ -32,8 +35,10 @@ from core.permissions import (
     get_visible_projects_queryset,
 )
 from core.plugins.bluesky import BlueskySourcePlugin
+from core.plugins.mastodon import MastodonSourcePlugin
 from projects.models import (
     BlueskyCredentials,
+    MastodonCredentials,
     Project,
     ProjectConfig,
     ProjectMembership,
@@ -43,6 +48,7 @@ from projects.models import (
 )
 from projects.serializers import (
     BlueskyCredentialsSerializer,
+    MastodonCredentialsSerializer,
     ProjectConfigSerializer,
     ProjectMembershipSerializer,
     ProjectSerializer,
@@ -121,6 +127,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             "destroy",
             "rotate_intake_token",
             "verify_bluesky_credentials",
+            "verify_mastodon_credentials",
         }:
             permission_classes = [IsProjectAdmin]
         elif self.action in {"list", "retrieve"}:
@@ -240,6 +247,82 @@ class ProjectViewSet(viewsets.ModelViewSet):
             }
         )
 
+    @extend_schema(
+        summary="Verify Mastodon credentials",
+        description=(
+            "Verify the selected project's stored Mastodon credentials by "
+            "authenticating the configured instance token and checking the bound "
+            "account."
+        ),
+        tags=["Ingestion"],
+        request=None,
+        responses={
+            200: build_success_response(
+                MASTODON_CREDENTIALS_VERIFY_RESPONSE,
+                "The project's Mastodon credentials were verified successfully.",
+            ),
+            400: OpenApiResponse(
+                response=inline_serializer(
+                    name="MastodonCredentialsVerifyErrorResponse",
+                    fields={
+                        "type": serializers.CharField(),
+                        "errors": inline_serializer(
+                            name="MastodonCredentialsVerifyError",
+                            fields={
+                                "code": serializers.CharField(),
+                                "detail": serializers.CharField(),
+                                "attr": serializers.CharField(allow_null=True),
+                            },
+                            many=True,
+                        ),
+                    },
+                ),
+                description="The project is missing Mastodon credentials or verification failed.",
+            ),
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="verify-mastodon-credentials")
+    def verify_mastodon_credentials(self, request, *args, **kwargs):
+        """Verify the Mastodon credentials stored for the selected project."""
+
+        project = self.get_object()
+        try:
+            credentials = project.mastodon_credentials
+        except MastodonCredentials.DoesNotExist as exc:
+            raise serializers.ValidationError(
+                {
+                    "mastodon_credentials": "No Mastodon credentials are configured for this project."
+                }
+            ) from exc
+
+        try:
+            MastodonSourcePlugin.verify_credentials(credentials)
+        except Exception as exc:
+            logger.exception(
+                "Mastodon credential verification failed for project id=%s",
+                project.id,
+            )
+            raise serializers.ValidationError(
+                {
+                    "mastodon_credentials": (
+                        "Credential verification failed. Please re-check the credentials "
+                        "and try again."
+                    )
+                }
+            ) from exc
+
+        credentials.refresh_from_db()
+        return Response(
+            {
+                "status": "verified",
+                "account_acct": credentials.account_acct,
+                "instance_url": credentials.instance_url,
+                "last_verified_at": credentials.last_verified_at,
+                "last_error": "",
+            }
+        )
+
 
 @document_project_owned_viewset(
     resource_plural="project configurations",
@@ -301,6 +384,38 @@ class BlueskyCredentialsViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet
 
 
 @document_project_owned_viewset(
+    resource_plural="Mastodon credentials",
+    resource_singular="Mastodon credentials",
+    create_description=(
+        "Create Mastodon credentials for the selected project. The access token is "
+        "accepted write-only and is never returned in API responses."
+    ),
+    tag="Ingestion",
+    action_overrides=build_crud_action_overrides(
+        MastodonCredentialsSerializer,
+        resource_plural="Mastodon credentials for the selected project",
+        resource_singular="Mastodon credentials",
+        retrieve_examples=[MASTODON_CREDENTIALS_RESPONSE_EXAMPLE],
+    ),
+)
+class MastodonCredentialsViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Manage project-scoped Mastodon credentials."""
+
+    serializer_class = MastodonCredentialsSerializer
+    queryset = MastodonCredentials.objects.select_related("project")
+
+    def get_permissions(self):
+        """Restrict Mastodon credential access to project admins."""
+
+        return [IsProjectAdmin()]
+
+    def get_queryset(self):
+        """Restrict credentials to the selected project and current user."""
+
+        return super().get_queryset().order_by("-updated_at")
+
+
+@document_project_owned_viewset(
     resource_plural="source configurations",
     resource_singular="source configuration",
     create_description="Create a new source configuration for the selected project. Plugin-specific configuration is validated before the record is saved.",
@@ -313,6 +428,7 @@ class BlueskyCredentialsViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet
             SOURCE_CONFIG_CREATE_REQUEST_EXAMPLE,
             SOURCE_CONFIG_REDDIT_REQUEST_EXAMPLE,
             SOURCE_CONFIG_BLUESKY_REQUEST_EXAMPLE,
+            SOURCE_CONFIG_MASTODON_REQUEST_EXAMPLE,
             SOURCE_CONFIG_RESPONSE_EXAMPLE,
         ],
         create_response_examples=[SOURCE_CONFIG_RESPONSE_EXAMPLE],

@@ -3,6 +3,7 @@
 from typing import Any
 
 from ingestion.plugins.bluesky import BlueskySourcePlugin
+from ingestion.plugins.mastodon import MastodonSourcePlugin
 from ingestion.plugins.reddit import RedditSourcePlugin
 from ingestion.plugins.rss import RSSSourcePlugin
 from projects.model_support import SourcePluginName
@@ -11,6 +12,7 @@ PLUGIN_REGISTRY = {
     SourcePluginName.RSS: RSSSourcePlugin,
     SourcePluginName.REDDIT: RedditSourcePlugin,
     SourcePluginName.BLUESKY: BlueskySourcePlugin,
+    SourcePluginName.MASTODON: MastodonSourcePlugin,
 }
 
 

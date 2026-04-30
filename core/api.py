@@ -117,6 +117,23 @@ BLUESKY_CREDENTIALS_RESPONSE_EXAMPLE = OpenApiExample(
     response_only=True,
 )
 
+MASTODON_CREDENTIALS_RESPONSE_EXAMPLE = OpenApiExample(
+    "Mastodon Credentials Response",
+    value={
+        "id": 1,
+        "project": 1,
+        "instance_url": "https://hachyderm.io",
+        "account_acct": "alice@hachyderm.io",
+        "is_active": True,
+        "has_stored_credential": True,
+        "last_verified_at": "2026-04-26T13:00:00Z",
+        "last_error": "",
+        "created_at": "2026-04-26T12:30:00Z",
+        "updated_at": "2026-04-26T13:00:00Z",
+    },
+    response_only=True,
+)
+
 SOURCE_CONFIG_CREATE_REQUEST_EXAMPLE = OpenApiExample(
     "Create RSS Source Request",
     value={
@@ -151,6 +168,22 @@ SOURCE_CONFIG_BLUESKY_REQUEST_EXAMPLE = OpenApiExample(
             "author_handle": "alice.bsky.social",
             "include_replies": False,
             "max_posts_per_fetch": 100,
+        },
+        "is_active": True,
+    },
+    request_only=True,
+)
+
+SOURCE_CONFIG_MASTODON_REQUEST_EXAMPLE = OpenApiExample(
+    "Create Mastodon Source Request",
+    value={
+        "plugin_name": "mastodon",
+        "config": {
+            "instance_url": "https://hachyderm.io",
+            "hashtag": "platformengineering",
+            "include_replies": False,
+            "include_reblogs": True,
+            "max_statuses_per_fetch": 100,
         },
         "is_active": True,
     },
@@ -279,6 +312,17 @@ BLUESKY_CREDENTIALS_VERIFY_RESPONSE = inline_serializer(
     fields={
         "status": serializers.CharField(),
         "handle": serializers.CharField(),
+        "last_verified_at": serializers.DateTimeField(allow_null=True),
+        "last_error": serializers.CharField(allow_blank=True),
+    },
+)
+
+MASTODON_CREDENTIALS_VERIFY_RESPONSE = inline_serializer(
+    name="MastodonCredentialsVerifyResponse",
+    fields={
+        "status": serializers.CharField(),
+        "account_acct": serializers.CharField(allow_blank=True),
+        "instance_url": serializers.URLField(),
         "last_verified_at": serializers.DateTimeField(allow_null=True),
         "last_error": serializers.CharField(allow_blank=True),
     },

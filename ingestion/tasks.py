@@ -97,13 +97,22 @@ def _ingest_source_config(source_config: SourceConfig) -> tuple[int, int]:
 def _content_exists_for_item(source_config: SourceConfig, item) -> bool:
     """Check whether a fetched item already exists for the project."""
 
-    post_uri = (getattr(item, "source_metadata", None) or {}).get("post_uri")
-    if post_uri:
-        return Content.objects.filter(
-            project=source_config.project,
-            source_plugin=item.source_plugin,
-            source_metadata__post_uri=post_uri,
-        ).exists()
+    source_metadata = getattr(item, "source_metadata", None) or {}
+    native_item_uri = source_metadata.get("post_uri") or source_metadata.get(
+        "status_uri"
+    )
+    if native_item_uri:
+        return (
+            Content.objects.filter(
+                project=source_config.project,
+                source_plugin=item.source_plugin,
+            )
+            .filter(
+                Q(source_metadata__post_uri=native_item_uri)
+                | Q(source_metadata__status_uri=native_item_uri)
+            )
+            .exists()
+        )
     canonical_url = canonicalize_url(item.url)
     return (
         Content.objects.filter(
