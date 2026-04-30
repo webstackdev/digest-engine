@@ -236,6 +236,32 @@ describe("api helpers", () => {
     expect(result).toBeUndefined()
   })
 
+  it("fetches one invitation token payload from the public invite endpoint", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        token: "invite-token",
+        project_id: 9,
+        project_name: "Invited Project",
+        email: "invitee@example.com",
+        role: "member",
+        status: "pending",
+        accepted_at: null,
+        revoked_at: null,
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { getMembershipInvitation } = await import("@/lib/api")
+    const invitation = await getMembershipInvitation("invite-token")
+
+    expect(invitation.project_id).toBe(9)
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/invitations/invite-token/",
+      expect.objectContaining({}),
+    )
+  })
+
   it("omits the JSON content type when sending form data", async () => {
     getServerSessionMock.mockResolvedValue(null)
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }))

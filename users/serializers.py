@@ -1,11 +1,13 @@
 """Serializers for the custom user profile surface."""
 
+from django.conf import settings
 from rest_framework import serializers
 
 from users.models import (
     AVATAR_ALLOWED_CONTENT_TYPES,
     AVATAR_MAX_FILE_SIZE,
     AppUser,
+    MembershipInvitation,
 )
 
 
@@ -65,3 +67,113 @@ class AvatarUploadSerializer(serializers.Serializer):
         if value.size > AVATAR_MAX_FILE_SIZE:
             raise serializers.ValidationError("Avatar images must be 2 MB or smaller.")
         return value
+
+
+class MembershipInvitationSerializer(serializers.ModelSerializer):
+    """Serialize one project invitation for project-admin workflows."""
+
+    invited_by_email = serializers.SerializerMethodField()
+    invite_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MembershipInvitation
+        fields = [
+            "id",
+            "project",
+            "email",
+            "role",
+            "token",
+            "invited_by",
+            "invited_by_email",
+            "invite_url",
+            "created_at",
+            "accepted_at",
+            "revoked_at",
+        ]
+        read_only_fields = [
+            "id",
+            "project",
+            "token",
+            "invited_by",
+            "invited_by_email",
+            "invite_url",
+            "created_at",
+            "accepted_at",
+            "revoked_at",
+        ]
+
+    def validate_email(self, value: str) -> str:
+        """Normalize invited email addresses to lower-case."""
+
+        return value.strip().lower()
+
+    def validate(self, attrs):
+        """Reject duplicate active invitations and existing memberships."""
+
+        attrs = super().validate(attrs)
+        project = self.context.get("project")
+        if project is None:
+            return attrs
+
+        email = attrs.get("email", "").strip().lower()
+        if not email:
+            return attrs
+
+        if project.memberships.filter(user__email__iexact=email).exists():
+            raise serializers.ValidationError(
+                {"email": "That user is already a project member."}
+            )
+
+        active_invitation_exists = MembershipInvitation.objects.filter(
+            project=project,
+            email__iexact=email,
+            accepted_at__isnull=True,
+            revoked_at__isnull=True,
+        ).exists()
+        if active_invitation_exists:
+            raise serializers.ValidationError(
+                {"email": "An active invitation already exists for this email."}
+            )
+
+        return attrs
+
+    def get_invited_by_email(self, obj: MembershipInvitation) -> str:
+        """Return the inviter email when available."""
+
+        return obj.invited_by.email if obj.invited_by else ""
+
+    def get_invite_url(self, obj: MembershipInvitation) -> str:
+        """Return the frontend invitation URL for the token."""
+
+        return f"{settings.FRONTEND_BASE_URL.rstrip('/')}/invite/{obj.token}"
+
+
+class PublicMembershipInvitationSerializer(serializers.ModelSerializer):
+    """Serialize invitation details safe to expose on the public invite page."""
+
+    project_id = serializers.IntegerField(source="project.id", read_only=True)
+    project_name = serializers.CharField(source="project.name", read_only=True)
+    status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MembershipInvitation
+        fields = [
+            "token",
+            "project_id",
+            "project_name",
+            "email",
+            "role",
+            "status",
+            "accepted_at",
+            "revoked_at",
+        ]
+        read_only_fields = fields
+
+    def get_status(self, obj: MembershipInvitation) -> str:
+        """Return a simple token lifecycle status for the invite page."""
+
+        if obj.revoked_at is not None:
+            return "revoked"
+        if obj.accepted_at is not None:
+            return "accepted"
+        return "pending"

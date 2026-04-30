@@ -1,7 +1,10 @@
 """REST API viewsets for project-owned models."""
 
+from django.conf import settings
+from django.core.mail import send_mail
+from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
-from rest_framework import serializers, viewsets
+from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -33,21 +36,65 @@ from projects.models import (
     BlueskyCredentials,
     Project,
     ProjectConfig,
+    ProjectMembership,
+    ProjectRole,
     SourceConfig,
     generate_project_intake_token,
 )
 from projects.serializers import (
     BlueskyCredentialsSerializer,
     ProjectConfigSerializer,
+    ProjectMembershipSerializer,
     ProjectSerializer,
     SourceConfigSerializer,
 )
+from users.models import MembershipInvitation
+from users.serializers import MembershipInvitationSerializer
+
+
+def _assert_project_keeps_admin(
+    project: Project,
+    membership: ProjectMembership,
+    *,
+    next_role: str | None = None,
+) -> None:
+    """Reject changes that would leave a project without an admin."""
+
+    resulting_role = next_role
+    if membership.role != ProjectRole.ADMIN or resulting_role == ProjectRole.ADMIN:
+        return
+
+    has_other_admin = (
+        project.memberships.exclude(pk=membership.pk)
+        .filter(role=ProjectRole.ADMIN)
+        .exists()
+    )
+    if not has_other_admin:
+        raise serializers.ValidationError(
+            {"role": "Projects must keep at least one admin."}
+        )
+
+
+def _send_membership_invitation_email(invitation: MembershipInvitation) -> None:
+    """Send the one-time membership invitation email."""
+
+    invite_url = f"{settings.FRONTEND_BASE_URL.rstrip('/')}/invite/{invitation.token}"
+    send_mail(
+        subject=f"You're invited to join {invitation.project.name}",
+        message=(
+            f"You have been invited to join {invitation.project.name} as a "
+            f"{invitation.role}.\n\nOpen this link to accept the invitation:\n{invite_url}"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[invitation.email],
+        fail_silently=False,
+    )
 
 
 @document_group_access_viewset(
     resource_plural="projects",
     resource_singular="project",
-    create_description="Create a new project for one of the authenticated user's groups.",
+    create_description="Create a new project for the authenticated user.",
     tag="Project Management",
     action_overrides=build_crud_action_overrides(
         ProjectSerializer,
@@ -87,6 +134,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
         return get_visible_projects_queryset(self.request.user).select_related(
             "group", "bluesky_credentials"
+        )
+
+    def perform_create(self, serializer):
+        """Create the project and make the creator its first admin."""
+
+        project = serializer.save(group=None)
+        ProjectMembership.objects.create(
+            user=self.request.user,
+            project=project,
+            role=ProjectRole.ADMIN,
         )
 
     @extend_schema(
@@ -278,3 +335,83 @@ class SourceConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
         else:
             permission_classes = [IsProjectMember]
         return [permission() for permission in permission_classes]
+
+
+class ProjectMembershipViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Manage the roster of members attached to one project."""
+
+    serializer_class = ProjectMembershipSerializer
+    queryset = ProjectMembership.objects.select_related("project", "user", "invited_by")
+
+    def get_permissions(self):
+        """Restrict member-roster management to project admins."""
+
+        return [IsProjectAdmin()]
+
+    def get_queryset(self):
+        """Return roster rows for the selected project ordered by join time."""
+
+        return super().get_queryset().order_by("joined_at", "user__username")
+
+    def perform_update(self, serializer):
+        """Persist role changes without allowing the last admin to disappear."""
+
+        membership = self.get_object()
+        next_role = serializer.validated_data.get("role", membership.role)
+        _assert_project_keeps_admin(membership.project, membership, next_role=next_role)
+        serializer.save()
+
+    def destroy(self, request, *args, **kwargs):
+        """Remove one membership while preserving at least one project admin."""
+
+        membership = self.get_object()
+        _assert_project_keeps_admin(membership.project, membership, next_role=None)
+        membership.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ProjectInvitationViewSet(
+    ProjectOwnedQuerysetMixin,
+    mixins.CreateModelMixin,
+    mixins.DestroyModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Create, list, and revoke project invitation tokens."""
+
+    serializer_class = MembershipInvitationSerializer
+    queryset = MembershipInvitation.objects.select_related("project", "invited_by")
+
+    def get_permissions(self):
+        """Restrict invitation management to project admins."""
+
+        return [IsProjectAdmin()]
+
+    def get_queryset(self):
+        """Return invitations for the selected project ordered newest first."""
+
+        return super().get_queryset().order_by("-created_at")
+
+    def get_serializer_context(self):
+        """Pass the selected project into invitation validation and URL generation."""
+
+        context = super().get_serializer_context()
+        context["project"] = self.get_project()
+        return context
+
+    def perform_create(self, serializer):
+        """Persist the invitation row and dispatch its email."""
+
+        invitation = serializer.save(
+            project=self.get_project(),
+            invited_by=self.request.user,
+        )
+        _send_membership_invitation_email(invitation)
+
+    def destroy(self, request, *args, **kwargs):
+        """Mark one invitation as revoked instead of deleting it outright."""
+
+        invitation = self.get_object()
+        invitation.revoked_at = timezone.now()
+        invitation.save(update_fields=["revoked_at"])
+        return Response(status=status.HTTP_204_NO_CONTENT)

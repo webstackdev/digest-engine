@@ -13,9 +13,12 @@ import type {
   EntityCandidate,
   IngestionRun,
   IntakeAllowlistEntry,
+  MembershipInvitation,
   NewsletterIntake,
   Project,
   ProjectBlueskyVerification,
+  ProjectMembership,
+  PublicMembershipInvitation,
   ReviewQueueItem,
   SkillResult,
   SourceConfig,
@@ -265,6 +268,144 @@ export async function apiFetch<T>(
 export const getProjects = cache(
   async (): Promise<Project[]> => apiFetch<Project[]>("/api/v1/projects/"),
 )
+
+/**
+ * Create a new project and return the creator-scoped response payload.
+ *
+ * @param payload - Minimal project fields accepted during creation.
+ * @returns The created project payload.
+ */
+export async function createProject(payload: {
+  name: string
+  topic_description: string
+  content_retention_days: number
+}): Promise<Project> {
+  return apiFetch<Project>("/api/v1/projects/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Fetch the membership roster for one project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @returns The project's membership rows.
+ */
+export async function getProjectMemberships(
+  projectId: number,
+): Promise<ProjectMembership[]> {
+  return apiFetch<ProjectMembership[]>(`/api/v1/projects/${projectId}/memberships/`)
+}
+
+/**
+ * Update one membership row for the selected project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @param membershipId - Numeric membership identifier.
+ * @param payload - Editable membership fields.
+ * @returns The updated membership payload.
+ */
+export async function updateProjectMembership(
+  projectId: number,
+  membershipId: number,
+  payload: Pick<ProjectMembership, "role">,
+): Promise<ProjectMembership> {
+  return apiFetch<ProjectMembership>(
+    `/api/v1/projects/${projectId}/memberships/${membershipId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Remove one membership row from the selected project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @param membershipId - Numeric membership identifier.
+ * @returns No content on success.
+ */
+export async function deleteProjectMembership(
+  projectId: number,
+  membershipId: number,
+): Promise<void> {
+  return apiFetch<void>(`/api/v1/projects/${projectId}/memberships/${membershipId}/`, {
+    method: "DELETE",
+  })
+}
+
+/**
+ * Fetch invitation rows for one project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @returns The project's invitation rows.
+ */
+export async function getProjectInvitations(
+  projectId: number,
+): Promise<MembershipInvitation[]> {
+  return apiFetch<MembershipInvitation[]>(`/api/v1/projects/${projectId}/invitations/`)
+}
+
+/**
+ * Create a new project invitation.
+ *
+ * @param projectId - Numeric project identifier.
+ * @param payload - Invitation request fields.
+ * @returns The created invitation payload.
+ */
+export async function createProjectInvitation(
+  projectId: number,
+  payload: { email: string; role: "admin" | "member" | "reader" },
+): Promise<MembershipInvitation> {
+  return apiFetch<MembershipInvitation>(`/api/v1/projects/${projectId}/invitations/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Revoke one invitation row for the selected project.
+ *
+ * @param projectId - Numeric project identifier.
+ * @param invitationId - Numeric invitation identifier.
+ * @returns No content on success.
+ */
+export async function revokeProjectInvitation(
+  projectId: number,
+  invitationId: number,
+): Promise<void> {
+  return apiFetch<void>(`/api/v1/projects/${projectId}/invitations/${invitationId}/`, {
+    method: "DELETE",
+  })
+}
+
+/**
+ * Fetch one public invitation-token payload.
+ *
+ * @param token - One-time invitation token.
+ * @returns Public invitation details used by the invite acceptance page.
+ */
+export async function getMembershipInvitation(
+  token: string,
+): Promise<PublicMembershipInvitation> {
+  return apiFetch<PublicMembershipInvitation>(`/api/v1/invitations/${token}/`)
+}
+
+/**
+ * Accept one invitation token for the current authenticated user.
+ *
+ * @param token - One-time invitation token.
+ * @returns The updated invitation payload.
+ */
+export async function acceptMembershipInvitation(
+  token: string,
+): Promise<PublicMembershipInvitation> {
+  return apiFetch<PublicMembershipInvitation>(`/api/v1/invitations/${token}/`, {
+    method: "POST",
+  })
+}
 
 /**
  * Fetch the current authenticated user's profile payload.

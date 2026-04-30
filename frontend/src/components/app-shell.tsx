@@ -20,6 +20,9 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const projectQuery = selectedProjectId ? `?project=${selectedProjectId}` : ""
+  const selectedProject =
+    projects.find((project) => project.id === selectedProjectId) ?? null
+  const canManageMembers = selectedProject?.user_role === "admin"
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[320px_minmax(0,1fr)]">
@@ -61,6 +64,20 @@ export function AppShell({
             href={`/admin/sources${projectQuery}`}
           >
             Source configs
+          </Link>
+          {canManageMembers && selectedProjectId ? (
+            <Link
+              className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+              href={`/projects/${selectedProjectId}/members${projectQuery}`}
+            >
+              Members
+            </Link>
+          ) : null}
+          <Link
+            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            href="/admin/projects/new"
+          >
+            New project
           </Link>
         </nav>
 

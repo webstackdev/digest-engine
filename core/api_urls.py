@@ -16,6 +16,8 @@ from core.api import (
 from projects.api import (
     BlueskyCredentialsViewSet,
     ProjectConfigViewSet,
+    ProjectInvitationViewSet,
+    ProjectMembershipViewSet,
     ProjectViewSet,
     SourceConfigViewSet,
 )
@@ -28,6 +30,12 @@ router.register("projects", ProjectViewSet, basename="project")
 project_router = NestedSimpleRouter(router, r"projects", lookup="project")
 project_router.register(
     r"project-configs", ProjectConfigViewSet, basename="project-config"
+)
+project_router.register(
+    r"memberships", ProjectMembershipViewSet, basename="project-membership"
+)
+project_router.register(
+    r"invitations", ProjectInvitationViewSet, basename="project-invitation"
 )
 project_router.register(r"entities", EntityViewSet, basename="project-entity")
 project_router.register(

@@ -5,7 +5,14 @@ from rest_framework import serializers
 from core.plugins import validate_plugin_config
 from core.permissions import get_user_role
 from core.serializers import ProjectScopedSerializerMixin
-from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
+from projects.models import (
+    BlueskyCredentials,
+    Project,
+    ProjectConfig,
+    ProjectMembership,
+    ProjectRole,
+    SourceConfig,
+)
 
 
 class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
@@ -204,3 +211,42 @@ class SourceConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
             except ValueError as exc:
                 raise serializers.ValidationError({"config": str(exc)}) from exc
         return attrs
+
+
+class ProjectMembershipSerializer(serializers.ModelSerializer):
+    """Serialize project-member roster entries for admin workflows."""
+
+    username = serializers.CharField(source="user.username", read_only=True)
+    email = serializers.CharField(source="user.email", read_only=True)
+    display_name = serializers.CharField(source="user.display_name", read_only=True)
+
+    class Meta:
+        model = ProjectMembership
+        fields = [
+            "id",
+            "project",
+            "user",
+            "username",
+            "email",
+            "display_name",
+            "role",
+            "invited_by",
+            "joined_at",
+        ]
+        read_only_fields = [
+            "id",
+            "project",
+            "user",
+            "username",
+            "email",
+            "display_name",
+            "invited_by",
+            "joined_at",
+        ]
+
+    def validate_role(self, value: str) -> str:
+        """Restrict role updates to the supported project-role values."""
+
+        if value not in ProjectRole.values:
+            raise serializers.ValidationError("Select a valid project role.")
+        return value

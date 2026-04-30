@@ -78,6 +78,11 @@ describe("AppShell", () => {
     expect(
       screen.getByRole("link", { name: "Source configs" }),
     ).toHaveAttribute("href", "/admin/sources?project=2")
+    expect(screen.getByRole("link", { name: "New project" })).toHaveAttribute(
+      "href",
+      "/admin/projects/new",
+    )
+    expect(screen.queryByRole("link", { name: "Members" })).not.toBeInTheDocument()
   })
 
   it("marks the active project in the switcher", () => {
@@ -97,5 +102,23 @@ describe("AppShell", () => {
 
     expect(activeProject).toHaveAttribute("data-active", "true")
     expect(inactiveProject).toHaveAttribute("data-active", "false")
+  })
+
+  it("shows the members link when the selected project role is admin", () => {
+    render(
+      <AppShell
+        title="Dashboard"
+        description="A test description"
+        projects={projects}
+        selectedProjectId={1}
+      >
+        <div>Child content</div>
+      </AppShell>,
+    )
+
+    expect(screen.getByRole("link", { name: "Members" })).toHaveAttribute(
+      "href",
+      "/projects/1/members?project=1",
+    )
   })
 })

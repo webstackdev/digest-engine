@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from typing import ClassVar
 
 from django.contrib.auth.models import AbstractUser, Group, Permission
@@ -29,6 +30,12 @@ def avatar_thumbnail_path(instance: "AppUser") -> str:
 
     user_id = instance.pk or "pending"
     return f"avatars/{user_id}/thumb.webp"
+
+
+def generate_membership_invitation_token() -> str:
+    """Generate a one-time token used to redeem a project invitation."""
+
+    return secrets.token_urlsafe(32)
 
 
 class AppUser(AbstractUser):
@@ -99,3 +106,52 @@ class AppUser(AbstractUser):
 
     def __str__(self) -> str:
         return self.display_name or self.get_username()
+
+
+class MembershipInvitation(models.Model):
+    """Invite one email address to join a project with a predefined role."""
+
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="invitations",
+    )
+    email = models.EmailField()
+    role = models.CharField(
+        max_length=16,
+        choices=(
+            ("admin", "Project Admin"),
+            ("member", "Project Member"),
+            ("reader", "Project Reader"),
+        ),
+        default="member",
+    )
+    token = models.CharField(
+        max_length=64,
+        unique=True,
+        default=generate_membership_invitation_token,
+        editable=False,
+    )
+    invited_by = models.ForeignKey(
+        "users.AppUser",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_membership_invitations",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["project", "email"])]
+
+    def __str__(self) -> str:
+        return f"Invitation for {self.email} to join {self.project} as {self.role}"
+
+    @property
+    def is_pending(self) -> bool:
+        """Return whether the invitation can still be accepted."""
+
+        return self.accepted_at is None and self.revoked_at is None
