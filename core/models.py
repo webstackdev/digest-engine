@@ -10,8 +10,7 @@ import secrets
 from django.conf import settings
 from django.db import models
 
-from projects.model_support import SourcePluginName
-from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
+from projects.models import Project
 
 
 def generate_project_intake_token() -> str:

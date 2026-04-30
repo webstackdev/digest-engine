@@ -35,7 +35,6 @@ from core.models import (
     TopicCentroidSnapshot,
     UserFeedback,
 )
-from core.plugins import get_plugin_for_source_config, validate_plugin_config
 
 
 def _score_to_percent(value):
@@ -864,21 +863,24 @@ class SkillResultAdmin(ModelAdmin):
 
         qs = self.get_queryset(request)
         extra_context = extra_context or {}
-        metrics = qs.aggregate(avg_lat=Avg("latency_ms"))
-        avg_latency = metrics["avg_lat"] or 0
-        failure_count = qs.filter(status="failed").count()
-        total_count = qs.count() or 1
+        avg_latency = qs.aggregate(avg_latency=Avg("latency_ms"))["avg_latency"]
+        total_count = qs.count()
+        failure_count = qs.filter(status__iexact="failed").count()
 
         extra_context["dashboard_stats"] = [
             {
                 "title": "Avg Latency",
-                "value": f"{avg_latency:.0f}ms",
+                "value": f"{avg_latency:.0f}ms" if avg_latency is not None else "-",
                 "icon": "timer",
-                "color": "warning" if avg_latency > 2000 else "success",
+                "color": "warning" if avg_latency and avg_latency > 3000 else "success",
             },
             {
                 "title": "Failure Rate",
-                "value": f"{(failure_count / total_count) * 100:.1f}%",
+                "value": (
+                    f"{(failure_count / total_count) * 100:.1f}%"
+                    if total_count
+                    else "0.0%"
+                ),
                 "icon": "error",
                 "color": "danger" if failure_count > 0 else "success",
             },
@@ -1113,55 +1115,3 @@ class ReviewQueueAdmin(ModelAdmin):
             },
         ]
         return super().changelist_view(request, extra_context=extra_context)
-
-
-from projects.admin import (  # noqa: E402
-    BlueskyCredentialsAdmin as ProjectsBlueskyCredentialsAdmin,
-    BlueskyCredentialsAdminForm as ProjectsBlueskyCredentialsAdminForm,
-    ProjectAdmin as ProjectsProjectAdmin,
-    ProjectConfigAdmin as ProjectsProjectConfigAdmin,
-    SourceConfigAdmin as ProjectsSourceConfigAdmin,
-)
-
-BlueskyCredentialsAdminForm = ProjectsBlueskyCredentialsAdminForm
-ProjectAdmin = ProjectsProjectAdmin
-BlueskyCredentialsAdmin = ProjectsBlueskyCredentialsAdmin
-ProjectConfigAdmin = ProjectsProjectConfigAdmin
-
-
-class SourceConfigAdmin(ProjectsSourceConfigAdmin):
-    """Compatibility wrapper for the moved source-config admin class."""
-
-    def test_source_connection(self, request, queryset):
-        """Trigger a dry-run connectivity check for the selected sources."""
-
-        healthy_sources = []
-        failed_sources = []
-
-        for source_config in queryset.select_related("project"):
-            try:
-                source_config.config = validate_plugin_config(
-                    source_config.plugin_name,
-                    source_config.config,
-                )
-                plugin = get_plugin_for_source_config(source_config)
-                if not plugin.health_check():
-                    raise RuntimeError("Health check returned an unhealthy status.")
-            except Exception as exc:
-                failed_sources.append(f"{source_config}: {exc}")
-            else:
-                healthy_sources.append(str(source_config))
-
-        if healthy_sources:
-            self.message_user(
-                request,
-                f"Connectivity check passed for {len(healthy_sources)} source(s).",
-                messages.SUCCESS,
-            )
-
-        if failed_sources:
-            self.message_user(
-                request,
-                "Connectivity check failed for: " + "; ".join(failed_sources),
-                messages.ERROR,
-            )

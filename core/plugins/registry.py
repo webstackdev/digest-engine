@@ -2,10 +2,10 @@
 
 from typing import Any
 
-from core.models import SourcePluginName
 from core.plugins.bluesky import BlueskySourcePlugin
 from core.plugins.reddit import RedditSourcePlugin
 from core.plugins.rss import RSSSourcePlugin
+from projects.model_support import SourcePluginName
 
 PLUGIN_REGISTRY = {
     SourcePluginName.RSS: RSSSourcePlugin,

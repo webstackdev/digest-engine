@@ -5,8 +5,9 @@ from types import SimpleNamespace
 import pytest
 from django.contrib.auth.models import Group
 
-from core.models import Project, SourceConfig, SourcePluginName
 from core.plugins.rss import RSSSourcePlugin
+from projects.model_support import SourcePluginName
+from projects.models import Project, SourceConfig
 
 pytestmark = pytest.mark.django_db
 

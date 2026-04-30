@@ -8,8 +8,8 @@ from time import struct_time
 import feedparser
 from django.utils import timezone
 
-from core.models import SourcePluginName
 from core.plugins.base import ContentItem, SourcePlugin
+from projects.model_support import SourcePluginName
 
 
 class RSSSourcePlugin(SourcePlugin):

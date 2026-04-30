@@ -27,11 +27,8 @@ from core.models import (
     Content,
     Entity,
     IngestionRun,
-    Project,
     ReviewQueue,
     SkillResult,
-    SourceConfig,
-    SourcePluginName,
     UserFeedback,
 )
 from core.pipeline import (
@@ -39,6 +36,8 @@ from core.pipeline import (
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
 )
+from projects.model_support import SourcePluginName
+from projects.models import Project, SourceConfig
 
 pytestmark = pytest.mark.django_db
 

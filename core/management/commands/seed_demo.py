@@ -20,16 +20,12 @@ from core.models import (
     EntityType,
     FeedbackType,
     IngestionRun,
-    Project,
-    ProjectConfig,
     ReviewQueue,
     ReviewReason,
     ReviewResolution,
     RunStatus,
     SkillResult,
     SkillStatus,
-    SourceConfig,
-    SourcePluginName,
     UserFeedback,
 )
 from core.pipeline import (
@@ -37,6 +33,8 @@ from core.pipeline import (
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
 )
+from projects.model_support import SourcePluginName
+from projects.models import Project, ProjectConfig, SourceConfig
 
 DEMO_PROJECT_NAME = "Platform Engineering Weekly"
 DEMO_GROUP_NAME = "platform-engineering-editors"

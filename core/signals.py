@@ -8,9 +8,10 @@ from anymail.signals import inbound
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from core.models import ProjectConfig, UserFeedback
+from core.models import UserFeedback
 from core.newsletters import process_inbound_newsletter
 from core.tasks import queue_topic_centroid_recompute
+from projects.models import ProjectConfig
 
 
 def _address_to_string(address) -> str:

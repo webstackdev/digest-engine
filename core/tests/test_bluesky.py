@@ -5,13 +5,11 @@ import pytest
 from django.contrib.auth.models import Group
 
 from core.models import (
-    BlueskyCredentials,
     Entity,
-    Project,
-    SourceConfig,
-    SourcePluginName,
 )
 from core.plugins.bluesky import BlueskySourcePlugin
+from projects.model_support import SourcePluginName
+from projects.models import BlueskyCredentials, Project, SourceConfig
 
 pytestmark = pytest.mark.django_db
 
@@ -42,7 +40,9 @@ def bluesky_context(django_user_model):
 
 
 def test_bluesky_validate_config_normalizes_defaults_and_rejects_invalid_values():
-    assert BlueskySourcePlugin.validate_config({"author_handle": "@Alice.BSKY.social"}) == {
+    assert BlueskySourcePlugin.validate_config(
+        {"author_handle": "@Alice.BSKY.social"}
+    ) == {
         "author_handle": "alice.bsky.social",
         "include_replies": False,
         "max_posts_per_fetch": 100,
@@ -74,7 +74,9 @@ def test_bluesky_validate_config_normalizes_defaults_and_rejects_invalid_values(
     with pytest.raises(ValueError, match="feed_uri must be a Bluesky feed generator"):
         BlueskySourcePlugin.validate_config({"feed_uri": "https://example.com/feed"})
 
-    with pytest.raises(ValueError, match="max_posts_per_fetch must be a positive integer"):
+    with pytest.raises(
+        ValueError, match="max_posts_per_fetch must be a positive integer"
+    ):
         BlueskySourcePlugin.validate_config(
             {"author_handle": "alice.bsky.social", "max_posts_per_fetch": 0}
         )
@@ -214,10 +216,10 @@ def test_bluesky_credentials_encrypt_password_and_normalize_pds_url(bluesky_cont
     assert credentials.get_app_password() == "app-password"
 
 
-def test_bluesky_client_uses_authenticated_project_credentials(
-    bluesky_context, mocker
-):
-    credentials = BlueskyCredentials(project=bluesky_context.project, handle="alice.bsky.social")
+def test_bluesky_client_uses_authenticated_project_credentials(bluesky_context, mocker):
+    credentials = BlueskyCredentials(
+        project=bluesky_context.project, handle="alice.bsky.social"
+    )
     credentials.set_app_password("app-password")
     credentials.save()
     client = mocker.Mock()
@@ -233,7 +235,9 @@ def test_bluesky_client_uses_authenticated_project_credentials(
 
 
 def test_bluesky_health_check_records_credential_errors(bluesky_context, mocker):
-    credentials = BlueskyCredentials(project=bluesky_context.project, handle="alice.bsky.social")
+    credentials = BlueskyCredentials(
+        project=bluesky_context.project, handle="alice.bsky.social"
+    )
     credentials.set_app_password("app-password")
     credentials.save()
     plugin = BlueskySourcePlugin(bluesky_context.source_config)
@@ -252,7 +256,9 @@ def test_bluesky_health_check_records_credential_errors(bluesky_context, mocker)
 def test_bluesky_verify_credentials_uses_authenticated_session_check(
     bluesky_context, mocker
 ):
-    credentials = BlueskyCredentials(project=bluesky_context.project, handle="alice.bsky.social")
+    credentials = BlueskyCredentials(
+        project=bluesky_context.project, handle="alice.bsky.social"
+    )
     credentials.set_app_password("app-password")
     credentials.save()
     client = mocker.Mock()

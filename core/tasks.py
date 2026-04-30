@@ -31,10 +31,7 @@ from core.models import (
     IntakeAllowlist,
     NewsletterIntake,
     NewsletterIntakeStatus,
-    Project,
-    ProjectConfig,
     RunStatus,
-    SourceConfig,
     TopicCentroidSnapshot,
     UserFeedback,
 )
@@ -47,6 +44,7 @@ from core.pipeline import (
     process_content_pipeline,
 )
 from core.plugins import get_plugin_for_source_config
+from projects.models import Project, ProjectConfig, SourceConfig
 
 logger = logging.getLogger(__name__)
 

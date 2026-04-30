@@ -8,8 +8,9 @@ from atproto import Client
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
-from core.models import BlueskyCredentials, SourcePluginName
 from core.plugins.base import ContentItem, SourcePlugin
+from projects.model_support import SourcePluginName
+from projects.models import BlueskyCredentials
 
 PUBLIC_APPVIEW_BASE_URL = "https://public.api.bsky.app"
 
@@ -43,9 +44,7 @@ class BlueskySourcePlugin(SourcePlugin):
             or not feed_uri.startswith("at://")
             or "/app.bsky.feed.generator/" not in feed_uri
         ):
-            raise ValueError(
-                "feed_uri must be a Bluesky feed generator at:// URI"
-            )
+            raise ValueError("feed_uri must be a Bluesky feed generator at:// URI")
         if author_handle:
             normalized_handle = cls._normalize_handle(author_handle)
             if not normalized_handle:
@@ -112,7 +111,9 @@ class BlueskySourcePlugin(SourcePlugin):
     def _get_feed_response(self, limit: int | None = None):
         """Query the configured public feed endpoint."""
 
-        request_limit = limit or self.source_config.config.get("max_posts_per_fetch", 100)
+        request_limit = limit or self.source_config.config.get(
+            "max_posts_per_fetch", 100
+        )
         client = self._client()
         feed_uri = self.source_config.config.get("feed_uri")
         if feed_uri:
@@ -130,7 +131,9 @@ class BlueskySourcePlugin(SourcePlugin):
     def _build_content_item(self, post, published_date: datetime) -> ContentItem:
         """Convert one AppView post into the shared plugin payload."""
 
-        author_handle = self._normalize_handle(self._nested_value(post, "author", "handle"))
+        author_handle = self._normalize_handle(
+            self._nested_value(post, "author", "handle")
+        )
         external_url = self._nested_value(post, "embed", "external", "uri")
         external_title = (
             self._nested_value(post, "embed", "external", "title") or ""
@@ -219,10 +222,14 @@ class BlueskySourcePlugin(SourcePlugin):
     def _credentials(self) -> BlueskyCredentials | None:
         """Return the active project-scoped Bluesky credentials, if configured."""
 
-        return BlueskyCredentials.objects.filter(project=self.project, is_active=True).first()
+        return BlueskyCredentials.objects.filter(
+            project=self.project, is_active=True
+        ).first()
 
     @staticmethod
-    def _authenticated_client_for_credentials(credentials: BlueskyCredentials) -> Client:
+    def _authenticated_client_for_credentials(
+        credentials: BlueskyCredentials,
+    ) -> Client:
         """Build an authenticated client from a stored credential record."""
 
         if not credentials.has_app_password():

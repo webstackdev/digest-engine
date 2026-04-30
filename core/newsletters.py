@@ -17,9 +17,10 @@ from django.conf import settings as django_settings
 from django.core.mail import EmailMultiAlternatives
 from django.urls import reverse
 
-from core.models import IntakeAllowlist, NewsletterIntake, Project
+from core.models import IntakeAllowlist, NewsletterIntake
 from core.newsletter_extraction import extract_newsletter_items
 from core.settings_types import CoreSettings
+from projects.models import Project
 
 settings = cast(CoreSettings, django_settings)
 

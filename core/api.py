@@ -36,7 +36,6 @@ from core.models import (
     IngestionRun,
     IntakeAllowlist,
     NewsletterIntake,
-    Project,
     ReviewQueue,
     SkillResult,
     TopicCentroidSnapshot,
@@ -58,6 +57,7 @@ from core.serializers import (
     TopicCentroidSnapshotSerializer,
     UserFeedbackSerializer,
 )
+from projects.models import Project
 
 CLASSIFICATION_SKILL_NAME = "content_classification"
 RELEVANCE_SKILL_NAME = "relevance_scoring"
@@ -1029,11 +1029,3 @@ class ReviewQueueViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
 
     serializer_class = ReviewQueueSerializer
     queryset = ReviewQueue.objects.select_related("content", "project")
-
-
-from projects.api import (  # noqa: E402
-    BlueskyCredentialsViewSet,
-    ProjectConfigViewSet,
-    ProjectViewSet,
-    SourceConfigViewSet,
-)

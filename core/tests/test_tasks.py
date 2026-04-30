@@ -12,12 +12,8 @@ from core.models import (
     EntityMentionRole,
     FeedbackType,
     IngestionRun,
-    Project,
-    ProjectConfig,
     RunStatus,
     SkillStatus,
-    SourceConfig,
-    SourcePluginName,
     TopicCentroidSnapshot,
     UserFeedback,
 )
@@ -36,6 +32,8 @@ from core.tasks import (
     run_relevance_scoring_skill,
     run_summarization_skill,
 )
+from projects.model_support import SourcePluginName
+from projects.models import Project, ProjectConfig, SourceConfig
 
 pytestmark = pytest.mark.django_db
 

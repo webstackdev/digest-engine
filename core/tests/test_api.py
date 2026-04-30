@@ -8,7 +8,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from core.models import (
-    BlueskyCredentials,
     Content,
     Entity,
     EntityAuthoritySnapshot,
@@ -20,18 +19,16 @@ from core.models import (
     IntakeAllowlist,
     NewsletterIntake,
     NewsletterIntakeStatus,
-    Project,
-    ProjectConfig,
     ReviewQueue,
     ReviewReason,
     RunStatus,
     SkillResult,
     SkillStatus,
-    SourceConfig,
-    SourcePluginName,
     TopicCentroidSnapshot,
     UserFeedback,
 )
+from projects.model_support import SourcePluginName
+from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
 
 
 class ProjectScopedApiTests(APITestCase):

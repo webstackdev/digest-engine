@@ -1,8 +1,8 @@
 import pytest
 from django.contrib.auth.models import Group
 
-from core.models import Project, ProjectConfig
 from core.utils import dashboard_callback
+from projects.models import Project, ProjectConfig
 
 pytestmark = pytest.mark.django_db
 

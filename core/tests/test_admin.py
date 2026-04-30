@@ -9,8 +9,6 @@ from django.contrib.auth.models import Group
 from django.utils import timezone
 
 from core.admin import (
-    BlueskyCredentialsAdmin,
-    BlueskyCredentialsAdminForm,
     ContentAdmin,
     DuplicateStateFilter,
     EntityAdmin,
@@ -18,15 +16,12 @@ from core.admin import (
     EntityCandidateAdmin,
     HighValueFilter,
     IngestionRunAdmin,
-    ProjectConfigAdmin,
     ReviewQueueAdmin,
     SkillResultAdmin,
-    SourceConfigAdmin,
     TopicCentroidSnapshotAdmin,
     UserFeedbackAdmin,
 )
 from core.models import (
-    BlueskyCredentials,
     Content,
     Entity,
     EntityAuthoritySnapshot,
@@ -34,17 +29,21 @@ from core.models import (
     EntityCandidateStatus,
     EntityMention,
     IngestionRun,
-    Project,
-    ProjectConfig,
     ReviewQueue,
     ReviewReason,
     RunStatus,
     SkillResult,
-    SourceConfig,
-    SourcePluginName,
     TopicCentroidSnapshot,
     UserFeedback,
 )
+from projects.admin import (
+    BlueskyCredentialsAdmin,
+    BlueskyCredentialsAdminForm,
+    ProjectConfigAdmin,
+    SourceConfigAdmin,
+)
+from projects.model_support import SourcePluginName
+from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
 
 pytestmark = pytest.mark.django_db
 
@@ -71,11 +70,11 @@ def test_test_source_connection_reports_success(source_admin_context, mocker):
     plugin = mocker.Mock()
     plugin.health_check.return_value = True
     validate_mock = mocker.patch(
-        "core.admin.validate_plugin_config",
+        "projects.admin.validate_plugin_config",
         return_value={"feed_url": "https://example.com/feed.xml"},
     )
     get_plugin_mock = mocker.patch(
-        "core.admin.get_plugin_for_source_config", return_value=plugin
+        "projects.admin.get_plugin_for_source_config", return_value=plugin
     )
     admin_instance = SourceConfigAdmin(SourceConfig, AdminSite())
     admin_instance.message_user = mocker.Mock()
@@ -201,7 +200,7 @@ def test_test_source_connection_reports_failures(source_admin_context, mocker):
         config={"feed_url": "https://example.com/feed.xml"},
     )
     mocker.patch(
-        "core.admin.validate_plugin_config",
+        "projects.admin.validate_plugin_config",
         side_effect=ValueError("Missing required config field: feed_url"),
     )
     admin_instance = SourceConfigAdmin(SourceConfig, AdminSite())

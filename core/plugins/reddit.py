@@ -7,8 +7,8 @@ from datetime import UTC, datetime
 import praw
 from django.conf import settings
 
-from core.models import SourcePluginName
 from core.plugins.base import ContentItem, SourcePlugin
+from projects.model_support import SourcePluginName
 
 
 class RedditSourcePlugin(SourcePlugin):

@@ -17,12 +17,12 @@ from core.models import (
     IngestionRun,
     IntakeAllowlist,
     NewsletterIntake,
-    Project,
     ReviewQueue,
     SkillResult,
     TopicCentroidSnapshot,
     UserFeedback,
 )
+from projects.models import Project
 
 
 class ProjectScopedSerializerMixin:
@@ -438,11 +438,3 @@ class NewsletterIntakeSerializer(
             "extraction_result",
             "error_message",
         ]
-
-
-from projects.serializers import (  # noqa: E402
-    BlueskyCredentialsSerializer,
-    ProjectConfigSerializer,
-    ProjectSerializer,
-    SourceConfigSerializer,
-)
