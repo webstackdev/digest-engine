@@ -47,8 +47,5 @@ jobs:
       - name: Install dependencies
         run: just install
 
-      - name: Install pre-commit hooks
-        run: pre-commit install --install-hooks
-
       - name: Run lint and type checks
         run: just lint

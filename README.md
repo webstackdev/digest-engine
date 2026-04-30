@@ -95,8 +95,10 @@ The system is designed for graceful failure, not silent corruption. Unparseable 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install -r requirements.txt
+just install
 ```
+
+`just install` installs the backend and frontend dependencies and registers the repository's `pre-commit` hooks, so `git commit` runs the configured lint and test hooks locally.
 
 1. Run `just dev` to start Django, Celery, Postgres, Redis, Qdrant, and Nginx. On the first run Docker builds the app image automatically. After that, `just dev` reuses the existing image so normal restarts are fast. If `.env` is missing, the `just` command copies `.env.example` automatically.
 2. Run `just build` after changing `requirements.txt` or `docker/web/Dockerfile`.
