@@ -22,6 +22,7 @@ from core.api import (
     document_project_owned_viewset,
     logger,
 )
+from core.permissions import get_visible_projects_queryset
 from core.plugins.bluesky import BlueskySourcePlugin
 from projects.models import (
     BlueskyCredentials,
@@ -53,7 +54,7 @@ from projects.serializers import (
     ),
 )
 class ProjectViewSet(viewsets.ModelViewSet):
-    """Manage projects accessible through the current user's group memberships."""
+    """Manage projects accessible through the current user's project memberships."""
 
     serializer_class = ProjectSerializer
     queryset = Project.objects.select_related("group", "bluesky_credentials")
@@ -62,7 +63,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Limit projects to those visible through the authenticated user."""
 
-        return self.queryset.filter(group__user=self.request.user).distinct()
+        return get_visible_projects_queryset(self.request.user).select_related(
+            "group", "bluesky_credentials"
+        )
 
     @extend_schema(
         summary="Rotate newsletter intake token",

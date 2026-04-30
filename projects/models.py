@@ -1,5 +1,10 @@
 """Project-owned models split out from the historical core app."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from django.conf import settings
 from django.contrib.auth.models import Group
 from django.db import models
 
@@ -11,12 +16,43 @@ from projects.model_support import (
     normalize_bluesky_pds_url,
 )
 
+if TYPE_CHECKING:
+    from users.models import AppUser
+
+
+class ProjectRole(models.TextChoices):
+    """Role assigned to a user's membership within one project."""
+
+    ADMIN = "admin", "Project Admin"
+    MEMBER = "member", "Project Member"
+    READER = "reader", "Project Reader"
+
 
 class Project(models.Model):
-    """Represents a newsletter workspace owned by a Django auth group."""
+    """Represents a newsletter workspace owned by a Django auth group.
+
+    Project memberships are the primary authorization surface. The historical
+    group foreign key remains as a temporary compatibility shim while the codebase
+    migrates off group-based project access.
+    """
 
     name = models.CharField(max_length=255)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="projects")
+    group = models.ForeignKey(
+        Group,
+        on_delete=models.SET_NULL,
+        related_name="projects",
+        null=True,
+        blank=True,
+    )
+    members: models.ManyToManyField[AppUser, ProjectMembership] = (
+        models.ManyToManyField(
+            settings.AUTH_USER_MODEL,
+            through="ProjectMembership",
+            through_fields=("project", "user"),
+            related_name="projects",
+            blank=True,
+        )
+    )
     topic_description = models.TextField()
     content_retention_days = models.PositiveIntegerField(default=365)
     intake_token = models.CharField(
@@ -34,6 +70,50 @@ class Project(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class ProjectMembership(models.Model):
+    """Associate one user with one project and an authorization role."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="project_memberships",
+    )
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="memberships",
+    )
+    role = models.CharField(
+        max_length=16,
+        choices=ProjectRole.choices,
+        default=ProjectRole.MEMBER,
+    )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="memberships_invited",
+    )
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["project__name", "user__username"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "project"],
+                name="projects_membership_unique_user_project",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["project", "role"]),
+            models.Index(fields=["user", "project"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user} in {self.project} ({self.role})"
 
 
 class BlueskyCredentials(models.Model):

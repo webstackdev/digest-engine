@@ -11,7 +11,21 @@ from import_export.admin import ExportActionMixin
 from unfold.admin import ModelAdmin
 
 from core.plugins import get_plugin_for_source_config, validate_plugin_config
-from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
+from projects.models import (
+    BlueskyCredentials,
+    Project,
+    ProjectConfig,
+    ProjectMembership,
+    SourceConfig,
+)
+
+
+class ProjectMembershipInline(admin.TabularInline):
+    """Edit project memberships inline from the project admin."""
+
+    model = ProjectMembership
+    extra = 0
+    autocomplete_fields = ("user", "invited_by")
 
 
 class BlueskyCredentialsAdminForm(forms.ModelForm):
@@ -60,6 +74,7 @@ class ProjectAdmin(ExportActionMixin, admin.ModelAdmin):
     search_fields = ("name", "group__name")
     autocomplete_fields = ("group",)
     list_editable = ("content_retention_days",)
+    inlines = (ProjectMembershipInline,)
 
 
 @admin.register(BlueskyCredentials)

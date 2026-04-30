@@ -22,7 +22,7 @@ from core.models import (
     TopicCentroidSnapshot,
     UserFeedback,
 )
-from projects.models import Project
+from core.permissions import get_visible_projects_queryset
 
 
 class ProjectScopedSerializerMixin:
@@ -36,35 +36,35 @@ class ProjectScopedSerializerMixin:
         if "group" in self.fields:
             self.fields["group"].queryset = Group.objects.filter(user=user)
         if "project" in self.fields:
-            self.fields["project"].queryset = Project.objects.filter(
-                group__user=user
-            ).distinct()
+            self.fields["project"].queryset = get_visible_projects_queryset(user)
         if "entity" in self.fields:
             entity_queryset = (
                 Entity.objects.filter(project=project)
                 if project
-                else Entity.objects.filter(project__group__user=user)
+                else Entity.objects.filter(project__memberships__user=user).distinct()
             )
             self.fields["entity"].queryset = entity_queryset
         if "merged_into" in self.fields:
             merged_into_queryset = (
                 Entity.objects.filter(project=project)
                 if project
-                else Entity.objects.filter(project__group__user=user)
+                else Entity.objects.filter(project__memberships__user=user).distinct()
             )
             self.fields["merged_into"].queryset = merged_into_queryset
         if "content" in self.fields:
             content_queryset = (
                 Content.objects.filter(project=project)
                 if project
-                else Content.objects.filter(project__group__user=user)
+                else Content.objects.filter(project__memberships__user=user).distinct()
             )
             self.fields["content"].queryset = content_queryset
         if "superseded_by" in self.fields:
             skill_result_queryset = (
                 SkillResult.objects.filter(project=project)
                 if project
-                else SkillResult.objects.filter(project__group__user=user)
+                else SkillResult.objects.filter(
+                    project__memberships__user=user
+                ).distinct()
             )
             self.fields["superseded_by"].queryset = skill_result_queryset
 

@@ -95,6 +95,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "drf_standardized_errors",
     # 6. Project Apps
+    "users",
     "projects",
     "core",
 ]
@@ -150,6 +151,8 @@ AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
+
+AUTH_USER_MODEL = "users.AppUser"
 
 ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
@@ -215,6 +218,7 @@ __all__ = [
     "WSGI_APPLICATION",
     "DATABASES",
     "AUTH_PASSWORD_VALIDATORS",
+    "AUTH_USER_MODEL",
     "AUTHENTICATION_BACKENDS",
     "ACCOUNT_EMAIL_VERIFICATION",
     "ACCOUNT_LOGIN_METHODS",

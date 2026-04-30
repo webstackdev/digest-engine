@@ -28,7 +28,14 @@ from core.models import (
     UserFeedback,
 )
 from projects.model_support import SourcePluginName
-from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
+from projects.models import (
+    BlueskyCredentials,
+    Project,
+    ProjectConfig,
+    ProjectMembership,
+    ProjectRole,
+    SourceConfig,
+)
 
 
 class ProjectScopedApiTests(APITestCase):
@@ -53,6 +60,16 @@ class ProjectScopedApiTests(APITestCase):
             name="Other Project",
             group=self.other_group,
             topic_description="Frontend",
+        )
+        ProjectMembership.objects.create(
+            user=self.owner,
+            project=self.owner_project,
+            role=ProjectRole.ADMIN,
+        )
+        ProjectMembership.objects.create(
+            user=self.other_user,
+            project=self.other_project,
+            role=ProjectRole.ADMIN,
         )
         self.owner_entity = Entity.objects.create(
             project=self.owner_project,
@@ -169,7 +186,7 @@ class ProjectScopedApiTests(APITestCase):
             },
         )
 
-    def test_project_list_is_scoped_to_request_user_groups(self):
+    def test_project_list_is_scoped_to_request_user_memberships(self):
         BlueskyCredentials.objects.create(
             project=self.owner_project,
             handle="owner-project.bsky.social",

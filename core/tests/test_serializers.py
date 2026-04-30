@@ -18,7 +18,7 @@ from core.serializers import (
     UserFeedbackSerializer,
 )
 from projects.model_support import SourcePluginName
-from projects.models import Project, SourceConfig
+from projects.models import Project, ProjectMembership, ProjectRole, SourceConfig
 from projects.serializers import ProjectSerializer, SourceConfigSerializer
 
 pytestmark = pytest.mark.django_db
@@ -41,6 +41,12 @@ def serializer_context(django_user_model):
     )
     other_project = Project.objects.create(
         name="Other Serializer Project", group=other_group, topic_description="Data"
+    )
+    ProjectMembership.objects.create(user=user, project=project, role=ProjectRole.ADMIN)
+    ProjectMembership.objects.create(
+        user=other_user,
+        project=other_project,
+        role=ProjectRole.ADMIN,
     )
     entity = Entity.objects.create(
         project=project, name="Serializer Entity", type="vendor"

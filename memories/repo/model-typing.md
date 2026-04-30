@@ -1,0 +1,3 @@
+- `users.AppUser` overrides `groups` and `user_permissions` to reuse legacy auth tables; mypy needs `# type: ignore[assignment]` on those field overrides and `objects: ClassVar[AppUserManager]`.
+- `projects.Project.members` needs an explicit `ManyToManyField[...]` annotation for mypy under the Django plugin.
+- Focused validation that covered the R1/WP2 auth boundary: `pytest core/tests/test_membership.py core/tests/test_api.py core/tests/test_serializers.py users/tests/test_models.py -q`, `python manage.py check`, `just backend-lint`.

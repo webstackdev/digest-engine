@@ -41,6 +41,7 @@ from core.models import (
     TopicCentroidSnapshot,
     UserFeedback,
 )
+from core.permissions import get_visible_projects_queryset
 from core.serializers import (
     ContentSerializer,
     EntityAuthoritySnapshotSerializer,
@@ -573,7 +574,7 @@ class ProjectOwnedQuerysetMixin:
                 "project_id must be present in nested project-scoped routes"
             )
         try:
-            return Project.objects.get(pk=project_id, group__user=self.request.user)
+            return get_visible_projects_queryset(self.request.user).get(pk=project_id)
         except Project.DoesNotExist as exc:
             raise NotFound("Project not found.") from exc
 
