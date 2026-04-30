@@ -8,7 +8,6 @@ running ingestion and AI-assisted content curation.
 import json
 from urllib.parse import urlencode
 
-from django import forms
 from django.contrib import admin, messages
 from django.db.models import Avg, Max, QuerySet
 from django.http import HttpRequest
@@ -16,7 +15,6 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from import_export.admin import ExportActionMixin
 from unfold.admin import ModelAdmin
 
 from core.entity_extraction import (
@@ -25,7 +23,6 @@ from core.entity_extraction import (
     reject_entity_candidate,
 )
 from core.models import (
-    BlueskyCredentials,
     Content,
     Entity,
     EntityAuthoritySnapshot,
@@ -33,11 +30,8 @@ from core.models import (
     EntityCandidateStatus,
     EntityMention,
     IngestionRun,
-    Project,
-    ProjectConfig,
     ReviewQueue,
     SkillResult,
-    SourceConfig,
     TopicCentroidSnapshot,
     UserFeedback,
 )
@@ -154,177 +148,6 @@ def _build_topic_centroid_project_drilldowns(queryset, changelist_url: str):
         )
 
     return project_drilldowns
-
-
-class BlueskyCredentialsAdminForm(forms.ModelForm):
-    """Admin form that accepts a plaintext Bluesky app credential input."""
-
-    credential_input = forms.CharField(
-        required=False,
-        strip=False,
-        widget=forms.PasswordInput(render_value=False),
-        help_text="Leave blank to keep the existing stored credential.",
-        label="Bluesky app credential",
-    )
-
-    class Meta:
-        model = BlueskyCredentials
-        fields = ["project", "handle", "pds_url", "is_active"]
-
-    def clean(self):
-        """Require a credential when creating the record for the first time."""
-
-        cleaned_data = super().clean()
-        credential_input = cleaned_data.get("credential_input", "")
-        if not self.instance.has_stored_credential() and not credential_input:
-            self.add_error("credential_input", "A Bluesky app credential is required.")
-        return cleaned_data
-
-    def save(self, commit=True):
-        """Encrypt a new credential value before saving the model instance."""
-
-        instance = super().save(commit=False)
-        credential_input = self.cleaned_data.get("credential_input", "")
-        if credential_input:
-            instance.set_stored_credential(credential_input)
-        if commit:
-            instance.save()
-        return instance
-
-
-@admin.register(Project)
-class ProjectAdmin(ExportActionMixin, admin.ModelAdmin):
-    """Admin configuration for top-level project workspaces."""
-
-    list_display = ("name", "group", "content_retention_days", "created_at")
-
-    # Better navigation
-    date_hierarchy = "created_at"
-    list_filter = ("created_at",)
-
-    # Faster searching
-    search_fields = ("name", "group__name")
-
-    # Performance for large user lists
-    autocomplete_fields = ("group",)
-
-    # Quick editing
-    list_editable = ("content_retention_days",)
-
-
-@admin.register(BlueskyCredentials)
-class BlueskyCredentialsAdmin(ModelAdmin):
-    """Admin view for project-scoped Bluesky authentication settings."""
-
-    form = BlueskyCredentialsAdminForm
-    actions = ["verify_selected_credentials"]
-    list_display = (
-        "project",
-        "handle",
-        "display_pds_host",
-        "has_stored_credential",
-        "is_active",
-        "last_verified_at",
-    )
-    list_filter = ("is_active", ("project", admin.RelatedOnlyFieldListFilter))
-    search_fields = ("project__name", "handle", "pds_url")
-    autocomplete_fields = ("project",)
-    readonly_fields = (
-        "has_stored_credential",
-        "last_verified_at",
-        "last_error",
-        "created_at",
-        "updated_at",
-    )
-    fieldsets = (
-        (
-            "Account",
-            {"fields": ("project", "handle", "credential_input", "is_active")},
-        ),
-        (
-            "PDS Override",
-            {
-                "fields": ("pds_url",),
-                "description": "Leave blank to use the default Bluesky-hosted account flow.",
-            },
-        ),
-        (
-            "Verification",
-            {
-                "fields": (
-                    "has_stored_credential",
-                    "last_verified_at",
-                    "last_error",
-                    "created_at",
-                    "updated_at",
-                )
-            },
-        ),
-    )
-
-    @admin.display(description="PDS")
-    def display_pds_host(self, obj):
-        """Show whether the credentials use the hosted default or a custom PDS."""
-
-        return obj.pds_url or "Bluesky hosted default"
-
-    @admin.display(boolean=True, description="Stored Credential")
-    def has_stored_credential(self, obj):
-        """Return whether an encrypted Bluesky credential has been configured."""
-
-        return obj.has_stored_credential()
-
-    @admin.action(description="Verify Selected Credentials")
-    def verify_selected_credentials(self, request, queryset):
-        """Authenticate the selected Bluesky accounts and report the outcome."""
-
-        from core.plugins.bluesky import BlueskySourcePlugin
-
-        verified_credentials = []
-        failed_credentials = []
-
-        for credentials in queryset.select_related("project"):
-            try:
-                BlueskySourcePlugin.verify_credentials(credentials)
-            except Exception as exc:
-                failed_credentials.append(f"{credentials}: {exc}")
-            else:
-                verified_credentials.append(str(credentials))
-
-        if verified_credentials:
-            self.message_user(
-                request,
-                f"Credential verification passed for {len(verified_credentials)} account(s).",
-                messages.SUCCESS,
-            )
-
-        if failed_credentials:
-            self.message_user(
-                request,
-                "Credential verification failed for: " + "; ".join(failed_credentials),
-                messages.ERROR,
-            )
-
-
-@admin.register(ProjectConfig)
-class ProjectConfigAdmin(admin.ModelAdmin):
-    """Admin configuration for per-project scoring settings."""
-
-    list_display = (
-        "project",
-        "upvote_authority_weight",
-        "downvote_authority_weight",
-        "authority_decay_rate",
-        "recompute_topic_centroid_on_feedback_save",
-    )
-    list_filter = ("recompute_topic_centroid_on_feedback_save",)
-    fields = (
-        "project",
-        "upvote_authority_weight",
-        "downvote_authority_weight",
-        "authority_decay_rate",
-        "recompute_topic_centroid_on_feedback_save",
-    )
 
 
 @admin.register(Entity)
@@ -1219,133 +1042,6 @@ class IngestionRunAdmin(ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
 
 
-@admin.register(SourceConfig)
-class SourceConfigAdmin(ModelAdmin):
-    """Admin view for source-plugin configuration and connectivity checks."""
-
-    list_display = (
-        "plugin_name",
-        "project",
-        "display_health",
-        "is_active",
-        "last_fetched_at",
-    )
-    list_filter = (
-        "is_active",
-        "plugin_name",
-        ("project", admin.RelatedOnlyFieldListFilter),
-    )
-    list_editable = ("is_active",)
-    search_fields = ("plugin_name", "project__name")
-    actions = ["test_source_connection"]
-    readonly_fields = ("last_fetched_at", "pretty_config")
-    fieldsets = (
-        ("Core Settings", {"fields": ("plugin_name", "project", "is_active")}),
-        (
-            "Configuration",
-            {
-                "fields": ("pretty_config", "config"),
-            },
-        ),
-        (
-            "Activity",
-            {
-                "fields": ("last_fetched_at",),
-            },
-        ),
-    )
-
-    @admin.display(description="Status")
-    def display_health(self, obj):
-        """Infer a human-friendly health state from activity timestamps."""
-
-        if not obj.is_active:
-            return format_html('<span style="color: {};">{}</span>', "gray", "● Paused")
-
-        if obj.last_fetched_at:
-            hours_since = (timezone.now() - obj.last_fetched_at).total_seconds() / 3600
-            if hours_since > 24:
-                return format_html(
-                    '<span style="color: {};">{}</span>', "red", "● Stale"
-                )
-            return format_html(
-                '<span style="color: {};">{}</span>', "green", "● Healthy"
-            )
-
-        return format_html(
-            '<span style="color: {};">{}</span>', "orange", "● Never Run"
-        )
-
-    @admin.display(description="Config Preview")
-    def pretty_config(self, obj):
-        """Displays the JSON config in a readable format."""
-        if not obj.config:
-            return "Empty"
-        formatted_json = json.dumps(obj.config, indent=4)
-        return mark_safe(
-            f'<pre style="background: #1e1e1e; color: #dcdcdc; padding: 10px; border-radius: 5px; font-size: 12px;">{formatted_json}</pre>'
-        )
-
-    @admin.action(description="Test Source Connectivity")
-    def test_source_connection(self, request, queryset):
-        """
-        Custom action to trigger a dry-run fetch for the selected sources.
-        """
-        healthy_sources = []
-        failed_sources = []
-
-        for source_config in queryset.select_related("project"):
-            try:
-                source_config.config = validate_plugin_config(
-                    source_config.plugin_name,
-                    source_config.config,
-                )
-                plugin = get_plugin_for_source_config(source_config)
-                if not plugin.health_check():
-                    raise RuntimeError("Health check returned an unhealthy status.")
-            except Exception as exc:
-                failed_sources.append(f"{source_config}: {exc}")
-            else:
-                healthy_sources.append(str(source_config))
-
-        if healthy_sources:
-            self.message_user(
-                request,
-                f"Connectivity check passed for {len(healthy_sources)} source(s).",
-                messages.SUCCESS,
-            )
-
-        if failed_sources:
-            self.message_user(
-                request,
-                "Connectivity check failed for: " + "; ".join(failed_sources),
-                messages.ERROR,
-            )
-
-    def changelist_view(self, request, extra_context=None):
-        """Augment the changelist with source-count and diversity stats."""
-
-        qs = self.get_queryset(request)
-        extra_context = extra_context or {}
-        active_count = qs.filter(is_active=True).count()
-        total_count = qs.count() or 1
-
-        extra_context["dashboard_stats"] = [
-            {
-                "title": "Active Sources",
-                "value": f"{active_count} / {total_count}",
-                "icon": "settings_input_component",
-                "color": "success" if active_count == total_count else "warning",
-            },
-            {
-                "title": "Plugin Variety",
-                "value": qs.values("plugin_name").distinct().count(),
-                "icon": "extension",
-            },
-        ]
-        return super().changelist_view(request, extra_context=extra_context)
-
-
 @admin.register(ReviewQueue)
 class ReviewQueueAdmin(ModelAdmin):
     """Admin view for items waiting on editorial judgment."""
@@ -1417,3 +1113,55 @@ class ReviewQueueAdmin(ModelAdmin):
             },
         ]
         return super().changelist_view(request, extra_context=extra_context)
+
+
+from projects.admin import (  # noqa: E402
+    BlueskyCredentialsAdmin as ProjectsBlueskyCredentialsAdmin,
+    BlueskyCredentialsAdminForm as ProjectsBlueskyCredentialsAdminForm,
+    ProjectAdmin as ProjectsProjectAdmin,
+    ProjectConfigAdmin as ProjectsProjectConfigAdmin,
+    SourceConfigAdmin as ProjectsSourceConfigAdmin,
+)
+
+BlueskyCredentialsAdminForm = ProjectsBlueskyCredentialsAdminForm
+ProjectAdmin = ProjectsProjectAdmin
+BlueskyCredentialsAdmin = ProjectsBlueskyCredentialsAdmin
+ProjectConfigAdmin = ProjectsProjectConfigAdmin
+
+
+class SourceConfigAdmin(ProjectsSourceConfigAdmin):
+    """Compatibility wrapper for the moved source-config admin class."""
+
+    def test_source_connection(self, request, queryset):
+        """Trigger a dry-run connectivity check for the selected sources."""
+
+        healthy_sources = []
+        failed_sources = []
+
+        for source_config in queryset.select_related("project"):
+            try:
+                source_config.config = validate_plugin_config(
+                    source_config.plugin_name,
+                    source_config.config,
+                )
+                plugin = get_plugin_for_source_config(source_config)
+                if not plugin.health_check():
+                    raise RuntimeError("Health check returned an unhealthy status.")
+            except Exception as exc:
+                failed_sources.append(f"{source_config}: {exc}")
+            else:
+                healthy_sources.append(str(source_config))
+
+        if healthy_sources:
+            self.message_user(
+                request,
+                f"Connectivity check passed for {len(healthy_sources)} source(s).",
+                messages.SUCCESS,
+            )
+
+        if failed_sources:
+            self.message_user(
+                request,
+                "Connectivity check failed for: " + "; ".join(failed_sources),
+                messages.ERROR,
+            )

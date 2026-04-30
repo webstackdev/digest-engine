@@ -2,20 +2,22 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_nested.routers import NestedSimpleRouter
 
 from core.api import (
-    BlueskyCredentialsViewSet,
     ContentViewSet,
     EntityCandidateViewSet,
     EntityViewSet,
     IngestionRunViewSet,
     IntakeAllowlistViewSet,
     NewsletterIntakeViewSet,
-    ProjectConfigViewSet,
-    ProjectViewSet,
     ReviewQueueViewSet,
     SkillResultViewSet,
-    SourceConfigViewSet,
     TopicCentroidSnapshotViewSet,
     UserFeedbackViewSet,
+)
+from projects.api import (
+    BlueskyCredentialsViewSet,
+    ProjectConfigViewSet,
+    ProjectViewSet,
+    SourceConfigViewSet,
 )
 
 app_name = "api"

@@ -1,19 +1,17 @@
-"""Core domain models for projects, ingestion, and editorial review.
+"""Core domain models for ingestion, editorial review, and shared enums.
 
 The admin, API, Celery tasks, and AI pipeline all revolve around the models in this
 module. Adding model-level docstrings here gives Django admindocs a useful summary
 of the core entities new contributors interact with first.
 """
 
-import base64
-import hashlib
 import secrets
-from urllib.parse import urlsplit, urlunsplit
 
-from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth.models import Group
 from django.db import models
+
+from projects.model_support import SourcePluginName
+from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
 
 
 def generate_project_intake_token() -> str:
@@ -24,7 +22,9 @@ def generate_project_intake_token() -> str:
         ``intake+<token>@...`` to route inbound newsletters to a project.
     """
 
-    return secrets.token_hex(16)
+    from projects.model_support import generate_project_intake_token as _generate_token
+
+    return _generate_token()
 
 
 def generate_confirmation_token() -> str:
@@ -41,41 +41,25 @@ def generate_confirmation_token() -> str:
 def normalize_bluesky_handle(handle: str) -> str:
     """Normalize Bluesky handles so stored account references stay consistent."""
 
-    return handle.strip().removeprefix("@").lower()
+    from projects.model_support import normalize_bluesky_handle as _normalize_handle
+
+    return _normalize_handle(handle)
 
 
 def normalize_bluesky_pds_url(pds_url: str) -> str:
     """Normalize a user-provided PDS URL to its base host form."""
 
-    stripped_url = pds_url.strip().rstrip("/")
-    if not stripped_url:
-        return ""
-    parsed_url = urlsplit(stripped_url)
-    path = parsed_url.path.rstrip("/")
-    if path.endswith("/xrpc"):
-        path = path[: -len("/xrpc")]
-    return urlunsplit(
-        (
-            parsed_url.scheme,
-            parsed_url.netloc,
-            path,
-            parsed_url.query,
-            parsed_url.fragment,
-        )
-    ).rstrip("/")
+    from projects.model_support import normalize_bluesky_pds_url as _normalize_pds_url
+
+    return _normalize_pds_url(pds_url)
 
 
-def _bluesky_credentials_fernet() -> Fernet:
+def _bluesky_credentials_fernet():
     """Build the symmetric cipher used for Bluesky app-password storage."""
 
-    key_material = (
-        getattr(settings, "BLUESKY_CREDENTIALS_ENCRYPTION_KEY", "")
-        or settings.SECRET_KEY
-    )
-    derived_key = base64.urlsafe_b64encode(
-        hashlib.sha256(key_material.encode("utf-8")).digest()
-    )
-    return Fernet(derived_key)
+    from projects.model_support import bluesky_credentials_fernet
+
+    return bluesky_credentials_fernet()
 
 
 class EntityType(models.TextChoices):
@@ -128,14 +112,6 @@ class FeedbackType(models.TextChoices):
     DOWNVOTE = "downvote", "Downvote"
 
 
-class SourcePluginName(models.TextChoices):
-    """Built-in ingestion plugins that can populate project content."""
-
-    RSS = "rss", "RSS"
-    REDDIT = "reddit", "Reddit"
-    BLUESKY = "bluesky", "Bluesky"
-
-
 class NewsletterIntakeStatus(models.TextChoices):
     """Lifecycle states for a raw inbound newsletter email."""
 
@@ -168,144 +144,6 @@ class ReviewResolution(models.TextChoices):
 
     HUMAN_APPROVED = "human_approved", "Human Approved"
     HUMAN_REJECTED = "human_rejected", "Human Rejected"
-
-
-class Project(models.Model):
-    """Represents a newsletter workspace owned by a Django auth group.
-
-    A project defines the editorial topic, retention policy, and email-intake
-    identity used by all downstream ingestion, relevance scoring, and review flows.
-    Most other core models are scoped to a single project.
-    """
-
-    name = models.CharField(max_length=255)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="projects")
-    topic_description = models.TextField()
-    content_retention_days = models.PositiveIntegerField(default=365)
-    intake_token = models.CharField(
-        max_length=64,
-        unique=True,
-        default=generate_project_intake_token,
-        editable=False,
-    )
-    intake_enabled = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self) -> str:
-        return self.name
-
-
-class BlueskyCredentials(models.Model):
-    """Stores the authenticated Bluesky account used by one project.
-
-    The plugin can read public content through AppView without credentials, but a
-    stored account enables authenticated reads and self-hosted PDS support.
-    """
-
-    project = models.OneToOneField(
-        Project, on_delete=models.CASCADE, related_name="bluesky_credentials"
-    )
-    handle = models.CharField(max_length=255)
-    app_password_encrypted = models.TextField(blank=True)
-    pds_url = models.URLField(blank=True)
-    is_active = models.BooleanField(default=True)
-    last_verified_at = models.DateTimeField(null=True, blank=True)
-    last_error = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["project__name"]
-        verbose_name_plural = "Bluesky credentials"
-
-    def __str__(self) -> str:
-        return f"Bluesky credentials for {self.project.name}"
-
-    @property
-    def client_base_url(self) -> str:
-        """Return the effective base URL used by the ATProto client."""
-
-        if not self.pds_url:
-            return "https://bsky.social/xrpc"
-        return f"{self.pds_url.rstrip('/')}/xrpc"
-
-    def has_app_password(self) -> bool:
-        """Return whether an encrypted app password has been stored."""
-
-        return bool(self.app_password_encrypted)
-
-    def has_stored_credential(self) -> bool:
-        """Return whether an encrypted Bluesky credential has been stored."""
-
-        return self.has_app_password()
-
-    def set_app_password(self, app_password: str) -> None:
-        """Encrypt and store the given Bluesky app password."""
-
-        if not app_password:
-            self.app_password_encrypted = ""
-            return
-        self.app_password_encrypted = (
-            _bluesky_credentials_fernet()
-            .encrypt(app_password.encode("utf-8"))
-            .decode("utf-8")
-        )
-
-    def set_stored_credential(self, credential_value: str) -> None:
-        """Encrypt and store the given Bluesky credential value."""
-
-        self.set_app_password(credential_value)
-
-    def get_app_password(self) -> str:
-        """Decrypt and return the stored Bluesky app password."""
-
-        if not self.app_password_encrypted:
-            return ""
-        return (
-            _bluesky_credentials_fernet()
-            .decrypt(self.app_password_encrypted.encode("utf-8"))
-            .decode("utf-8")
-        )
-
-    def get_stored_credential(self) -> str:
-        """Decrypt and return the stored Bluesky credential value."""
-
-        return self.get_app_password()
-
-    def save(self, *args, **kwargs):
-        """Normalize stored account fields before persisting the credentials."""
-
-        self.handle = normalize_bluesky_handle(self.handle)
-        self.pds_url = normalize_bluesky_pds_url(self.pds_url)
-        super().save(*args, **kwargs)
-
-
-class ProjectConfig(models.Model):
-    """Stores tunable scoring parameters for a single project.
-
-    These values let the application adjust how strongly upvotes, downvotes, and
-    score decay influence entity authority over time without changing code.
-    They also control whether feedback saves should immediately refresh the
-    project's topic centroid.
-    """
-
-    project = models.OneToOneField(
-        Project, on_delete=models.CASCADE, related_name="config"
-    )
-    upvote_authority_weight = models.FloatField(default=0.1)
-    downvote_authority_weight = models.FloatField(default=-0.05)
-    authority_decay_rate = models.FloatField(default=0.95)
-    recompute_topic_centroid_on_feedback_save = models.BooleanField(default=True)
-
-    class Meta:
-        verbose_name = "Project config"
-        verbose_name_plural = "Project configs"
-
-    def __str__(self) -> str:
-        return f"Config for {self.project.name}"
 
 
 class Entity(models.Model):
@@ -692,31 +530,6 @@ class UserFeedback(models.Model):
 
     def __str__(self) -> str:
         return f"{self.feedback_type} by {self.user}"
-
-
-class SourceConfig(models.Model):
-    """Configures one ingestion source for a project.
-
-    Each source config selects a plugin, stores its provider-specific settings,
-    and records the last successful fetch time used for incremental ingestion.
-    """
-
-    project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name="source_configs"
-    )
-    plugin_name = models.CharField(max_length=64, choices=SourcePluginName.choices)
-    config = models.JSONField(default=dict)
-    is_active = models.BooleanField(default=True)
-    last_fetched_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        ordering = ["plugin_name", "id"]
-        indexes = [
-            models.Index(fields=["project", "plugin_name", "is_active"]),
-        ]
-
-    def __str__(self) -> str:
-        return f"{self.plugin_name} source for {self.project.name}"
 
 
 class IngestionRun(models.Model):

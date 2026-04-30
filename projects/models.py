@@ -1,0 +1,160 @@
+"""Project-owned models split out from the historical core app."""
+
+from django.contrib.auth.models import Group
+from django.db import models
+
+from projects.model_support import (
+    SourcePluginName,
+    bluesky_credentials_fernet,
+    generate_project_intake_token,
+    normalize_bluesky_handle,
+    normalize_bluesky_pds_url,
+)
+
+
+class Project(models.Model):
+    """Represents a newsletter workspace owned by a Django auth group."""
+
+    name = models.CharField(max_length=255)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name="projects")
+    topic_description = models.TextField()
+    content_retention_days = models.PositiveIntegerField(default=365)
+    intake_token = models.CharField(
+        max_length=64,
+        unique=True,
+        default=generate_project_intake_token,
+        editable=False,
+    )
+    intake_enabled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+        db_table = "core_project"
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class BlueskyCredentials(models.Model):
+    """Stores the authenticated Bluesky account used by one project."""
+
+    project = models.OneToOneField(
+        Project, on_delete=models.CASCADE, related_name="bluesky_credentials"
+    )
+    handle = models.CharField(max_length=255)
+    app_password_encrypted = models.TextField(blank=True)
+    pds_url = models.URLField(blank=True)
+    is_active = models.BooleanField(default=True)
+    last_verified_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["project__name"]
+        verbose_name_plural = "Bluesky credentials"
+        db_table = "core_blueskycredentials"
+
+    def __str__(self) -> str:
+        return f"Bluesky credentials for {self.project.name}"
+
+    @property
+    def client_base_url(self) -> str:
+        """Return the effective base URL used by the ATProto client."""
+
+        if not self.pds_url:
+            return "https://bsky.social/xrpc"
+        return f"{self.pds_url.rstrip('/')}/xrpc"
+
+    def has_app_password(self) -> bool:
+        """Return whether an encrypted app password has been stored."""
+
+        return bool(self.app_password_encrypted)
+
+    def has_stored_credential(self) -> bool:
+        """Return whether an encrypted Bluesky credential has been stored."""
+
+        return self.has_app_password()
+
+    def set_app_password(self, app_password: str) -> None:
+        """Encrypt and store the given Bluesky app password."""
+
+        if not app_password:
+            self.app_password_encrypted = ""
+            return
+        self.app_password_encrypted = (
+            bluesky_credentials_fernet()
+            .encrypt(app_password.encode("utf-8"))
+            .decode("utf-8")
+        )
+
+    def set_stored_credential(self, credential_value: str) -> None:
+        """Encrypt and store the given Bluesky credential value."""
+
+        self.set_app_password(credential_value)
+
+    def get_app_password(self) -> str:
+        """Decrypt and return the stored Bluesky app password."""
+
+        if not self.app_password_encrypted:
+            return ""
+        return (
+            bluesky_credentials_fernet()
+            .decrypt(self.app_password_encrypted.encode("utf-8"))
+            .decode("utf-8")
+        )
+
+    def get_stored_credential(self) -> str:
+        """Decrypt and return the stored Bluesky credential value."""
+
+        return self.get_app_password()
+
+    def save(self, *args, **kwargs):
+        """Normalize stored account fields before persisting the credentials."""
+
+        self.handle = normalize_bluesky_handle(self.handle)
+        self.pds_url = normalize_bluesky_pds_url(self.pds_url)
+        super().save(*args, **kwargs)
+
+
+class ProjectConfig(models.Model):
+    """Stores tunable scoring parameters for a single project."""
+
+    project = models.OneToOneField(
+        Project, on_delete=models.CASCADE, related_name="config"
+    )
+    upvote_authority_weight = models.FloatField(default=0.1)
+    downvote_authority_weight = models.FloatField(default=-0.05)
+    authority_decay_rate = models.FloatField(default=0.95)
+    recompute_topic_centroid_on_feedback_save = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Project config"
+        verbose_name_plural = "Project configs"
+        db_table = "core_projectconfig"
+
+    def __str__(self) -> str:
+        return f"Config for {self.project.name}"
+
+
+class SourceConfig(models.Model):
+    """Configures one ingestion source for a project."""
+
+    project = models.ForeignKey(
+        Project, on_delete=models.CASCADE, related_name="source_configs"
+    )
+    plugin_name = models.CharField(max_length=64, choices=SourcePluginName.choices)
+    config = models.JSONField(default=dict)
+    is_active = models.BooleanField(default=True)
+    last_fetched_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["plugin_name", "id"]
+        indexes = [
+            models.Index(fields=["project", "plugin_name", "is_active"]),
+        ]
+        db_table = "core_sourceconfig"
+
+    def __str__(self) -> str:
+        return f"{self.plugin_name} source for {self.project.name}"
