@@ -6,8 +6,8 @@ from .base import env_bool
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 
-# Celery: these settings point workers at Redis and keep the recurring
-# ingestion job on its 6-hour beat schedule.
+# Celery: these settings point workers at Redis and keep recurring
+# ingestion and trend-analysis jobs on their beat schedules.
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", default=False)
@@ -25,6 +25,10 @@ CELERY_BEAT_SCHEDULE = {
     "run-all-topic-centroid-recomputations-nightly": {
         "task": "core.tasks.run_all_topic_centroid_recomputations",
         "schedule": crontab(hour=3, minute=0),
+    },
+    "run-all-topic-cluster-recomputations-nightly": {
+        "task": "core.tasks.run_all_topic_cluster_recomputations",
+        "schedule": crontab(hour=4, minute=0),
     },
 }
 

@@ -1,10 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
 
 from core.models import (
     Content,
+    ContentClusterMembership,
     Entity,
     EntityAuthoritySnapshot,
     EntityMention,
@@ -14,6 +15,8 @@ from core.models import (
     RunStatus,
     SkillStatus,
     TopicCentroidSnapshot,
+    TopicCluster,
+    TopicVelocitySnapshot,
     UserFeedback,
 )
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
@@ -29,9 +32,13 @@ from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectConfig, SourceConfig
 from trends.tasks import (
     TOPIC_CENTROID_MIN_UPVOTES,
+    assign_content_to_topic_cluster,
     queue_topic_centroid_recompute,
     recompute_topic_centroid,
+    recompute_topic_clusters,
+    recompute_topic_velocity,
     run_all_topic_centroid_recomputations,
+    run_all_topic_cluster_recomputations,
 )
 
 pytestmark = pytest.mark.django_db
@@ -445,6 +452,23 @@ def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
     delay_mock.assert_not_called()
 
 
+def test_run_all_topic_cluster_recomputations_enqueues_all_projects(
+    source_plugin_context, mocker
+):
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_clusters.delay")
+    other_project = Project.objects.create(
+        name="Other Cluster Project",
+        topic_description="Security",
+    )
+
+    enqueued_count = run_all_topic_cluster_recomputations()
+
+    assert enqueued_count == 2
+    delay_mock.assert_any_call(source_plugin_context.project.id)
+    delay_mock.assert_any_call(other_project.id)
+    assert delay_mock.call_count == 2
+
+
 def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
     source_plugin_context, mocker
 ):
@@ -704,6 +728,209 @@ def test_recompute_topic_centroid_disables_centroid_below_minimum_upvotes(
     assert snapshot.centroid_vector == []
     assert snapshot.upvote_count == TOPIC_CENTROID_MIN_UPVOTES - 1
     assert snapshot.drift_from_previous is None
+
+
+def test_recompute_topic_clusters_groups_recent_similar_content(
+    source_plugin_context, mocker
+):
+    project = source_plugin_context.project
+    second_entity = Entity.objects.create(
+        project=project,
+        name="Secondary Entity",
+        type="vendor",
+    )
+    vector_lookup = {
+        "Trend 1": [1.0, 0.0],
+        "Trend 2": [0.99, 0.01],
+        "Trend 3": [0.98, 0.02],
+        "Trend 4": [0.97, 0.03],
+        "Outlier": [0.0, 1.0],
+    }
+    mocker.patch(
+        "trends.tasks.embed_text",
+        side_effect=lambda text: vector_lookup[text.split("\n\n", 1)[0]],
+    )
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_velocity.delay")
+
+    clustered_contents = []
+    for index in range(4):
+        content = Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url=f"https://example.com/trend-{index}",
+            title=f"Trend {index + 1}",
+            author="Author",
+            source_plugin=SourcePluginName.RSS,
+            published_date=f"2026-04-2{index}T12:00:00Z",
+            content_text="Clusterable trend content",
+        )
+        clustered_contents.append(content)
+        EntityMention.objects.create(
+            project=project,
+            content=content,
+            entity=source_plugin_context.entity,
+            role=EntityMentionRole.SUBJECT,
+        )
+    outlier = Content.objects.create(
+        project=project,
+        entity=second_entity,
+        url="https://example.com/outlier",
+        title="Outlier",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-24T12:00:00Z",
+        content_text="Outlier trend content",
+    )
+
+    result = recompute_topic_clusters(project.id)
+
+    cluster = TopicCluster.objects.get(project=project, is_active=True)
+    memberships = list(cluster.memberships.values_list("content_id", flat=True))
+
+    assert result["contents_considered"] == 5
+    assert result["clusters_updated"] == 1
+    assert cluster.member_count == 4
+    assert cluster.dominant_entity == source_plugin_context.entity
+    assert set(memberships) == {content.id for content in clustered_contents}
+    assert outlier.id not in memberships
+    delay_mock.assert_called_once_with(project.id)
+
+
+def test_assign_content_to_topic_cluster_adds_similar_content_to_existing_cluster(
+    source_plugin_context, mocker
+):
+    project = source_plugin_context.project
+    vector_lookup = {
+        "Cluster 1": [1.0, 0.0],
+        "Cluster 2": [0.99, 0.01],
+        "Cluster 3": [0.98, 0.02],
+        "Candidate": [0.97, 0.03],
+    }
+    mocker.patch(
+        "trends.tasks.embed_text",
+        side_effect=lambda text: vector_lookup[text.split("\n\n", 1)[0]],
+    )
+
+    existing_contents = []
+    for index in range(3):
+        content = Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url=f"https://example.com/cluster-{index}",
+            title=f"Cluster {index + 1}",
+            author="Author",
+            source_plugin=SourcePluginName.RSS,
+            published_date=f"2026-04-2{index}T12:00:00Z",
+            content_text="Existing cluster content",
+        )
+        existing_contents.append(content)
+    cluster = TopicCluster.objects.create(
+        project=project,
+        first_seen_at=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+        last_seen_at=datetime(2026, 4, 22, 12, 0, tzinfo=timezone.utc),
+        is_active=True,
+        member_count=3,
+        dominant_entity=source_plugin_context.entity,
+    )
+    ContentClusterMembership.objects.bulk_create(
+        [
+            ContentClusterMembership(
+                content=content,
+                cluster=cluster,
+                project=project,
+                similarity=0.9,
+            )
+            for content in existing_contents
+        ]
+    )
+    candidate = Content.objects.create(
+        project=project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/candidate",
+        title="Candidate",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-24T12:00:00Z",
+        content_text="New similar cluster content",
+    )
+
+    result = assign_content_to_topic_cluster(candidate.id)
+
+    cluster.refresh_from_db()
+    membership = ContentClusterMembership.objects.get(content=candidate)
+    assert result["assigned"] is True
+    assert result["cluster_id"] == cluster.id
+    assert membership.cluster == cluster
+    assert cluster.member_count == 4
+    assert cluster.is_active is True
+
+
+def test_recompute_topic_velocity_detects_synthetic_burst(
+    source_plugin_context, mocker
+):
+    project = source_plugin_context.project
+    fixed_now = datetime(2026, 4, 30, 12, 0, tzinfo=timezone.utc)
+    mocker.patch("trends.tasks.timezone.now", return_value=fixed_now)
+    cluster = TopicCluster.objects.create(
+        project=project,
+        first_seen_at=fixed_now - timedelta(days=8),
+        last_seen_at=fixed_now,
+        is_active=True,
+        member_count=11,
+        dominant_entity=source_plugin_context.entity,
+    )
+
+    membership_rows = []
+    for offset in range(1, 8):
+        content = Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url=f"https://example.com/baseline-{offset}",
+            title=f"Baseline {offset}",
+            author="Author",
+            source_plugin=SourcePluginName.RSS,
+            published_date=fixed_now - timedelta(days=offset, hours=1),
+            content_text="Baseline trend content",
+        )
+        membership_rows.append(
+            ContentClusterMembership(
+                content=content,
+                cluster=cluster,
+                project=project,
+                similarity=0.9,
+            )
+        )
+    for index in range(4):
+        content = Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url=f"https://example.com/burst-{index}",
+            title=f"Burst {index}",
+            author="Author",
+            source_plugin=SourcePluginName.RSS,
+            published_date=fixed_now - timedelta(hours=index + 1),
+            content_text="Burst trend content",
+        )
+        membership_rows.append(
+            ContentClusterMembership(
+                content=content,
+                cluster=cluster,
+                project=project,
+                similarity=0.95,
+            )
+        )
+    ContentClusterMembership.objects.bulk_create(membership_rows)
+
+    result = recompute_topic_velocity(project.id)
+
+    snapshot = TopicVelocitySnapshot.objects.get(cluster=cluster)
+    assert result["clusters_evaluated"] == 1
+    assert result["snapshots_created"] == 1
+    assert snapshot.window_count == 4
+    assert snapshot.trailing_mean == pytest.approx(1.0)
+    assert snapshot.trailing_stddev == pytest.approx(0.0)
+    assert snapshot.z_score == pytest.approx(3.0)
+    assert snapshot.velocity_score == pytest.approx(1.0)
 
 
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):

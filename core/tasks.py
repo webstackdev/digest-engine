@@ -49,9 +49,13 @@ if TYPE_CHECKING:
     from newsletters.tasks import process_newsletter_intake
     from trends.tasks import (
         TOPIC_CENTROID_MIN_UPVOTES,
+        assign_content_to_topic_cluster,
         queue_topic_centroid_recompute,
         recompute_topic_centroid,
+        recompute_topic_clusters,
+        recompute_topic_velocity,
         run_all_topic_centroid_recomputations,
+        run_all_topic_cluster_recomputations,
     )
 
 _COMPAT_TASK_EXPORTS = {
@@ -61,15 +65,25 @@ _COMPAT_TASK_EXPORTS = {
     ),
     "run_all_ingestions": ("ingestion.tasks", "run_all_ingestions"),
     "run_ingestion": ("ingestion.tasks", "run_ingestion"),
+    "assign_content_to_topic_cluster": (
+        "trends.tasks",
+        "assign_content_to_topic_cluster",
+    ),
     "TOPIC_CENTROID_MIN_UPVOTES": (
         "trends.tasks",
         "TOPIC_CENTROID_MIN_UPVOTES",
     ),
+    "recompute_topic_clusters": ("trends.tasks", "recompute_topic_clusters"),
     "queue_topic_centroid_recompute": (
         "trends.tasks",
         "queue_topic_centroid_recompute",
     ),
     "recompute_topic_centroid": ("trends.tasks", "recompute_topic_centroid"),
+    "recompute_topic_velocity": ("trends.tasks", "recompute_topic_velocity"),
+    "run_all_topic_cluster_recomputations": (
+        "trends.tasks",
+        "run_all_topic_cluster_recomputations",
+    ),
     "run_all_topic_centroid_recomputations": (
         "trends.tasks",
         "run_all_topic_centroid_recomputations",
@@ -79,12 +93,16 @@ _COMPAT_TASK_EXPORTS = {
 __all__ = [
     "process_newsletter_intake",
     "run_all_ingestions",
+    "assign_content_to_topic_cluster",
     "run_ingestion",
     "TOPIC_CENTROID_MIN_UPVOTES",
     "queue_topic_centroid_recompute",
     "recompute_authority_scores",
+    "recompute_topic_clusters",
     "recompute_topic_centroid",
+    "recompute_topic_velocity",
     "run_all_authority_recomputations",
+    "run_all_topic_cluster_recomputations",
     "run_all_topic_centroid_recomputations",
     "run_relevance_scoring_skill",
     "run_summarization_skill",
