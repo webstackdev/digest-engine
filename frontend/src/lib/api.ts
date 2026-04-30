@@ -27,6 +27,8 @@ import type {
 const API_BASE_URL =
   process.env.NEWSLETTER_API_BASE_URL ?? "http://127.0.0.1:8080"
 
+type AuthorizationSource = "token" | "bearer" | "basic"
+
 type SessionWithBackendAuth = {
   backendAuth?: {
     access?: string
@@ -87,14 +89,77 @@ async function getAuthorizationHeader() {
   const session = (await getServerSession(authOptions)) as SessionWithBackendAuth | null
 
   if (session?.backendAuth?.key) {
-    return `Token ${session.backendAuth.key}`
+    return {
+      authorization: `Token ${session.backendAuth.key}`,
+      source: "token" as const,
+    }
   }
 
   if (session?.backendAuth?.access) {
-    return `Bearer ${session.backendAuth.access}`
+    return {
+      authorization: `Bearer ${session.backendAuth.access}`,
+      source: "bearer" as const,
+    }
   }
 
-  return getBasicAuthHeader()
+  return {
+    authorization: getBasicAuthHeader(),
+    source: "basic" as const,
+  }
+}
+
+function tryGetBasicAuthHeader() {
+  try {
+    return getBasicAuthHeader()
+  } catch {
+    return null
+  }
+}
+
+function isAuthenticationFailure(
+  status: number,
+  contentType: string,
+  text: string,
+  source: AuthorizationSource,
+) {
+  if (source === "basic" || ![401, 403].includes(status) || !contentType.includes("json")) {
+    return false
+  }
+
+  try {
+    const payload = JSON.parse(text) as {
+      detail?: string
+      errors?: Array<{ code?: string; detail?: string }>
+    }
+    const details = [payload.detail, ...(payload.errors ?? []).map((error) => error.detail)]
+      .filter((detail): detail is string => Boolean(detail))
+      .join(" ")
+    const codes = new Set((payload.errors ?? []).map((error) => error.code))
+
+    return (
+      codes.has("authentication_failed") ||
+      codes.has("not_authenticated") ||
+      /invalid token|authentication credentials were not provided/i.test(details)
+    )
+  } catch {
+    return false
+  }
+}
+
+async function performApiRequest(
+  path: string,
+  init: RequestInit,
+  authorization: string,
+) {
+  return fetch(buildUrl(path), {
+    ...init,
+    headers: {
+      Authorization: authorization,
+      "Content-Type": "application/json",
+      ...(init.headers ?? {}),
+    },
+    cache: "no-store",
+  })
 }
 
 /**
@@ -133,24 +198,32 @@ export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const authorization = await getAuthorizationHeader()
+  const { authorization, source } = await getAuthorizationHeader()
 
-  const response = await fetch(buildUrl(path), {
-    ...init,
-    headers: {
-      Authorization: authorization,
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
-    cache: "no-store",
-  })
+  let response = await performApiRequest(path, init, authorization)
 
   if (response.status === 204) {
     return undefined as T
   }
 
-  const contentType = response.headers.get("content-type") ?? ""
-  const text = await response.text()
+  let contentType = response.headers.get("content-type") ?? ""
+  let text = await response.text()
+
+  if (isAuthenticationFailure(response.status, contentType, text, source)) {
+    const basicAuthorization = tryGetBasicAuthHeader()
+
+    if (basicAuthorization && basicAuthorization !== authorization) {
+      response = await performApiRequest(path, init, basicAuthorization)
+
+      if (response.status === 204) {
+        return undefined as T
+      }
+
+      contentType = response.headers.get("content-type") ?? ""
+      text = await response.text()
+    }
+  }
+
   if (!response.ok) {
     throw new Error(
       `API request failed (${response.status}) from ${buildUrl(path)} with ${contentType || "unknown content type"}: ${previewResponseBody(text)}`,
