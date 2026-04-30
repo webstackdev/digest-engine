@@ -1,76 +1,42 @@
+"""Aggregate app-owned API route registrations under the public v1 surface."""
+
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested.routers import NestedSimpleRouter
 
-from content.api import ContentViewSet, UserFeedbackViewSet
-from entities.api import EntityCandidateViewSet, EntityViewSet
-from ingestion.api import IngestionRunViewSet
-from newsletters.api import IntakeAllowlistViewSet, NewsletterIntakeViewSet
-from pipeline.api import ReviewQueueViewSet, SkillResultViewSet
-from projects.api import (
-    BlueskyCredentialsViewSet,
-    ProjectConfigViewSet,
-    ProjectInvitationViewSet,
-    ProjectMembershipViewSet,
-    ProjectViewSet,
-    SourceConfigViewSet,
+from content.api_urls import register_project_routes as register_content_project_routes
+from entities.api_urls import (
+    register_project_routes as register_entities_project_routes,
 )
-from trends.api import TopicCentroidSnapshotViewSet
+from ingestion.api_urls import (
+    register_project_routes as register_ingestion_project_routes,
+)
+from newsletters.api_urls import (
+    register_project_routes as register_newsletters_project_routes,
+)
+from pipeline.api_urls import (
+    register_project_routes as register_pipeline_project_routes,
+)
+from projects.api_urls import (
+    register_project_routes as register_projects_project_routes,
+)
+from projects.api_urls import (
+    register_root_routes as register_projects_root_routes,
+)
+from trends.api_urls import register_project_routes as register_trends_project_routes
 
 app_name = "api"
 
 router = DefaultRouter()
-router.register("projects", ProjectViewSet, basename="project")
+register_projects_root_routes(router)
 
 project_router = NestedSimpleRouter(router, r"projects", lookup="project")
-project_router.register(
-    r"project-configs", ProjectConfigViewSet, basename="project-config"
-)
-project_router.register(
-    r"memberships", ProjectMembershipViewSet, basename="project-membership"
-)
-project_router.register(
-    r"invitations", ProjectInvitationViewSet, basename="project-invitation"
-)
-project_router.register(r"entities", EntityViewSet, basename="project-entity")
-project_router.register(
-    r"entity-candidates",
-    EntityCandidateViewSet,
-    basename="project-entity-candidate",
-)
-project_router.register(r"contents", ContentViewSet, basename="project-content")
-project_router.register(
-    r"skill-results", SkillResultViewSet, basename="project-skill-result"
-)
-project_router.register(r"feedback", UserFeedbackViewSet, basename="project-feedback")
-project_router.register(
-    r"ingestion-runs", IngestionRunViewSet, basename="project-ingestion-run"
-)
-project_router.register(
-    r"bluesky-credentials",
-    BlueskyCredentialsViewSet,
-    basename="project-bluesky-credentials",
-)
-project_router.register(
-    r"intake-allowlist",
-    IntakeAllowlistViewSet,
-    basename="project-intake-allowlist",
-)
-project_router.register(
-    r"newsletter-intakes",
-    NewsletterIntakeViewSet,
-    basename="project-newsletter-intake",
-)
-project_router.register(
-    r"source-configs", SourceConfigViewSet, basename="project-source-config"
-)
-project_router.register(
-    r"topic-centroid-snapshots",
-    TopicCentroidSnapshotViewSet,
-    basename="project-topic-centroid-snapshot",
-)
-project_router.register(
-    r"review-queue", ReviewQueueViewSet, basename="project-review-queue"
-)
+register_projects_project_routes(project_router)
+register_entities_project_routes(project_router)
+register_content_project_routes(project_router)
+register_pipeline_project_routes(project_router)
+register_ingestion_project_routes(project_router)
+register_newsletters_project_routes(project_router)
+register_trends_project_routes(project_router)
 
 urlpatterns = [
     *router.urls,
