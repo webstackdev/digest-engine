@@ -8,6 +8,7 @@ from rest_framework.test import APITestCase
 
 from core.models import (
     Content,
+    ContentClusterMembership,
     Entity,
     EntityAuthoritySnapshot,
     EntityCandidate,
@@ -24,6 +25,8 @@ from core.models import (
     SkillResult,
     SkillStatus,
     TopicCentroidSnapshot,
+    TopicCluster,
+    TopicVelocitySnapshot,
     UserFeedback,
 )
 from projects.model_support import SourcePluginName
@@ -539,6 +542,115 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.json()["latest_snapshot"]["id"], latest_snapshot.id)
         self.assertAlmostEqual(response.json()["avg_drift_from_previous"], 0.2)
         self.assertAlmostEqual(response.json()["avg_drift_from_week_ago"], 0.3)
+
+    def test_topic_cluster_list_returns_current_velocity_annotation(self):
+        cluster = TopicCluster.objects.create(
+            project=self.owner_project,
+            first_seen_at="2026-04-22T00:00:00Z",
+            last_seen_at="2026-04-24T00:00:00Z",
+            is_active=True,
+            member_count=3,
+            dominant_entity=self.owner_entity,
+        )
+        TopicVelocitySnapshot.objects.create(
+            cluster=cluster,
+            project=self.owner_project,
+            window_count=4,
+            trailing_mean=1.5,
+            trailing_stddev=0.5,
+            z_score=3.0,
+            velocity_score=1.0,
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-topic-cluster-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            {"ordering": "-velocity_score"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["id"], cluster.id)
+        self.assertEqual(response.json()[0]["member_count"], 3)
+        self.assertEqual(
+            response.json()[0]["dominant_entity"]["id"], self.owner_entity.id
+        )
+        self.assertAlmostEqual(response.json()[0]["velocity_score"], 1.0)
+        self.assertAlmostEqual(response.json()[0]["z_score"], 3.0)
+        self.assertEqual(response.json()[0]["window_count"], 4)
+
+    def test_topic_cluster_detail_and_velocity_history_action_return_memberships(self):
+        cluster = TopicCluster.objects.create(
+            project=self.owner_project,
+            first_seen_at="2026-04-22T00:00:00Z",
+            last_seen_at="2026-04-24T00:00:00Z",
+            is_active=True,
+            member_count=1,
+            dominant_entity=self.owner_entity,
+        )
+        ContentClusterMembership.objects.create(
+            content=self.owner_content,
+            cluster=cluster,
+            project=self.owner_project,
+            similarity=0.92,
+        )
+        first_snapshot = TopicVelocitySnapshot.objects.create(
+            cluster=cluster,
+            project=self.owner_project,
+            window_count=2,
+            trailing_mean=1.0,
+            trailing_stddev=0.2,
+            z_score=1.5,
+            velocity_score=0.75,
+        )
+        second_snapshot = TopicVelocitySnapshot.objects.create(
+            cluster=cluster,
+            project=self.owner_project,
+            window_count=3,
+            trailing_mean=1.0,
+            trailing_stddev=0.3,
+            z_score=3.0,
+            velocity_score=1.0,
+        )
+        TopicVelocitySnapshot.objects.filter(pk=first_snapshot.pk).update(
+            computed_at="2026-04-23T00:00:00Z"
+        )
+        TopicVelocitySnapshot.objects.filter(pk=second_snapshot.pk).update(
+            computed_at="2026-04-24T00:00:00Z"
+        )
+
+        detail_response = self.client.get(
+            reverse(
+                "v1:project-topic-cluster-detail",
+                kwargs={"project_id": self.owner_project.id, "pk": cluster.id},
+            )
+        )
+        history_response = self.client.get(
+            reverse(
+                "v1:project-topic-cluster-velocity-history",
+                kwargs={"project_id": self.owner_project.id, "pk": cluster.id},
+            ),
+            {"limit": 1},
+        )
+
+        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail_response.json()["id"], cluster.id)
+        self.assertEqual(len(detail_response.json()["memberships"]), 1)
+        self.assertEqual(
+            detail_response.json()["memberships"][0]["content"]["id"],
+            self.owner_content.id,
+        )
+        self.assertEqual(len(detail_response.json()["velocity_history"]), 2)
+        self.assertEqual(
+            detail_response.json()["velocity_history"][0]["id"],
+            second_snapshot.id,
+        )
+
+        self.assertEqual(history_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(history_response.json()), 1)
+        self.assertEqual(history_response.json()[0]["id"], second_snapshot.id)
 
     def test_content_detail_includes_duplicate_state(self):
         canonical = self.owner_content

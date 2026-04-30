@@ -26,7 +26,10 @@ from pipeline.models import ReviewResolution as _ReviewResolution
 from pipeline.models import SkillResult as _SkillResult
 from pipeline.models import SkillStatus as _SkillStatus
 from projects.models import Project as _Project
+from trends.models import ContentClusterMembership as _ContentClusterMembership
 from trends.models import TopicCentroidSnapshot as _TopicCentroidSnapshot
+from trends.models import TopicCluster as _TopicCluster
+from trends.models import TopicVelocitySnapshot as _TopicVelocitySnapshot
 
 Project = _Project
 ReviewQueue = _ReviewQueue
@@ -34,10 +37,14 @@ ReviewReason = _ReviewReason
 ReviewResolution = _ReviewResolution
 SkillResult = _SkillResult
 SkillStatus = _SkillStatus
+ContentClusterMembership = _ContentClusterMembership
+TopicCluster = _TopicCluster
 TopicCentroidSnapshot = _TopicCentroidSnapshot
+TopicVelocitySnapshot = _TopicVelocitySnapshot
 
 __all__ = [
     "Content",
+    "ContentClusterMembership",
     "Entity",
     "EntityAuthoritySnapshot",
     "EntityCandidate",
@@ -53,6 +60,9 @@ __all__ = [
     "NewsletterIntakeStatus",
     "Project",
     "RunStatus",
+    "TopicCluster",
+    "TopicCentroidSnapshot",
+    "TopicVelocitySnapshot",
     "UserFeedback",
 ]
 
