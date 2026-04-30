@@ -13,6 +13,7 @@ django-allauth==65.16.1
 django-anymail==15.0
 django-cors-headers==4.9.0
 django-import-export==4.4.0
+django-storages==1.14.6
 django-stubs-ext==6.0.3
 django-stubs==6.0.3
 django-unfold==0.91.0

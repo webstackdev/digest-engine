@@ -236,6 +236,31 @@ describe("api helpers", () => {
     expect(result).toBeUndefined()
   })
 
+  it("omits the JSON content type when sending form data", async () => {
+    getServerSessionMock.mockResolvedValue(null)
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { uploadCurrentUserAvatar } = await import("@/lib/api")
+    const formData = new FormData()
+    formData.set(
+      "avatar",
+      new File(["avatar"], "avatar.png", { type: "image/png" }),
+    )
+
+    await uploadCurrentUserAvatar(formData)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/profile/avatar/",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.not.objectContaining({
+          "Content-Type": "application/json",
+        }),
+      }),
+    )
+  })
+
   it("throws when a successful response is not JSON", async () => {
     getServerSessionMock.mockResolvedValue(null)
     const fetchMock = vi.fn().mockResolvedValue(

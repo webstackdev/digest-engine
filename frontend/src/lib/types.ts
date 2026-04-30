@@ -17,6 +17,19 @@ export type Project = {
   created_at: string
 }
 
+export type UserProfile = {
+  id: number
+  username: string
+  email: string
+  display_name: string
+  avatar_url: string | null
+  avatar_thumbnail_url: string | null
+  bio: string
+  timezone: string
+  first_name: string
+  last_name: string
+}
+
 export type ProjectBlueskyVerification = {
   status: "verified"
   handle: string

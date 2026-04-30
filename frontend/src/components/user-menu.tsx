@@ -1,13 +1,11 @@
 "use client"
 
-import type { Session } from "next-auth"
-import { getSession, signOut } from "next-auth/react"
+import { useQuery } from "@tanstack/react-query"
+import Link from "next/link"
+import { signOut } from "next-auth/react"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-type AccountIdentity = {
-  name: string
-  email: string
-}
+import { fetchProfile, PROFILE_QUERY_KEY } from "@/lib/profile"
 
 const AVATAR_TONES = [
   "bg-primary text-white",
@@ -15,17 +13,6 @@ const AVATAR_TONES = [
   "bg-sidebar text-sidebar-ink",
   "bg-danger text-white",
 ]
-
-function buildAccountIdentity(session: Session | null): AccountIdentity {
-  const fallbackName = "Guest user"
-  const sessionName = session?.user?.name?.trim() || ""
-  const sessionEmail = session?.user?.email?.trim() || ""
-
-  return {
-    name: sessionName || sessionEmail || fallbackName,
-    email: sessionEmail,
-  }
-}
 
 function buildInitials(name: string) {
   const words = name
@@ -63,33 +50,13 @@ function buildAvatarTone(name: string) {
  * @returns A circular initials trigger with a dropdown containing account details and logout.
  */
 export function UserMenu() {
-  const [account, setAccount] = useState<AccountIdentity>({
-    name: "Guest user",
-    email: "",
-  })
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    let isActive = true
-
-    async function loadSession() {
-      const session = await getSession()
-      if (!isActive) {
-        return
-      }
-
-      setAccount(buildAccountIdentity(session))
-      setIsAuthenticated(Boolean(session?.user))
-    }
-
-    void loadSession()
-
-    return () => {
-      isActive = false
-    }
-  }, [])
+  const profileQuery = useQuery({
+    queryKey: PROFILE_QUERY_KEY,
+    queryFn: fetchProfile,
+    retry: false,
+  })
 
   useEffect(() => {
     if (!isOpen) {
@@ -117,8 +84,18 @@ export function UserMenu() {
     }
   }, [isOpen])
 
-  const initials = useMemo(() => buildInitials(account.name), [account.name])
-  const avatarTone = useMemo(() => buildAvatarTone(account.name), [account.name])
+  const accountName =
+    profileQuery.data?.display_name ||
+    profileQuery.data?.email ||
+    profileQuery.data?.username ||
+    "Guest user"
+  const accountEmail = profileQuery.data?.email || ""
+  const isAuthenticated = Boolean(profileQuery.data)
+  const avatarUrl =
+    profileQuery.data?.avatar_thumbnail_url ?? profileQuery.data?.avatar_url ?? null
+
+  const initials = useMemo(() => buildInitials(accountName), [accountName])
+  const avatarTone = useMemo(() => buildAvatarTone(accountName), [accountName])
 
   return (
     <div className="relative" ref={containerRef}>
@@ -130,7 +107,16 @@ export function UserMenu() {
         onClick={() => setIsOpen((currentValue) => !currentValue)}
         type="button"
       >
-        {initials}
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            alt={`${accountName} avatar`}
+            className="h-full w-full rounded-full object-cover"
+            src={avatarUrl}
+          />
+        ) : (
+          initials
+        )}
       </button>
 
       {isOpen ? (
@@ -139,22 +125,41 @@ export function UserMenu() {
           role="menu"
         >
           <div className="flex items-center gap-3">
-            <div
-              aria-hidden="true"
-              className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarTone}`}
-            >
-              {initials}
-            </div>
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                alt={`${accountName} avatar`}
+                className="h-12 w-12 shrink-0 rounded-full object-cover"
+                src={avatarUrl}
+              />
+            ) : (
+              <div
+                aria-hidden="true"
+                className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${avatarTone}`}
+              >
+                {initials}
+              </div>
+            )}
             <div className="min-w-0">
-              <p className="m-0 truncate text-sm font-semibold text-ink">{account.name}</p>
+              <p className="m-0 truncate text-sm font-semibold text-ink">{accountName}</p>
               <p className="m-0 truncate text-sm text-muted">
-                {account.email || "Signed in account"}
+                {accountEmail || "Signed in account"}
               </p>
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-ink/10 bg-surface-strong/45 px-4 py-3 text-sm leading-6 text-muted">
-            Profile actions will expand here next. Logout is wired now so the header affordance is already in place.
+          <div className="mt-4 grid gap-2">
+            <Link
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-surface-strong/45 px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/65"
+              href="/profile"
+              onClick={() => setIsOpen(false)}
+              role="menuitem"
+            >
+              View profile
+            </Link>
+            <div className="rounded-2xl border border-ink/10 bg-surface-strong/45 px-4 py-3 text-sm leading-6 text-muted">
+              Update your avatar, display name, and timezone from the profile workspace.
+            </div>
           </div>
 
           {isAuthenticated ? (

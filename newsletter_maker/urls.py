@@ -1,6 +1,7 @@
 """Top-level URL configuration for the newsletter-maker project."""
 
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.shortcuts import redirect
@@ -33,6 +34,7 @@ urlpatterns = [
     path("api/auth/registration/", include("dj_rest_auth.registration.urls")),
     path("api/auth/github/", GitHubLoginView.as_view(), name="github_login"),
     path("api/auth/google/", GoogleLoginView.as_view(), name="google_login"),
+    path("api/v1/", include("users.api_urls")),
     path("api/v1/", include(("core.api_urls", "api"), namespace="v1")),
     path(
         "favicon.ico",
@@ -42,3 +44,4 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

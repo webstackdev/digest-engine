@@ -166,6 +166,27 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+STORAGES = {
+    "default": {
+        "BACKEND": os.environ.get(
+            "DEFAULT_FILE_STORAGE",
+            "django.core.files.storage.FileSystemStorage",
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "")
+AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL", "")
+AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN", "")
+AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = None
+AWS_S3_FILE_OVERWRITE = False
+MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "var" / "media")))
+
 # DRF: the API defaults to authenticated access so browser sessions and basic
 # auth work locally, but anonymous requests are rejected.
 REST_FRAMEWORK = {
@@ -229,6 +250,16 @@ __all__ = [
     "USE_TZ",
     "STATIC_URL",
     "STATIC_ROOT",
+    "STORAGES",
+    "AWS_STORAGE_BUCKET_NAME",
+    "AWS_S3_REGION_NAME",
+    "AWS_S3_ENDPOINT_URL",
+    "AWS_S3_CUSTOM_DOMAIN",
+    "AWS_QUERYSTRING_AUTH",
+    "AWS_DEFAULT_ACL",
+    "AWS_S3_FILE_OVERWRITE",
+    "MEDIA_URL",
+    "MEDIA_ROOT",
     "REST_FRAMEWORK",
     "DRF_STANDARDIZED_ERRORS",
     "SECURE_PROXY_SSL_HEADER",

@@ -22,6 +22,7 @@ import type {
   TopicCentroidObservabilitySummary,
   TopicCentroidSnapshot,
   UserFeedback,
+  UserProfile,
 } from "@/lib/types"
 
 const API_BASE_URL =
@@ -151,12 +152,15 @@ async function performApiRequest(
   init: RequestInit,
   authorization: string,
 ) {
+  const isFormDataBody =
+    typeof FormData !== "undefined" && init.body instanceof FormData
+
   return fetch(buildUrl(path), {
     ...init,
     headers: {
       Authorization: authorization,
-      "Content-Type": "application/json",
       ...(init.headers ?? {}),
+      ...(isFormDataBody ? {} : { "Content-Type": "application/json" }),
     },
     cache: "no-store",
   })
@@ -261,6 +265,56 @@ export async function apiFetch<T>(
 export const getProjects = cache(
   async (): Promise<Project[]> => apiFetch<Project[]>("/api/v1/projects/"),
 )
+
+/**
+ * Fetch the current authenticated user's profile payload.
+ *
+ * @returns The current user's editable profile fields.
+ */
+export async function getCurrentUserProfile(): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/v1/profile/")
+}
+
+/**
+ * Update the current user's editable profile fields.
+ *
+ * @param payload - Partial profile fields accepted by the backend.
+ * @returns The updated profile payload.
+ */
+export async function updateCurrentUserProfile(
+  payload: Partial<Pick<UserProfile, "display_name" | "bio" | "timezone">>,
+): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/v1/profile/", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Upload a new avatar image for the current user.
+ *
+ * @param formData - Multipart body containing the selected avatar image.
+ * @returns The updated profile payload.
+ */
+export async function uploadCurrentUserAvatar(
+  formData: FormData,
+): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/v1/profile/avatar/", {
+    method: "POST",
+    body: formData,
+  })
+}
+
+/**
+ * Remove the current user's stored avatar image.
+ *
+ * @returns The updated profile payload without avatar URLs.
+ */
+export async function deleteCurrentUserAvatar(): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/api/v1/profile/avatar/", {
+    method: "DELETE",
+  })
+}
 
 /**
  * Partially update one project record.

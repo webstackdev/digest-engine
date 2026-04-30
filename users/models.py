@@ -9,12 +9,26 @@ from django.db import models
 
 from users.managers import AppUserManager
 
+AVATAR_ALLOWED_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+AVATAR_MAX_FILE_SIZE = 2 * 1024 * 1024
+
 
 def avatar_upload_path(instance: "AppUser", filename: str) -> str:
     """Return the storage path used for uploaded profile avatars."""
 
     user_id = instance.pk or "pending"
     return f"avatars/{user_id}/{filename}"
+
+
+def avatar_thumbnail_path(instance: "AppUser") -> str:
+    """Return the storage path used for a user's generated avatar thumbnail."""
+
+    user_id = instance.pk or "pending"
+    return f"avatars/{user_id}/thumb.webp"
 
 
 class AppUser(AbstractUser):
@@ -57,6 +71,31 @@ class AppUser(AbstractUser):
         db_table = "auth_user"
         verbose_name = "User"
         verbose_name_plural = "Users"
+
+    @property
+    def avatar_url(self) -> str | None:
+        """Return the current avatar URL, if one is stored."""
+
+        if not self.avatar:
+            return None
+        try:
+            return self.avatar.url
+        except ValueError:
+            return None
+
+    @property
+    def avatar_thumbnail_url(self) -> str | None:
+        """Return the generated avatar thumbnail URL, or fall back to the avatar."""
+
+        avatar_url = self.avatar_url
+        if avatar_url is None:
+            return None
+
+        storage = self.avatar.storage
+        thumbnail_name = avatar_thumbnail_path(self)
+        if storage.exists(thumbnail_name):
+            return storage.url(thumbnail_name)
+        return avatar_url
 
     def __str__(self) -> str:
         return self.display_name or self.get_username()
