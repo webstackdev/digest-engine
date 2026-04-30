@@ -269,7 +269,7 @@ def test_source_config_serializer_surfaces_plugin_validation_errors(serializer_c
     )
 
     assert serializer.is_valid() is False
-    assert serializer.errors == {"config": ["Missing required config field: feed_url"]}
+    assert serializer.errors == {"config": ["Invalid source configuration."]}
 
 
 def test_source_config_serializer_normalizes_bluesky_author_handle_config(

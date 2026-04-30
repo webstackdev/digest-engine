@@ -2,8 +2,13 @@
 
 from rest_framework import serializers
 
-from core.serializers import ProjectScopedSerializerMixin
-from entities.models import Entity, EntityAuthoritySnapshot, EntityCandidate, EntityMention
+from core.serializer_mixins import ProjectScopedSerializerMixin
+from entities.models import (
+    Entity,
+    EntityAuthoritySnapshot,
+    EntityCandidate,
+    EntityMention,
+)
 
 
 class EntitySerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
@@ -82,7 +87,9 @@ class EntityMentionSummarySerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class EntityCandidateSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
+class EntityCandidateSerializer(
+    ProjectScopedSerializerMixin, serializers.ModelSerializer
+):
     """Serialize extracted entity candidates awaiting editorial review."""
 
     first_seen_title = serializers.CharField(
@@ -109,7 +116,9 @@ class EntityCandidateSerializer(ProjectScopedSerializerMixin, serializers.ModelS
         read_only_fields = fields
 
 
-class EntityCandidateMergeSerializer(ProjectScopedSerializerMixin, serializers.Serializer):
+class EntityCandidateMergeSerializer(
+    ProjectScopedSerializerMixin, serializers.Serializer
+):
     """Validate merge requests for entity candidates."""
 
     merged_into = serializers.PrimaryKeyRelatedField(queryset=Entity.objects.none())

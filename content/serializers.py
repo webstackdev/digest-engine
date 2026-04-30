@@ -3,7 +3,7 @@
 from rest_framework import serializers
 
 from content.models import Content, UserFeedback
-from core.serializers import ProjectScopedSerializerMixin
+from core.serializer_mixins import ProjectScopedSerializerMixin
 
 
 class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):

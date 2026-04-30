@@ -31,9 +31,11 @@ TOPIC_CENTROID_DECAY_TAU_DAYS = 45
 class DelayedTask(Protocol):
     """Protocol for Celery tasks that can run eagerly or via ``delay``."""
 
-    def __call__(self, *args: object, **kwargs: object) -> object: ...
+    def __call__(self, *args: object, **kwargs: object) -> object:
+        pass
 
-    def delay(self, *args: object, **kwargs: object) -> object: ...
+    def delay(self, *args: object, **kwargs: object) -> object:
+        pass
 
 
 def _enqueue_task(task: object, *args: object) -> None:

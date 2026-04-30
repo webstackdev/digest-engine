@@ -5,7 +5,7 @@ import math
 from collections import defaultdict
 from datetime import timedelta
 from importlib import import_module
-from typing import Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from celery import shared_task
 from django.conf import settings
@@ -34,18 +34,6 @@ from entities.models import (
     EntityMention,
     EntityMentionRole,
 )
-from ingestion.tasks import (
-    _ingest_source_config as _ingest_source_config_impl,
-)
-from ingestion.tasks import (
-    run_all_ingestions as run_all_ingestions_impl,
-)
-from ingestion.tasks import (
-    run_ingestion as run_ingestion_impl,
-)
-from newsletters.tasks import (
-    process_newsletter_intake as process_newsletter_intake_impl,
-)
 from projects.models import Project, ProjectConfig
 
 logger = logging.getLogger(__name__)
@@ -56,25 +44,77 @@ AUTHORITY_ROLE_SIGNALS = (
     EntityMentionRole.SUBJECT,
 )
 
-_ingest_source_config = _ingest_source_config_impl
-process_newsletter_intake = process_newsletter_intake_impl
-run_all_ingestions = run_all_ingestions_impl
-run_ingestion = run_ingestion_impl
-_trends_tasks = import_module("trends.tasks")
-TOPIC_CENTROID_MIN_UPVOTES = _trends_tasks.TOPIC_CENTROID_MIN_UPVOTES
-queue_topic_centroid_recompute = _trends_tasks.queue_topic_centroid_recompute
-recompute_topic_centroid = _trends_tasks.recompute_topic_centroid
-run_all_topic_centroid_recomputations = (
-    _trends_tasks.run_all_topic_centroid_recomputations
-)
+if TYPE_CHECKING:
+    from ingestion.tasks import run_all_ingestions, run_ingestion
+    from newsletters.tasks import process_newsletter_intake
+    from trends.tasks import (
+        TOPIC_CENTROID_MIN_UPVOTES,
+        queue_topic_centroid_recompute,
+        recompute_topic_centroid,
+        run_all_topic_centroid_recomputations,
+    )
+
+_COMPAT_TASK_EXPORTS = {
+    "process_newsletter_intake": (
+        "newsletters.tasks",
+        "process_newsletter_intake",
+    ),
+    "run_all_ingestions": ("ingestion.tasks", "run_all_ingestions"),
+    "run_ingestion": ("ingestion.tasks", "run_ingestion"),
+    "TOPIC_CENTROID_MIN_UPVOTES": (
+        "trends.tasks",
+        "TOPIC_CENTROID_MIN_UPVOTES",
+    ),
+    "queue_topic_centroid_recompute": (
+        "trends.tasks",
+        "queue_topic_centroid_recompute",
+    ),
+    "recompute_topic_centroid": ("trends.tasks", "recompute_topic_centroid"),
+    "run_all_topic_centroid_recomputations": (
+        "trends.tasks",
+        "run_all_topic_centroid_recomputations",
+    ),
+}
+
+__all__ = [
+    "process_newsletter_intake",
+    "run_all_ingestions",
+    "run_ingestion",
+    "TOPIC_CENTROID_MIN_UPVOTES",
+    "queue_topic_centroid_recompute",
+    "recompute_authority_scores",
+    "recompute_topic_centroid",
+    "run_all_authority_recomputations",
+    "run_all_topic_centroid_recomputations",
+    "run_relevance_scoring_skill",
+    "run_summarization_skill",
+    "queue_content_skill",
+    "process_content",
+    "upsert_content_embedding",
+]
+
+
+def __getattr__(name: str) -> Any:
+    """Resolve compatibility task re-exports lazily."""
+
+    try:
+        module_name, attribute_name = _COMPAT_TASK_EXPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+
+    value = getattr(import_module(module_name), attribute_name)
+    globals()[name] = value
+    return value
 
 
 class DelayedTask(Protocol):
     """Protocol for Celery tasks that can run eagerly or via ``delay``."""
 
-    def __call__(self, *args: object, **kwargs: object) -> object: ...
+    def __call__(self, *args: object, **kwargs: object) -> object:
+        pass
 
-    def delay(self, *args: object, **kwargs: object) -> object: ...
+    def delay(self, *args: object, **kwargs: object) -> object:
+        pass
 
 
 def _enqueue_task(task: object, *args: object) -> None:

@@ -1,10 +1,12 @@
 """DRF serializers for project-owned models."""
 
+import logging
+
 from rest_framework import serializers
 
 from core.plugins import validate_plugin_config
 from core.permissions import get_user_role
-from core.serializers import ProjectScopedSerializerMixin
+from core.serializer_mixins import ProjectScopedSerializerMixin
 from projects.models import (
     BlueskyCredentials,
     Project,
@@ -13,6 +15,8 @@ from projects.models import (
     ProjectRole,
     SourceConfig,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
@@ -208,7 +212,14 @@ class SourceConfigSerializer(ProjectScopedSerializerMixin, serializers.ModelSeri
             try:
                 attrs["config"] = validate_plugin_config(plugin_name, config)
             except ValueError as exc:
-                raise serializers.ValidationError({"config": str(exc)}) from exc
+                logger.warning(
+                    "Rejected invalid source config",
+                    extra={"plugin_name": str(plugin_name)},
+                    exc_info=exc,
+                )
+                raise serializers.ValidationError(
+                    {"config": "Invalid source configuration."}
+                )
         return attrs
 
 

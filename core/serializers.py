@@ -1,11 +1,7 @@
-"""DRF serializers for project-scoped core models.
-
-These serializers enforce the project's access rules at the API boundary. They do
-more than simple field translation: several serializers limit related querysets to
-the active project and validate that cross-project relationships cannot be posted.
-"""
+"""DRF serializers for project-scoped core models and compatibility exports."""
 
 from importlib import import_module
+from typing import TYPE_CHECKING, Any
 
 from rest_framework import serializers
 
@@ -14,90 +10,79 @@ from core.models import (
     IngestionRun,
     IntakeAllowlist,
     NewsletterIntake,
-    SkillResult,
     UserFeedback,
 )
-from core.permissions import get_visible_projects_queryset
-from entities.models import Entity
+from core.serializer_mixins import ProjectScopedSerializerMixin
 
+if TYPE_CHECKING:
+    from entities.serializers import (
+        EntityAuthoritySnapshotSerializer,
+        EntityCandidateMergeSerializer,
+        EntityCandidateSerializer,
+        EntityMentionSummarySerializer,
+        EntitySerializer,
+    )
+    from pipeline.serializers import ReviewQueueSerializer, SkillResultSerializer
+    from trends.serializers import (
+        TopicCentroidObservabilitySummarySerializer,
+        TopicCentroidSnapshotSerializer,
+    )
 
-class ProjectScopedSerializerMixin:
-    """Limit serializer relationship fields to objects the current user can access."""
-
-    def _filter_related_queryset(self, request):
-        """Constrain related-field querysets using the request user and project context."""
-
-        user = request.user
-        project = self.context.get("project")
-        if "project" in self.fields:
-            self.fields["project"].queryset = get_visible_projects_queryset(user)
-        if "entity" in self.fields:
-            entity_queryset = (
-                Entity.objects.filter(project=project)
-                if project
-                else Entity.objects.filter(project__memberships__user=user).distinct()
-            )
-            self.fields["entity"].queryset = entity_queryset
-        if "merged_into" in self.fields:
-            merged_into_queryset = (
-                Entity.objects.filter(project=project)
-                if project
-                else Entity.objects.filter(project__memberships__user=user).distinct()
-            )
-            self.fields["merged_into"].queryset = merged_into_queryset
-        if "content" in self.fields:
-            content_queryset = (
-                Content.objects.filter(project=project)
-                if project
-                else Content.objects.filter(project__memberships__user=user).distinct()
-            )
-            self.fields["content"].queryset = content_queryset
-        if "superseded_by" in self.fields:
-            skill_result_queryset = (
-                SkillResult.objects.filter(project=project)
-                if project
-                else SkillResult.objects.filter(
-                    project__memberships__user=user
-                ).distinct()
-            )
-            self.fields["superseded_by"].queryset = skill_result_queryset
-
-    def __init__(self, *args, **kwargs):
-        """Initialize the serializer and scope relation fields when authenticated."""
-
-        super().__init__(*args, **kwargs)
-        request = self.context.get("request")
-        if request and request.user.is_authenticated:
-            self._filter_related_queryset(request)
-
-
-# Imported after ProjectScopedSerializerMixin to avoid a circular import while
-# keeping the legacy core.serializers import surface stable during the app split.
-from entities.serializers import (  # noqa: E402
-    EntityAuthoritySnapshotSerializer,
-    EntityCandidateMergeSerializer,
-    EntityCandidateSerializer,
-    EntityMentionSummarySerializer,
-    EntitySerializer,
-)
-
-_pipeline_serializers = import_module("pipeline.serializers")
-_trends_serializers = import_module("trends.serializers")
-
-ReviewQueueSerializer = _pipeline_serializers.ReviewQueueSerializer
-SkillResultSerializer = _pipeline_serializers.SkillResultSerializer
-TopicCentroidObservabilitySummarySerializer = (
-    _trends_serializers.TopicCentroidObservabilitySummarySerializer
-)
-TopicCentroidSnapshotSerializer = _trends_serializers.TopicCentroidSnapshotSerializer
+_COMPAT_SERIALIZER_EXPORTS = {
+    "EntityAuthoritySnapshotSerializer": (
+        "entities.serializers",
+        "EntityAuthoritySnapshotSerializer",
+    ),
+    "EntityCandidateMergeSerializer": (
+        "entities.serializers",
+        "EntityCandidateMergeSerializer",
+    ),
+    "EntityCandidateSerializer": (
+        "entities.serializers",
+        "EntityCandidateSerializer",
+    ),
+    "EntityMentionSummarySerializer": (
+        "entities.serializers",
+        "EntityMentionSummarySerializer",
+    ),
+    "EntitySerializer": ("entities.serializers", "EntitySerializer"),
+    "ReviewQueueSerializer": ("pipeline.serializers", "ReviewQueueSerializer"),
+    "SkillResultSerializer": ("pipeline.serializers", "SkillResultSerializer"),
+    "TopicCentroidObservabilitySummarySerializer": (
+        "trends.serializers",
+        "TopicCentroidObservabilitySummarySerializer",
+    ),
+    "TopicCentroidSnapshotSerializer": (
+        "trends.serializers",
+        "TopicCentroidSnapshotSerializer",
+    ),
+}
 
 __all__ = [
+    "ProjectScopedSerializerMixin",
     "EntityAuthoritySnapshotSerializer",
     "EntityCandidateMergeSerializer",
     "EntityCandidateSerializer",
     "EntityMentionSummarySerializer",
     "EntitySerializer",
+    "ReviewQueueSerializer",
+    "SkillResultSerializer",
+    "TopicCentroidObservabilitySummarySerializer",
+    "TopicCentroidSnapshotSerializer",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    """Resolve compatibility serializer re-exports lazily."""
+
+    try:
+        module_name, attribute_name = _COMPAT_SERIALIZER_EXPORTS[name]
+    except KeyError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
+
+    value = getattr(import_module(module_name), attribute_name)
+    globals()[name] = value
+    return value
 
 
 class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):

@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 
-from core.serializers import ProjectScopedSerializerMixin
+from core.serializer_mixins import ProjectScopedSerializerMixin
 from pipeline.models import ReviewQueue, SkillResult
 
 
