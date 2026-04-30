@@ -262,6 +262,60 @@ def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
     process_content_delay_mock.assert_not_called()
 
 
+def test_ingest_source_config_deduplicates_mastodon_statuses_by_status_uri(
+    source_plugin_context, mocker
+):
+    upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    source_config = SourceConfig.objects.create(
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.MASTODON,
+        config={
+            "instance_url": "https://hachyderm.io",
+            "hashtag": "platformengineering",
+        },
+    )
+    Content.objects.create(
+        project=source_plugin_context.project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/existing-article",
+        title="Existing Mastodon Status",
+        author="Alice Example",
+        source_plugin=SourcePluginName.MASTODON,
+        published_date="2026-04-20T12:00:00Z",
+        content_text="Existing content",
+        source_metadata={
+            "status_uri": "https://hachyderm.io/users/alice/statuses/abc123"
+        },
+    )
+    plugin = SimpleNamespace(
+        fetch_new_content=lambda since: [
+            SimpleNamespace(
+                url="https://example.com/new-canonical-url",
+                title="Duplicate Mastodon Status",
+                author="Alice Example",
+                published_date=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+                content_text="Duplicate content",
+                source_plugin=SourcePluginName.MASTODON,
+                source_metadata={
+                    "author_acct": "alice@hachyderm.io",
+                    "status_uri": "https://hachyderm.io/users/alice/statuses/abc123",
+                },
+            )
+        ],
+        match_entity_for_item=lambda item: source_plugin_context.entity,
+    )
+    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
+
+    items_fetched, items_ingested = _ingest_source_config(source_config)
+
+    assert items_fetched == 1
+    assert items_ingested == 0
+    assert Content.objects.filter(project=source_plugin_context.project).count() == 1
+    upsert_embedding_mock.assert_not_called()
+    process_content_delay_mock.assert_not_called()
+
+
 def test_run_all_ingestions_enqueues_active_source_configs(
     source_plugin_context, mocker
 ):

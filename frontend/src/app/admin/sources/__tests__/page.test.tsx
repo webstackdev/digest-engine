@@ -6,6 +6,7 @@ import type {
   BlueskyCredentials,
   IngestionRun,
   IntakeAllowlistEntry,
+  MastodonCredentials,
   NewsletterIntake,
   Project,
   SourceConfig,
@@ -15,6 +16,7 @@ const {
   getProjectBlueskyCredentialsMock,
   getProjectIngestionRunsMock,
   getProjectIntakeAllowlistMock,
+  getProjectMastodonCredentialsMock,
   getProjectNewsletterIntakesMock,
   getProjectsMock,
   getProjectSourceConfigsMock,
@@ -23,6 +25,7 @@ const {
   getProjectBlueskyCredentialsMock: vi.fn(),
   getProjectIngestionRunsMock: vi.fn(),
   getProjectIntakeAllowlistMock: vi.fn(),
+  getProjectMastodonCredentialsMock: vi.fn(),
   getProjectNewsletterIntakesMock: vi.fn(),
   getProjectsMock: vi.fn(),
   getProjectSourceConfigsMock: vi.fn(),
@@ -65,6 +68,7 @@ vi.mock("@/lib/api", () => ({
   getProjectBlueskyCredentials: getProjectBlueskyCredentialsMock,
   getProjectIngestionRuns: getProjectIngestionRunsMock,
   getProjectIntakeAllowlist: getProjectIntakeAllowlistMock,
+  getProjectMastodonCredentials: getProjectMastodonCredentialsMock,
   getProjectNewsletterIntakes: getProjectNewsletterIntakesMock,
   getProjects: getProjectsMock,
   getProjectSourceConfigs: getProjectSourceConfigsMock,
@@ -183,6 +187,24 @@ function createBlueskyCredentials(
   }
 }
 
+function createMastodonCredentials(
+  overrides: Partial<MastodonCredentials> = {},
+): MastodonCredentials {
+  return {
+    id: 8,
+    project: 1,
+    instance_url: "https://hachyderm.io",
+    account_acct: "project@hachyderm.io",
+    is_active: true,
+    has_stored_credential: true,
+    last_verified_at: "2026-04-29T10:00:00Z",
+    last_error: "",
+    created_at: "2026-04-29T09:00:00Z",
+    updated_at: "2026-04-29T10:00:00Z",
+    ...overrides,
+  }
+}
+
 async function loadSourcesPageModule() {
   return import("../page")
 }
@@ -245,14 +267,16 @@ describe("SourcesPage", () => {
     getProjectSourceConfigsMock.mockReset()
     getProjectIngestionRunsMock.mockReset()
     getProjectIntakeAllowlistMock.mockReset()
+    getProjectMastodonCredentialsMock.mockReset()
     getProjectNewsletterIntakesMock.mockReset()
     selectProjectMock.mockReset()
 
-  getProjectBlueskyCredentialsMock.mockResolvedValue([])
+    getProjectBlueskyCredentialsMock.mockResolvedValue([])
     getProjectsMock.mockResolvedValue([defaultProject])
     getProjectSourceConfigsMock.mockResolvedValue([])
     getProjectIngestionRunsMock.mockResolvedValue([])
     getProjectIntakeAllowlistMock.mockResolvedValue([])
+    getProjectMastodonCredentialsMock.mockResolvedValue([])
     getProjectNewsletterIntakesMock.mockResolvedValue([])
     selectProjectMock.mockImplementation((projects: Project[]) => {
       return projects[0] ?? null
@@ -276,6 +300,7 @@ describe("SourcesPage", () => {
     expect(getProjectIngestionRunsMock).not.toHaveBeenCalled()
     expect(getProjectBlueskyCredentialsMock).not.toHaveBeenCalled()
     expect(getProjectIntakeAllowlistMock).not.toHaveBeenCalled()
+    expect(getProjectMastodonCredentialsMock).not.toHaveBeenCalled()
     expect(getProjectNewsletterIntakesMock).not.toHaveBeenCalled()
   })
 
@@ -315,6 +340,7 @@ describe("SourcesPage", () => {
     expect(getProjectIngestionRunsMock).toHaveBeenCalledWith(1)
     expect(getProjectBlueskyCredentialsMock).toHaveBeenCalledWith(1)
     expect(getProjectIntakeAllowlistMock).toHaveBeenCalledWith(1)
+    expect(getProjectMastodonCredentialsMock).toHaveBeenCalledWith(1)
     expect(getProjectNewsletterIntakesMock).toHaveBeenCalledWith(1)
   })
 
@@ -423,6 +449,28 @@ describe("SourcesPage", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders Mastodon verification controls from stored credentials", async () => {
+    const selectedProject = createProject({ id: 4 })
+
+    getProjectsMock.mockResolvedValue([selectedProject])
+    selectProjectMock.mockReturnValue(selectedProject)
+    getProjectMastodonCredentialsMock.mockResolvedValue([
+      createMastodonCredentials({ project: 4, account_acct: "alice@hachyderm.io" }),
+    ])
+
+    await renderSourcesPage({ project: "4" })
+
+    expect(screen.getByText("alice@hachyderm.io")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "Save an optional per-instance access token for higher rate limits, then verify it without leaving the editor dashboard.",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Verify Mastodon credentials" }),
+    ).toBeEnabled()
+  })
+
   it("renders source cards with badge tones and the latest run summary", async () => {
     const selectedProject = createProject({ id: 3 })
     getProjectsMock.mockResolvedValue([selectedProject])
@@ -474,7 +522,7 @@ describe("SourcesPage", () => {
     expect(screen.getByText("Rate limited")).toBeInTheDocument()
 
     const badges = screen.getAllByTestId("status-badge")
-    expect(badges).toHaveLength(4)
+    expect(badges).toHaveLength(5)
     expect(
       badges.some(
         (badge) =>
@@ -500,5 +548,13 @@ describe("SourcesPage", () => {
 
     expect(screen.getByText("Latest run: none")).toBeInTheDocument()
     expect(screen.getByText("No recent error")).toBeInTheDocument()
+  })
+
+  it("includes Mastodon in the source creation options", async () => {
+    await renderSourcesPage({ project: "1" })
+
+    expect(
+      screen.getByRole("option", { name: "Mastodon" }),
+    ).toBeInTheDocument()
   })
 })

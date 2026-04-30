@@ -39,11 +39,19 @@ from ingestion.admin import IngestionRunAdmin
 from projects.admin import (
     BlueskyCredentialsAdmin,
     BlueskyCredentialsAdminForm,
+    MastodonCredentialsAdmin,
+    MastodonCredentialsAdminForm,
     ProjectConfigAdmin,
     SourceConfigAdmin,
 )
 from projects.model_support import SourcePluginName
-from projects.models import BlueskyCredentials, Project, ProjectConfig, SourceConfig
+from projects.models import (
+    BlueskyCredentials,
+    MastodonCredentials,
+    Project,
+    ProjectConfig,
+    SourceConfig,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -361,6 +369,82 @@ def test_verify_selected_bluesky_credentials_reports_failures(
     admin_instance.message_user.assert_called_once_with(
         ANY,
         "Credential verification failed for: Bluesky credentials for Admin Project: bad login",
+        messages.ERROR,
+    )
+
+
+def test_mastodon_credentials_admin_form_encrypts_access_token(source_admin_context):
+    form = MastodonCredentialsAdminForm(
+        data={
+            "project": source_admin_context.project.id,
+            "instance_url": "https://hachyderm.io/@alice/",
+            "account_acct": "@Alice",
+            "credential_input": "access-token",
+            "is_active": True,
+        }
+    )
+
+    assert form.is_valid(), form.errors
+    credentials = form.save()
+
+    assert credentials.instance_url == "https://hachyderm.io"
+    assert credentials.account_acct == "alice@hachyderm.io"
+    assert credentials.has_access_token() is True
+    assert credentials.get_access_token() == "access-token"
+
+
+def test_verify_selected_mastodon_credentials_reports_success(
+    source_admin_context, mocker
+):
+    credentials = MastodonCredentials.objects.create(
+        project=source_admin_context.project,
+        instance_url="https://hachyderm.io",
+        account_acct="alice@hachyderm.io",
+        access_token_encrypted="ciphertext",
+    )
+    verify_mock = mocker.patch(
+        "core.plugins.mastodon.MastodonSourcePlugin.verify_credentials"
+    )
+    admin_instance = MastodonCredentialsAdmin(MastodonCredentials, AdminSite())
+    admin_instance.message_user = mocker.Mock()
+
+    admin_instance.verify_selected_credentials(
+        request=SimpleNamespace(),
+        queryset=MastodonCredentials.objects.filter(pk=credentials.pk),
+    )
+
+    verify_mock.assert_called_once_with(credentials)
+    admin_instance.message_user.assert_called_once_with(
+        ANY,
+        "Credential verification passed for 1 account(s).",
+        messages.SUCCESS,
+    )
+
+
+def test_verify_selected_mastodon_credentials_reports_failures(
+    source_admin_context, mocker
+):
+    credentials = MastodonCredentials.objects.create(
+        project=source_admin_context.project,
+        instance_url="https://hachyderm.io",
+        account_acct="alice@hachyderm.io",
+        access_token_encrypted="ciphertext",
+    )
+    mocker.patch(
+        "core.plugins.mastodon.MastodonSourcePlugin.verify_credentials",
+        side_effect=RuntimeError("bad token"),
+    )
+    admin_instance = MastodonCredentialsAdmin(MastodonCredentials, AdminSite())
+    admin_instance.message_user = mocker.Mock()
+
+    admin_instance.verify_selected_credentials(
+        request=SimpleNamespace(),
+        queryset=MastodonCredentials.objects.filter(pk=credentials.pk),
+    )
+
+    admin_instance.message_user.assert_called_once_with(
+        ANY,
+        "Credential verification failed for: Mastodon credentials for Admin Project: bad token",
         messages.ERROR,
     )
 

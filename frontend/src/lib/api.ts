@@ -13,10 +13,12 @@ import type {
   EntityCandidate,
   IngestionRun,
   IntakeAllowlistEntry,
+  MastodonCredentials,
   MembershipInvitation,
   NewsletterIntake,
   Project,
   ProjectBlueskyVerification,
+  ProjectMastodonVerification,
   ProjectMembership,
   PublicMembershipInvitation,
   ReviewQueueItem,
@@ -578,6 +580,89 @@ export async function updateProjectBlueskyCredentials(
 ): Promise<BlueskyCredentials> {
   return apiFetch<BlueskyCredentials>(
     `/api/v1/projects/${projectId}/bluesky-credentials/${credentialId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Verify the stored Mastodon credentials for one project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Verification status details for the stored Mastodon account.
+ */
+export async function verifyProjectMastodonCredentials(
+  projectId: number,
+): Promise<ProjectMastodonVerification> {
+  return apiFetch<ProjectMastodonVerification>(
+    `/api/v1/projects/${projectId}/verify-mastodon-credentials/`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+/**
+ * Fetch stored Mastodon credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Zero or one stored Mastodon credential rows for the project.
+ */
+export async function getProjectMastodonCredentials(
+  projectId: number,
+): Promise<MastodonCredentials[]> {
+  return apiFetch<MastodonCredentials[]>(
+    `/api/v1/projects/${projectId}/mastodon-credentials/`,
+  )
+}
+
+/**
+ * Create Mastodon credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param payload - Credential fields accepted by the backend serializer.
+ * @returns The created Mastodon credentials row.
+ */
+export async function createProjectMastodonCredentials(
+  projectId: number,
+  payload: {
+    instance_url: string
+    account_acct: string
+    is_active: boolean
+    access_token: string
+  },
+): Promise<MastodonCredentials> {
+  return apiFetch<MastodonCredentials>(
+    `/api/v1/projects/${projectId}/mastodon-credentials/`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Update stored Mastodon credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param credentialId - Numeric credential identifier inside the project.
+ * @param payload - Partial credential fields accepted by the backend serializer.
+ * @returns The updated Mastodon credentials row.
+ */
+export async function updateProjectMastodonCredentials(
+  projectId: number,
+  credentialId: number,
+  payload: Partial<{
+    instance_url: string
+    account_acct: string
+    is_active: boolean
+    access_token: string
+  }>,
+): Promise<MastodonCredentials> {
+  return apiFetch<MastodonCredentials>(
+    `/api/v1/projects/${projectId}/mastodon-credentials/${credentialId}/`,
     {
       method: "PATCH",
       body: JSON.stringify(payload),

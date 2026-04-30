@@ -5,11 +5,17 @@ import {
   getProjectBlueskyCredentials,
   getProjectIngestionRuns,
   getProjectIntakeAllowlist,
+  getProjectMastodonCredentials,
   getProjectNewsletterIntakes,
   getProjects,
   getProjectSourceConfigs,
 } from "@/lib/api"
-import type { BlueskyCredentials, NewsletterIntake, Project } from "@/lib/types"
+import type {
+  BlueskyCredentials,
+  MastodonCredentials,
+  NewsletterIntake,
+  Project,
+} from "@/lib/types"
 import {
   formatDate,
   getErrorMessage,
@@ -54,6 +60,30 @@ export function deriveBlueskyVerificationState(
   }
 
   if (project.bluesky_last_verified_at) {
+    return { label: "verified", tone: "positive" }
+  }
+
+  return { label: "needs verification", tone: "warning" }
+}
+
+/**
+ * Derive the current Mastodon verification badge state for stored credentials.
+ *
+ * @param credentials - Current stored Mastodon credentials, if any.
+ * @returns A badge label and semantic tone describing the stored credential state.
+ */
+export function deriveMastodonVerificationState(
+  credentials: MastodonCredentials | null,
+): BlueskyVerificationState {
+  if (!credentials) {
+    return { label: "not configured", tone: "neutral" }
+  }
+
+  if (credentials.last_error) {
+    return { label: "verification failed", tone: "negative" }
+  }
+
+  if (credentials.last_verified_at) {
     return { label: "verified", tone: "positive" }
   }
 
@@ -173,12 +203,14 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
     intakeAllowlist,
     newsletterIntakes,
     blueskyCredentials,
+    mastodonCredentials,
   ] = await Promise.all([
     getProjectSourceConfigs(selectedProject.id),
     getProjectIngestionRuns(selectedProject.id),
     getProjectIntakeAllowlist(selectedProject.id),
     getProjectNewsletterIntakes(selectedProject.id),
     getProjectBlueskyCredentials(selectedProject.id),
+    getProjectMastodonCredentials(selectedProject.id),
   ])
   const latestRunByPlugin = buildLatestRunByPlugin(ingestionRuns)
   const blueskyVerificationState = deriveBlueskyVerificationState(selectedProject)
@@ -205,6 +237,11 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
     null
   const currentBlueskyCredentials: BlueskyCredentials | null =
     blueskyCredentials[0] ?? null
+  const currentMastodonCredentials: MastodonCredentials | null =
+    mastodonCredentials[0] ?? null
+  const mastodonVerificationState = deriveMastodonVerificationState(
+    currentMastodonCredentials,
+  )
 
   const errorMessage = getErrorMessage(resolvedSearchParams)
   const successMessage = getSuccessMessage(resolvedSearchParams)
@@ -212,7 +249,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
   return (
     <AppShell
       title="Source configuration"
-      description="Add, tune, and disable RSS, Reddit, and Bluesky ingestion while keeping newsletter intake controls in the same editor dashboard."
+      description="Add, tune, and disable RSS, Reddit, Bluesky, and Mastodon ingestion while keeping newsletter intake controls in the same editor dashboard."
       projects={projects}
       selectedProjectId={selectedProject.id}
     >
@@ -655,6 +692,135 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
           </article>
 
           <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Mastodon</p>
+                <h2 className="m-0 font-display text-title-sm font-bold text-ink">
+                  Credential verification
+                </h2>
+                <p className="m-0 text-sm leading-6 text-muted">
+                  Save an optional per-instance access token for higher rate limits, then
+                  verify it without leaving the editor dashboard.
+                </p>
+              </div>
+              <StatusBadge tone={mastodonVerificationState.tone}>
+                {mastodonVerificationState.label}
+              </StatusBadge>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-2 rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+                <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+                  Stored credentials
+                </p>
+                <p className="m-0 text-sm leading-6 text-ink">
+                  {currentMastodonCredentials
+                    ? currentMastodonCredentials.account_acct || currentMastodonCredentials.instance_url
+                    : "No Mastodon credentials are configured for this project yet."}
+                </p>
+                <p className="m-0 text-sm leading-6 text-muted">
+                  {currentMastodonCredentials?.last_verified_at
+                    ? `Last verified ${formatDate(currentMastodonCredentials.last_verified_at)}`
+                    : "Run verification after saving credentials to confirm the token."}
+                </p>
+                {currentMastodonCredentials?.last_error ? (
+                  <p className="m-0 text-sm leading-6 text-danger-ink">
+                    {currentMastodonCredentials.last_error}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-2 rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+                <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+                  Save credentials
+                </p>
+                <form
+                  className="space-y-4"
+                  action={`/api/projects/${selectedProject.id}/mastodon-credentials`}
+                  method="POST"
+                >
+                  <input
+                    type="hidden"
+                    name="redirectTo"
+                    value={`/admin/sources?project=${selectedProject.id}`}
+                  />
+                  <input
+                    type="hidden"
+                    name="credentialId"
+                    value={currentMastodonCredentials?.id ?? ""}
+                  />
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Instance URL</span>
+                    <input
+                      className="w-full rounded-2xl border border-ink/12 bg-surface px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      defaultValue={currentMastodonCredentials?.instance_url ?? "https://mastodon.social"}
+                      name="instance_url"
+                      placeholder="https://hachyderm.io"
+                      required
+                    />
+                  </label>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Account acct</span>
+                    <input
+                      className="w-full rounded-2xl border border-ink/12 bg-surface px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      defaultValue={currentMastodonCredentials?.account_acct ?? ""}
+                      name="account_acct"
+                      placeholder="alice@hachyderm.io"
+                    />
+                  </label>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Access token</span>
+                    <input
+                      className="w-full rounded-2xl border border-ink/12 bg-surface px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      name="access_token"
+                      placeholder={
+                        currentMastodonCredentials?.has_stored_credential
+                          ? "Leave blank to keep the current stored token"
+                          : "Required on first save"
+                      }
+                      type="password"
+                    />
+                  </label>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-ink">Status</span>
+                    <select
+                      className="w-full rounded-2xl border border-ink/12 bg-surface px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      defaultValue={currentMastodonCredentials?.is_active === false ? "false" : "true"}
+                      name="is_active"
+                    >
+                      <option value="true">Active</option>
+                      <option value="false">Disabled</option>
+                    </select>
+                  </label>
+                  <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50" type="submit">
+                    {currentMastodonCredentials ? "Update credentials" : "Save credentials"}
+                  </button>
+                </form>
+                <p className="m-0 text-sm leading-6 text-muted">
+                  Use <span className="font-mono text-ink">{"{\"instance_url\": \"https://hachyderm.io\", \"hashtag\": \"platformengineering\"}"}</span> for a hashtag timeline, <span className="font-mono text-ink">{"{\"account_acct\": \"alice@hachyderm.io\"}"}</span> for an account, or <span className="font-mono text-ink">{"{\"list_id\": 42}"}</span> for a list.
+                </p>
+              </div>
+            </div>
+
+            <form
+              action={`/api/projects/${selectedProject.id}/verify-mastodon-credentials`}
+              method="POST"
+            >
+              <input
+                type="hidden"
+                name="redirectTo"
+                value={`/admin/sources?project=${selectedProject.id}`}
+              />
+              <button
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!currentMastodonCredentials}
+                type="submit"
+              >
+                Verify Mastodon credentials
+              </button>
+            </form>
+          </article>
+
+          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Add source</p>
             <form
               className="space-y-4"
@@ -677,6 +843,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                   <option value="rss">RSS</option>
                   <option value="reddit">Reddit</option>
                   <option value="bluesky">Bluesky</option>
+                  <option value="mastodon">Mastodon</option>
                 </select>
               </label>
               <label className="grid gap-2">
@@ -692,8 +859,8 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                 />
               </label>
               <p className="m-0 text-sm leading-6 text-muted">
-                Bluesky configs accept either an actor handle or a feed URI. RSS and Reddit
-                continue to use the existing backend JSON shapes.
+                Bluesky configs accept either an actor handle or a feed URI. Mastodon
+                configs accept an instance URL plus one of <span className="font-mono text-ink">hashtag</span>, <span className="font-mono text-ink">account_acct</span>, or <span className="font-mono text-ink">list_id</span>. RSS and Reddit continue to use the existing backend JSON shapes.
               </p>
               <label className="grid gap-2">
                 <span className="text-sm font-medium text-ink">Active</span>

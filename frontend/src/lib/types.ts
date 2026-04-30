@@ -73,11 +73,32 @@ export type ProjectBlueskyVerification = {
   last_error: string
 }
 
+export type ProjectMastodonVerification = {
+  status: "verified"
+  account_acct: string
+  instance_url: string
+  last_verified_at: string | null
+  last_error: string
+}
+
 export type BlueskyCredentials = {
   id: number
   project: number
   handle: string
   pds_url: string
+  is_active: boolean
+  has_stored_credential: boolean
+  last_verified_at: string | null
+  last_error: string
+  created_at: string
+  updated_at: string
+}
+
+export type MastodonCredentials = {
+  id: number
+  project: number
+  instance_url: string
+  account_acct: string
   is_active: boolean
   has_stored_credential: boolean
   last_verified_at: string | null
@@ -262,7 +283,7 @@ export type IngestionRun = {
 export type SourceConfig = {
   id: number
   project: number
-  plugin_name: "rss" | "reddit" | "bluesky"
+  plugin_name: "rss" | "reddit" | "bluesky" | "mastodon"
   config: Record<string, unknown>
   is_active: boolean
   last_fetched_at: string | null

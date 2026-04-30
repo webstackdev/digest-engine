@@ -29,6 +29,7 @@ from core.models import (
 from projects.model_support import SourcePluginName
 from projects.models import (
     BlueskyCredentials,
+    MastodonCredentials,
     Project,
     ProjectConfig,
     ProjectMembership,
@@ -760,6 +761,81 @@ class ProjectScopedApiTests(APITestCase):
             self.owner_project.id,
         )
 
+    def test_verify_mastodon_credentials_requires_configured_project_credentials(self):
+        response = self.client.post(
+            reverse(
+                "v1:project-verify-mastodon-credentials",
+                kwargs={"id": self.owner_project.id},
+            ),
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assert_standardized_validation_error(
+            response.json(), "mastodon_credentials"
+        )
+
+    @patch("core.plugins.mastodon.MastodonSourcePlugin.verify_credentials")
+    def test_verify_mastodon_credentials_verifies_project_account(self, verify_mock):
+        credentials = MastodonCredentials(
+            project=self.owner_project,
+            instance_url="https://hachyderm.io",
+            account_acct="alice@hachyderm.io",
+        )
+        credentials.set_access_token("access-token")
+        credentials.save()
+
+        response = self.client.post(
+            reverse(
+                "v1:project-verify-mastodon-credentials",
+                kwargs={"id": self.owner_project.id},
+            ),
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        verify_mock.assert_called_once()
+        verified_credentials = verify_mock.call_args.args[0]
+        self.assertEqual(verified_credentials.id, credentials.id)
+        self.assertEqual(response.json()["status"], "verified")
+        self.assertEqual(response.json()["account_acct"], "alice@hachyderm.io")
+        self.assertEqual(response.json()["instance_url"], "https://hachyderm.io")
+        self.assertEqual(response.json()["last_error"], "")
+
+    @patch("core.api.logger.exception")
+    @patch(
+        "core.plugins.mastodon.MastodonSourcePlugin.verify_credentials",
+        side_effect=RuntimeError("bad token"),
+    )
+    def test_verify_mastodon_credentials_surfaces_verification_errors(
+        self, _verify_mock, logger_exception_mock
+    ):
+        credentials = MastodonCredentials(
+            project=self.owner_project,
+            instance_url="https://hachyderm.io",
+            account_acct="alice@hachyderm.io",
+        )
+        credentials.set_access_token("access-token")
+        credentials.save()
+
+        response = self.client.post(
+            reverse(
+                "v1:project-verify-mastodon-credentials",
+                kwargs={"id": self.owner_project.id},
+            ),
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assert_standardized_validation_error(
+            response.json(), "mastodon_credentials"
+        )
+        self.assertNotIn("bad token", str(response.json()))
+        logger_exception_mock.assert_called_once_with(
+            "Mastodon credential verification failed for project id=%s",
+            self.owner_project.id,
+        )
+
     @patch("core.signals.queue_topic_centroid_recompute")
     def test_feedback_create_assigns_current_user(self, queue_centroid_mock):
         response = self.client.post(
@@ -916,6 +992,10 @@ class ProjectScopedApiTests(APITestCase):
             ),
             reverse(
                 "v1:project-bluesky-credentials-list",
+                kwargs={"project_id": self.owner_project.id},
+            ),
+            reverse(
+                "v1:project-mastodon-credentials-list",
                 kwargs={"project_id": self.owner_project.id},
             ),
             reverse(
