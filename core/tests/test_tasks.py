@@ -18,19 +18,21 @@ from core.models import (
 )
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
 from core.tasks import (
-    TOPIC_CENTROID_MIN_UPVOTES,
     queue_content_skill,
-    queue_topic_centroid_recompute,
     recompute_authority_scores,
-    recompute_topic_centroid,
     run_all_authority_recomputations,
-    run_all_topic_centroid_recomputations,
     run_relevance_scoring_skill,
     run_summarization_skill,
 )
 from ingestion.tasks import _ingest_source_config, run_all_ingestions, run_ingestion
 from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectConfig, SourceConfig
+from trends.tasks import (
+    TOPIC_CENTROID_MIN_UPVOTES,
+    queue_topic_centroid_recompute,
+    recompute_topic_centroid,
+    run_all_topic_centroid_recomputations,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -355,7 +357,7 @@ def test_run_all_authority_recomputations_executes_inline_when_eager(
 def test_run_all_topic_centroid_recomputations_enqueues_all_projects(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
     other_project = Project.objects.create(
         name="Other Centroid Project",
         topic_description="Security",
@@ -373,8 +375,8 @@ def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
     settings.CELERY_TASK_ALWAYS_EAGER = True
-    recompute_mock = mocker.patch("core.tasks.recompute_topic_centroid")
-    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+    recompute_mock = mocker.patch("trends.tasks.recompute_topic_centroid")
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
     other_project = Project.objects.create(
         name="Inline Centroid Project",
         topic_description="Platform",
@@ -478,8 +480,8 @@ def test_recompute_topic_centroid_upserts_weighted_normalized_centroid(
 ):
     project = source_plugin_context.project
     mocker.patch("core.signals.queue_topic_centroid_recompute")
-    upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
-    delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
+    upsert_mock = mocker.patch("trends.tasks.upsert_topic_centroid")
+    delete_mock = mocker.patch("trends.tasks.delete_topic_centroid")
     vector_lookup = {
         **{
             f"Upvote {index}": [1.0, 0.0] for index in range(TOPIC_CENTROID_MIN_UPVOTES)
@@ -487,7 +489,7 @@ def test_recompute_topic_centroid_upserts_weighted_normalized_centroid(
         "Downvote": [0.0, 1.0],
     }
     mocker.patch(
-        "core.tasks.embed_text",
+        "trends.tasks.embed_text",
         side_effect=lambda text: vector_lookup[text.split("\n\n", 1)[0]],
     )
 
@@ -555,9 +557,9 @@ def test_recompute_topic_centroid_persists_drift_from_previous_and_week_old_snap
 ):
     project = source_plugin_context.project
     mocker.patch("core.signals.queue_topic_centroid_recompute")
-    upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
-    delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
-    mocker.patch("core.tasks.embed_text", return_value=[1.0, 0.0])
+    upsert_mock = mocker.patch("trends.tasks.upsert_topic_centroid")
+    delete_mock = mocker.patch("trends.tasks.delete_topic_centroid")
+    mocker.patch("trends.tasks.embed_text", return_value=[1.0, 0.0])
 
     recent_snapshot = TopicCentroidSnapshot.objects.create(
         project=project,
@@ -618,8 +620,8 @@ def test_recompute_topic_centroid_disables_centroid_below_minimum_upvotes(
 ):
     project = source_plugin_context.project
     mocker.patch("core.signals.queue_topic_centroid_recompute")
-    upsert_mock = mocker.patch("core.tasks.upsert_topic_centroid")
-    delete_mock = mocker.patch("core.tasks.delete_topic_centroid")
+    upsert_mock = mocker.patch("trends.tasks.upsert_topic_centroid")
+    delete_mock = mocker.patch("trends.tasks.delete_topic_centroid")
     for index in range(TOPIC_CENTROID_MIN_UPVOTES - 1):
         content = Content.objects.create(
             project=project,
@@ -740,8 +742,8 @@ def test_queue_content_skill_executes_summary_inline_when_eager(
 def test_queue_topic_centroid_recompute_enqueues_background_task(
     source_plugin_context, mocker
 ):
-    cache_add_mock = mocker.patch("core.tasks.cache.add", return_value=True)
-    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+    cache_add_mock = mocker.patch("trends.tasks.cache.add", return_value=True)
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
 
     queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
 
@@ -753,8 +755,8 @@ def test_queue_topic_centroid_recompute_enqueues_background_task(
 def test_queue_topic_centroid_recompute_skips_duplicate_queue_attempts(
     source_plugin_context, mocker
 ):
-    mocker.patch("core.tasks.cache.add", return_value=False)
-    delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
+    mocker.patch("trends.tasks.cache.add", return_value=False)
+    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
 
     queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
 

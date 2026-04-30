@@ -79,19 +79,3 @@ def generate_confirmation_token() -> str:
     """
 
     return secrets.token_urlsafe(24)
-
-
-def normalize_bluesky_handle(handle: str) -> str:
-    """Normalize Bluesky handles so stored account references stay consistent."""
-
-    from projects.model_support import normalize_bluesky_handle as _normalize_handle
-
-    return _normalize_handle(handle)
-
-
-def normalize_bluesky_pds_url(pds_url: str) -> str:
-    """Normalize a user-provided PDS URL to its base host form."""
-
-    from projects.model_support import normalize_bluesky_pds_url as _normalize_pds_url
-
-    return _normalize_pds_url(pds_url)

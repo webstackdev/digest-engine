@@ -8,9 +8,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from core.models import UserFeedback
-from core.tasks import queue_topic_centroid_recompute
 from newsletters.signals import handle_anymail_inbound as _handle_anymail_inbound
 from projects.models import ProjectConfig
+from trends.tasks import queue_topic_centroid_recompute
 
 
 def handle_anymail_inbound(
