@@ -95,7 +95,6 @@ PROJECT_CREATE_REQUEST_EXAMPLE = OpenApiExample(
     "Create Project Request",
     value={
         "name": "AI Weekly",
-        "group": 3,
         "topic_description": "Coverage of developer tools, model releases, and applied AI workflows.",
         "content_retention_days": 180,
     },
@@ -107,7 +106,6 @@ PROJECT_RESPONSE_EXAMPLE = OpenApiExample(
     value={
         "id": 1,
         "name": "AI Weekly",
-        "group": 3,
         "topic_description": "Coverage of developer tools, model releases, and applied AI workflows.",
         "content_retention_days": 180,
         "intake_token": "project-token-123",
@@ -425,7 +423,7 @@ def document_group_access_viewset(
     tag: str,
     action_overrides: dict[str, dict] | None = None,
 ):
-    """Decorate a viewset with schema metadata for group-access resources.
+    """Decorate a viewset with schema metadata for membership-scoped resources.
 
     Args:
         resource_plural: Human-readable plural label for the resource.
@@ -457,12 +455,12 @@ def document_group_access_viewset(
         list=schema(
             "list",
             summary=f"List {resource_plural}",
-            description=f"Return all {resource_plural} available to the authenticated user through group membership.",
+            description=f"Return all {resource_plural} available to the authenticated user through project membership.",
         ),
         retrieve=schema(
             "retrieve",
             summary=f"Get {resource_singular}",
-            description=f"Return a single {resource_singular} available to the authenticated user through group membership.",
+            description=f"Return a single {resource_singular} available to the authenticated user through project membership.",
         ),
         create=schema(
             "create",
@@ -472,17 +470,17 @@ def document_group_access_viewset(
         update=schema(
             "update",
             summary=f"Replace {resource_singular}",
-            description=f"Replace an existing {resource_singular} available to the authenticated user through group membership.",
+            description=f"Replace an existing {resource_singular} available to the authenticated user through project membership.",
         ),
         partial_update=schema(
             "partial_update",
             summary=f"Update {resource_singular}",
-            description=f"Update one or more fields on an existing {resource_singular} available to the authenticated user through group membership.",
+            description=f"Update one or more fields on an existing {resource_singular} available to the authenticated user through project membership.",
         ),
         destroy=schema(
             "destroy",
             summary=f"Delete {resource_singular}",
-            description=f"Delete an existing {resource_singular} available to the authenticated user through group membership.",
+            description=f"Delete an existing {resource_singular} available to the authenticated user through project membership.",
         ),
     )
 

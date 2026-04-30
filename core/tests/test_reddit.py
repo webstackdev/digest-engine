@@ -2,7 +2,6 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import Group
 
 from core.plugins.reddit import RedditSourcePlugin
 from core.plugins.registry import validate_plugin_config
@@ -13,15 +12,8 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def reddit_context(django_user_model):
-    user = django_user_model.objects.create_user(
-        username="reddit-owner", password="testpass123"
-    )
-    group = Group.objects.create(name="reddit-team")
-    user.groups.add(group)
-    project = Project.objects.create(
-        name="Reddit Project", group=group, topic_description="Infra"
-    )
+def reddit_context():
+    project = Project.objects.create(name="Reddit Project", topic_description="Infra")
     source_config = SourceConfig.objects.create(
         project=project,
         plugin_name=SourcePluginName.REDDIT,

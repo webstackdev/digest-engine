@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from django.conf import settings
-from django.contrib.auth.models import Group
 from django.db import models
 
 from projects.model_support import (
@@ -29,21 +28,9 @@ class ProjectRole(models.TextChoices):
 
 
 class Project(models.Model):
-    """Represents a newsletter workspace owned by a Django auth group.
-
-    Project memberships are the primary authorization surface. The historical
-    group foreign key remains as a temporary compatibility shim while the codebase
-    migrates off group-based project access.
-    """
+    """Represents a newsletter workspace owned through project memberships."""
 
     name = models.CharField(max_length=255)
-    group = models.ForeignKey(
-        Group,
-        on_delete=models.SET_NULL,
-        related_name="projects",
-        null=True,
-        blank=True,
-    )
     members: models.ManyToManyField[AppUser, ProjectMembership] = (
         models.ManyToManyField(
             settings.AUTH_USER_MODEL,

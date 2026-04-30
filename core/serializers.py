@@ -2,10 +2,9 @@
 
 These serializers enforce the project's access rules at the API boundary. They do
 more than simple field translation: several serializers limit related querysets to
- the active project and validate that cross-project relationships cannot be posted.
+the active project and validate that cross-project relationships cannot be posted.
 """
 
-from django.contrib.auth.models import Group
 from rest_framework import serializers
 
 from core.models import (
@@ -33,8 +32,6 @@ class ProjectScopedSerializerMixin:
 
         user = request.user
         project = self.context.get("project")
-        if "group" in self.fields:
-            self.fields["group"].queryset = Group.objects.filter(user=user)
         if "project" in self.fields:
             self.fields["project"].queryset = get_visible_projects_queryset(user)
         if "entity" in self.fields:

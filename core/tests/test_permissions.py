@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -44,10 +43,8 @@ class ProjectRolePermissionTests(APITestCase):
             password="testpass123",
         )
 
-        self.group = Group.objects.create(name="permissions-team")
         self.project = Project.objects.create(
             name="Permissions Project",
-            group=self.group,
             topic_description="Platform engineering",
         )
 

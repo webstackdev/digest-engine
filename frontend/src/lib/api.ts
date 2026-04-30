@@ -475,10 +475,7 @@ export async function deleteCurrentUserAvatar(): Promise<UserProfile> {
 export async function updateProject(
   projectId: number,
   payload: Partial<
-    Pick<
-      Project,
-      "name" | "group" | "topic_description" | "content_retention_days" | "intake_enabled"
-    >
+    Pick<Project, "name" | "topic_description" | "content_retention_days" | "intake_enabled">
   >,
 ): Promise<Project> {
   return apiFetch<Project>(`/api/v1/projects/${projectId}/`, {

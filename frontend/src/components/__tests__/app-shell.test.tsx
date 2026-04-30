@@ -12,7 +12,6 @@ const projects: Project[] = [
   {
     id: 1,
     name: "AI Weekly",
-    group: 3,
     topic_description: "Applied AI",
     content_retention_days: 30,
     user_role: "admin",
@@ -21,7 +20,6 @@ const projects: Project[] = [
   {
     id: 2,
     name: "Platform Weekly",
-    group: 3,
     topic_description: "Platform engineering",
     content_retention_days: 30,
     user_role: "member",

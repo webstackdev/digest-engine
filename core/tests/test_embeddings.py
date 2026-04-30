@@ -4,7 +4,6 @@ from unittest.mock import call
 
 import httpx
 import pytest
-from django.contrib.auth.models import Group
 from django.core.management import CommandError, call_command
 from django.db.models import Count
 from qdrant_client.http.exceptions import ResponseHandlingException
@@ -54,10 +53,8 @@ def embedding_context(django_user_model):
     user = django_user_model.objects.create_user(
         username="embed-owner", password="testpass123"
     )
-    group = Group.objects.create(name="embedding-team")
-    user.groups.add(group)
     project = Project.objects.create(
-        name="Embedding Project", group=group, topic_description="Infra"
+        name="Embedding Project", topic_description="Infra"
     )
     content = Content.objects.create(
         project=project,
@@ -68,7 +65,7 @@ def embedding_context(django_user_model):
         published_date="2026-04-20T12:00:00Z",
         content_text="This article covers platform engineering practices.",
     )
-    return SimpleNamespace(user=user, group=group, project=project, content=content)
+    return SimpleNamespace(user=user, project=project, content=content)
 
 
 def test_upsert_content_embedding_persists_embedding_id_and_payload(
@@ -486,13 +483,8 @@ def test_sync_embeddings_scopes_to_requested_content_id(embedding_context, mocke
 def test_sync_embeddings_filters_project_and_references_only(
     embedding_context, django_user_model, mocker
 ):
-    other_user = django_user_model.objects.create_user(
-        username="embed-owner-2", password="testpass123"
-    )
-    other_group = Group.objects.create(name="embedding-team-2")
-    other_user.groups.add(other_group)
     other_project = Project.objects.create(
-        name="Other Embedding Project", group=other_group, topic_description="Other"
+        name="Other Embedding Project", topic_description="Other"
     )
     same_project_reference = Content.objects.create(
         project=embedding_context.project,

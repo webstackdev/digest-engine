@@ -3,7 +3,6 @@ from time import struct_time
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import Group
 
 from core.plugins.rss import RSSSourcePlugin
 from projects.model_support import SourcePluginName
@@ -13,15 +12,8 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def rss_context(django_user_model):
-    user = django_user_model.objects.create_user(
-        username="rss-owner", password="testpass123"
-    )
-    group = Group.objects.create(name="rss-team")
-    user.groups.add(group)
-    project = Project.objects.create(
-        name="RSS Project", group=group, topic_description="Infra"
-    )
+def rss_context():
+    project = Project.objects.create(name="RSS Project", topic_description="Infra")
     source_config = SourceConfig.objects.create(
         project=project,
         plugin_name=SourcePluginName.RSS,

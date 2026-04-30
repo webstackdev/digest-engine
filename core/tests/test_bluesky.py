@@ -2,7 +2,6 @@ from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import Group
 
 from core.models import (
     Entity,
@@ -15,15 +14,8 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def bluesky_context(django_user_model):
-    user = django_user_model.objects.create_user(
-        username="bluesky-owner", password="testpass123"
-    )
-    group = Group.objects.create(name="bluesky-team")
-    user.groups.add(group)
-    project = Project.objects.create(
-        name="Bluesky Project", group=group, topic_description="Infra"
-    )
+def bluesky_context():
+    project = Project.objects.create(name="Bluesky Project", topic_description="Infra")
     entity = Entity.objects.create(
         project=project,
         name="Alice",

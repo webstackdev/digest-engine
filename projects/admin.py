@@ -68,11 +68,10 @@ class BlueskyCredentialsAdminForm(forms.ModelForm):
 class ProjectAdmin(ExportActionMixin, admin.ModelAdmin):
     """Admin configuration for top-level project workspaces."""
 
-    list_display = ("name", "group", "content_retention_days", "created_at")
+    list_display = ("name", "content_retention_days", "created_at")
     date_hierarchy = "created_at"
     list_filter = ("created_at",)
-    search_fields = ("name", "group__name")
-    autocomplete_fields = ("group",)
+    search_fields = ("name",)
     list_editable = ("content_retention_days",)
     inlines = (ProjectMembershipInline,)
 

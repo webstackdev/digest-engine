@@ -5,7 +5,6 @@ from unittest.mock import ANY
 import pytest
 from django.contrib import messages
 from django.contrib.admin.sites import AdminSite
-from django.contrib.auth.models import Group
 from django.utils import timezone
 
 from core.admin import (
@@ -53,12 +52,8 @@ def source_admin_context(django_user_model):
     user = django_user_model.objects.create_user(
         username="admin-owner", password="testpass123"
     )
-    group = Group.objects.create(name="admin-team")
-    user.groups.add(group)
-    project = Project.objects.create(
-        name="Admin Project", group=group, topic_description="Infra"
-    )
-    return SimpleNamespace(user=user, group=group, project=project)
+    project = Project.objects.create(name="Admin Project", topic_description="Infra")
+    return SimpleNamespace(user=user, project=project)
 
 
 def test_test_source_connection_reports_success(source_admin_context, mocker):
@@ -129,7 +124,6 @@ def test_topic_centroid_snapshot_admin_changelist_view_builds_dashboard_stats(
 ):
     second_project = Project.objects.create(
         name="Second Admin Project",
-        group=source_admin_context.group,
         topic_description="Analytics",
     )
     fixed_now = timezone.now()

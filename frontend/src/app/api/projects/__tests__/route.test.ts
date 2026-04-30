@@ -28,7 +28,6 @@ describe("POST /api/projects", () => {
     vi.mocked(createProject).mockResolvedValue({
       id: 11,
       name: "New Project",
-      group: null,
       topic_description: "A new project",
       content_retention_days: 180,
       intake_enabled: false,

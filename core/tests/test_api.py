@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -47,18 +46,12 @@ class ProjectScopedApiTests(APITestCase):
         self.other_user = user_model.objects.create_user(
             username="other", password="testpass123"
         )
-        self.owner_group = Group.objects.create(name="owner-team")
-        self.owner.groups.add(self.owner_group)
-        self.other_group = Group.objects.create(name="other-team")
-        self.other_user.groups.add(self.other_group)
         self.owner_project = Project.objects.create(
             name="Owner Project",
-            group=self.owner_group,
             topic_description="Platform engineering",
         )
         self.other_project = Project.objects.create(
             name="Other Project",
-            group=self.other_group,
             topic_description="Frontend",
         )
         ProjectMembership.objects.create(

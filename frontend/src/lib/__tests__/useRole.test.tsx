@@ -9,7 +9,6 @@ function createProject(overrides: Partial<Project> = {}): Project {
   return {
     id: 1,
     name: "AI Weekly",
-    group: 10,
     topic_description: "AI news",
     content_retention_days: 30,
     intake_enabled: false,

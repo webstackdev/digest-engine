@@ -109,7 +109,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     """Manage projects accessible through the current user's project memberships."""
 
     serializer_class = ProjectSerializer
-    queryset = Project.objects.select_related("group", "bluesky_credentials")
+    queryset = Project.objects.select_related("bluesky_credentials")
     lookup_url_kwarg = "id"
 
     def get_permissions(self):
@@ -133,13 +133,13 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """Limit projects to those visible through the authenticated user."""
 
         return get_visible_projects_queryset(self.request.user).select_related(
-            "group", "bluesky_credentials"
+            "bluesky_credentials"
         )
 
     def perform_create(self, serializer):
         """Create the project and make the creator its first admin."""
 
-        project = serializer.save(group=None)
+        project = serializer.save()
         ProjectMembership.objects.create(
             user=self.request.user,
             project=project,

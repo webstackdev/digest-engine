@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import AnonymousUser, Group
+from django.contrib.auth.models import AnonymousUser
 
 from core.models import (
     Content,
@@ -32,15 +32,11 @@ def serializer_context(django_user_model):
     other_user = django_user_model.objects.create_user(
         username="serializer-other", password="testpass123"
     )
-    group = Group.objects.create(name="serializer-team")
-    other_group = Group.objects.create(name="serializer-other-team")
-    user.groups.add(group)
-    other_user.groups.add(other_group)
     project = Project.objects.create(
-        name="Serializer Project", group=group, topic_description="Infra"
+        name="Serializer Project", topic_description="Infra"
     )
     other_project = Project.objects.create(
-        name="Other Serializer Project", group=other_group, topic_description="Data"
+        name="Other Serializer Project", topic_description="Data"
     )
     ProjectMembership.objects.create(user=user, project=project, role=ProjectRole.ADMIN)
     ProjectMembership.objects.create(
@@ -137,7 +133,7 @@ def test_project_scoped_serializer_filters_related_querysets_without_project_con
 def test_project_scoped_serializer_skips_filtering_for_anonymous_user():
     serializer = ProjectSerializer(context={"request": _request_for(AnonymousUser())})
 
-    assert serializer.fields["group"].queryset.count() == Group.objects.count()
+    assert "project" not in serializer.fields
 
 
 def test_content_serializer_rejects_cross_project_entity(serializer_context):

@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import Group
 
 from core.models import (
     Content,
@@ -43,18 +42,14 @@ def source_plugin_context(django_user_model):
     user = django_user_model.objects.create_user(
         username="plugin-owner", password="testpass123"
     )
-    group = Group.objects.create(name="plugin-team")
-    user.groups.add(group)
-    project = Project.objects.create(
-        name="Plugin Project", group=group, topic_description="Infra"
-    )
+    project = Project.objects.create(name="Plugin Project", topic_description="Infra")
     entity = Entity.objects.create(
         project=project,
         name="Example",
         type="vendor",
         website_url="https://example.com",
     )
-    return SimpleNamespace(user=user, group=group, project=project, entity=entity)
+    return SimpleNamespace(user=user, project=project, entity=entity)
 
 
 def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, mocker):
@@ -326,10 +321,8 @@ def test_run_all_authority_recomputations_enqueues_all_projects(
     source_plugin_context, mocker
 ):
     delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
-    other_group = Group.objects.create(name="second-authority-team")
     other_project = Project.objects.create(
         name="Other Project",
-        group=other_group,
         topic_description="Security",
     )
 
@@ -347,10 +340,8 @@ def test_run_all_authority_recomputations_executes_inline_when_eager(
     settings.CELERY_TASK_ALWAYS_EAGER = True
     recompute_mock = mocker.patch("core.tasks.recompute_authority_scores")
     delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
-    other_group = Group.objects.create(name="inline-authority-team")
     other_project = Project.objects.create(
         name="Inline Project",
-        group=other_group,
         topic_description="Platform",
     )
 
@@ -367,10 +358,8 @@ def test_run_all_topic_centroid_recomputations_enqueues_all_projects(
     source_plugin_context, mocker
 ):
     delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
-    other_group = Group.objects.create(name="second-centroid-team")
     other_project = Project.objects.create(
         name="Other Centroid Project",
-        group=other_group,
         topic_description="Security",
     )
 
@@ -388,10 +377,8 @@ def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
     settings.CELERY_TASK_ALWAYS_EAGER = True
     recompute_mock = mocker.patch("core.tasks.recompute_topic_centroid")
     delay_mock = mocker.patch("core.tasks.recompute_topic_centroid.delay")
-    other_group = Group.objects.create(name="inline-centroid-team")
     other_project = Project.objects.create(
         name="Inline Centroid Project",
-        group=other_group,
         topic_description="Platform",
     )
 

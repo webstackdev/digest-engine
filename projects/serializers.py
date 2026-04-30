@@ -30,7 +30,6 @@ class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
         fields = [
             "id",
             "name",
-            "group",
             "topic_description",
             "content_retention_days",
             "intake_token",

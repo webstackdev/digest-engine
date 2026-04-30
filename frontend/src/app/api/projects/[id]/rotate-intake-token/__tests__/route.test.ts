@@ -28,7 +28,6 @@ describe("POST /api/projects/[id]/rotate-intake-token", () => {
     vi.mocked(rotateProjectIntakeToken).mockResolvedValue({
       id: 4,
       name: "Project",
-      group: 1,
       topic_description: "Topic",
       content_retention_days: 30,
       intake_token: "rotated-token",

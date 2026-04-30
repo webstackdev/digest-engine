@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth.models import Group
 from django.core import mail
 from django.urls import reverse
 from svix.webhooks import Webhook
@@ -28,10 +27,8 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def project():
-    group = Group.objects.create(name="newsletter-team")
     return Project.objects.create(
         name="Newsletter Project",
-        group=group,
         topic_description="Platform engineering",
         intake_enabled=True,
     )
