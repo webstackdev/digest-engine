@@ -1,3 +1,5 @@
+import "server-only"
+
 import type { NextAuthOptions, User } from "next-auth"
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -27,7 +29,9 @@ type AuthenticatedUser = User & {
   backendAuth?: BackendAuthPayload
 }
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL
+function getApiBaseUrl() {
+  return process.env.NEWSLETTER_API_BASE_URL ?? "http://127.0.0.1:8080"
+}
 
 /**
  * Parse a backend authentication response when it contains JSON.
@@ -71,7 +75,7 @@ async function parseBackendResponse(response: Response) {
  * @param path - Relative Django auth endpoint path such as `/api/auth/login/`.
  * @param body - JSON payload expected by the backend auth endpoint.
  * @returns Parsed backend auth payload. Successful empty JSON bodies resolve to `{}`.
- * @throws When `NEXT_PUBLIC_API_URL` is missing or the backend rejects the request.
+ * @throws When the backend auth service cannot be reached or rejects the request.
  * @example
  * ```ts
  * const backendAuth = await postBackendAuth("/api/auth/login/", {
@@ -84,15 +88,17 @@ async function postBackendAuth(
   path: string,
   body: Record<string, unknown>,
 ): Promise<BackendAuthPayload> {
-  if (!apiBaseUrl) {
-    throw new Error("NEXT_PUBLIC_API_URL is not configured.")
-  }
+  let response: Response
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  })
+  try {
+    response = await fetch(new URL(path, getApiBaseUrl()).toString(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+  } catch {
+    throw new Error("Unable to reach the authentication service.")
+  }
 
   const payload = await parseBackendResponse(response)
 

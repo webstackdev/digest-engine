@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-celery-beat
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.celeryBeat.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "celery-beat") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "celery-beat") | nindent 8 }}
+    spec:
+      containers:
+        - name: celery-beat
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.celeryBeat.command | nindent 12 }}
+          env:
+            - name: BOOTSTRAP_APP
+              value: "false"
+          envFrom:
+            - configMapRef:
+                name: {{ include "newsletter-maker.fullname" . }}-env
+            - secretRef:
+                name: {{ include "newsletter-maker.fullname" . }}-secret
+          resources:
+            {{- toYaml .Values.celeryBeat.resources | nindent 12 }}

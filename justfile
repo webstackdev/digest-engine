@@ -45,7 +45,7 @@ backend-lint:
     if [ ! -f .env ]; then cp .env.example .env; fi
     ruff check manage.py core newsletter_maker tests
     djlint core/templates --check
-    python3 -m mypy manage.py core newsletter_maker tests
+    python3 -m mypy
     pre-commit run --all-files check-yaml
     pre-commit run --all-files end-of-file-fixer
     pre-commit run --all-files trailing-whitespace
@@ -53,11 +53,13 @@ backend-lint:
 
 frontend-lint:
     if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
+    cd frontend && npm run typecheck
     cd frontend && npm run lint
 
 lint:
     just backend-lint
     just frontend-lint
+    just helm-lint
 
 backend-lint-fix:
     if [ ! -f .env ]; then cp .env.example .env; fi
@@ -169,3 +171,19 @@ embed-smoke-content content_id:
 shell:
     if [ ! -f .env ]; then cp .env.example .env; fi
     python3 manage.py shell
+
+helm-lint:
+    helm lint deploy/helm/newsletter-maker
+
+helm-template:
+    helm template newsletter-maker deploy/helm/newsletter-maker -f deploy/helm/newsletter-maker/values-minikube.yaml > /tmp/newsletter-maker-helm-template.yaml
+
+k8s-build-minikube:
+    DOCKER_BUILDKIT=1 docker build -t newsletter-maker:minikube -f docker/web/Dockerfile .
+    minikube image load newsletter-maker:minikube
+
+k8s-install-minikube:
+    helm upgrade --install newsletter-maker ./deploy/helm/newsletter-maker -f ./deploy/helm/newsletter-maker/values-minikube.yaml
+
+k8s-uninstall-minikube:
+    helm uninstall newsletter-maker || true

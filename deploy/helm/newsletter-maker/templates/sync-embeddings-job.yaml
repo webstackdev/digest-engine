@@ -1,0 +1,31 @@
+{{- if .Values.jobs.syncEmbeddings.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-sync-embeddings
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "sync-embeddings") | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: sync-embeddings
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - manage.py
+            - sync_embeddings
+          env:
+            - name: BOOTSTRAP_APP
+              value: "false"
+          envFrom:
+            - configMapRef:
+                name: {{ include "newsletter-maker.fullname" . }}-env
+            - secretRef:
+                name: {{ include "newsletter-maker.fullname" . }}-secret
+{{- end }}

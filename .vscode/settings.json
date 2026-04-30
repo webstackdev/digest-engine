@@ -46,6 +46,7 @@
     "upserted",
     "upvote",
     "uritemplate",
+    "xrpc",
     "xxhash"
   ]
 }

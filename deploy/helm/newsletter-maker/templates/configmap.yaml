@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "newsletter-maker.fullname" . }}-env
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+data:
+  DEBUG: {{ .Values.env.debug | quote }}
+  ALLOWED_HOSTS: {{ .Values.env.allowedHosts | quote }}
+  CSRF_TRUSTED_ORIGINS: {{ .Values.env.csrfTrustedOrigins | quote }}
+  SITE_ID: {{ .Values.env.siteId | quote }}
+  REDIS_URL: {{ include "newsletter-maker.redisUrl" . | quote }}
+  QDRANT_URL: {{ include "newsletter-maker.qdrantUrl" . | quote }}
+  NEWSLETTER_API_BASE_URL: {{ .Values.env.newsletterApiBaseUrl | quote }}
+  EMAIL_BACKEND: {{ .Values.env.emailBackend | quote }}
+  DEFAULT_FROM_EMAIL: {{ .Values.env.defaultFromEmail | quote }}
+  SERVER_EMAIL: {{ .Values.env.serverEmail | quote }}
+  RESEND_FROM_EMAIL: {{ .Values.env.resendFromEmail | quote }}
+  REDDIT_USER_AGENT: {{ .Values.env.redditUserAgent | quote }}
+  LOG_LEVEL: {{ .Values.env.logLevel | quote }}
+  CELERY_TASK_ALWAYS_EAGER: {{ .Values.env.celeryTaskAlwaysEager | quote }}
+  OPENROUTER_API_BASE: {{ .Values.env.openrouterApiBase | quote }}
+  OPENROUTER_APP_URL: {{ .Values.env.openrouterAppUrl | quote }}
+  OPENROUTER_APP_NAME: {{ .Values.env.openrouterAppName | quote }}
+  AI_CLASSIFICATION_MODEL: {{ .Values.env.aiClassificationModel | quote }}
+  AI_RELEVANCE_MODEL: {{ .Values.env.aiRelevanceModel | quote }}
+  AI_SUMMARIZATION_MODEL: {{ .Values.env.aiSummarizationModel | quote }}
+  AI_CLASSIFICATION_REVIEW_THRESHOLD: {{ .Values.env.aiClassificationReviewThreshold | quote }}
+  AI_RELEVANCE_LOW_THRESHOLD: {{ .Values.env.aiRelevanceLowThreshold | quote }}
+  AI_RELEVANCE_HIGH_THRESHOLD: {{ .Values.env.aiRelevanceHighThreshold | quote }}
+  AI_RELEVANCE_REVIEW_THRESHOLD: {{ .Values.env.aiRelevanceReviewThreshold | quote }}
+  AI_RELEVANCE_SUMMARIZE_THRESHOLD: {{ .Values.env.aiRelevanceSummarizeThreshold | quote }}
+  AI_MAX_NODE_RETRIES: {{ .Values.env.aiMaxNodeRetries | quote }}
+  AI_REQUEST_TIMEOUT_SECONDS: {{ .Values.env.aiRequestTimeoutSeconds | quote }}
+  EMBEDDING_PROVIDER: {{ .Values.env.embeddingProvider | quote }}
+  EMBEDDING_MODEL: {{ .Values.env.embeddingModel | quote }}
+  EMBEDDING_TRUST_REMOTE_CODE: {{ .Values.env.embeddingTrustRemoteCode | quote }}
+  OLLAMA_URL: {{ .Values.env.ollamaUrl | quote }}

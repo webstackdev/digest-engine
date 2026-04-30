@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "newsletter-maker.djangoHost" . }}
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.django.port }}
+      targetPort: http
+  selector:
+    {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "django") | nindent 4 }}

@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "newsletter-maker.djangoHost" . }}
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.django.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "django") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "django") | nindent 8 }}
+    spec:
+      containers:
+        - name: django
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.django.command | nindent 12 }}
+          env:
+            - name: BOOTSTRAP_APP
+              value: "false"
+          envFrom:
+            - configMapRef:
+                name: {{ include "newsletter-maker.fullname" . }}-env
+            - secretRef:
+                name: {{ include "newsletter-maker.fullname" . }}-secret
+          ports:
+            - name: http
+              containerPort: {{ .Values.django.port }}
+          readinessProbe:
+            httpGet:
+              path: /readyz/
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /healthz/
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.django.resources | nindent 12 }}
