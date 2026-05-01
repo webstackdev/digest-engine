@@ -15,7 +15,8 @@ applyTo:
 - Put route-local components in `frontend/src/app/**/_components/` when they are only used by a single route.
 - Put route page tests beside the page or route-local component they cover within the same `frontend/src/app/**` directory.
 - When a component lives under `frontend/src/components/`, give it its own folder instead of a single loose file.
-- Colocate the component implementation, Storybook story, tests, and a small `index.ts` export in that folder when those files exist.
+- For component folders under `frontend/src/components/` and `frontend/src/app/**/_components/`, let the folder name carry the component name and use `index.tsx`, `index.test.tsx`, and `index.stories.tsx` for colocated files.
+- Do not add barrel `index.ts` files inside component folders unless a task explicitly needs a separate module boundary.
 
 ## Preferred Shapes
 
@@ -23,20 +24,18 @@ Shared reusable component:
 
 ```text
 frontend/src/components/ui/Button/
-  Button.tsx
-  Button.stories.tsx
-  Button.test.tsx
-  index.ts
+  index.tsx
+  index.stories.tsx
+  index.test.tsx
 ```
 
 Route-local component:
 
 ```text
 frontend/src/app/projects/[id]/_components/MemberInviteCard/
-  MemberInviteCard.tsx
-  MemberInviteCard.stories.tsx
-  MemberInviteCard.test.tsx
-  index.ts
+  index.tsx
+  index.stories.tsx
+  index.test.tsx
 ```
 
 Route page with colocated test:
@@ -53,6 +52,7 @@ frontend/src/app/admin/sources/
 - If the component primarily arranges shared navigation or page chrome, place it under `components/layout/`.
 - If the component is tied to a business area but reused across multiple routes, place it under `components/features/<feature-name>/`.
 - If the component is only consumed by one route segment, keep it under that route's `_components/` folder instead of promoting it to `components/`.
+- Prefer folder-level naming over duplicate file naming. For example, prefer `OriginalContentIdeaCard/index.tsx` over `OriginalContentIdeaCard/OriginalContentIdeaCard.tsx`.
 - When extracting from a large page, prefer moving the smallest reusable visual leaves first, then larger feature sections, while keeping the page as the orchestration layer.
 - Prefer `*.test.tsx` files beside the owning page or component over `__tests__/` directories for new frontend tests.
 

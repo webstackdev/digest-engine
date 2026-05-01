@@ -16,12 +16,22 @@
     "noEmit": true,
     "paths": {
       "@/components/layout/*": [
+        "./src/components/layout/*/index.tsx",
         "./src/components/layout/*/index.ts",
         "./src/components/layout/*"
       ],
+      "@/components/elements/*": [
+        "./src/components/elements/*/index.tsx",
+        "./src/components/elements/*/index.ts",
+        "./src/components/elements/*"
+      ],
       "@/components/ui/*": [
+        "./src/components/ui/*/index.tsx",
         "./src/components/ui/*/index.ts",
-        "./src/components/ui/*"
+        "./src/components/elements/*/index.tsx",
+        "./src/components/elements/*/index.ts",
+        "./src/components/ui/*",
+        "./src/components/elements/*"
       ],
       "@/*": [
         "./src/*"

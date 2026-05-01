@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UserMenu } from "@/components/layout/UserMenu"
-import { QueryProvider } from "@/components/shared/QueryProvider"
+import { QueryProvider } from "@/providers/QueryProvider"
 
 const { fetchProfileMock, signOutMock } = vi.hoisted(() => ({
   fetchProfileMock: vi.fn(),

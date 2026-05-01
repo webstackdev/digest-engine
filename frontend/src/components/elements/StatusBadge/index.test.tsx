@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { StatusBadge } from "@/components/ui/StatusBadge"
+import { StatusBadge } from "@/components/elements/StatusBadge"
 
 describe("StatusBadge", () => {
   it("renders its children and tone class", () => {

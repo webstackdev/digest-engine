@@ -2,7 +2,7 @@ import Link from "next/link"
 
 import { SourceDiversityPanel } from "@/app/admin/health/_components/SourceDiversityPanel"
 import { AppShell } from "@/components/layout/AppShell"
-import { StatusBadge } from "@/components/ui/StatusBadge"
+import { StatusBadge } from "@/components/elements/StatusBadge"
 import {
   getProjectIngestionRuns,
   getProjects,

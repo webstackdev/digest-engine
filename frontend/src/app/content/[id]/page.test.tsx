@@ -66,7 +66,7 @@ vi.mock("@/app/content/[id]/_components/SkillActionBar", () => ({
   ),
 }))
 
-vi.mock("@/components/ui/StatusBadge", () => ({
+vi.mock("@/components/elements/StatusBadge", () => ({
   StatusBadge: ({
     children,
     tone,

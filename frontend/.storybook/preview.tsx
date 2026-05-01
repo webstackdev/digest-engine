@@ -3,7 +3,7 @@ import "../src/app/globals.css"
 import type { Preview } from "@storybook/nextjs-vite"
 import type { ReactNode } from "react"
 
-import { QueryProvider } from "../src/components/shared/QueryProvider"
+import { QueryProvider } from "../src/providers/QueryProvider"
 
 function StorybookProviders({ children }: { children: ReactNode }) {
   return (

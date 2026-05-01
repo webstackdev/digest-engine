@@ -3,7 +3,7 @@ import Link from "next/link"
 
 import { TopicClusterCard } from "@/app/trends/_components/TopicClusterCard"
 import { AppShell } from "@/components/layout/AppShell"
-import { StatusBadge } from "@/components/ui/StatusBadge"
+import { StatusBadge } from "@/components/elements/StatusBadge"
 import {
   createProject,
   createTopicClusterDetail,

@@ -21,8 +21,8 @@ def root_redirect_view(request):
 urlpatterns = [
     path("", include("core.urls")),
     path("", root_redirect_view),
-    path("admin/", admin.site.urls),
     path("admin/doc/", include("django.contrib.admindocs.urls")),
+    path("admin/", admin.site.urls),
     path("anymail/", include("anymail.urls")),
     path(
         "api/docs/",

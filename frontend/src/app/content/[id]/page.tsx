@@ -2,7 +2,7 @@ import Link from "next/link"
 
 import { SkillActionBar } from "@/app/content/[id]/_components/SkillActionBar"
 import { AppShell } from "@/components/layout/AppShell"
-import { StatusBadge } from "@/components/ui/StatusBadge"
+import { StatusBadge } from "@/components/elements/StatusBadge"
 import {
   getProjectContent,
   getProjectFeedback,

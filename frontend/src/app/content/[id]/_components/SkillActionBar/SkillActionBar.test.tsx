@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SkillActionBar } from "@/app/content/[id]/_components/SkillActionBar"
-import { QueryProvider } from "@/components/shared/QueryProvider"
+import { QueryProvider } from "@/providers/QueryProvider"
 
 const { refreshMock } = vi.hoisted(() => ({
   refreshMock: vi.fn(),

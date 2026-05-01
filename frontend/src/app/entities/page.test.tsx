@@ -34,7 +34,7 @@ vi.mock("@/components/layout/AppShell", () => ({
   ),
 }))
 
-vi.mock("@/components/ui/StatusBadge", () => ({
+vi.mock("@/components/elements/StatusBadge", () => ({
   StatusBadge: ({
     children,
     tone,

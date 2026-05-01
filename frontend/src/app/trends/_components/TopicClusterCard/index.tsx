@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-import { StatusBadge } from "@/components/ui/StatusBadge"
+import { StatusBadge } from "@/components/elements/StatusBadge"
 import type { TopicCluster, TopicClusterDetail } from "@/lib/types"
 import { formatDate, formatPercentScore, formatScore } from "@/lib/view-helpers"
 

@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { QueryProvider } from "@/components/shared/QueryProvider"
+import { QueryProvider } from "@/providers/QueryProvider"
 
 function Inspector() {
   const queryClient = useQueryClient()

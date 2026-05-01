@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { ThemeProvider } from "@/components/shared/ThemeProvider"
+import { ThemeProvider } from "@/providers/ThemeProvider"
 
 const nextThemesProviderMock = vi.fn()
 

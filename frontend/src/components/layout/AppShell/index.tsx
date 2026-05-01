@@ -1,8 +1,8 @@
 import Link from "next/link"
 import type { ReactNode } from "react"
 
+import { ThemeToggle } from "@/components/elements/ThemeToggle"
 import { UserMenu } from "@/components/layout/UserMenu"
-import { ThemeToggle } from "@/components/ui/ThemeToggle"
 import type { Project } from "@/lib/types"
 
 type AppShellProps = {
