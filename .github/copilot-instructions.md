@@ -45,6 +45,12 @@ You are working in Newsletter Maker, a Django + DRF + Celery + Qdrant backend wi
 - TypeScript and React code should use JSDoc for exported utilities, hooks, route handlers, and non-trivial components when behavior is not obvious from the type signature alone.
 - If architecture or workflow behavior changes, update the most relevant docs in `docs/`, especially `docs/DEVELOPER_GUIDE.md`, `docs/IMPLEMENTATION_OVERVIEW.md`, `docs/MODELS.md`, `docs/RELEVANCE_SCORING.md`, or `docs/LOGGING.md`.
 
+## Prompt Skill Conventions
+
+- Application prompt skills live under `skills/<skill_name>/SKILL.md` and are loaded by `core/llm.py` using the folder name rather than the frontmatter `name`.
+- When adding or editing one of these prompt skills, always include a short frontmatter `description` so VS Code does not report incomplete skill metadata.
+- If a frontmatter `name` is present, prefer lowercase letters, numbers, and hyphens there to satisfy the Copilot markdown validator, even when the runtime skill key elsewhere in the app still uses underscores.
+
 ## Testing And Validation
 
 - Backend tests use `pytest`.

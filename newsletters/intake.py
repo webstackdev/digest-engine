@@ -24,9 +24,11 @@ settings = cast(CoreSettings, django_settings)
 class QueuedTask(Protocol):
     """Protocol for Celery tasks used by newsletter intake dispatch."""
 
-    def apply(self, *args: object, **kwargs: object) -> object: ...
+    def apply(self, *args: object, **kwargs: object) -> object:
+        pass
 
-    def delay(self, *args: object, **kwargs: object) -> object: ...
+    def delay(self, *args: object, **kwargs: object) -> object:
+        pass
 
 
 def _require_pk(instance: Model) -> int:

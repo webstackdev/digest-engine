@@ -13,9 +13,11 @@ if TYPE_CHECKING:
     class PermissionBase:
         """Typed shim for DRF permissions whose default methods return bool."""
 
-        def has_permission(self, request, view) -> bool: ...
+        def has_permission(self, request, view) -> bool:
+            pass
 
-        def has_object_permission(self, request, view, obj) -> bool: ...
+        def has_object_permission(self, request, view, obj) -> bool:
+            pass
 
 else:
     PermissionBase = permissions.BasePermission

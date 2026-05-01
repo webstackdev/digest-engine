@@ -26,7 +26,8 @@ from users.tasks import generate_avatar_thumbnail
 class DelayedTask(Protocol):
     """Protocol for Celery tasks dispatched through ``delay``."""
 
-    def delay(self, *args: object, **kwargs: object) -> object: ...
+    def delay(self, *args: object, **kwargs: object) -> object:
+        pass
 
 
 def _enqueue_task(task: object, *args: object) -> None:

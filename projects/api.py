@@ -4,7 +4,6 @@ from typing import Any, cast
 
 from django.conf import settings
 from django.core.mail import send_mail
-from django.db.models import QuerySet
 from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import mixins, serializers, status, viewsets

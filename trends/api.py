@@ -233,7 +233,9 @@ class ThemeSuggestionViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
         try:
             accept_theme_suggestion(suggestion, user_id=request.user.id)
         except ValueError as exc:
-            raise serializers.ValidationError({"status": str(exc)}) from exc
+            raise serializers.ValidationError(
+                {"status": "Unable to accept this theme suggestion."}
+            ) from exc
         suggestion = self.get_queryset().get(pk=suggestion.pk)
         serializer = self.get_serializer(suggestion)
         return Response(serializer.data)
@@ -266,7 +268,9 @@ class ThemeSuggestionViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
                 reason=serializer.validated_data["reason"],
             )
         except ValueError as exc:
-            raise serializers.ValidationError({"status": str(exc)}) from exc
+            raise serializers.ValidationError(
+                {"status": "Unable to dismiss this theme suggestion."}
+            ) from exc
         response_serializer = self.get_serializer(suggestion)
         return Response(response_serializer.data)
 
