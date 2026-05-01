@@ -3,6 +3,7 @@
 from rest_framework_nested.routers import NestedSimpleRouter
 
 from trends.api import (
+    SourceDiversitySnapshotViewSet,
     ThemeSuggestionViewSet,
     TopicCentroidSnapshotViewSet,
     TopicClusterViewSet,
@@ -26,4 +27,9 @@ def register_project_routes(project_router: NestedSimpleRouter) -> None:
         r"topic-centroid-snapshots",
         TopicCentroidSnapshotViewSet,
         basename="project-topic-centroid-snapshot",
+    )
+    project_router.register(
+        r"source-diversity-snapshots",
+        SourceDiversitySnapshotViewSet,
+        basename="project-source-diversity-snapshot",
     )

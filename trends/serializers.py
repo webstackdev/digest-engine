@@ -6,6 +6,7 @@ from content.models import Content
 from core.serializer_mixins import ProjectScopedSerializerMixin
 from trends.models import (
     ContentClusterMembership,
+    SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
@@ -213,3 +214,32 @@ class TopicCentroidObservabilitySummarySerializer(serializers.Serializer):
     avg_drift_from_previous = serializers.FloatField(allow_null=True)
     avg_drift_from_week_ago = serializers.FloatField(allow_null=True)
     latest_snapshot = TopicCentroidSnapshotSerializer(allow_null=True)
+
+
+class SourceDiversitySnapshotSerializer(serializers.ModelSerializer):
+    """Serialize one persisted source-diversity snapshot for a project."""
+
+    class Meta:
+        model = SourceDiversitySnapshot
+        fields = [
+            "id",
+            "project",
+            "computed_at",
+            "window_days",
+            "plugin_entropy",
+            "source_entropy",
+            "author_entropy",
+            "cluster_entropy",
+            "top_plugin_share",
+            "top_source_share",
+            "breakdown",
+        ]
+        read_only_fields = fields
+
+
+class SourceDiversityObservabilitySummarySerializer(serializers.Serializer):
+    """Serialize project-level source-diversity observability metrics."""
+
+    project = serializers.IntegerField()
+    snapshot_count = serializers.IntegerField()
+    latest_snapshot = SourceDiversitySnapshotSerializer(allow_null=True)

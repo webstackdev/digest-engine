@@ -19,6 +19,7 @@ from core.api import (
 from core.permissions import IsProjectContributor, IsProjectMember
 from trends.models import (
     ContentClusterMembership,
+    SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
@@ -26,6 +27,8 @@ from trends.models import (
     TopicVelocitySnapshot,
 )
 from trends.serializers import (
+    SourceDiversityObservabilitySummarySerializer,
+    SourceDiversitySnapshotSerializer,
     ThemeSuggestionDismissSerializer,
     ThemeSuggestionSerializer,
     TopicClusterDetailSerializer,
@@ -329,6 +332,59 @@ class TopicCentroidSnapshotViewSet(
                 "active_snapshot_count": metrics["active_snapshot_count"],
                 "avg_drift_from_previous": metrics["avg_drift_from_previous"],
                 "avg_drift_from_week_ago": metrics["avg_drift_from_week_ago"],
+                "latest_snapshot": queryset.order_by("-computed_at").first(),
+            },
+            context=self.get_serializer_context(),
+        )
+        return Response(serializer.data)
+
+
+@document_project_owned_viewset(
+    resource_plural="source diversity snapshots",
+    resource_singular="source diversity snapshot",
+    create_description="Source diversity snapshots are pipeline-managed observability rows and are exposed read-only for health analysis.",
+    tag="Observability",
+    action_overrides=build_crud_action_overrides(
+        SourceDiversitySnapshotSerializer,
+        resource_plural="source diversity snapshots for the selected project",
+        resource_singular="source diversity snapshot",
+    ),
+)
+class SourceDiversitySnapshotViewSet(
+    ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewSet
+):
+    """Inspect persisted source-diversity history for a project."""
+
+    serializer_class = SourceDiversitySnapshotSerializer
+    queryset = SourceDiversitySnapshot.objects.select_related("project")
+
+    def get_permissions(self):
+        """Restrict source-diversity observability to project contributors."""
+
+        return [IsProjectContributor()]
+
+    @extend_schema(
+        summary="Get source diversity summary",
+        description=(
+            "Return the latest persisted source-diversity snapshot for the selected project "
+            "along with the number of stored snapshots."
+        ),
+        request=None,
+        responses={
+            200: SourceDiversityObservabilitySummarySerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Observability"],
+    )
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request, *args, **kwargs):
+        """Return source-diversity summary metrics for the current project."""
+
+        queryset = self.get_queryset()
+        serializer = SourceDiversityObservabilitySummarySerializer(
+            {
+                "project": _require_pk(self.get_project()),
+                "snapshot_count": queryset.count(),
                 "latest_snapshot": queryset.order_by("-computed_at").first(),
             },
             context=self.get_serializer_context(),

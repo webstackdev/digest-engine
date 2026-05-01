@@ -21,11 +21,12 @@ from core.embeddings import (
 )
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
 from content.models import Content, FeedbackType, UserFeedback
-from entities.models import Entity, EntityMention
-from projects.models import Project
+from entities.models import Entity, EntityMention, EntityMentionRole
+from projects.models import Project, SourceConfig
 
 from .models import (
     ContentClusterMembership,
+    SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
@@ -43,6 +44,9 @@ TOPIC_CLUSTER_SIMILARITY_THRESHOLD = 0.85
 TOPIC_CLUSTER_MIN_MEMBERS = 3
 TOPIC_VELOCITY_TRAILING_DAYS = 7
 TOPIC_VELOCITY_EMA_ALPHA = 0.5
+SOURCE_DIVERSITY_WINDOW_DAYS = 14
+SOURCE_DIVERSITY_TOP_PLUGIN_ALERT_THRESHOLD = 0.7
+SOURCE_DIVERSITY_LOW_AUTHOR_ENTROPY_THRESHOLD = 0.4
 THEME_DETECTION_SKILL_NAME = "theme_detection"
 THEME_SUGGESTION_DAILY_CAP = 5
 THEME_NOVELTY_LOOKBACK_DAYS = 30
@@ -357,13 +361,153 @@ def recompute_topic_velocity(project_id: int) -> dict[str, int]:
         )
         snapshot_count += 1
     if settings.CELERY_TASK_ALWAYS_EAGER:
+        recompute_source_diversity(project_id)
         generate_theme_suggestions(project_id)
     else:
+        _enqueue_task(recompute_source_diversity, project_id)
         _enqueue_task(generate_theme_suggestions, project_id)
     return {
         "project_id": project_id,
         "clusters_evaluated": len(clusters),
         "snapshots_created": snapshot_count,
+    }
+
+
+@shared_task(name="core.tasks.recompute_source_diversity")
+def recompute_source_diversity(project_id: int) -> dict[str, object]:
+    """Persist one fresh source-diversity snapshot for a project's recent content."""
+
+    computed_at = timezone.now()
+    window_start = computed_at - timedelta(days=SOURCE_DIVERSITY_WINDOW_DAYS)
+    recent_contents = list(
+        Content.objects.filter(
+            project_id=project_id,
+            is_active=True,
+            published_date__gte=window_start,
+        )
+        .select_related("entity")
+        .only(
+            "id",
+            "project_id",
+            "entity_id",
+            "source_plugin",
+            "source_metadata",
+            "published_date",
+        )
+        .order_by("published_date", "id")
+    )
+    content_ids = [_require_pk(content) for content in recent_contents]
+    author_entity_ids = _author_entities_for_contents(recent_contents)
+    cluster_labels = {
+        str(cluster_id): label
+        for cluster_id, label in TopicCluster.objects.filter(
+            memberships__content_id__in=content_ids,
+            project_id=project_id,
+        )
+        .distinct()
+        .values_list("id", "label")
+    }
+
+    plugin_counts: Counter[str] = Counter()
+    source_counts: Counter[str] = Counter()
+    author_counts: Counter[str] = Counter()
+    for content in recent_contents:
+        plugin_key = content.source_plugin or "unknown"
+        plugin_counts[plugin_key] += 1
+        source_counts[_source_bucket_key(content)] += 1
+        author_entity_id = author_entity_ids.get(_require_pk(content))
+        if author_entity_id is not None:
+            author_counts[str(author_entity_id)] += 1
+
+    cluster_counts: Counter[str] = Counter(
+        str(cluster_id)
+        for cluster_id in ContentClusterMembership.objects.filter(
+            project_id=project_id,
+            content_id__in=content_ids,
+        ).values_list("cluster_id", flat=True)
+    )
+
+    source_config_labels = {
+        f"source_config:{source_id}": f"{plugin_name} #{source_id}"
+        for source_id, plugin_name in SourceConfig.objects.filter(
+            pk__in=[
+                int(key.split(":", 1)[1])
+                for key in source_counts
+                if key.startswith("source_config:")
+            ]
+        ).values_list("id", "plugin_name")
+    }
+    author_labels = {
+        str(entity_id): name
+        for entity_id, name in Entity.objects.filter(
+            pk__in=[int(key) for key in author_counts]
+        ).values_list("id", "name")
+    }
+    cluster_label_map = {
+        cluster_id: label or f"Cluster {cluster_id}"
+        for cluster_id, label in cluster_labels.items()
+    }
+
+    top_plugin_item = _top_count_item(plugin_counts)
+    top_source_item = _top_count_item(source_counts)
+    plugin_entropy = _normalized_shannon_entropy(plugin_counts)
+    source_entropy = _normalized_shannon_entropy(source_counts)
+    author_entropy = _normalized_shannon_entropy(author_counts)
+    cluster_entropy = _normalized_shannon_entropy(cluster_counts)
+    top_plugin_share = _top_share(plugin_counts)
+    top_source_share = _top_share(source_counts)
+
+    alerts = _build_source_diversity_alerts(
+        top_plugin_item=top_plugin_item,
+        top_plugin_share=top_plugin_share,
+        author_counts=author_counts,
+        author_entropy=author_entropy,
+    )
+    breakdown = {
+        "total_content_count": len(recent_contents),
+        "plugin_counts": _serialize_breakdown_counts(
+            plugin_counts,
+            label_resolver=lambda key: key,
+        ),
+        "source_counts": _serialize_breakdown_counts(
+            source_counts,
+            label_resolver=lambda key: source_config_labels.get(
+                key,
+                _fallback_source_label(key),
+            ),
+        ),
+        "author_counts": _serialize_breakdown_counts(
+            author_counts,
+            label_resolver=lambda key: author_labels.get(key, f"Entity {key}"),
+        ),
+        "cluster_counts": _serialize_breakdown_counts(
+            cluster_counts,
+            label_resolver=lambda key: cluster_label_map.get(key, f"Cluster {key}"),
+        ),
+        "alerts": alerts,
+    }
+
+    snapshot = SourceDiversitySnapshot.objects.create(
+        project_id=project_id,
+        window_days=SOURCE_DIVERSITY_WINDOW_DAYS,
+        plugin_entropy=plugin_entropy,
+        source_entropy=source_entropy,
+        author_entropy=author_entropy,
+        cluster_entropy=cluster_entropy,
+        top_plugin_share=top_plugin_share,
+        top_source_share=top_source_share,
+        breakdown=breakdown,
+    )
+    if snapshot.computed_at != computed_at:
+        SourceDiversitySnapshot.objects.filter(pk=snapshot.pk).update(
+            computed_at=computed_at
+        )
+        snapshot.computed_at = computed_at
+    return {
+        "project_id": project_id,
+        "snapshot_id": _require_pk(snapshot),
+        "content_count": len(recent_contents),
+        "alert_count": len(alerts),
     }
 
 
@@ -927,6 +1071,164 @@ def dismiss_theme_suggestion(
         update_fields=["status", "decided_at", "decided_by", "dismissal_reason"]
     )
     return theme_suggestion
+
+
+def _author_entities_for_contents(contents: list[Content]) -> dict[int, int | None]:
+    """Resolve one best-effort author entity bucket per content row."""
+
+    content_ids = [_require_pk(content) for content in contents]
+    author_mentions: dict[int, int] = {}
+    for content_id, entity_id in (
+        EntityMention.objects.filter(
+            content_id__in=content_ids,
+            role=EntityMentionRole.AUTHOR,
+        )
+        .order_by("content_id", "entity_id")
+        .values_list("content_id", "entity_id")
+    ):
+        author_mentions.setdefault(int(content_id), int(entity_id))
+    return {
+        _require_pk(content): author_mentions.get(_require_pk(content))
+        or (_require_pk(content.entity) if content.entity is not None else None)
+        for content in contents
+    }
+
+
+def _source_bucket_key(content: Content) -> str:
+    """Return the source bucket key used for source diversity counts."""
+
+    source_metadata = content.source_metadata or {}
+    source_config_id = source_metadata.get("source_config_id")
+    if isinstance(source_config_id, bool):
+        source_config_id = None
+    if isinstance(source_config_id, (int, str)) and source_config_id != "":
+        try:
+            return f"source_config:{int(source_config_id)}"
+        except ValueError:
+            pass
+    sender_email = str(source_metadata.get("sender_email", "")).strip().lower()
+    if sender_email:
+        return f"sender_email:{sender_email}"
+    for metadata_key in (
+        "feed_url",
+        "subreddit",
+        "author_handle",
+        "account_acct",
+        "instance_url",
+    ):
+        metadata_value = str(source_metadata.get(metadata_key, "")).strip().lower()
+        if metadata_value:
+            return f"{metadata_key}:{metadata_value}"
+    if content.source_plugin:
+        return f"plugin:{content.source_plugin}"
+    return "unknown"
+
+
+def _fallback_source_label(source_key: str) -> str:
+    """Render a human-readable source label for non-SourceConfig buckets."""
+
+    prefix, _, value = source_key.partition(":")
+    if not value:
+        return source_key
+    if prefix == "sender_email":
+        return value
+    if prefix == "plugin":
+        return f"{value} (unattributed)"
+    return value
+
+
+def _serialize_breakdown_counts(
+    counts: Counter[str],
+    *,
+    label_resolver,
+) -> list[dict[str, object]]:
+    """Serialize one counter into a stable JSON-friendly breakdown list."""
+
+    total_count = sum(counts.values())
+    if total_count <= 0:
+        return []
+    return [
+        {
+            "key": key,
+            "label": label_resolver(key),
+            "count": count,
+            "share": count / total_count,
+        }
+        for key, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+
+def _normalized_shannon_entropy(counts: Counter[str]) -> float:
+    """Return Shannon entropy normalized into the inclusive [0, 1] interval."""
+
+    positive_counts = [count for count in counts.values() if count > 0]
+    if len(positive_counts) <= 1:
+        return 0.0
+    total_count = sum(positive_counts)
+    entropy = -sum(
+        (count / total_count) * math.log2(count / total_count)
+        for count in positive_counts
+    )
+    max_entropy = math.log2(len(positive_counts))
+    if max_entropy <= 0:
+        return 0.0
+    return max(0.0, min(1.0, entropy / max_entropy))
+
+
+def _top_share(counts: Counter[str]) -> float:
+    """Return the share owned by the largest bucket in one distribution."""
+
+    total_count = sum(counts.values())
+    if total_count <= 0:
+        return 0.0
+    return max(counts.values()) / total_count
+
+
+def _top_count_item(counts: Counter[str]) -> tuple[str, int] | None:
+    """Return the largest bucket key/count pair using a stable tie-breaker."""
+
+    if not counts:
+        return None
+    return max(counts.items(), key=lambda item: (item[1], item[0]))
+
+
+def _build_source_diversity_alerts(
+    *,
+    top_plugin_item: tuple[str, int] | None,
+    top_plugin_share: float,
+    author_counts: Counter[str],
+    author_entropy: float,
+) -> list[dict[str, str]]:
+    """Build advisory cards for concentrated source diversity snapshots."""
+
+    alerts: list[dict[str, str]] = []
+    if (
+        top_plugin_item is not None
+        and top_plugin_share > SOURCE_DIVERSITY_TOP_PLUGIN_ALERT_THRESHOLD
+    ):
+        alerts.append(
+            {
+                "code": "top_plugin_share",
+                "severity": "warning",
+                "message": (
+                    f"Your stream is {top_plugin_share:.0%} from {top_plugin_item[0]} this week."
+                ),
+            }
+        )
+    if author_counts and author_entropy < SOURCE_DIVERSITY_LOW_AUTHOR_ENTROPY_THRESHOLD:
+        author_bucket_count = len(author_counts)
+        alerts.append(
+            {
+                "code": "author_entropy",
+                "severity": "warning",
+                "message": (
+                    "Three authors account for most of your content."
+                    if author_bucket_count <= 3
+                    else "A small set of authors accounts for most of your content."
+                ),
+            }
+        )
+    return alerts
 
 
 def _resolve_dominant_entity(contents: list[Content]) -> Entity | None:

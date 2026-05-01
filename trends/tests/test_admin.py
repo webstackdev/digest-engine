@@ -10,8 +10,8 @@ from django.test import RequestFactory
 from django.utils import timezone
 
 from projects.models import Project
-from trends.admin import TopicCentroidSnapshotAdmin
-from trends.models import TopicCentroidSnapshot
+from trends.admin import SourceDiversitySnapshotAdmin, TopicCentroidSnapshotAdmin
+from trends.models import SourceDiversitySnapshot, TopicCentroidSnapshot
 
 pytestmark = pytest.mark.django_db
 
@@ -53,6 +53,21 @@ def _drilldowns(response: object) -> list[dict[str, Any]]:
     """Return typed centroid drilldowns from a changelist extra_context payload."""
 
     return cast(list[dict[str, Any]], _context(response)["centroid_project_drilldowns"])
+
+
+def _source_diversity_alerts(response: object) -> list[dict[str, Any]]:
+    """Return typed source diversity alerts from a changelist payload."""
+
+    return cast(list[dict[str, Any]], _context(response)["source_diversity_alerts"])
+
+
+def _source_diversity_drilldowns(response: object) -> list[dict[str, Any]]:
+    """Return typed source diversity drilldowns from a changelist payload."""
+
+    return cast(
+        list[dict[str, Any]],
+        _context(response)["source_diversity_project_drilldowns"],
+    )
 
 
 @pytest.fixture
@@ -151,3 +166,82 @@ def test_topic_centroid_snapshot_admin_changelist_view_builds_dashboard_stats(
         f"{_require_pk(source_admin_context.project)}"
     )
     assert centroid_project_drilldowns[0]["drift_from_previous"] == "10.0%"
+
+
+def test_source_diversity_snapshot_admin_changelist_view_builds_dashboard_stats(
+    source_admin_context, mocker
+):
+    second_project = Project.objects.create(
+        name="Second Diversity Project",
+        topic_description="Analytics",
+    )
+    first_snapshot = SourceDiversitySnapshot.objects.create(
+        project=source_admin_context.project,
+        window_days=14,
+        plugin_entropy=0.8,
+        source_entropy=0.7,
+        author_entropy=0.3,
+        cluster_entropy=0.6,
+        top_plugin_share=0.75,
+        top_source_share=0.7,
+        breakdown={
+            "alerts": [
+                {
+                    "code": "top_plugin_share",
+                    "severity": "warning",
+                    "message": "Your stream is 75% from rss this week.",
+                }
+            ]
+        },
+    )
+    second_snapshot = SourceDiversitySnapshot.objects.create(
+        project=second_project,
+        window_days=14,
+        plugin_entropy=0.2,
+        source_entropy=0.4,
+        author_entropy=0.1,
+        cluster_entropy=0.3,
+        top_plugin_share=0.9,
+        top_source_share=0.85,
+        breakdown={"alerts": []},
+    )
+    admin_instance = SourceDiversitySnapshotAdmin(SourceDiversitySnapshot, AdminSite())
+    mocker.patch.object(
+        admin_instance,
+        "get_queryset",
+        return_value=SourceDiversitySnapshot.objects.all(),
+    )
+    super_changelist_view = mocker.patch(
+        "django.contrib.admin.options.ModelAdmin.changelist_view",
+        side_effect=lambda request, extra_context=None: extra_context,
+    )
+
+    response = admin_instance.changelist_view(request=_request())
+    dashboard_stats = _dashboard_stats(response)
+    alerts = _source_diversity_alerts(response)
+    drilldowns = _source_diversity_drilldowns(response)
+
+    super_changelist_view.assert_called_once()
+    assert (
+        admin_instance.list_before_template
+        == "admin/source_diversity_snapshot_changelist_widget.html"
+    )
+    assert dashboard_stats[0]["value"] == "50.0%"
+    assert dashboard_stats[0]["color"] == "warning"
+    assert dashboard_stats[1]["value"] == "55.0%"
+    assert dashboard_stats[2]["value"] == "20.0%"
+    assert dashboard_stats[2]["color"] == "danger"
+    assert dashboard_stats[3]["value"] == "82.5%"
+    assert dashboard_stats[3]["color"] == "danger"
+    assert alerts == [
+        {
+            "code": "top_plugin_share",
+            "severity": "warning",
+            "message": "Your stream is 75% from rss this week.",
+        }
+    ]
+    assert len(drilldowns) == 2
+    assert drilldowns[0]["project_name"] == "Admin Project"
+    assert drilldowns[0]["plugin_entropy"] == "80.0%"
+    assert drilldowns[0]["top_plugin_share"] == "75.0%"
+    assert drilldowns[0]["alert_count"] == 1

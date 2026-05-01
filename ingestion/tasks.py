@@ -4,7 +4,7 @@ import logging
 
 from celery import shared_task
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Model, Q
 from django.utils import timezone
 
 from content.deduplication import canonicalize_url
@@ -14,6 +14,17 @@ from ingestion.plugins import get_plugin_for_source_config
 from projects.models import SourceConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key as an ``int``."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(
+            f"{instance.__class__.__name__} must be saved before task dispatch"
+        )
+    return int(instance_pk)
 
 
 @shared_task(name="core.tasks.run_ingestion")
@@ -74,7 +85,10 @@ def _ingest_source_config(source_config: SourceConfig) -> tuple[int, int]:
     for item in fetched_items:
         if _content_exists_for_item(source_config, item):
             continue
-        source_metadata = getattr(item, "source_metadata", None) or {}
+        source_metadata = {
+            **(getattr(item, "source_metadata", None) or {}),
+            "source_config_id": _require_pk(source_config),
+        }
         content = Content.objects.create(
             project=source_config.project,
             entity=_match_entity_for_item(plugin, item),
