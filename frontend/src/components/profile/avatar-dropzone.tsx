@@ -49,10 +49,10 @@ export function AvatarDropzone({
   })
 
   return (
-    <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+    <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
       <div className="space-y-1">
         <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Upload</p>
-        <h2 className="m-0 font-display text-title-sm font-bold text-ink">
+        <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
           Drag, drop, or browse
         </h2>
       </div>
@@ -61,14 +61,14 @@ export function AvatarDropzone({
         {...getRootProps()}
         className={`rounded-3xl border border-dashed px-5 py-8 text-center transition ${
           isDragReject
-            ? "border-danger/40 bg-danger/10"
+            ? "border-destructive/40 bg-destructive/10"
             : isDragActive
               ? "border-primary/45 bg-primary/8"
-              : "border-ink/16 bg-surface-strong/45 hover:border-primary/28 hover:bg-surface-strong/60"
+              : "border-border/16 bg-muted/45 hover:border-primary/28 hover:bg-muted/60"
         } ${isUploading ? "cursor-wait opacity-70" : "cursor-pointer"}`}
       >
         <input {...getInputProps({ "aria-label": "Upload avatar image" })} />
-        <p className="m-0 text-base font-medium text-ink">
+        <p className="m-0 text-base font-medium text-foreground">
           {isUploading ? "Uploading avatar..." : "Drop an image here or click to browse."}
         </p>
         <p className="mt-2 mb-0 text-sm leading-6 text-muted">
@@ -77,7 +77,7 @@ export function AvatarDropzone({
       </div>
 
       {errorMessage ? (
-        <div className="rounded-panel bg-danger/12 px-4 py-3 text-sm leading-6 text-danger-ink">
+        <div className="rounded-panel bg-destructive/12 px-4 py-3 text-sm leading-6 text-destructive">
           {errorMessage}
         </div>
       ) : null}

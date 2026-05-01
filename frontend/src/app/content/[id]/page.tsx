@@ -80,7 +80,7 @@ export default async function ContentDetailPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -120,14 +120,14 @@ export default async function ContentDetailPage({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
+        <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
+        <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(280px,0.95fr)]">
         <div className="space-y-4">
-          <article className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-3">
                 <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">{content.source_plugin}</p>
@@ -151,7 +151,7 @@ export default async function ContentDetailPage({
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                 href={content.url}
                 target="_blank"
               >
@@ -170,7 +170,7 @@ export default async function ContentDetailPage({
                   name="redirectTo"
                   value={`/content/${content.id}?project=${selectedProject.id}`}
                 />
-                <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
+                <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                   Upvote
                 </button>
               </form>
@@ -187,30 +187,30 @@ export default async function ContentDetailPage({
                   name="redirectTo"
                   value={`/content/${content.id}?project=${selectedProject.id}`}
                 />
-                <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
+                <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                   Downvote
                 </button>
               </form>
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
-              <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
+              <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">
                 Canonical URL {content.canonical_url || content.url}
               </span>
               {content.authority_adjusted_score !== null ? (
-                <span className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink">
+                <span className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-foreground">
                   Base {formatPercentScore(content.relevance_score)}
                 </span>
               ) : null}
               {content.duplicate_signal_count > 0 ? (
-                <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">
+                <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">
                   Also seen in {content.duplicate_signal_count} source
                   {content.duplicate_signal_count === 1 ? "" : "s"}
                 </span>
               ) : null}
               {content.duplicate_of ? (
                 <Link
-                  className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink transition hover:bg-surface-strong/80"
+                  className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground transition hover:bg-muted/80"
                   href={`/content/${content.duplicate_of}?project=${selectedProject.id}`}
                 >
                   Duplicate of #{content.duplicate_of}
@@ -218,7 +218,7 @@ export default async function ContentDetailPage({
               ) : null}
               {content.newsletter_promotion_at ? (
                 <Link
-                  className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink transition hover:bg-primary/12"
+                  className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-foreground transition hover:bg-primary/12"
                   href={content.newsletter_promotion_theme ? `/themes?project=${selectedProject.id}&theme=${content.newsletter_promotion_theme}` : `/themes?project=${selectedProject.id}`}
                 >
                   Promoted {formatDate(content.newsletter_promotion_at)}
@@ -231,7 +231,7 @@ export default async function ContentDetailPage({
             </div>
           </article>
 
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Skill action bar</p>
             <div className="flex flex-wrap items-center gap-3">
               <SkillActionBar
@@ -253,7 +253,7 @@ export default async function ContentDetailPage({
                   name="redirectTo"
                   value={`/content/${content.id}?project=${selectedProject.id}`}
                 />
-                <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
+                <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                   Find related
                 </button>
               </form>
@@ -266,7 +266,7 @@ export default async function ContentDetailPage({
           </article>
 
           {contentSkillResults.map((skillResult) => (
-            <article key={skillResult.id} className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+            <article key={skillResult.id} className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">{skillResult.skill_name}</p>
@@ -292,11 +292,11 @@ export default async function ContentDetailPage({
                 <span>Confidence {formatScore(skillResult.confidence)}</span>
               </div>
               {skillResult.error_message ? (
-                <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">
+                <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">
                   {skillResult.error_message}
                 </div>
               ) : null}
-              <pre className="overflow-auto rounded-2xl bg-sidebar/95 p-4 text-sm text-sidebar-ink">
+              <pre className="overflow-auto rounded-2xl bg-sidebar/95 p-4 text-sm text-sidebar-foreground">
                 {JSON.stringify(skillResult.result_data, null, 2)}
               </pre>
             </article>
@@ -304,7 +304,7 @@ export default async function ContentDetailPage({
         </div>
 
         <aside className="space-y-4">
-          <article className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Feedback</p>
             <p className="mt-1 text-3xl font-bold">
               {upvotes}/{downvotes}
@@ -314,7 +314,7 @@ export default async function ContentDetailPage({
             </p>
           </article>
 
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Review state</p>
             {reviewItems.length === 0 ? (
               <p className="text-sm leading-6 text-muted">
@@ -338,7 +338,7 @@ export default async function ContentDetailPage({
             ))}
           </article>
 
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Promotion state</p>
             {content.newsletter_promotion_at ? (
               <div className="space-y-3 text-sm leading-6 text-muted">
@@ -348,7 +348,7 @@ export default async function ContentDetailPage({
                 ) : null}
                 {content.newsletter_promotion_theme ? (
                   <Link
-                    className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink transition hover:bg-primary/12"
+                    className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-foreground transition hover:bg-primary/12"
                     href={`/themes?project=${selectedProject.id}&theme=${content.newsletter_promotion_theme}`}
                   >
                     Open promoting theme #{content.newsletter_promotion_theme}
@@ -362,16 +362,16 @@ export default async function ContentDetailPage({
             )}
           </article>
 
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Navigate</p>
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               href={`/?project=${selectedProject.id}`}
             >
               Back to dashboard
             </Link>
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
               href={`/entities?project=${selectedProject.id}`}
             >
               Manage entities

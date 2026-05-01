@@ -30,15 +30,15 @@ export function ProfileForm({
   const [timezone, setTimezone] = useState(profile.timezone)
 
   return (
-    <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+    <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
       <div className="space-y-1">
         <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Identity</p>
-        <h2 className="m-0 font-display text-title-sm font-bold text-ink">
+        <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
           Profile details
         </h2>
       </div>
 
-      <div className="grid gap-2 rounded-2xl border border-ink/10 bg-surface-strong/45 px-4 py-4 text-sm text-muted sm:grid-cols-2">
+      <div className="grid gap-2 rounded-2xl border border-border/10 bg-muted/45 px-4 py-4 text-sm text-muted sm:grid-cols-2">
         <div>
           <span className="block text-xs uppercase tracking-eyebrow opacity-70">Username</span>
           <span>{profile.username}</span>
@@ -61,32 +61,32 @@ export function ProfileForm({
         }}
       >
         <label className="grid gap-2">
-          <span className="text-sm font-medium text-ink">Display name</span>
+          <span className="text-sm font-medium text-foreground">Display name</span>
           <input
-            className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+            className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
             onChange={(event) => setDisplayName(event.target.value)}
             value={displayName}
           />
         </label>
         <label className="grid gap-2">
-          <span className="text-sm font-medium text-ink">Bio</span>
+          <span className="text-sm font-medium text-foreground">Bio</span>
           <textarea
-            className="min-h-32 w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+            className="min-h-32 w-full resize-y rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
             onChange={(event) => setBio(event.target.value)}
             value={bio}
           />
         </label>
         <label className="grid gap-2">
-          <span className="text-sm font-medium text-ink">Timezone</span>
+          <span className="text-sm font-medium text-foreground">Timezone</span>
           <input
-            className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+            className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
             onChange={(event) => setTimezone(event.target.value)}
             placeholder="UTC"
             value={timezone}
           />
         </label>
         <button
-          className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={isSaving}
           type="submit"
         >

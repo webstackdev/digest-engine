@@ -82,7 +82,7 @@ export function ProfileSettingsPanel() {
 
   if (profileQuery.isLoading) {
     return (
-      <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+      <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
         Loading profile...
       </div>
     )
@@ -95,7 +95,7 @@ export function ProfileSettingsPanel() {
         : "Unable to load profile."
 
     return (
-      <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">
+      <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">
         {message}
       </div>
     )
@@ -107,8 +107,8 @@ export function ProfileSettingsPanel() {
         <div
           className={`rounded-panel px-4 py-4 text-sm leading-6 ${
             notice.tone === "success"
-              ? "bg-ink/6 text-muted"
-              : "bg-danger/14 text-danger-ink"
+              ? "bg-muted/60 text-muted"
+              : "bg-destructive/14 text-destructive"
           }`}
         >
           {notice.message}

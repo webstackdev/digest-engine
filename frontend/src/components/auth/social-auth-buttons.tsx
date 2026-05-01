@@ -21,7 +21,7 @@ export default function SocialButtons() {
     <div className="flex flex-col space-y-3 w-full max-w-sm">
       <button
         onClick={() => signIn("github")}
-        className="flex w-full items-center justify-center space-x-3 rounded-lg bg-ink px-4 py-2 text-white transition-colors duration-300 hover:bg-ink/85 focus:outline-none focus:ring-2 focus:ring-ink focus:ring-offset-2"
+        className="flex w-full items-center justify-center space-x-3 rounded-lg bg-foreground px-4 py-2 text-background transition-colors duration-300 hover:bg-foreground/85 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
       >
         <svg
           className="h-5 w-5"
@@ -36,7 +36,7 @@ export default function SocialButtons() {
 
       <button
         onClick={() => signIn("google")}
-        className="flex w-full items-center justify-center space-x-3 rounded-lg border border-ink/20 bg-surface-strong px-4 py-2 text-muted transition-colors duration-300 hover:bg-surface-strong/80 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
+        className="flex w-full items-center justify-center space-x-3 rounded-lg border border-border/20 bg-muted px-4 py-2 text-muted transition-colors duration-300 hover:bg-muted/80 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2"
       >
         <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
           <path

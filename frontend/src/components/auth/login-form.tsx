@@ -67,12 +67,12 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
   }
 
   return (
-    <div className="w-full max-w-md space-y-8 rounded-3xl border border-ink/12 bg-surface/90 p-8 shadow-panel backdrop-blur-xl">
+    <div className="w-full max-w-md space-y-8 rounded-3xl border border-border/12 bg-card/90 p-8 shadow-panel backdrop-blur-xl">
       <div className="text-center">
         <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-muted">
           Newsletter Maker
         </p>
-        <h2 className="mt-2 font-display text-display-page font-bold text-ink">
+        <h2 className="mt-2 font-display text-display-page font-bold text-foreground">
           Welcome back
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted">
@@ -84,17 +84,17 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-ink/12" />
+          <span className="w-full border-t border-border/12" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-surface px-2 text-muted">Or continue with password</span>
+          <span className="bg-card px-2 text-muted">Or continue with password</span>
         </div>
       </div>
 
       <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
         <div className="space-y-4 rounded-2xl">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-ink">
+            <label htmlFor="username" className="block text-sm font-medium text-foreground">
               Username or email
             </label>
             <input
@@ -103,12 +103,12 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
               type="text"
               required
               autoComplete="username"
-              className="mt-1 block w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+              className="mt-1 block w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
               placeholder="your_username"
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-ink">
+            <label htmlFor="password" className="block text-sm font-medium text-foreground">
               Password
             </label>
             <input
@@ -117,14 +117,14 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
               type="password"
               required
               autoComplete="current-password"
-              className="mt-1 block w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+              className="mt-1 block w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
               placeholder="••••••••"
             />
           </div>
         </div>
 
         {errorMessage ? (
-          <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">
+          <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">
             {errorMessage}
           </div>
         ) : null}
@@ -135,9 +135,9 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
               id="remember-me"
               name="remember-me"
               type="checkbox"
-              className="h-4 w-4 rounded border-ink/20 text-primary focus:ring-primary/20"
+              className="h-4 w-4 rounded border-border/20 text-primary focus:ring-primary/20"
             />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-ink">
+            <label htmlFor="remember-me" className="ml-2 block text-sm text-foreground">
               Remember me
             </label>
           </div>
@@ -147,14 +147,14 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
 
         <button
           type="submit"
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
           disabled={isSubmitting}
         >
           {isSubmitting ? "Signing in..." : "Sign in"}
         </button>
 
         <p className="text-center text-sm text-muted">
-          Need an account? Use the <Link href="/admin/" className="font-medium text-primary hover:text-primary-strong">Django admin</Link> or registration API.
+          Need an account? Use the <Link href="/admin/" className="font-medium text-primary hover:text-primary">Django admin</Link> or registration API.
         </p>
       </form>
     </div>

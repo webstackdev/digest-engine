@@ -43,6 +43,7 @@
     "nodeenv",
     "noinput",
     "nomic",
+    "oklch",
     "OLLAMA",
     "ormsgpack",
     "PRAW",

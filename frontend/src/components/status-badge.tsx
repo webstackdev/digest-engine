@@ -24,9 +24,9 @@ type StatusBadgeProps = {
 export function StatusBadge({ tone, children }: StatusBadgeProps) {
   const toneClasses = {
     positive: "bg-primary/15 text-primary",
-    warning: "bg-warning/16 text-warning",
-    negative: "bg-danger/15 text-danger",
-    neutral: "bg-ink/8 text-muted",
+    warning: "bg-secondary text-secondary-foreground",
+    negative: "bg-destructive/15 text-destructive",
+    neutral: "bg-muted text-muted-foreground",
   }
 
   return (

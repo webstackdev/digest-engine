@@ -42,10 +42,10 @@ export function AvatarPreview({
   )
 
   return (
-    <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+    <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
       <div className="space-y-1">
         <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Avatar</p>
-        <h2 className="m-0 font-display text-title-sm font-bold text-ink">
+        <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
           Profile image
         </h2>
       </div>
@@ -55,11 +55,11 @@ export function AvatarPreview({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             alt={`${profile.display_name || profile.username} avatar`}
-            className="h-24 w-24 rounded-3xl border border-ink/10 object-cover shadow-sm"
+            className="h-24 w-24 rounded-3xl border border-border/10 object-cover shadow-sm"
             src={avatarUrl}
           />
         ) : (
-          <div className="inline-flex h-24 w-24 items-center justify-center rounded-3xl bg-primary text-2xl font-semibold text-white shadow-sm">
+          <div className="inline-flex h-24 w-24 items-center justify-center rounded-3xl bg-primary text-2xl font-semibold text-primary-foreground shadow-sm">
             {initials}
           </div>
         )}
@@ -69,7 +69,7 @@ export function AvatarPreview({
           </p>
           {profile.avatar_url ? (
             <button
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-danger/25 bg-danger/10 px-4 py-3 text-sm font-medium text-danger-ink transition hover:bg-danger/16 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive transition hover:bg-destructive/16 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isRemoving}
               onClick={onRemove}
               type="button"

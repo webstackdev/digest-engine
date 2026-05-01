@@ -27,7 +27,7 @@ export function AppShell({
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className="flex flex-col gap-8 bg-sidebar/95 p-5 text-sidebar-ink md:p-8">
+      <aside className="flex flex-col gap-8 bg-sidebar/95 p-5 text-sidebar-foreground md:p-8">
         <div>
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">
             Newsletter Maker
@@ -35,7 +35,7 @@ export function AppShell({
           <h1 className="mt-1 font-display text-display-hero font-bold leading-display">
             Editor cockpit
           </h1>
-          <p className="mt-4 text-sm leading-6 text-sidebar-muted/74">
+          <p className="mt-4 text-sm leading-6 text-sidebar-foreground/74">
             A compact review surface for relevance-ranked content, review work,
             and source health.
           </p>
@@ -43,57 +43,57 @@ export function AppShell({
 
         <nav className="grid gap-4">
           <Link
-            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
             href={`/${projectQuery}`}
           >
             Dashboard
           </Link>
           <Link
-            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
             href={`/trends${projectQuery}`}
           >
             Trends
           </Link>
           <Link
-            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
             href={`/themes${projectQuery}`}
           >
             Themes
           </Link>
           <Link
-            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
             href={`/ideas${projectQuery}`}
           >
             Ideas
           </Link>
           <Link
-            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
             href={`/entities${projectQuery}`}
           >
             Entities
           </Link>
           <Link
-            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
             href={`/admin/health${projectQuery}`}
           >
             Ingestion health
           </Link>
           <Link
-            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
             href={`/admin/sources${projectQuery}`}
           >
             Source configs
           </Link>
           {canManageMembers && selectedProjectId ? (
             <Link
-              className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+              className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
               href={`/projects/${selectedProjectId}/members${projectQuery}`}
             >
               Members
             </Link>
           ) : null}
           <Link
-            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
             href="/admin/projects/new"
           >
             New project
@@ -114,12 +114,12 @@ export function AppShell({
                   href={`/?project=${project.id}`}
                   className={`grid gap-1 rounded-panel border px-4 py-4 transition hover:-translate-y-0.5 ${
                     isActive
-                      ? "border-warning-soft/46 bg-linear-to-b from-warning/18 to-sidebar-ink/3"
-                      : "border-sidebar-ink/8 bg-sidebar-ink/3 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+                      ? "border-primary/30 bg-linear-to-b from-primary/15 to-sidebar-accent/40"
+                      : "border-sidebar-border/60 bg-sidebar-accent/30 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
                   }`}
                 >
                   <span>{project.name}</span>
-                  <small className="text-sidebar-muted/64">
+                  <small className="text-sidebar-foreground/64">
                     {project.topic_description}
                   </small>
                 </Link>

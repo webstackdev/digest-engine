@@ -8,10 +8,10 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { fetchProfile, PROFILE_QUERY_KEY } from "@/lib/profile"
 
 const AVATAR_TONES = [
-  "bg-primary text-white",
-  "bg-warning text-ink",
-  "bg-sidebar text-sidebar-ink",
-  "bg-danger text-white",
+  "bg-primary text-primary-foreground",
+  "bg-secondary text-secondary-foreground",
+  "bg-sidebar text-sidebar-foreground",
+  "bg-destructive text-destructive-foreground",
 ]
 
 function buildInitials(name: string) {
@@ -103,7 +103,7 @@ export function UserMenu() {
         aria-expanded={isOpen}
         aria-haspopup="menu"
         aria-label="Open user menu"
-        className={`inline-flex h-12 w-12 items-center justify-center rounded-full border border-ink/10 text-sm font-semibold shadow-sm transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-primary/20 ${avatarTone}`}
+        className={`inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/10 text-sm font-semibold shadow-sm transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-primary/20 ${avatarTone}`}
         onClick={() => setIsOpen((currentValue) => !currentValue)}
         type="button"
       >
@@ -121,7 +121,7 @@ export function UserMenu() {
 
       {isOpen ? (
         <div
-          className="absolute right-0 top-full z-20 mt-3 w-72 rounded-3xl border border-ink/10 bg-surface/95 p-4 shadow-panel backdrop-blur-xl"
+          className="absolute right-0 top-full z-20 mt-3 w-72 rounded-3xl border border-border/10 bg-card/95 p-4 shadow-panel backdrop-blur-xl"
           role="menu"
         >
           <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export function UserMenu() {
               </div>
             )}
             <div className="min-w-0">
-              <p className="m-0 truncate text-sm font-semibold text-ink">{accountName}</p>
+              <p className="m-0 truncate text-sm font-semibold text-foreground">{accountName}</p>
               <p className="m-0 truncate text-sm text-muted">
                 {accountEmail || "Signed in account"}
               </p>
@@ -150,21 +150,21 @@ export function UserMenu() {
 
           <div className="mt-4 grid gap-2">
             <Link
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-surface-strong/45 px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/65"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-muted/45 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/65"
               href="/profile"
               onClick={() => setIsOpen(false)}
               role="menuitem"
             >
               View profile
             </Link>
-            <div className="rounded-2xl border border-ink/10 bg-surface-strong/45 px-4 py-3 text-sm leading-6 text-muted">
+            <div className="rounded-2xl border border-border/10 bg-muted/45 px-4 py-3 text-sm leading-6 text-muted">
               Update your avatar, display name, and timezone from the profile workspace.
             </div>
           </div>
 
           {isAuthenticated ? (
             <button
-              className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50"
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50"
               onClick={() => void signOut({ callbackUrl: "/login" })}
               role="menuitem"
               type="button"

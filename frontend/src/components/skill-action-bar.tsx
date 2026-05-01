@@ -168,7 +168,7 @@ export function SkillActionBar({
   return (
     <>
       <button
-        className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
         disabled={!canSummarize || isBusy("summarization")}
         onClick={() => {
@@ -179,7 +179,7 @@ export function SkillActionBar({
         {getSkillLabel("summarization", isBusy("summarization"))}
       </button>
       <button
-        className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
         disabled={isBusy("relevance_scoring")}
         onClick={() => {
@@ -190,12 +190,12 @@ export function SkillActionBar({
         {getSkillLabel("relevance_scoring", isBusy("relevance_scoring"))}
       </button>
       {statusMessage ? (
-        <p className="basis-full rounded-panel bg-ink/6 px-4 py-3 text-sm leading-6 text-muted" role="status">
+        <p className="basis-full rounded-panel bg-muted/60 px-4 py-3 text-sm leading-6 text-muted" role="status">
           {statusMessage}
         </p>
       ) : null}
       {errorMessage ? (
-        <p className="basis-full rounded-panel bg-danger/14 px-4 py-3 text-sm leading-6 text-danger-ink" role="alert">
+        <p className="basis-full rounded-panel bg-destructive/14 px-4 py-3 text-sm leading-6 text-destructive" role="alert">
           {errorMessage}
         </p>
       ) : null}

@@ -37,7 +37,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const callbackUrl = resolveCallbackUrl(resolvedSearchParams.callbackUrl)
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-paper px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <LoginForm callbackUrl={callbackUrl} />
     </div>
   )

@@ -4,15 +4,12 @@ import type { Preview } from "@storybook/nextjs-vite"
 import type { ReactNode } from "react"
 
 import { QueryProvider } from "../src/components/query-provider"
-import { ThemeProvider } from "../src/components/theme-provider"
 
 function StorybookProviders({ children }: { children: ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-      <QueryProvider>
-        <div className="min-h-screen bg-paper p-6 text-ink">{children}</div>
-      </QueryProvider>
-    </ThemeProvider>
+    <QueryProvider>
+      <div className="min-h-screen bg-background p-6 text-foreground">{children}</div>
+    </QueryProvider>
   )
 }
 

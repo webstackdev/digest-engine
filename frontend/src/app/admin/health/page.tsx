@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { AppShell } from "@/components/app-shell"
+import { SourceDiversityPanel } from "@/components/source-diversity-panel"
 import { StatusBadge } from "@/components/status-badge"
 import {
   getProjectIngestionRuns,
@@ -18,7 +19,7 @@ import type {
   TopicCentroidObservabilitySummary,
   TopicCentroidSnapshot,
 } from "@/lib/types"
-import { formatDate, formatPercentScore, healthTone, selectProject } from "@/lib/view-helpers"
+import { formatDate, healthTone, selectProject } from "@/lib/view-helpers"
 
 type HealthPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -191,7 +192,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -248,10 +249,10 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
       projects={projects}
       selectedProjectId={selectedProject.id}
     >
-      <section className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+      <section className="rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-ink">
+            <h2 className="text-lg font-semibold text-foreground">
               Topic centroid observability
             </h2>
             <p className="mt-1 text-sm leading-6 text-muted">
@@ -269,11 +270,11 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-panel bg-ink/6 px-4 py-4">
+          <div className="rounded-panel bg-muted/60 px-4 py-4">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
               Centroid state
             </p>
-            <p className="mt-2 text-2xl font-semibold text-ink">
+            <p className="mt-2 text-2xl font-semibold text-foreground">
               {centroidSummary.latest_snapshot
                 ? centroidSummary.latest_snapshot.centroid_active
                   ? "Active"
@@ -281,27 +282,27 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                 : "Not computed"}
             </p>
           </div>
-          <div className="rounded-panel bg-ink/6 px-4 py-4">
+          <div className="rounded-panel bg-muted/60 px-4 py-4">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
               Avg drift vs previous
             </p>
-            <p className="mt-2 text-2xl font-semibold text-ink">
+            <p className="mt-2 text-2xl font-semibold text-foreground">
               {formatDriftPercent(centroidSummary.avg_drift_from_previous)}
             </p>
           </div>
-          <div className="rounded-panel bg-ink/6 px-4 py-4">
+          <div className="rounded-panel bg-muted/60 px-4 py-4">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
               Avg drift vs 7d
             </p>
-            <p className="mt-2 text-2xl font-semibold text-ink">
+            <p className="mt-2 text-2xl font-semibold text-foreground">
               {formatDriftPercent(centroidSummary.avg_drift_from_week_ago)}
             </p>
           </div>
-          <div className="rounded-panel bg-ink/6 px-4 py-4">
+          <div className="rounded-panel bg-muted/60 px-4 py-4">
             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
               Latest snapshot
             </p>
-            <p className="mt-2 text-2xl font-semibold text-ink">
+            <p className="mt-2 text-2xl font-semibold text-foreground">
               {formatDate(centroidSummary.latest_snapshot?.computed_at ?? null)}
             </p>
           </div>
@@ -310,7 +311,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         {visibleCentroidSnapshots.length > 1 ? (
           <Link
             aria-label="Open centroid snapshot history"
-            className="mt-4 block rounded-panel bg-ink/6 px-4 py-4 transition hover:bg-ink/8"
+            className="mt-4 block rounded-panel bg-muted/60 px-4 py-4 transition hover:bg-muted"
             href={`/admin/health?project=${selectedProject.id}#centroid-snapshot-history`}
           >
             <div className="flex items-center justify-between gap-3 text-sm text-muted">
@@ -319,7 +320,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
             </div>
             <svg
               aria-label="Centroid drift trend"
-              className="mt-3 h-20 w-full overflow-visible text-ink"
+              className="mt-3 h-20 w-full overflow-visible text-foreground"
               role="img"
               viewBox="0 0 220 72"
             >
@@ -336,7 +337,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         ) : null}
 
         {centroidSummary.latest_snapshot ? (
-          <div className="mt-4 flex flex-wrap gap-3 text-sm text-ink">
+          <div className="mt-4 flex flex-wrap gap-3 text-sm text-foreground">
             <span>{centroidSummary.snapshot_count} snapshots</span>
             <span>{centroidSummary.active_snapshot_count} active snapshots</span>
             <span>
@@ -346,19 +347,19 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
             <span>Downvotes {centroidSummary.latest_snapshot.downvote_count}</span>
           </div>
         ) : (
-          <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+          <div className="mt-4 rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
             No centroid snapshots exist for this project yet.
           </div>
         )}
       </section>
 
       <section
-        className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl"
+        className="rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl"
         id="centroid-snapshot-history"
       >
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-ink">
+            <h2 className="text-lg font-semibold text-foreground">
               Centroid snapshot history
             </h2>
             <p className="mt-1 text-sm leading-6 text-muted">
@@ -371,14 +372,14 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         </div>
 
         {visibleCentroidSnapshots.length === 0 ? (
-          <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+          <div className="mt-4 rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
             No centroid snapshot history exists for this project yet.
           </div>
         ) : (
           <div className="mt-4 overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-ink/12 text-sm text-muted">
+                <tr className="border-b border-border/12 text-sm text-muted">
                   <th className="px-3 py-4 font-medium">Computed</th>
                   <th className="px-3 py-4 font-medium">State</th>
                   <th className="px-3 py-4 font-medium">Feedback</th>
@@ -390,9 +391,9 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                 {visibleCentroidSnapshots.map((snapshot) => (
                   <tr
                     key={snapshot.id}
-                    className="border-b border-ink/12 align-top last:border-b-0"
+                    className="border-b border-border/12 align-top last:border-b-0"
                   >
-                    <td className="px-3 py-4 text-sm text-ink">
+                    <td className="px-3 py-4 text-sm text-foreground">
                       {formatDate(snapshot.computed_at)}
                     </td>
                     <td className="px-3 py-4">
@@ -400,13 +401,13 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                         {snapshot.centroid_active ? "active" : "inactive"}
                       </StatusBadge>
                     </td>
-                    <td className="px-3 py-4 text-sm text-ink">
+                    <td className="px-3 py-4 text-sm text-foreground">
                       {snapshot.feedback_count} total
                     </td>
-                    <td className="px-3 py-4 text-sm text-ink">
+                    <td className="px-3 py-4 text-sm text-foreground">
                       {formatDriftPercent(snapshot.drift_from_previous)}
                     </td>
-                    <td className="px-3 py-4 text-sm text-ink">
+                    <td className="px-3 py-4 text-sm text-foreground">
                       {formatDriftPercent(snapshot.drift_from_week_ago)}
                     </td>
                   </tr>
@@ -417,155 +418,19 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         )}
       </section>
 
-      <section className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-ink">Source diversity</h2>
-            <p className="mt-1 text-sm leading-6 text-muted">
-              Entropy, source concentration, and advisory alerts derived from the latest source-diversity snapshot.
-            </p>
-          </div>
-          <StatusBadge tone={healthTone(deriveSourceDiversityStatus(sourceDiversitySummary))}>
-            {sourceDiversitySummary.latest_snapshot ? "tracked" : "idle"}
-          </StatusBadge>
-        </div>
+      <SourceDiversityPanel
+        statusLabel={sourceDiversitySummary.latest_snapshot ? "tracked" : "idle"}
+        statusTone={healthTone(deriveSourceDiversityStatus(sourceDiversitySummary))}
+        summary={sourceDiversitySummary}
+        trendPoints={sourceDiversityTrendPoints}
+        visibleSnapshots={visibleSourceDiversitySnapshots}
+      />
 
-        {sourceDiversitySummary.latest_snapshot ? (
-          <>
-            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-panel bg-ink/6 px-4 py-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Plugin diversity</p>
-                <p className="mt-2 text-2xl font-semibold text-ink">
-                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.plugin_entropy)}
-                </p>
-              </div>
-              <div className="rounded-panel bg-ink/6 px-4 py-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Source diversity</p>
-                <p className="mt-2 text-2xl font-semibold text-ink">
-                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.source_entropy)}
-                </p>
-              </div>
-              <div className="rounded-panel bg-ink/6 px-4 py-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Author diversity</p>
-                <p className="mt-2 text-2xl font-semibold text-ink">
-                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.author_entropy)}
-                </p>
-              </div>
-              <div className="rounded-panel bg-ink/6 px-4 py-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Cluster diversity</p>
-                <p className="mt-2 text-2xl font-semibold text-ink">
-                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.cluster_entropy)}
-                </p>
-              </div>
-              <div className="rounded-panel bg-ink/6 px-4 py-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Top plugin share</p>
-                <p className="mt-2 text-2xl font-semibold text-ink">
-                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.top_plugin_share)}
-                </p>
-              </div>
-              <div className="rounded-panel bg-ink/6 px-4 py-4">
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Top source share</p>
-                <p className="mt-2 text-2xl font-semibold text-ink">
-                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.top_source_share)}
-                </p>
-              </div>
-            </div>
-
-            {visibleSourceDiversitySnapshots.length > 1 ? (
-              <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4">
-                <div className="flex items-center justify-between gap-3 text-sm text-muted">
-                  <span>Top plugin share trend</span>
-                  <span>Last {visibleSourceDiversitySnapshots.length} snapshots</span>
-                </div>
-                <svg
-                  aria-label="Source diversity trend"
-                  className="mt-3 h-20 w-full overflow-visible text-ink"
-                  role="img"
-                  viewBox="0 0 220 72"
-                >
-                  <polyline
-                    fill="none"
-                    points={sourceDiversityTrendPoints}
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="3"
-                  />
-                </svg>
-              </div>
-            ) : null}
-
-            {(sourceDiversitySummary.latest_snapshot.breakdown.alerts ?? []).length > 0 ? (
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {sourceDiversitySummary.latest_snapshot.breakdown.alerts.map((alert) => (
-                  <div key={alert.code} className="rounded-panel bg-warning/14 px-4 py-4 text-sm leading-6 text-ink">
-                    <strong className="font-medium">{alert.code}</strong>
-                    <p className="mt-2 m-0">{alert.message}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
-                No source-diversity alerts are active for this project.
-              </div>
-            )}
-
-            <div className="mt-4 grid gap-4 xl:grid-cols-2">
-              <div className="rounded-panel bg-ink/6 px-4 py-4">
-                <p className="m-0 text-sm font-medium text-ink">Top plugin buckets</p>
-                <div className="mt-3 space-y-3">
-                  {sourceDiversitySummary.latest_snapshot.breakdown.plugin_counts.slice(0, 4).map((item) => (
-                    <div key={item.key}>
-                      <div className="flex items-center justify-between gap-3 text-sm text-muted">
-                        <span>{item.label}</span>
-                        <span>{formatPercentScore(item.share)}</span>
-                      </div>
-                      <div className="mt-2 h-2 rounded-full bg-ink/10">
-                        <div className="h-2 rounded-full bg-ink" style={{ width: `${Math.max(item.share * 100, 4)}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-panel bg-ink/6 px-4 py-4">
-                <p className="m-0 text-sm font-medium text-ink">Top source buckets</p>
-                <div className="mt-3 space-y-3">
-                  {sourceDiversitySummary.latest_snapshot.breakdown.source_counts.slice(0, 4).map((item) => (
-                    <div key={item.key}>
-                      <div className="flex items-center justify-between gap-3 text-sm text-muted">
-                        <span>{item.label}</span>
-                        <span>{formatPercentScore(item.share)}</span>
-                      </div>
-                      <div className="mt-2 h-2 rounded-full bg-ink/10">
-                        <div className="h-2 rounded-full bg-ink" style={{ width: `${Math.max(item.share * 100, 4)}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <details className="mt-4 rounded-panel bg-ink/6 px-4 py-4">
-              <summary className="cursor-pointer text-sm font-medium text-ink">
-                View raw breakdown JSON
-              </summary>
-              <pre className="mt-3 overflow-auto rounded-2xl bg-sidebar/95 p-4 text-sm text-sidebar-ink">
-                {JSON.stringify(sourceDiversitySummary.latest_snapshot.breakdown, null, 2)}
-              </pre>
-            </details>
-          </>
-        ) : (
-          <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
-            No source-diversity snapshots exist for this project yet.
-          </div>
-        )}
-      </section>
-
-      <section className="overflow-hidden rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+      <section className="overflow-hidden rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-ink/12 text-sm text-muted">
+              <tr className="border-b border-border/12 text-sm text-muted">
                 <th className="px-3 py-4 font-medium">Source</th>
                 <th className="px-3 py-4 font-medium">Status</th>
                 <th className="px-3 py-4 font-medium">Last fetch</th>
@@ -578,7 +443,7 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
               {sourceConfigs.length === 0 ? (
                 <tr>
                   <td className="px-3 py-4" colSpan={6}>
-                    <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+                    <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
                       No source configurations exist for this project yet.
                     </div>
                   </td>
@@ -595,10 +460,10 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                 return (
                   <tr
                     key={sourceConfig.id}
-                    className="border-b border-ink/12 align-top last:border-b-0"
+                    className="border-b border-border/12 align-top last:border-b-0"
                   >
                     <td className="px-3 py-4">
-                      <strong className="font-medium text-ink">
+                      <strong className="font-medium text-foreground">
                         {sourceConfig.plugin_name}
                       </strong>
                       <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
@@ -613,20 +478,20 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                         {status}
                       </StatusBadge>
                     </td>
-                    <td className="px-3 py-4 text-sm text-ink">
+                    <td className="px-3 py-4 text-sm text-foreground">
                       {formatDate(sourceConfig.last_fetched_at)}
                     </td>
-                    <td className="px-3 py-4 text-sm text-ink">
+                    <td className="px-3 py-4 text-sm text-foreground">
                       {latestRun
                         ? `${latestRun.status} at ${formatDate(latestRun.started_at)}`
                         : "No runs yet"}
                     </td>
-                    <td className="px-3 py-4 text-sm text-ink">
+                    <td className="px-3 py-4 text-sm text-foreground">
                       {latestRun
                         ? `${latestRun.items_ingested}/${latestRun.items_fetched}`
                         : "0/0"}
                     </td>
-                    <td className="px-3 py-4 text-sm text-ink">
+                    <td className="px-3 py-4 text-sm text-foreground">
                       {latestRun?.error_message || "-"}
                     </td>
                   </tr>

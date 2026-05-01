@@ -32,7 +32,7 @@ export function CopyButton({ value, label }: CopyButtonProps) {
 
   return (
     <button
-      className="inline-flex min-h-11 items-center justify-center rounded-full border border-ink/12 bg-transparent px-4 py-3 text-sm font-medium text-ink transition hover:bg-surface-strong/50"
+      className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50"
       onClick={handleClick}
       type="button"
     >
