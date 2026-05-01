@@ -1,5 +1,6 @@
 ---
 name: summarization
+description: Write a concise newsletter-ready summary for relevant content.
 input: title, content_text, newsletter_topic
 output: summary
 ---

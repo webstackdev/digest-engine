@@ -1,5 +1,6 @@
 ---
-name: relevance_scoring
+name: relevance-scoring
+description: Score how relevant a content item is for a project's newsletter topic.
 input: newsletter_topic, reference_similarity, title, content_text, url, source_plugin
 output: relevance_score, explanation, used_llm
 ---

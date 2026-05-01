@@ -1,5 +1,6 @@
 ---
 name: deduplication
+description: Decide whether two content items should be treated as duplicates.
 input: title, content_text, canonical_url, candidate_title, candidate_content_text, candidate_canonical_url, similarity_score
 output: is_duplicate, confidence, explanation
 ---

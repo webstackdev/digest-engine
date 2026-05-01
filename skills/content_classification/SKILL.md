@@ -1,5 +1,6 @@
 ---
-name: content_classification
+name: content-classification
+description: Classify newsletter content into one supported editorial content type.
 input: title, content_text, url
 output: content_type, confidence, explanation
 ---

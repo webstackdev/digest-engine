@@ -1,5 +1,6 @@
 ---
-name: entity_extraction
+name: entity-extraction
+description: Extract tracked entity mentions and propose new entity candidates.
 input: title, content_text, project_id, tracked_entities
 output: mentions, candidate_entities, explanation
 ---

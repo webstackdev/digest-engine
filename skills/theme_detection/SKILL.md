@@ -1,5 +1,6 @@
 ---
-name: theme_detection
+name: theme-detection
+description: Generate one editor-facing theme suggestion from a high-velocity topic cluster.
 input: project_topic, cluster_context, recent_accepted_themes
 output: title, one_sentence_pitch, why_it_matters, suggested_angle
 ---
