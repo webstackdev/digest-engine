@@ -11,6 +11,37 @@ import {
 import type { TopicClusterDetail, TopicVelocitySnapshot } from "@/lib/types"
 import { formatPercentScore } from "@/lib/view-helpers"
 
+const meta = {
+  title: "Pages/Trends",
+  component: TrendsPagePreview,
+  tags: ["autodocs"],
+  args: {},
+} satisfies Meta<typeof TrendsPagePreview>
+
+export default meta
+
+type Story = StoryObj<typeof meta>
+
+export const Populated: Story = {}
+
+export const Empty: Story = {
+  args: {
+    clusters: [],
+    selectedCluster: null,
+  },
+}
+
+const populatedClusters = [
+  createTopicClusterDetail(),
+  createTopicClusterDetail({
+    id: 6,
+    label: "Operational Guardrails",
+    member_count: 2,
+    velocity_score: 0.58,
+    z_score: 1.12,
+  }),
+]
+
 function buildVelocityTrendPoints(snapshots: TopicVelocitySnapshot[]) {
   if (snapshots.length <= 1) {
     return "0,56 220,56"
@@ -135,35 +166,4 @@ function TrendsPagePreview({
       </section>
     </AppShell>
   )
-}
-
-const populatedClusters = [
-  createTopicClusterDetail(),
-  createTopicClusterDetail({
-    id: 6,
-    label: "Operational Guardrails",
-    member_count: 2,
-    velocity_score: 0.58,
-    z_score: 1.12,
-  }),
-]
-
-const meta = {
-  title: "Pages/Trends",
-  component: TrendsPagePreview,
-  tags: ["autodocs"],
-  args: {},
-} satisfies Meta<typeof TrendsPagePreview>
-
-export default meta
-
-type Story = StoryObj<typeof meta>
-
-export const Populated: Story = {}
-
-export const Empty: Story = {
-  args: {
-    clusters: [],
-    selectedCluster: null,
-  },
 }

@@ -13,6 +13,25 @@ type ThemesPreviewProps = {
   themes?: ReturnType<typeof createThemeSuggestion>[]
 }
 
+const meta = {
+  title: "Pages/Themes",
+  component: ThemesPagePreview,
+  tags: ["autodocs"],
+  args: {},
+} satisfies Meta<typeof ThemesPagePreview>
+
+export default meta
+
+type Story = StoryObj<typeof meta>
+
+export const Populated: Story = {}
+
+export const Empty: Story = {
+  args: {
+    themes: [],
+  },
+}
+
 function ThemesPagePreview({ themes = populatedThemes }: ThemesPreviewProps) {
   const projects = [createProject()]
   const cluster = createTopicCluster()
@@ -82,22 +101,3 @@ const populatedThemes = [
     dismissal_reason: "already covered",
   }),
 ]
-
-const meta = {
-  title: "Pages/Themes",
-  component: ThemesPagePreview,
-  tags: ["autodocs"],
-  args: {},
-} satisfies Meta<typeof ThemesPagePreview>
-
-export default meta
-
-type Story = StoryObj<typeof meta>
-
-export const Populated: Story = {}
-
-export const Empty: Story = {
-  args: {
-    themes: [],
-  },
-}

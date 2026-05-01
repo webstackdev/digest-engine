@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { createOriginalContentIdea } from "@/lib/storybook-fixtures"
 
-import { OriginalContentIdeaCard } from "./OriginalContentIdeaCard"
+import { OriginalContentIdeaCard } from "."
 
 const meta = {
-  title: "Routes/Ideas/OriginalContentIdeaCard",
+  title: "Pages/Ideas/Components/OriginalContentIdeaCard",
   component: OriginalContentIdeaCard,
   tags: ["autodocs"],
   args: {

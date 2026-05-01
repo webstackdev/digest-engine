@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { createProject } from "@/lib/storybook-fixtures"
 
-import { AppShell } from "./AppShell"
+import { AppShell } from "."
 
 const projects = [
   createProject(),

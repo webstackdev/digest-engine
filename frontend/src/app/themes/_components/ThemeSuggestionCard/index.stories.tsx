@@ -6,13 +6,13 @@ import {
   createTopicClusterDetail,
 } from "@/lib/storybook-fixtures"
 
-import { ThemeSuggestionCard } from "./ThemeSuggestionCard"
+import { ThemeSuggestionCard } from "."
 
 const baseCluster = createTopicCluster()
 const baseClusterDetail = createTopicClusterDetail()
 
 const meta = {
-  title: "Routes/Themes/ThemeSuggestionCard",
+  title: "Pages/Themes/Components/ThemeSuggestionCard",
   component: ThemeSuggestionCard,
   tags: ["autodocs"],
   args: {

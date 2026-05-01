@@ -5,7 +5,7 @@ import {
   createSourceDiversitySummary,
 } from "@/lib/storybook-fixtures"
 
-import { SourceDiversityPanel } from "./SourceDiversityPanel"
+import { SourceDiversityPanel } from "."
 
 const healthySummary = createSourceDiversitySummary()
 const healthySnapshots = [
@@ -15,7 +15,7 @@ const healthySnapshots = [
 ]
 
 const meta = {
-  title: "Pages/AdminHealth/SourceDiversityPanel",
+  title: "Pages/AdminHealth/Components/SourceDiversityPanel",
   component: SourceDiversityPanel,
   tags: ["autodocs"],
   args: {

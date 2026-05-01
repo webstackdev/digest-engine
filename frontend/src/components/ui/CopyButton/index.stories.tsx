@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
+import type { ComponentProps } from "react"
 
-import { CopyButton } from "./CopyButton"
+import { CopyButton } from "."
 
 const meta = {
   title: "UI/CopyButton",
@@ -22,7 +23,7 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {}
 
 export const CompactToolbar: Story = {
-  render: (args) => (
+  render: (args: ComponentProps<typeof CopyButton>) => (
     <div className="flex items-center gap-3 rounded-2xl border border-border/12 bg-card/85 p-3 shadow-panel backdrop-blur-xl">
       <span className="text-sm text-muted">Share</span>
       <CopyButton {...args} />

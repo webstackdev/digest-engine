@@ -11,6 +11,44 @@ type IdeasPreviewProps = {
   ideas?: ReturnType<typeof createOriginalContentIdea>[]
 }
 
+const meta = {
+  title: "Pages/Ideas",
+  component: IdeasPagePreview,
+  tags: ["autodocs"],
+  args: {},
+} satisfies Meta<typeof IdeasPagePreview>
+
+export default meta
+
+type Story = StoryObj<typeof meta>
+
+export const Populated: Story = {}
+
+export const Empty: Story = {
+  args: {
+    ideas: [],
+  },
+}
+
+const populatedIdeas = [
+  createOriginalContentIdea(),
+  createOriginalContentIdea({
+    id: 10,
+    status: "accepted",
+    decided_at: "2026-04-29T09:00:00Z",
+    decided_by: 5,
+    decided_by_username: "editor-2",
+  }),
+  createOriginalContentIdea({
+    id: 11,
+    status: "written",
+    decided_at: "2026-04-30T10:00:00Z",
+    decided_by: 5,
+    decided_by_username: "editor-2",
+  }),
+]
+
+
 function IdeasPagePreview({ ideas = populatedIdeas }: IdeasPreviewProps) {
   const projects = [createProject()]
 
@@ -48,41 +86,4 @@ function IdeasPagePreview({ ideas = populatedIdeas }: IdeasPreviewProps) {
       </section>
     </AppShell>
   )
-}
-
-const populatedIdeas = [
-  createOriginalContentIdea(),
-  createOriginalContentIdea({
-    id: 10,
-    status: "accepted",
-    decided_at: "2026-04-29T09:00:00Z",
-    decided_by: 5,
-    decided_by_username: "editor-2",
-  }),
-  createOriginalContentIdea({
-    id: 11,
-    status: "written",
-    decided_at: "2026-04-30T10:00:00Z",
-    decided_by: 5,
-    decided_by_username: "editor-2",
-  }),
-]
-
-const meta = {
-  title: "Pages/Ideas",
-  component: IdeasPagePreview,
-  tags: ["autodocs"],
-  args: {},
-} satisfies Meta<typeof IdeasPagePreview>
-
-export default meta
-
-type Story = StoryObj<typeof meta>
-
-export const Populated: Story = {}
-
-export const Empty: Story = {
-  args: {
-    ideas: [],
-  },
 }

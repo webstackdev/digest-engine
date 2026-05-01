@@ -5,33 +5,7 @@ import { expect, userEvent, within } from "storybook/test"
 import { PROFILE_QUERY_KEY } from "@/lib/profile"
 import type { UserProfile } from "@/lib/types"
 
-import { UserMenu } from "./UserMenu"
-
-function createSeededQueryClient(profile: UserProfile) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: false,
-        staleTime: Number.POSITIVE_INFINITY,
-      },
-    },
-  })
-
-  queryClient.setQueryData(PROFILE_QUERY_KEY, profile)
-  return queryClient
-}
-
-function UserMenuStory({ profile }: { profile: UserProfile }) {
-  const queryClient = createSeededQueryClient(profile)
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <div className="flex min-h-48 items-start justify-end p-6">
-        <UserMenu />
-      </div>
-    </QueryClientProvider>
-  )
-}
+import { UserMenu } from "."
 
 const baseProfile: UserProfile = {
   id: 7,
@@ -82,4 +56,30 @@ export const WithAvatar: Story = {
       avatar_thumbnail_url: "https://images.example.com/avatar-thumb.jpg",
     },
   },
+}
+
+function createSeededQueryClient(profile: UserProfile) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        staleTime: Number.POSITIVE_INFINITY,
+      },
+    },
+  })
+
+  queryClient.setQueryData(PROFILE_QUERY_KEY, profile)
+  return queryClient
+}
+
+function UserMenuStory({ profile }: { profile: UserProfile }) {
+  const queryClient = createSeededQueryClient(profile)
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div className="flex min-h-48 items-start justify-end p-6">
+        <UserMenu />
+      </div>
+    </QueryClientProvider>
+  )
 }

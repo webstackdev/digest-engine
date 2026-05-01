@@ -2,10 +2,10 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { createTopicClusterDetail } from "@/lib/storybook-fixtures"
 
-import { TopicClusterCard } from "./TopicClusterCard"
+import { TopicClusterCard } from "."
 
 const meta = {
-  title: "Routes/Trends/TopicClusterCard",
+  title: "Pages/Trends/Components/TopicClusterCard",
   component: TopicClusterCard,
   tags: ["autodocs"],
   args: {
