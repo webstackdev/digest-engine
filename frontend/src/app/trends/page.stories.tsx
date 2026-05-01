@@ -97,7 +97,12 @@ function TrendsPagePreview({
                 </StatusBadge>
               </div>
               <div className="mt-4 rounded-panel bg-muted/60 px-4 py-4">
-                <svg className="mt-3 h-20 w-full overflow-visible text-foreground" role="img" viewBox="0 0 220 72">
+                <svg
+                  aria-label="Velocity history trend"
+                  className="mt-3 h-20 w-full overflow-visible text-foreground"
+                  role="img"
+                  viewBox="0 0 220 72"
+                >
                   <polyline
                     fill="none"
                     points={buildVelocityTrendPoints(selectedCluster.velocity_history)}

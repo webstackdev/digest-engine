@@ -12,6 +12,7 @@ applyTo:
 - Keep backend-facing types in `frontend/src/lib/types.ts` and shared server-side API access in `frontend/src/lib/api.ts` unless a route handler in `frontend/src/app/api/` is the correct boundary.
 - Reuse the existing backend contract. This repo currently consumes `snake_case` fields from Django; do not silently rename payload keys in the frontend.
 - Keep reusable UI in `frontend/src/components/` and page composition in `frontend/src/app/`.
+- Keep Vitest files beside the route page, route-local component, or shared component they exercise instead of creating separate `__tests__/` folders.
 - Prefer strong explicit types over loose `Record<string, unknown>` shapes when the contract is known.
 - Add JSDoc for exported utilities, route handlers, hooks, and non-trivial components when behavior is not obvious from the signature.
 - When a change depends on new backend fields or endpoints, update the corresponding types and API helpers in the same change.

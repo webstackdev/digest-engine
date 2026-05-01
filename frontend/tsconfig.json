@@ -15,6 +15,14 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "paths": {
+      "@/components/layout/*": [
+        "./src/components/layout/*/index.ts",
+        "./src/components/layout/*"
+      ],
+      "@/components/ui/*": [
+        "./src/components/ui/*/index.ts",
+        "./src/components/ui/*"
+      ],
       "@/*": [
         "./src/*"
       ]

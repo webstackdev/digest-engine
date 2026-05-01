@@ -15,7 +15,7 @@ const healthySnapshots = [
 ]
 
 const meta = {
-  title: "Routes/Admin/Health/SourceDiversityPanel",
+  title: "Pages/AdminHealth/SourceDiversityPanel",
   component: SourceDiversityPanel,
   tags: ["autodocs"],
   args: {

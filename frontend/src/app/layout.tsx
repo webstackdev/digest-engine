@@ -4,8 +4,8 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import type { ReactNode } from "react"
 
-import { ThemeProvider } from "@/components/layout/ThemeProvider"
-import { QueryProvider } from "@/components/ui/QueryProvider"
+import { QueryProvider } from "@/components/shared/QueryProvider"
+import { ThemeProvider } from "@/components/shared/ThemeProvider"
 import { cn } from "@/lib/utils";
 
 const geistSans = Geist({

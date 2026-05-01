@@ -277,7 +277,12 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
                     <span>Velocity history</span>
                     <span>{selectedCluster.velocity_history.length} snapshots</span>
                   </div>
-                  <svg className="mt-3 h-20 w-full overflow-visible text-foreground" role="img" viewBox="0 0 220 72">
+                  <svg
+                    aria-label="Velocity history trend"
+                    className="mt-3 h-20 w-full overflow-visible text-foreground"
+                    role="img"
+                    viewBox="0 0 220 72"
+                  >
                     <polyline
                       fill="none"
                       points={buildVelocityTrendPoints(selectedCluster.velocity_history)}

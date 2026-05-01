@@ -3,7 +3,7 @@ import "../src/app/globals.css"
 import type { Preview } from "@storybook/nextjs-vite"
 import type { ReactNode } from "react"
 
-import { QueryProvider } from "../src/components/ui/QueryProvider"
+import { QueryProvider } from "../src/components/shared/QueryProvider"
 
 function StorybookProviders({ children }: { children: ReactNode }) {
   return (
@@ -14,7 +14,22 @@ function StorybookProviders({ children }: { children: ReactNode }) {
 }
 
 const preview: Preview = {
+  tags: ['autodocs'],
   parameters: {
+    options: {
+      storySort: {
+        order: [
+          'Pages',
+          ['*', ['Components', 'Views', '*']],  // Pages > [PageName] > Components/Views
+          'Layout',
+          'Features',
+          ['*', ['Components', '*']],           // Features > [FeatureName] > Components
+          'UI',
+          ['*'],                                // UI > [ComponentName]
+          '*',                                  // <--- Catch-all
+        ],
+      },
+    },
     layout: "padded",
     controls: {
       matchers: {

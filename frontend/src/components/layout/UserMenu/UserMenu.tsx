@@ -93,36 +93,56 @@ export function UserMenu() {
   const isAuthenticated = Boolean(profileQuery.data)
   const avatarUrl =
     profileQuery.data?.avatar_thumbnail_url ?? profileQuery.data?.avatar_url ?? null
+  const menuPanelId = "user-menu-panel"
 
   const initials = useMemo(() => buildInitials(accountName), [accountName])
   const avatarTone = useMemo(() => buildAvatarTone(accountName), [accountName])
+  const triggerContent = avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      alt={`${accountName} avatar`}
+      className="h-full w-full rounded-full object-cover"
+      src={avatarUrl}
+    />
+  ) : (
+    initials
+  )
 
   return (
     <div className="relative" ref={containerRef}>
-      <button
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-        aria-label="Open user menu"
-        className={`inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/10 text-sm font-semibold shadow-sm transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-primary/20 ${avatarTone}`}
-        onClick={() => setIsOpen((currentValue) => !currentValue)}
-        type="button"
-      >
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            alt={`${accountName} avatar`}
-            className="h-full w-full rounded-full object-cover"
-            src={avatarUrl}
-          />
-        ) : (
-          initials
-        )}
-      </button>
+      {isOpen ? (
+        <button
+          aria-controls={menuPanelId}
+          aria-expanded="true"
+          aria-haspopup="dialog"
+          aria-label="Open user menu"
+          className={`inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/10 text-sm font-semibold shadow-sm transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-primary/20 ${avatarTone}`}
+          onClick={() => setIsOpen((currentValue) => !currentValue)}
+          type="button"
+        >
+          {triggerContent}
+        </button>
+      ) : (
+        <button
+          aria-controls={menuPanelId}
+          aria-expanded="false"
+          aria-haspopup="dialog"
+          aria-label="Open user menu"
+          className={`inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/10 text-sm font-semibold shadow-sm transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-primary/20 ${avatarTone}`}
+          onClick={() => setIsOpen((currentValue) => !currentValue)}
+          type="button"
+        >
+          {triggerContent}
+        </button>
+      )}
 
       {isOpen ? (
         <div
           className="absolute right-0 top-full z-20 mt-3 w-72 rounded-3xl border border-border/10 bg-card/95 p-4 shadow-panel backdrop-blur-xl"
-          role="menu"
+          id={menuPanelId}
+          role="dialog"
+          aria-label="User menu"
+          aria-modal="false"
         >
           <div className="flex items-center gap-3">
             {avatarUrl ? (
@@ -153,7 +173,6 @@ export function UserMenu() {
               className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-muted/45 px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/65"
               href="/profile"
               onClick={() => setIsOpen(false)}
-              role="menuitem"
             >
               View profile
             </Link>
@@ -166,7 +185,6 @@ export function UserMenu() {
             <button
               className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50"
               onClick={() => void signOut({ callbackUrl: "/login" })}
-              role="menuitem"
               type="button"
             >
               Log out

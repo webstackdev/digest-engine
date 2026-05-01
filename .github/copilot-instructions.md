@@ -37,6 +37,7 @@ You are working in Newsletter Maker, a Django + DRF + Celery + Qdrant backend wi
 - Shared backend-facing types belong in `frontend/src/lib/types.ts`.
 - Shared backend-facing data access belongs in `frontend/src/lib/api.ts` unless there is a clear reason to add a route handler under `frontend/src/app/api/`.
 - Keep reusable UI in `frontend/src/components/` and page assembly in `frontend/src/app/`.
+- Frontend tests should live beside the files they cover in `frontend/src/app/` and `frontend/src/components/` rather than in separate `__tests__/` folders.
 - Preserve existing backend payload shapes in TypeScript types and UI code unless the backend contract is intentionally changing.
 
 ## Documentation Standards

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UserMenu } from "@/components/layout/UserMenu"
-import { QueryProvider } from "@/components/ui/QueryProvider"
+import { QueryProvider } from "@/components/shared/QueryProvider"
 
 const { fetchProfileMock, signOutMock } = vi.hoisted(() => ({
   fetchProfileMock: vi.fn(),
@@ -54,14 +54,14 @@ describe("UserMenu", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open user menu" }))
 
-    expect(screen.getByRole("menu")).toBeInTheDocument()
+    expect(screen.getByRole("dialog", { name: "User menu" })).toBeInTheDocument()
     expect(screen.getByText("Taylor Swift")).toBeInTheDocument()
     expect(screen.getByText("taylor@example.com")).toBeInTheDocument()
-    expect(screen.getByRole("menuitem", { name: "View profile" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View profile" })).toHaveAttribute(
       "href",
       "/profile",
     )
-    expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument()
   })
 
   it("logs out to the login page from the dropdown", async () => {
@@ -86,7 +86,7 @@ describe("UserMenu", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open user menu" }))
 
-    fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }))
+    fireEvent.click(screen.getByRole("button", { name: "Log out" }))
 
     expect(signOutMock).toHaveBeenCalledWith({ callbackUrl: "/login" })
   })

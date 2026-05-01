@@ -130,6 +130,7 @@ export function OriginalContentIdeaCard({
               >
                 <input type="hidden" name="redirectTo" value={currentPageHref} />
                 <select
+                  aria-label="Dismissal reason"
                   className="min-h-11 rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-sm text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                   defaultValue={dismissalReasons[0]}
                   name="reason"

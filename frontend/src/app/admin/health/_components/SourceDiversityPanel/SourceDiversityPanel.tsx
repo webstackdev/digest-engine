@@ -13,6 +13,27 @@ type SourceDiversityPanelProps = {
   statusLabel: string
 }
 
+function renderShareBar(share: number) {
+  return (
+    <svg
+      aria-hidden="true"
+      className="mt-2 h-2 w-full"
+      preserveAspectRatio="none"
+      viewBox="0 0 100 8"
+    >
+      <rect className="fill-muted" height="8" rx="4" width="100" x="0" y="0" />
+      <rect
+        className="fill-primary"
+        height="8"
+        rx="4"
+        width={Math.max(Math.round(share * 100), 4)}
+        x="0"
+        y="0"
+      />
+    </svg>
+  )
+}
+
 /**
  * Render the source-diversity observability panel shared by the health page and stories.
  *
@@ -128,9 +149,7 @@ export function SourceDiversityPanel({
                       <span>{item.label}</span>
                       <span>{formatPercentScore(item.share)}</span>
                     </div>
-                    <div className="mt-2 h-2 rounded-full bg-muted">
-                      <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.max(item.share * 100, 4)}%` }} />
-                    </div>
+                    {renderShareBar(item.share)}
                   </div>
                 ))}
               </div>
@@ -144,9 +163,7 @@ export function SourceDiversityPanel({
                       <span>{item.label}</span>
                       <span>{formatPercentScore(item.share)}</span>
                     </div>
-                    <div className="mt-2 h-2 rounded-full bg-muted">
-                      <div className="h-2 rounded-full bg-primary" style={{ width: `${Math.max(item.share * 100, 4)}%` }} />
-                    </div>
+                    {renderShareBar(item.share)}
                   </div>
                 ))}
               </div>

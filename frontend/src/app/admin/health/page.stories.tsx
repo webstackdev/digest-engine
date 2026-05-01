@@ -17,6 +17,31 @@ type HealthPreviewProps = {
   noSnapshots?: boolean
 }
 
+const meta = {
+  title: "Pages/AdminHealth",
+  component: HealthPagePreview,
+  tags: ["autodocs"],
+  args: {},
+} satisfies Meta<typeof HealthPagePreview>
+
+export default meta
+
+type Story = StoryObj<typeof meta>
+
+export const Healthy: Story = {}
+
+export const Alerting: Story = {
+  args: {
+    alerting: true,
+  },
+}
+
+export const NoSnapshots: Story = {
+  args: {
+    noSnapshots: true,
+  },
+}
+
 function HealthPagePreview({ alerting = false, noSnapshots = false }: HealthPreviewProps) {
   const projects = [createProject()]
   const centroidSummary = createTopicCentroidSummary({
@@ -117,29 +142,4 @@ function HealthPagePreview({ alerting = false, noSnapshots = false }: HealthPrev
       </section>
     </AppShell>
   )
-}
-
-const meta = {
-  title: "Pages/AdminHealth",
-  component: HealthPagePreview,
-  tags: ["autodocs"],
-  args: {},
-} satisfies Meta<typeof HealthPagePreview>
-
-export default meta
-
-type Story = StoryObj<typeof meta>
-
-export const Healthy: Story = {}
-
-export const Alerting: Story = {
-  args: {
-    alerting: true,
-  },
-}
-
-export const NoSnapshots: Story = {
-  args: {
-    noSnapshots: true,
-  },
 }
