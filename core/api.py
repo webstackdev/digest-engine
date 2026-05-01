@@ -6,7 +6,7 @@ generated schema consistent across similar viewsets.
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from drf_spectacular.utils import (
     OpenApiExample,
@@ -589,6 +589,16 @@ class ProjectOwnedQuerysetMixin:
 
     queryset: Any = None
 
+    def _kwargs(self) -> dict[str, Any]:
+        """Return the DRF route kwargs for typed nested-project lookups."""
+
+        return cast(dict[str, Any], getattr(self, "kwargs"))
+
+    def _request(self) -> Any:
+        """Return the DRF request object for typed access checks."""
+
+        return getattr(self, "request")
+
     def get_project(self):
         """Return the project referenced by ``project_id`` after access checks.
 
@@ -597,13 +607,15 @@ class ProjectOwnedQuerysetMixin:
             NotFound: If the project does not exist or the user lacks access.
         """
 
-        project_id = self.kwargs.get("project_id")
+        project_id = self._kwargs().get("project_id")
         if project_id is None:
             raise AssertionError(
                 "project_id must be present in nested project-scoped routes"
             )
         try:
-            return get_visible_projects_queryset(self.request.user).get(pk=project_id)
+            return get_visible_projects_queryset(self._request().user).get(
+                pk=project_id
+            )
         except Project.DoesNotExist as exc:
             raise NotFound("Project not found.") from exc
 
@@ -618,7 +630,7 @@ class ProjectOwnedQuerysetMixin:
     def get_serializer_context(self):
         """Inject the resolved project into serializer context."""
 
-        context = super().get_serializer_context()
+        context = cast(dict[str, Any], cast(Any, super()).get_serializer_context())
         context["project"] = self.get_project()
         return context
 

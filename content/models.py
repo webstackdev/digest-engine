@@ -47,6 +47,21 @@ class Content(models.Model):
     duplicate_signal_count = models.IntegerField(default=0)
     is_reference = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    newsletter_promotion_at = models.DateTimeField(null=True, blank=True)
+    newsletter_promotion_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="newsletter_promoted_content",
+    )
+    newsletter_promotion_theme = models.ForeignKey(
+        "trends.ThemeSuggestion",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="promoted_contents",
+    )
 
     class Meta:
         ordering = ["-published_date"]

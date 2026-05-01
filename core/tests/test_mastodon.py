@@ -5,6 +5,7 @@ import pytest
 
 from core.models import Entity
 from core.plugins.mastodon import MastodonSourcePlugin
+from ingestion.plugins.base import ContentItem
 from projects.model_support import SourcePluginName
 from projects.models import MastodonCredentials, Project, SourceConfig
 
@@ -161,8 +162,13 @@ def test_mastodon_match_entity_for_item_uses_mastodon_handle(mastodon_context):
     plugin = MastodonSourcePlugin(mastodon_context.source_config)
 
     result = plugin.match_entity_for_item(
-        SimpleNamespace(
+        ContentItem(
             url="https://irrelevant.example.com/article",
+            title="Ignored title",
+            author="Alice Example",
+            published_date=datetime.now(tz=UTC),
+            content_text="Ignored body",
+            source_plugin=SourcePluginName.MASTODON,
             source_metadata={"author_acct": "Alice@Hachyderm.io"},
         )
     )

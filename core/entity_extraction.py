@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Model
 from django.utils import timezone
 
 from core.embeddings import search_similar_entities_for_content
@@ -70,11 +71,26 @@ POSITIVE_TOKENS = {"improved", "improves", "strong", "launch", "launched", "good
 NEGATIVE_TOKENS = {"breach", "bug", "failed", "failure", "outage", "risk"}
 
 
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for typed entity-extraction operations."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
+
+
+def _project_pk(content: Content) -> int:
+    """Return the content row's owning project primary key."""
+
+    return _require_pk(content.project)
+
+
 def run_entity_extraction(content: Content) -> dict[str, Any]:
     """Extract tracked-entity mentions and surface unknown candidates."""
 
     tracked_entities = list(
-        Entity.objects.filter(project_id=content.project_id).order_by("name")
+        Entity.objects.filter(project_id=_project_pk(content)).order_by("name")
     )
     extraction = _run_entity_extraction_with_fallback(content, tracked_entities)
     normalized_mentions, unresolved_names = _normalize_mentions(
@@ -116,7 +132,7 @@ def run_entity_extraction(content: Content) -> dict[str, Any]:
         content, normalized_candidates, is_rerun=is_rerun
     )
     primary_entity = _select_primary_entity(mentions)
-    if primary_entity is not None and content.entity_id is None:
+    if primary_entity is not None and content.entity is None:
         content.entity = primary_entity
         content.save(update_fields=["entity"])
 
@@ -126,7 +142,9 @@ def run_entity_extraction(content: Content) -> dict[str, Any]:
         "candidate_entities": [
             _serialize_candidate(candidate) for candidate in candidates
         ],
-        "primary_entity_id": primary_entity.id if primary_entity is not None else None,
+        "primary_entity_id": (
+            _require_pk(primary_entity) if primary_entity is not None else None
+        ),
         "confidence": confidence,
         "explanation": extraction.get(
             "explanation",
@@ -186,7 +204,9 @@ def persist_entity_candidates(
     persisted: list[EntityCandidate] = []
     tracked_names = {
         _normalize_name(entity.name)
-        for entity in Entity.objects.filter(project_id=content.project_id).only("name")
+        for entity in Entity.objects.filter(project_id=_project_pk(content)).only(
+            "name"
+        )
     }
     seen_names: set[str] = set()
     for candidate_payload in candidate_payloads:
@@ -221,7 +241,7 @@ def persist_entity_candidates(
             if candidate.suggested_type != suggested_type:
                 candidate.suggested_type = suggested_type
                 update_fields.append("suggested_type")
-            if candidate.first_seen_in_id is None:
+            if candidate.first_seen_in is None:
                 candidate.first_seen_in = content
                 update_fields.append("first_seen_in")
             if not is_rerun:
@@ -287,10 +307,10 @@ def backfill_entity_mentions(
         mention_payloads = _heuristic_mentions_for_entities(
             content,
             [entity],
-            extra_labels={entity.id: labels},
+            extra_labels={_require_pk(entity): labels},
         )
         mentions = upsert_entity_mentions(content, mention_payloads)
-        if content.entity_id is None and any(
+        if content.entity is None and any(
             mention.role in {EntityMentionRole.SUBJECT, EntityMentionRole.AUTHOR}
             for mention in mentions
         ):
@@ -318,7 +338,7 @@ def _run_entity_extraction_with_fallback(
                 {
                     "title": content.title,
                     "content_text": content.content_text[:5000],
-                    "project_id": content.project_id,
+                    "project_id": _project_pk(content),
                     "tracked_entities": [
                         _serialize_tracked_entity(entity)
                         for entity in candidate_entities
@@ -377,7 +397,7 @@ def _retrieve_candidate_entities(
     if not tracked_entities:
         return []
 
-    entities_by_id = {entity.id: entity for entity in tracked_entities}
+    entities_by_id = {_require_pk(entity): entity for entity in tracked_entities}
     ordered_ids: list[int] = []
     try:
         matches = search_similar_entities_for_content(
@@ -394,7 +414,7 @@ def _retrieve_candidate_entities(
             ordered_ids.append(entity_id)
 
     exact_match_ids = {
-        entity.id
+        _require_pk(entity)
         for entity in tracked_entities
         if _find_entity_span(content, entity, extra_labels=None) is not None
     }
@@ -547,7 +567,8 @@ def _find_entity_span(
 ) -> str | None:
     """Return the first matched label for an entity inside the content."""
 
-    labels = extra_labels.get(entity.id, []) if extra_labels is not None else []
+    entity_id = _require_pk(entity)
+    labels = extra_labels.get(entity_id, []) if extra_labels is not None else []
     labels = [*labels, *_entity_labels(entity)]
     haystacks = [content.author or "", content.title or "", content.content_text or ""]
     for label in labels:
@@ -672,7 +693,7 @@ def _serialize_mention(mention: EntityMention) -> dict[str, Any]:
     """Serialize a persisted mention for the skill result payload."""
 
     return {
-        "entity_id": mention.entity_id,
+        "entity_id": _require_pk(mention.entity),
         "entity_name": mention.entity.name,
         "role": mention.role,
         "sentiment": mention.sentiment,
@@ -685,7 +706,7 @@ def _serialize_candidate(candidate: EntityCandidate) -> dict[str, Any]:
     """Serialize a persisted candidate for the skill result payload."""
 
     return {
-        "id": candidate.id,
+        "id": _require_pk(candidate),
         "name": candidate.name,
         "suggested_type": candidate.suggested_type,
         "occurrence_count": candidate.occurrence_count,

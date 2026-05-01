@@ -1,5 +1,6 @@
 """Admin configuration for trends-domain models."""
 
+from typing import Any, cast
 from urllib.parse import urlencode
 
 from django.contrib import admin
@@ -8,6 +9,15 @@ from django.urls import reverse
 from django.utils import timezone
 
 from trends.models import TopicCentroidSnapshot
+
+
+def _project_pk(snapshot: TopicCentroidSnapshot) -> int:
+    """Return the saved project primary key for a centroid snapshot."""
+
+    project_pk = snapshot.project.pk
+    if project_pk is None:
+        raise ValueError("TopicCentroidSnapshot.project must be saved first.")
+    return int(project_pk)
 
 
 def _score_to_percent(value):
@@ -70,7 +80,7 @@ def _build_topic_centroid_project_drilldowns(queryset, changelist_url: str):
     )
 
     for snapshot in ordered_snapshots:
-        project_id = snapshot.project_id
+        project_id = _project_pk(snapshot)
         snapshot_counts[project_id] = snapshot_counts.get(project_id, 0) + 1
         latest_by_project.setdefault(project_id, snapshot)
 
@@ -79,11 +89,12 @@ def _build_topic_centroid_project_drilldowns(queryset, changelist_url: str):
         latest_by_project.values(),
         key=lambda value: value.project.name.lower(),
     ):
+        project_id = _project_pk(snapshot)
         project_drilldowns.append(
             {
-                "project_id": snapshot.project_id,
+                "project_id": project_id,
                 "project_name": snapshot.project.name,
-                "snapshot_count": snapshot_counts[snapshot.project_id],
+                "snapshot_count": snapshot_counts[project_id],
                 "centroid_active": snapshot.centroid_active,
                 "feedback_count": snapshot.feedback_count,
                 "latest_snapshot": _format_snapshot_freshness(snapshot.computed_at),
@@ -97,7 +108,7 @@ def _build_topic_centroid_project_drilldowns(queryset, changelist_url: str):
                     if snapshot.drift_from_week_ago is not None
                     else "n/a"
                 ),
-                "href": f"{changelist_url}?{urlencode({'project__id__exact': snapshot.project_id})}",
+                "href": f"{changelist_url}?{urlencode({'project__id__exact': project_id})}",
             }
         )
 
@@ -161,7 +172,7 @@ class TopicCentroidSnapshotAdmin(admin.ModelAdmin):
             .count()
         )
 
-        extra_context = extra_context or {}
+        extra_context = cast(dict[str, Any], extra_context or {})
         extra_context["dashboard_stats"] = [
             {
                 "title": "Active Centroids",

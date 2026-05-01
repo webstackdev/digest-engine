@@ -1,5 +1,7 @@
 """REST API viewsets for project-owned models."""
 
+from typing import Any, cast
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
@@ -71,7 +73,8 @@ def _assert_project_keeps_admin(
         return
 
     has_other_admin = (
-        project.memberships.exclude(pk=membership.pk)
+        ProjectMembership.objects.filter(project=project)
+        .exclude(pk=membership.pk)
         .filter(role=ProjectRole.ADMIN)
         .exists()
     )
@@ -115,7 +118,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     """Manage projects accessible through the current user's project memberships."""
 
     serializer_class = ProjectSerializer
-    queryset = Project.objects.select_related("bluesky_credentials")
+    queryset: Any = Project.objects.select_related("bluesky_credentials")
     lookup_url_kwarg = "id"
 
     def get_permissions(self):
@@ -133,10 +136,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         elif self.action in {"list", "retrieve"}:
             permission_classes = [IsProjectMember]
         else:
-            permission_classes = self.permission_classes
+            permission_classes = cast(
+                list[type[Any]], getattr(self, "permission_classes", []) or []
+            )
         return [permission() for permission in permission_classes]
 
-    def get_queryset(self):
+    def get_queryset(self) -> Any:
         """Limit projects to those visible through the authenticated user."""
 
         return get_visible_projects_queryset(self.request.user).select_related(

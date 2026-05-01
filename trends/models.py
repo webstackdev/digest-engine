@@ -2,6 +2,7 @@
 
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 
@@ -103,7 +104,8 @@ class TopicVelocitySnapshot(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"Velocity snapshot for cluster {self.cluster_id}"
+        cluster_pk = self.cluster.pk
+        return f"Velocity snapshot for cluster {cluster_pk}"
 
 
 class ContentClusterMembership(models.Model):
@@ -142,4 +144,64 @@ class ContentClusterMembership(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"Content {self.content_id} in cluster {self.cluster_id}"
+        content_pk = self.content.pk
+        cluster_pk = self.cluster.pk
+        return f"Content {content_pk} in cluster {cluster_pk}"
+
+
+class ThemeSuggestionStatus(models.TextChoices):
+    """Workflow states for generated theme suggestions."""
+
+    PENDING = "pending", "Pending"
+    ACCEPTED = "accepted", "Accepted"
+    DISMISSED = "dismissed", "Dismissed"
+    USED = "used", "Used"
+
+
+class ThemeSuggestion(models.Model):
+    """Persist one editor-facing theme suggestion derived from a topic cluster."""
+
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="theme_suggestions",
+    )
+    cluster = models.ForeignKey(
+        TopicCluster,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="theme_suggestions",
+    )
+    title = models.CharField(max_length=255)
+    pitch = models.TextField()
+    why_it_matters = models.TextField()
+    suggested_angle = models.TextField(blank=True)
+    velocity_at_creation = models.FloatField()
+    novelty_score = models.FloatField()
+    status = models.CharField(
+        max_length=16,
+        choices=ThemeSuggestionStatus.choices,
+        default=ThemeSuggestionStatus.PENDING,
+    )
+    dismissal_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="decided_theme_suggestions",
+    )
+
+    class Meta:
+        ordering = ["-created_at", "id"]
+        db_table = "core_themesuggestion"
+        indexes = [
+            models.Index(fields=["project", "status", "-created_at"]),
+            models.Index(fields=["project", "-velocity_at_creation"]),
+        ]
+
+    def __str__(self) -> str:
+        return self.title

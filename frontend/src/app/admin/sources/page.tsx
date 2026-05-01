@@ -281,9 +281,15 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
 
             <div className="grid gap-4 lg:grid-cols-2">
               <div className="grid gap-2">
-                <span className="text-sm font-medium text-ink">Intake token</span>
+                <label
+                  className="text-sm font-medium text-ink"
+                  htmlFor="project-intake-token"
+                >
+                  Intake token
+                </label>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <input
+                    id="project-intake-token"
                     className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 font-mono text-sm text-ink outline-none"
                     readOnly
                     value={selectedProject.intake_token ?? ""}
@@ -305,9 +311,15 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                 </div>
               </div>
               <div className="grid gap-2">
-                <span className="text-sm font-medium text-ink">Address pattern</span>
+                <label
+                  className="text-sm font-medium text-ink"
+                  htmlFor="project-intake-address-pattern"
+                >
+                  Address pattern
+                </label>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <input
+                    id="project-intake-address-pattern"
                     className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 font-mono text-sm text-ink outline-none"
                     readOnly
                     value={intakeAddressTemplate}
@@ -542,7 +554,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                         {selectedIntake.extraction_result.items.slice(0, 4).map((item) => (
                           <li key={`${selectedIntake.id}:${item.position}`} className="rounded-2xl border border-ink/10 bg-surface-strong/45 p-3 text-sm text-muted">
                             <span className="font-medium text-ink">{item.title || item.url}</span>
-                            <div className="mt-1 break-words">{item.url}</div>
+                            <div className="mt-1 wrap-break-word">{item.url}</div>
                             {item.excerpt ? <div className="mt-1">{item.excerpt}</div> : null}
                           </li>
                         ))}

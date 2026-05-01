@@ -2,9 +2,25 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from rest_framework import permissions
 
 from projects.models import Project, ProjectMembership, ProjectRole
+
+if TYPE_CHECKING:
+
+    class PermissionBase:
+        """Typed shim for DRF permissions whose default methods return bool."""
+
+        def has_permission(self, request, view) -> bool:
+            pass
+
+        def has_object_permission(self, request, view, obj) -> bool:
+            pass
+
+else:
+    PermissionBase = permissions.BasePermission
 
 
 def get_visible_projects_queryset(user):
@@ -34,7 +50,9 @@ def _get_project_from_view(view) -> Project | None:
 
     get_project = getattr(view, "get_project", None)
     if callable(get_project):
-        return get_project()
+        project = get_project()
+        if isinstance(project, Project):
+            return project
     return None
 
 
@@ -46,7 +64,7 @@ def _resolve_project(obj) -> Project:
     return obj.project
 
 
-class IsProjectMember(permissions.BasePermission):
+class IsProjectMember(PermissionBase):
     """Allow authenticated project members to read project-scoped resources."""
 
     def has_permission(self, request, view) -> bool:
@@ -64,7 +82,7 @@ class IsProjectMember(permissions.BasePermission):
         return get_user_role(request.user, _resolve_project(obj)) is not None
 
 
-class IsProjectContributor(permissions.BasePermission):
+class IsProjectContributor(PermissionBase):
     """Allow only admins and members to access contributor-only resources."""
 
     allowed_roles = {ProjectRole.ADMIN, ProjectRole.MEMBER}
@@ -84,7 +102,7 @@ class IsProjectContributor(permissions.BasePermission):
         return get_user_role(request.user, _resolve_project(obj)) in self.allowed_roles
 
 
-class IsProjectMemberWritable(permissions.BasePermission):
+class IsProjectMemberWritable(PermissionBase):
     """Allow all members to read, but reserve writes for admins and members."""
 
     writable_roles = {ProjectRole.ADMIN, ProjectRole.MEMBER}
@@ -110,7 +128,7 @@ class IsProjectMemberWritable(permissions.BasePermission):
         return role in self.writable_roles
 
 
-class IsProjectAdmin(permissions.BasePermission):
+class IsProjectAdmin(PermissionBase):
     """Restrict access to project admins."""
 
     def has_permission(self, request, view) -> bool:
@@ -128,7 +146,7 @@ class IsProjectAdmin(permissions.BasePermission):
         return get_user_role(request.user, _resolve_project(obj)) == ProjectRole.ADMIN
 
 
-class IsProjectFeedbackEditor(permissions.BasePermission):
+class IsProjectFeedbackEditor(PermissionBase):
     """Allow feedback reads to any member and writes by owners or project admins."""
 
     contributor_roles = {ProjectRole.ADMIN, ProjectRole.MEMBER}

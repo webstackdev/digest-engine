@@ -861,7 +861,7 @@ class Command(BaseCommand):
 
     def _sync_embeddings(self, contents: list[Content]) -> int:
         embedded_count = 0
-        for content in sorted(contents, key=lambda item: item.id):
+        for content in sorted(contents, key=self._require_pk):
             try:
                 upsert_content_embedding(content)
             except (HTTPError, ResponseHandlingException) as exc:
@@ -874,6 +874,14 @@ class Command(BaseCommand):
                 break
             embedded_count += 1
         return embedded_count
+
+    def _require_pk(self, content: Content) -> int:
+        """Return a saved content primary key for deterministic ordering."""
+
+        content_pk = content.pk
+        if content_pk is None:
+            raise ValueError("Demo content must be saved before embedding sync.")
+        return int(content_pk)
 
     def _build_reference_articles(self) -> list[dict[str, Any]]:
         articles = list(LEGACY_REFERENCE_ARTICLES)

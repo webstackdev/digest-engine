@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, Protocol, cast
+
 from django.conf import settings
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema
@@ -19,6 +21,25 @@ from users.serializers import (
     PublicMembershipInvitationSerializer,
 )
 from users.tasks import generate_avatar_thumbnail
+
+
+class DelayedTask(Protocol):
+    """Protocol for Celery tasks dispatched through ``delay``."""
+
+    def delay(self, *args: object, **kwargs: object) -> object:
+        pass
+
+
+def _enqueue_task(task: object, *args: object) -> None:
+    """Dispatch a Celery task through a typed ``delay`` seam."""
+
+    cast(DelayedTask, task).delay(*args)
+
+
+def _validated_data(serializer: Any) -> dict[str, Any]:
+    """Return validated avatar-upload serializer data with a concrete mapping type."""
+
+    return cast(dict[str, Any], serializer.validated_data)
 
 
 def _delete_avatar_assets(user: AppUser) -> None:
@@ -73,13 +94,13 @@ class ProfileAvatarView(APIView):
 
         user = request.user
         _delete_avatar_assets(user)
-        user.avatar = serializer.validated_data["avatar"]
+        user.avatar = _validated_data(serializer)["avatar"]
         user.save(update_fields=["avatar"])
 
         if settings.CELERY_TASK_ALWAYS_EAGER:
             generate_avatar_thumbnail(user.id)
         else:
-            generate_avatar_thumbnail.delay(user.id)
+            _enqueue_task(generate_avatar_thumbnail, user.id)
 
         return Response(ProfileSerializer(user).data, status=status.HTTP_200_OK)
 

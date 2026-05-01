@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+from django.db.models import Model
 
 from core.deduplication import canonicalize_url
 from core.models import (
@@ -42,6 +43,15 @@ from core.pipeline import (
 from core.tasks import process_content
 
 pytestmark = pytest.mark.django_db
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for typed pipeline assertions."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
 
 
 @pytest.fixture
@@ -116,7 +126,7 @@ def test_process_content_runs_full_pipeline_for_relevant_content(
         },
     )
 
-    result = process_content(pipeline_context.content.id)
+    result = process_content(_require_pk(pipeline_context.content))
 
     pipeline_context.content.refresh_from_db()
     assert result["status"] == "completed"
@@ -219,7 +229,7 @@ def test_process_content_uses_top_entity_mention_for_authority_adjustment(
         },
     )
 
-    process_content(pipeline_context.content.id)
+    process_content(_require_pk(pipeline_context.content))
 
     pipeline_context.content.refresh_from_db()
     assert pipeline_context.content.authority_adjusted_score == pytest.approx(0.872)
@@ -401,12 +411,12 @@ def test_process_content_marks_exact_duplicates_and_skips_downstream_skills(
     relevance_mock = mocker.patch("core.pipeline.run_relevance_scoring")
     summarize_mock = mocker.patch("core.pipeline.run_summarization")
 
-    result = process_content(duplicate.id)
+    result = process_content(_require_pk(duplicate))
 
     duplicate.refresh_from_db()
     existing.refresh_from_db()
     assert result["status"] == "duplicate"
-    assert duplicate.duplicate_of_id == existing.id
+    assert duplicate.duplicate_of == existing
     assert duplicate.is_active is False
     assert existing.duplicate_signal_count == 1
     assert classify_mock.call_count == 0
@@ -444,16 +454,18 @@ def test_process_content_marks_semantic_duplicates_with_high_similarity(
     )
     mocker.patch(
         "core.pipeline.search_similar_content",
-        return_value=[SimpleNamespace(score=0.95, payload={"content_id": existing.id})],
+        return_value=[
+            SimpleNamespace(score=0.95, payload={"content_id": _require_pk(existing)})
+        ],
     )
     classify_mock = mocker.patch("core.pipeline.run_content_classification")
 
-    result = process_content(candidate.id)
+    result = process_content(_require_pk(candidate))
 
     candidate.refresh_from_db()
     existing.refresh_from_db()
     assert result["status"] == "duplicate"
-    assert candidate.duplicate_of_id == existing.id
+    assert candidate.duplicate_of == existing
     assert candidate.is_active is False
     assert existing.duplicate_signal_count == 1
     assert classify_mock.call_count == 0
@@ -721,7 +733,7 @@ def test_execute_ad_hoc_classification_supersedes_previous_result_and_updates_re
     assert classification_mock.call_count == 2
     assert first_result.status == SkillStatus.COMPLETED
     assert second_result.status == SkillStatus.COMPLETED
-    assert first_result.superseded_by_id == second_result.id
+    assert first_result.superseded_by == second_result
     assert pipeline_context.content.content_type == "tutorial"
     assert review_item.confidence == pytest.approx(0.45)
     assert (
@@ -887,7 +899,9 @@ def test_execute_background_skill_result_rejects_skill_name_mismatch(pipeline_co
     )
 
     with pytest.raises(ValueError, match="is for relevance_scoring, not summarization"):
-        execute_background_skill_result(pending_result.id, SUMMARIZATION_SKILL_NAME)
+        execute_background_skill_result(
+            _require_pk(pending_result), SUMMARIZATION_SKILL_NAME
+        )
 
 
 def test_execute_background_skill_result_completes_summary_when_requirements_are_met(
@@ -909,7 +923,7 @@ def test_execute_background_skill_result_completes_summary_when_requirements_are
     )
 
     result = execute_background_skill_result(
-        pending_result.id, SUMMARIZATION_SKILL_NAME
+        _require_pk(pending_result), SUMMARIZATION_SKILL_NAME
     )
 
     pending_result.refresh_from_db()
@@ -952,7 +966,9 @@ def test_execute_background_skill_result_uses_adjusted_score_for_relevance_confi
         },
     )
 
-    result = execute_background_skill_result(pending_result.id, RELEVANCE_SKILL_NAME)
+    result = execute_background_skill_result(
+        _require_pk(pending_result), RELEVANCE_SKILL_NAME
+    )
 
     pending_result.refresh_from_db()
     pipeline_context.content.refresh_from_db()
@@ -1005,7 +1021,7 @@ def test_execute_background_skill_result_completes_summary_when_adjusted_score_p
     )
 
     result = execute_background_skill_result(
-        pending_result.id, SUMMARIZATION_SKILL_NAME
+        _require_pk(pending_result), SUMMARIZATION_SKILL_NAME
     )
 
     pending_result.refresh_from_db()
@@ -1031,7 +1047,9 @@ def test_execute_background_skill_result_marks_relevance_failed_when_execution_e
         side_effect=RuntimeError("embedding unavailable"),
     )
 
-    result = execute_background_skill_result(pending_result.id, RELEVANCE_SKILL_NAME)
+    result = execute_background_skill_result(
+        _require_pk(pending_result), RELEVANCE_SKILL_NAME
+    )
 
     pending_result.refresh_from_db()
     assert result.status == SkillStatus.FAILED
@@ -1183,7 +1201,9 @@ def test_run_entity_extraction_persists_mentions_and_candidates(
     pipeline_context.content.save(update_fields=["title", "content_text"])
     mocker.patch(
         "core.entity_extraction.search_similar_entities_for_content",
-        return_value=[SimpleNamespace(score=0.91, payload={"entity_id": entity.id})],
+        return_value=[
+            SimpleNamespace(score=0.91, payload={"entity_id": _require_pk(entity)})
+        ],
     )
 
     result = run_entity_extraction(pipeline_context.content)
@@ -1196,8 +1216,8 @@ def test_run_entity_extraction_persists_mentions_and_candidates(
 
     assert mention.role == "subject"
     assert mention.span == "Acme Cloud"
-    assert result["primary_entity_id"] == entity.id
-    assert pipeline_context.content.entity_id == entity.id
+    assert result["primary_entity_id"] == _require_pk(entity)
+    assert pipeline_context.content.entity == entity
     assert candidate.suggested_type == "vendor"
     assert candidate.occurrence_count == 1
 
@@ -1225,7 +1245,7 @@ def test_process_content_records_entity_extraction_skill_result(
         return_value={
             "mentions": [
                 {
-                    "entity_id": entity.id,
+                    "entity_id": _require_pk(entity),
                     "entity_name": entity.name,
                     "role": "subject",
                     "sentiment": "neutral",
@@ -1234,7 +1254,7 @@ def test_process_content_records_entity_extraction_skill_result(
                 }
             ],
             "candidate_entities": [],
-            "primary_entity_id": entity.id,
+            "primary_entity_id": _require_pk(entity),
             "confidence": 0.88,
             "explanation": "Tracked entity matched in the title.",
             "model_used": "heuristic",

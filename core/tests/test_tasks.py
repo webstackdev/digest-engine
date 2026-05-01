@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
+from django.db.models import Model
 
 from core.models import (
     Content,
@@ -14,6 +15,8 @@ from core.models import (
     IngestionRun,
     RunStatus,
     SkillStatus,
+    ThemeSuggestion,
+    ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
     TopicVelocitySnapshot,
@@ -32,7 +35,9 @@ from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectConfig, SourceConfig
 from trends.tasks import (
     TOPIC_CENTROID_MIN_UPVOTES,
+    accept_theme_suggestion,
     assign_content_to_topic_cluster,
+    generate_theme_suggestions,
     queue_topic_centroid_recompute,
     recompute_topic_centroid,
     recompute_topic_clusters,
@@ -42,6 +47,15 @@ from trends.tasks import (
 )
 
 pytestmark = pytest.mark.django_db
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for typed task assertions."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
 
 
 @pytest.fixture
@@ -82,7 +96,7 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
         ]
     )
 
-    result = run_ingestion(source_config.id)
+    result = run_ingestion(_require_pk(source_config))
 
     assert result["items_fetched"] == 1
     assert result["items_ingested"] == 1
@@ -90,8 +104,11 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
     assert content.project == source_plugin_context.project
     assert content.entity == source_plugin_context.entity
     upsert_embedding_mock.assert_called_once_with(content)
-    process_content_delay_mock.assert_called_once_with(content.id)
-    assert SourceConfig.objects.get(pk=source_config.id).last_fetched_at is not None
+    process_content_delay_mock.assert_called_once_with(_require_pk(content))
+    assert (
+        SourceConfig.objects.get(pk=_require_pk(source_config)).last_fetched_at
+        is not None
+    )
     ingestion_run = IngestionRun.objects.get(
         project=source_plugin_context.project, plugin_name=SourcePluginName.RSS
     )
@@ -131,7 +148,7 @@ def test_run_ingestion_skips_same_source_duplicate_urls(source_plugin_context, m
         ]
     )
 
-    result = run_ingestion(source_config.id)
+    result = run_ingestion(_require_pk(source_config))
 
     assert result["items_fetched"] == 1
     assert result["items_ingested"] == 0
@@ -209,13 +226,13 @@ def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, 
     )
     reddit_mock.return_value.subreddit.return_value = subreddit
 
-    result = run_ingestion(source_config.id)
+    result = run_ingestion(_require_pk(source_config))
 
     assert result["items_fetched"] == 1
     assert result["items_ingested"] == 1
     content = Content.objects.get(title="Reddit Post")
     upsert_embedding_mock.assert_called_once_with(content)
-    process_content_delay_mock.assert_called_once_with(content.id)
+    process_content_delay_mock.assert_called_once_with(_require_pk(content))
     assert content.source_plugin == SourcePluginName.REDDIT
     assert content.entity is None
 
@@ -347,8 +364,8 @@ def test_run_all_ingestions_enqueues_active_source_configs(
     enqueued_count = run_all_ingestions()
 
     assert enqueued_count == 2
-    delay_mock.assert_any_call(active_one.id)
-    delay_mock.assert_any_call(active_two.id)
+    delay_mock.assert_any_call(_require_pk(active_one))
+    delay_mock.assert_any_call(_require_pk(active_two))
     assert delay_mock.call_count == 2
 
 
@@ -372,8 +389,8 @@ def test_run_all_ingestions_executes_inline_when_eager(
     enqueued_count = run_all_ingestions()
 
     assert enqueued_count == 2
-    run_ingestion_mock.assert_any_call(active_one.id)
-    run_ingestion_mock.assert_any_call(active_two.id)
+    run_ingestion_mock.assert_any_call(_require_pk(active_one))
+    run_ingestion_mock.assert_any_call(_require_pk(active_two))
     assert run_ingestion_mock.call_count == 2
     delay_mock.assert_not_called()
 
@@ -391,7 +408,7 @@ def test_run_all_authority_recomputations_enqueues_all_projects(
 
     assert enqueued_count == 2
     delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(other_project.id)
+    delay_mock.assert_any_call(_require_pk(other_project))
     assert delay_mock.call_count == 2
 
 
@@ -410,7 +427,7 @@ def test_run_all_authority_recomputations_executes_inline_when_eager(
 
     assert enqueued_count == 2
     recompute_mock.assert_any_call(source_plugin_context.project.id)
-    recompute_mock.assert_any_call(other_project.id)
+    recompute_mock.assert_any_call(_require_pk(other_project))
     assert recompute_mock.call_count == 2
     delay_mock.assert_not_called()
 
@@ -428,7 +445,7 @@ def test_run_all_topic_centroid_recomputations_enqueues_all_projects(
 
     assert enqueued_count == 2
     delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(other_project.id)
+    delay_mock.assert_any_call(_require_pk(other_project))
     assert delay_mock.call_count == 2
 
 
@@ -447,7 +464,7 @@ def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
 
     assert enqueued_count == 2
     recompute_mock.assert_any_call(source_plugin_context.project.id)
-    recompute_mock.assert_any_call(other_project.id)
+    recompute_mock.assert_any_call(_require_pk(other_project))
     assert recompute_mock.call_count == 2
     delay_mock.assert_not_called()
 
@@ -465,7 +482,7 @@ def test_run_all_topic_cluster_recomputations_enqueues_all_projects(
 
     assert enqueued_count == 2
     delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(other_project.id)
+    delay_mock.assert_any_call(_require_pk(other_project))
     assert delay_mock.call_count == 2
 
 
@@ -785,14 +802,18 @@ def test_recompute_topic_clusters_groups_recent_similar_content(
     result = recompute_topic_clusters(project.id)
 
     cluster = TopicCluster.objects.get(project=project, is_active=True)
-    memberships = list(cluster.memberships.values_list("content_id", flat=True))
+    memberships = list(
+        ContentClusterMembership.objects.filter(cluster=cluster).values_list(
+            "content_id", flat=True
+        )
+    )
 
     assert result["contents_considered"] == 5
     assert result["clusters_updated"] == 1
     assert cluster.member_count == 4
     assert cluster.dominant_entity == source_plugin_context.entity
-    assert set(memberships) == {content.id for content in clustered_contents}
-    assert outlier.id not in memberships
+    assert set(memberships) == {_require_pk(content) for content in clustered_contents}
+    assert _require_pk(outlier) not in memberships
     delay_mock.assert_called_once_with(project.id)
 
 
@@ -854,12 +875,12 @@ def test_assign_content_to_topic_cluster_adds_similar_content_to_existing_cluste
         content_text="New similar cluster content",
     )
 
-    result = assign_content_to_topic_cluster(candidate.id)
+    result = assign_content_to_topic_cluster(_require_pk(candidate))
 
     cluster.refresh_from_db()
     membership = ContentClusterMembership.objects.get(content=candidate)
     assert result["assigned"] is True
-    assert result["cluster_id"] == cluster.id
+    assert result["cluster_id"] == _require_pk(cluster)
     assert membership.cluster == cluster
     assert cluster.member_count == 4
     assert cluster.is_active is True
@@ -933,6 +954,190 @@ def test_recompute_topic_velocity_detects_synthetic_burst(
     assert snapshot.velocity_score == pytest.approx(1.0)
 
 
+def test_generate_theme_suggestions_creates_pending_suggestion(
+    source_plugin_context, settings, mocker
+):
+    settings.OPENROUTER_API_KEY = "test-key"
+    project = source_plugin_context.project
+    cluster = TopicCluster.objects.create(
+        project=project,
+        first_seen_at=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+        last_seen_at=datetime(2026, 4, 24, 12, 0, tzinfo=timezone.utc),
+        is_active=True,
+        member_count=3,
+        dominant_entity=source_plugin_context.entity,
+    )
+    content = Content.objects.create(
+        project=project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/theme-source",
+        title="Theme Source",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-24T12:00:00Z",
+        content_text="Theme source content",
+    )
+    ContentClusterMembership.objects.create(
+        content=content,
+        cluster=cluster,
+        project=project,
+        similarity=0.95,
+    )
+    TopicVelocitySnapshot.objects.create(
+        cluster=cluster,
+        project=project,
+        window_count=4,
+        trailing_mean=1.0,
+        trailing_stddev=0.0,
+        z_score=3.0,
+        velocity_score=1.0,
+    )
+    llm_mock = mocker.patch(
+        "trends.tasks.openrouter_chat_json",
+        side_effect=[
+            SimpleNamespace(
+                payload={
+                    "title": "Platform teams are consolidating around one workflow",
+                    "one_sentence_pitch": "A burst of similar coverage suggests a coherent newsletter theme.",
+                    "why_it_matters": "Editors can turn the cluster into a timely section.",
+                    "suggested_angle": "Explain what changed this week.",
+                },
+                model=settings.AI_SUMMARIZATION_MODEL,
+                latency_ms=123,
+            ),
+            SimpleNamespace(
+                payload={"novelty_score": 0.91, "explanation": "Novel enough."},
+                model=settings.AI_RELEVANCE_MODEL,
+                latency_ms=98,
+            ),
+        ],
+    )
+
+    result = generate_theme_suggestions(project.id)
+
+    suggestion = ThemeSuggestion.objects.get(project=project, cluster=cluster)
+    assert result["created"] == 1
+    assert suggestion.status == ThemeSuggestionStatus.PENDING
+    assert suggestion.title == "Platform teams are consolidating around one workflow"
+    assert suggestion.novelty_score == pytest.approx(0.91)
+    assert suggestion.velocity_at_creation == pytest.approx(1.0)
+    assert llm_mock.call_count == 2
+
+
+def test_generate_theme_suggestions_updates_existing_pending_for_same_cluster(
+    source_plugin_context,
+):
+    project = source_plugin_context.project
+    cluster = TopicCluster.objects.create(
+        project=project,
+        first_seen_at=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+        last_seen_at=datetime(2026, 4, 24, 12, 0, tzinfo=timezone.utc),
+        is_active=True,
+        member_count=3,
+        dominant_entity=source_plugin_context.entity,
+    )
+    TopicVelocitySnapshot.objects.create(
+        cluster=cluster,
+        project=project,
+        window_count=4,
+        trailing_mean=1.0,
+        trailing_stddev=0.0,
+        z_score=3.0,
+        velocity_score=0.88,
+    )
+    suggestion = ThemeSuggestion.objects.create(
+        project=project,
+        cluster=cluster,
+        title="Existing pending theme",
+        pitch="Pitch",
+        why_it_matters="Why",
+        suggested_angle="Angle",
+        velocity_at_creation=0.2,
+        novelty_score=0.8,
+    )
+
+    result = generate_theme_suggestions(project.id)
+
+    suggestion.refresh_from_db()
+    assert result["created"] == 0
+    assert result["updated"] == 1
+    assert ThemeSuggestion.objects.filter(project=project, cluster=cluster).count() == 1
+    assert suggestion.velocity_at_creation == pytest.approx(0.88)
+
+
+def test_accept_theme_suggestion_marks_cluster_members_for_newsletter_promotion(
+    source_plugin_context,
+):
+    project = source_plugin_context.project
+    cluster = TopicCluster.objects.create(
+        project=project,
+        first_seen_at=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+        last_seen_at=datetime(2026, 4, 24, 12, 0, tzinfo=timezone.utc),
+        is_active=True,
+        member_count=2,
+        dominant_entity=source_plugin_context.entity,
+    )
+    primary_content = Content.objects.create(
+        project=project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/promote-1",
+        title="Promoted One",
+        author="Author",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-24T12:00:00Z",
+        content_text="Primary theme content",
+    )
+    secondary_content = Content.objects.create(
+        project=project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/promote-2",
+        title="Promoted Two",
+        author="Author",
+        source_plugin=SourcePluginName.REDDIT,
+        published_date="2026-04-24T13:00:00Z",
+        content_text="Secondary theme content",
+    )
+    ContentClusterMembership.objects.bulk_create(
+        [
+            ContentClusterMembership(
+                content=primary_content,
+                cluster=cluster,
+                project=project,
+                similarity=0.95,
+            ),
+            ContentClusterMembership(
+                content=secondary_content,
+                cluster=cluster,
+                project=project,
+                similarity=0.9,
+            ),
+        ]
+    )
+    suggestion = ThemeSuggestion.objects.create(
+        project=project,
+        cluster=cluster,
+        title="Accepted Theme",
+        pitch="Pitch",
+        why_it_matters="Why",
+        suggested_angle="Angle",
+        velocity_at_creation=0.7,
+        novelty_score=0.8,
+    )
+
+    accept_theme_suggestion(suggestion, user_id=source_plugin_context.user.id)
+
+    suggestion.refresh_from_db()
+    primary_content.refresh_from_db()
+    secondary_content.refresh_from_db()
+    assert suggestion.status == ThemeSuggestionStatus.ACCEPTED
+    assert primary_content.newsletter_promotion_theme == suggestion
+    assert secondary_content.newsletter_promotion_theme == suggestion
+    assert primary_content.newsletter_promotion_by == source_plugin_context.user
+    assert secondary_content.newsletter_promotion_by == source_plugin_context.user
+    assert primary_content.newsletter_promotion_at is not None
+    assert secondary_content.newsletter_promotion_at is not None
+
+
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
     parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
@@ -943,7 +1148,7 @@ def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, m
     parse_mock.side_effect = RuntimeError("feed unavailable")
 
     with pytest.raises(RuntimeError, match="feed unavailable"):
-        run_ingestion(source_config.id)
+        run_ingestion(_require_pk(source_config))
 
     ingestion_run = IngestionRun.objects.get(
         project=source_plugin_context.project, plugin_name=SourcePluginName.RSS
@@ -968,7 +1173,7 @@ def test_queue_content_skill_enqueues_relevance_task(source_plugin_context, mock
     skill_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
 
     assert skill_result.status == SkillStatus.PENDING
-    delay_mock.assert_called_once_with(skill_result.id)
+    delay_mock.assert_called_once_with(_require_pk(skill_result))
 
 
 def test_queue_content_skill_executes_inline_when_eager(
@@ -991,7 +1196,7 @@ def test_queue_content_skill_executes_inline_when_eager(
     skill_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
 
     assert skill_result.status == SkillStatus.PENDING
-    task_mock.assert_called_once_with(skill_result.id)
+    task_mock.assert_called_once_with(_require_pk(skill_result))
     delay_mock.assert_not_called()
 
 
@@ -1016,7 +1221,7 @@ def test_queue_content_skill_executes_summary_inline_when_eager(
     skill_result = queue_content_skill(content, SUMMARIZATION_SKILL_NAME)
 
     assert skill_result.status == SkillStatus.PENDING
-    task_mock.assert_called_once_with(skill_result.id)
+    task_mock.assert_called_once_with(_require_pk(skill_result))
     delay_mock.assert_not_called()
 
 
@@ -1155,9 +1360,9 @@ def test_run_relevance_scoring_skill_updates_pending_result(
     delay_mock = mocker.patch("core.tasks.run_relevance_scoring_skill.delay")
 
     pending_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
-    delay_mock.assert_called_once_with(pending_result.id)
+    delay_mock.assert_called_once_with(_require_pk(pending_result))
 
-    result = run_relevance_scoring_skill(pending_result.id)
+    result = run_relevance_scoring_skill(_require_pk(pending_result))
 
     content.refresh_from_db()
     pending_result.refresh_from_db()
@@ -1184,9 +1389,9 @@ def test_run_summarization_skill_marks_result_failed_when_relevance_is_too_low(
     delay_mock = mocker.patch("core.tasks.run_summarization_skill.delay")
 
     pending_result = queue_content_skill(content, SUMMARIZATION_SKILL_NAME)
-    delay_mock.assert_called_once_with(pending_result.id)
+    delay_mock.assert_called_once_with(_require_pk(pending_result))
 
-    result = run_summarization_skill(pending_result.id)
+    result = run_summarization_skill(_require_pk(pending_result))
 
     pending_result.refresh_from_db()
     assert result.status == SkillStatus.FAILED
@@ -1229,5 +1434,5 @@ def test_ingest_source_config_truncates_fields_and_processes_inline(
     assert len(created.title) == 512
     assert len(created.author) == 255
     upsert_mock.assert_called_once_with(created)
-    process_mock.assert_called_once_with(created.id)
+    process_mock.assert_called_once_with(_require_pk(created))
     delay_mock.assert_not_called()

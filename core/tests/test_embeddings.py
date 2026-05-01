@@ -1,5 +1,6 @@
 from io import StringIO
 from types import SimpleNamespace
+from typing import cast
 from unittest.mock import call
 
 import httpx
@@ -7,6 +8,7 @@ import pytest
 from django.core.management import CommandError, call_command
 from django.db.models import Count
 from qdrant_client.http.exceptions import ResponseHandlingException
+from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
 from core import embeddings
 from core.embeddings import (
@@ -340,12 +342,16 @@ def test_build_search_filter_returns_none_without_conditions():
 
 
 def test_build_search_filter_supports_reference_and_exclusion_conditions():
-    filter_value = build_search_filter(is_reference=True, exclude_content_id=42)
+    filter_value = cast(
+        Filter, build_search_filter(is_reference=True, exclude_content_id=42)
+    )
+    must_conditions = cast(list[FieldCondition], filter_value.must)
+    must_not_conditions = cast(list[FieldCondition], filter_value.must_not)
 
-    assert filter_value.must[0].key == "is_reference"
-    assert filter_value.must[0].match.value is True
-    assert filter_value.must_not[0].key == "content_id"
-    assert filter_value.must_not[0].match.value == 42
+    assert must_conditions[0].key == "is_reference"
+    assert cast(MatchValue, must_conditions[0].match).value is True
+    assert must_not_conditions[0].key == "content_id"
+    assert cast(MatchValue, must_not_conditions[0].match).value == 42
 
 
 def test_embedding_smoke_command_prints_dimension(mocker, capsys):
@@ -476,7 +482,7 @@ def test_sync_embeddings_scopes_to_requested_content_id(embedding_context, mocke
     )
 
     upsert_mock.assert_called_once_with(embedding_context.content)
-    assert sibling_content.id != embedding_context.content.id
+    assert sibling_content.pk != embedding_context.content.pk
     assert "Synced embeddings for 1 content item(s)." in stdout.getvalue()
 
 
