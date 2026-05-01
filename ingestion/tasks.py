@@ -135,11 +135,9 @@ def _match_entity_for_item(plugin, item):
 def _schedule_content_processing(content: Content) -> None:
     """Ensure a content row is embedded before it enters the AI pipeline."""
 
-    from core.tasks import (
-        assign_content_to_topic_cluster,
-        process_content,
-        upsert_content_embedding,
-    )
+    from core.embeddings import upsert_content_embedding
+    from core.tasks import process_content
+    from trends.tasks import assign_content_to_topic_cluster
 
     upsert_content_embedding(content)
     assign_content_to_topic_cluster(content.id)

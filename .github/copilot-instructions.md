@@ -6,7 +6,7 @@ You are working in Newsletter Maker, a Django + DRF + Celery + Qdrant backend wi
 
 - Backend runtime code is split across `core/`, `projects/`, `content/`, `entities/`, `ingestion/`, `newsletters/`, `pipeline/`, `trends/`, and `users/`.
 - Django project settings and top-level URLs live in `newsletter_maker/`.
-- Backend tests live in app-local `tests/` packages first (`users/tests/`, `projects/tests/`, `ingestion/tests/`, `newsletters/tests/`, `pipeline/tests/`), with `core/tests/` reserved for the remaining cross-cutting and mixed compatibility coverage.
+- Backend tests live in app-local `tests/` packages first (`users/tests/`, `projects/tests/`, `ingestion/tests/`, `newsletters/tests/`, `pipeline/tests/`), with `core/tests/` reserved for the remaining cross-cutting coverage.
 - The repo-root `tests/` package is for integration coverage only. New unit and app-scoped tests should live in the owning app's `tests/` package.
 - Frontend application code lives in `frontend/src/app/`, shared UI in `frontend/src/components/`, and shared API/types/helpers in `frontend/src/lib/`.
 - Operational and architecture docs live in `docs/`.
@@ -21,8 +21,8 @@ You are working in Newsletter Maker, a Django + DRF + Celery + Qdrant backend wi
 ## Backend Conventions
 
 - Project scoping is a core invariant. Most API resources are nested under `/api/v1/projects/{project_id}/...`.
-- Treat `core/` as the home for genuine cross-cutting concerns and compatibility imports only. New app-owned runtime logic should live with its owning app rather than expanding `core/`.
-- Reuse the established DRF patterns in `core/api.py`, `core/api_urls.py`, and `core/serializers.py`:
+- Treat `core/` as the home for genuine cross-cutting concerns only. New app-owned runtime logic should live with its owning app rather than expanding `core/`.
+- Reuse the established DRF patterns in `core/api.py`, `core/api_urls.py`, and `core/serializer_mixins.py`:
 	- `ProjectOwnedQuerysetMixin` for nested viewsets
 	- serializer context containing `project`
 	- explicit validation for cross-project foreign keys

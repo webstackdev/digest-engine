@@ -1,7 +1,6 @@
 """Tests for the custom AppUser foundation."""
 
 import pytest
-from django.contrib.auth.models import Group
 
 from projects.models import Project, ProjectMembership, ProjectRole
 from users.models import AppUser, avatar_upload_path
@@ -22,12 +21,9 @@ def test_avatar_upload_path_uses_user_prefix():
 
 
 def test_app_user_project_membership_drives_project_visibility():
-    group = Group.objects.create(name="platform-team")
     user = AppUser.objects.create_user(username="reader", password="testpass123")
-    user.groups.add(group)
     project = Project.objects.create(
         name="Platform Weekly",
-        group=group,
         topic_description="Platform engineering",
     )
     ProjectMembership.objects.create(

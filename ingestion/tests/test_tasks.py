@@ -1,50 +1,15 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
 from django.db.models import Model
 
-from core.models import (
-    Content,
-    ContentClusterMembership,
-    Entity,
-    EntityAuthoritySnapshot,
-    EntityMention,
-    EntityMentionRole,
-    FeedbackType,
-    IngestionRun,
-    RunStatus,
-    SkillStatus,
-    ThemeSuggestion,
-    ThemeSuggestionStatus,
-    TopicCentroidSnapshot,
-    TopicCluster,
-    TopicVelocitySnapshot,
-    UserFeedback,
-)
-from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
-from core.tasks import (
-    queue_content_skill,
-    recompute_authority_scores,
-    run_all_authority_recomputations,
-    run_relevance_scoring_skill,
-    run_summarization_skill,
-)
+from content.models import Content
+from entities.models import Entity
+from ingestion.models import IngestionRun, RunStatus
 from ingestion.tasks import _ingest_source_config, run_all_ingestions, run_ingestion
 from projects.model_support import SourcePluginName
-from projects.models import Project, ProjectConfig, SourceConfig
-from trends.tasks import (
-    TOPIC_CENTROID_MIN_UPVOTES,
-    accept_theme_suggestion,
-    assign_content_to_topic_cluster,
-    generate_theme_suggestions,
-    queue_topic_centroid_recompute,
-    recompute_topic_centroid,
-    recompute_topic_clusters,
-    recompute_topic_velocity,
-    run_all_topic_centroid_recomputations,
-    run_all_topic_cluster_recomputations,
-)
+from projects.models import Project, SourceConfig
 
 pytestmark = pytest.mark.django_db
 
@@ -74,7 +39,7 @@ def source_plugin_context(django_user_model):
 
 
 def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, mocker):
-    upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
@@ -116,7 +81,7 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
 
 
 def test_run_ingestion_skips_same_source_duplicate_urls(source_plugin_context, mocker):
-    upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
@@ -160,7 +125,7 @@ def test_run_ingestion_skips_same_source_duplicate_urls(source_plugin_context, m
 def test_ingest_source_config_allows_cross_plugin_duplicate_urls_for_pipeline_dedup(
     source_plugin_context, mocker
 ):
-    upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
@@ -204,7 +169,7 @@ def test_ingest_source_config_allows_cross_plugin_duplicate_urls_for_pipeline_de
 
 
 def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, mocker):
-    upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     reddit_mock = mocker.patch("ingestion.plugins.reddit.praw.Reddit")
     source_config = SourceConfig.objects.create(
@@ -240,7 +205,7 @@ def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, 
 def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
     source_plugin_context, mocker
 ):
-    upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
@@ -289,7 +254,7 @@ def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
 def test_ingest_source_config_deduplicates_mastodon_statuses_by_status_uri(
     source_plugin_context, mocker
 ):
-    upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
@@ -395,178 +360,59 @@ def test_run_all_ingestions_executes_inline_when_eager(
     delay_mock.assert_not_called()
 
 
-def test_run_all_authority_recomputations_enqueues_all_projects(
-    source_plugin_context, mocker
-):
-    delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
-    other_project = Project.objects.create(
-        name="Other Project",
-        topic_description="Security",
+def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
+    parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
+    source_config = SourceConfig.objects.create(
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
     )
+    parse_mock.side_effect = RuntimeError("feed unavailable")
 
-    enqueued_count = run_all_authority_recomputations()
+    with pytest.raises(RuntimeError, match="feed unavailable"):
+        run_ingestion(_require_pk(source_config))
 
-    assert enqueued_count == 2
-    delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(_require_pk(other_project))
-    assert delay_mock.call_count == 2
+    ingestion_run = IngestionRun.objects.get(
+        project=source_plugin_context.project, plugin_name=SourcePluginName.RSS
+    )
+    assert ingestion_run.status == RunStatus.FAILED
+    assert ingestion_run.error_message == "feed unavailable"
 
 
-def test_run_all_authority_recomputations_executes_inline_when_eager(
+def test_ingest_source_config_truncates_fields_and_processes_inline(
     source_plugin_context, settings, mocker
 ):
     settings.CELERY_TASK_ALWAYS_EAGER = True
-    recompute_mock = mocker.patch("core.tasks.recompute_authority_scores")
-    delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
-    other_project = Project.objects.create(
-        name="Inline Project",
-        topic_description="Platform",
+    plugin = mocker.Mock()
+    plugin.fetch_new_content.return_value = [
+        SimpleNamespace(
+            url="https://example.com/post-long",
+            title="T" * 600,
+            author="A" * 300,
+            source_plugin=SourcePluginName.RSS,
+            published_date=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+            content_text="Summary",
+        )
+    ]
+    plugin.match_entity_for_url.return_value = source_plugin_context.entity
+    source_config = SourceConfig.objects.create(
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
     )
+    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
+    upsert_mock = mocker.patch("core.embeddings.upsert_content_embedding")
+    process_mock = mocker.patch("core.tasks.process_content")
+    delay_mock = mocker.patch("core.tasks.process_content.delay")
 
-    enqueued_count = run_all_authority_recomputations()
+    items_fetched, items_ingested = _ingest_source_config(source_config)
 
-    assert enqueued_count == 2
-    recompute_mock.assert_any_call(source_plugin_context.project.id)
-    recompute_mock.assert_any_call(_require_pk(other_project))
-    assert recompute_mock.call_count == 2
+    created = Content.objects.get(url="https://example.com/post-long")
+    assert items_fetched == 1
+    assert items_ingested == 1
+    assert created.entity == source_plugin_context.entity
+    assert len(created.title) == 512
+    assert len(created.author) == 255
+    upsert_mock.assert_called_once_with(created)
+    process_mock.assert_called_once_with(_require_pk(created))
     delay_mock.assert_not_called()
-
-
-def test_run_all_topic_centroid_recomputations_enqueues_all_projects(
-    source_plugin_context, mocker
-):
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
-    other_project = Project.objects.create(
-        name="Other Centroid Project",
-        topic_description="Security",
-    )
-
-    enqueued_count = run_all_topic_centroid_recomputations()
-
-    assert enqueued_count == 2
-    delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(_require_pk(other_project))
-    assert delay_mock.call_count == 2
-
-
-def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
-    source_plugin_context, settings, mocker
-):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
-    recompute_mock = mocker.patch("trends.tasks.recompute_topic_centroid")
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
-    other_project = Project.objects.create(
-        name="Inline Centroid Project",
-        topic_description="Platform",
-    )
-
-    enqueued_count = run_all_topic_centroid_recomputations()
-
-    assert enqueued_count == 2
-    recompute_mock.assert_any_call(source_plugin_context.project.id)
-    recompute_mock.assert_any_call(_require_pk(other_project))
-    assert recompute_mock.call_count == 2
-    delay_mock.assert_not_called()
-
-
-def test_run_all_topic_cluster_recomputations_enqueues_all_projects(
-    source_plugin_context, mocker
-):
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_clusters.delay")
-    other_project = Project.objects.create(
-        name="Other Cluster Project",
-        topic_description="Security",
-    )
-
-    enqueued_count = run_all_topic_cluster_recomputations()
-
-    assert enqueued_count == 2
-    delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(_require_pk(other_project))
-    assert delay_mock.call_count == 2
-
-
-def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
-    source_plugin_context, mocker
-):
-    mocker.patch("core.signals.queue_topic_centroid_recompute")
-    project = source_plugin_context.project
-    config = ProjectConfig.objects.create(
-        project=project,
-        upvote_authority_weight=0.2,
-        downvote_authority_weight=-0.1,
-        authority_decay_rate=0.9,
-    )
-    primary_entity = source_plugin_context.entity
-    secondary_entity = Entity.objects.create(
-        project=project,
-        name="Secondary",
-        type="vendor",
-        authority_score=0.5,
-    )
-    primary_content = Content.objects.create(
-        project=project,
-        entity=primary_entity,
-        url="https://example.com/authority-primary",
-        title="Authority Primary",
-        author="Reporter",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-28T12:00:00Z",
-        content_text="Primary authority content.",
-        duplicate_signal_count=3,
-    )
-    secondary_content = Content.objects.create(
-        project=project,
-        entity=secondary_entity,
-        url="https://example.com/authority-secondary",
-        title="Authority Secondary",
-        author="Reporter",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-28T13:00:00Z",
-        content_text="Secondary authority content.",
-    )
-    EntityMention.objects.create(
-        project=project,
-        content=primary_content,
-        entity=primary_entity,
-        role=EntityMentionRole.SUBJECT,
-        sentiment="positive",
-        span="Example",
-        confidence=0.9,
-    )
-    EntityMention.objects.create(
-        project=project,
-        content=secondary_content,
-        entity=secondary_entity,
-        role=EntityMentionRole.SUBJECT,
-        sentiment="neutral",
-        span="Secondary",
-        confidence=0.8,
-    )
-    UserFeedback.objects.create(
-        project=project,
-        content=primary_content,
-        user=source_plugin_context.user,
-        feedback_type=FeedbackType.UPVOTE,
-    )
-
-    result = recompute_authority_scores(project.id)
-
-    primary_entity.refresh_from_db()
-    secondary_entity.refresh_from_db()
-    primary_snapshot = EntityAuthoritySnapshot.objects.get(entity=primary_entity)
-    secondary_snapshot = EntityAuthoritySnapshot.objects.get(entity=secondary_entity)
-
-    assert result == {"project_id": project.id, "entities_updated": 2}
-    assert primary_entity.authority_score > secondary_entity.authority_score
-    assert primary_snapshot.final_score == pytest.approx(primary_entity.authority_score)
-    assert secondary_snapshot.final_score == pytest.approx(
-        secondary_entity.authority_score
-    )
-    assert primary_snapshot.feedback_component > 0.5
-    assert primary_snapshot.duplicate_component > secondary_snapshot.duplicate_component
-    assert primary_snapshot.decayed_prior == pytest.approx(
-        config.authority_decay_rate * 0.5
-    )
-
-

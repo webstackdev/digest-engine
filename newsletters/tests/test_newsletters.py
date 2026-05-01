@@ -157,7 +157,7 @@ def test_handle_anymail_inbound_creates_pending_intake_and_sends_confirmation(
 def test_handle_anymail_inbound_queues_confirmed_sender(settings, mocker, project):
     settings.CELERY_TASK_ALWAYS_EAGER = False
     send_mock = mocker.patch("newsletters.intake.send_confirmation_email")
-    delay_mock = mocker.patch("core.tasks.process_newsletter_intake.delay")
+    delay_mock = mocker.patch("newsletters.tasks.process_newsletter_intake.delay")
     IntakeAllowlist.objects.create(
         project=project,
         sender_email="newsletter@example.com",
@@ -348,7 +348,7 @@ def test_confirm_newsletter_sender_confirms_allowlist_and_queues_pending_intakes
         raw_text="Visit https://example.com/post",
         message_id="msg-456",
     )
-    delay_mock = mocker.patch("core.tasks.process_newsletter_intake.delay")
+    delay_mock = mocker.patch("newsletters.tasks.process_newsletter_intake.delay")
 
     response = client.get(
         reverse(
@@ -379,10 +379,10 @@ def test_process_newsletter_intake_creates_content_for_confirmed_sender(
         raw_text="Great article https://example.com/article",
         message_id="msg-789",
     )
-    upsert_mock = mocker.patch("core.tasks.upsert_content_embedding")
+    upsert_mock = mocker.patch("core.embeddings.upsert_content_embedding")
     delay_mock = mocker.patch("core.tasks.process_content.delay")
 
-    from core.tasks import process_newsletter_intake
+    from newsletters.tasks import process_newsletter_intake
 
     result = process_newsletter_intake(_require_pk(intake))
 
