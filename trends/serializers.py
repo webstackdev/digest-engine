@@ -6,6 +6,8 @@ from content.models import Content
 from core.serializer_mixins import ProjectScopedSerializerMixin
 from trends.models import (
     ContentClusterMembership,
+    OriginalContentIdea,
+    OriginalContentIdeaStatus,
     SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
@@ -174,6 +176,76 @@ class ThemeSuggestionDismissSerializer(
     ProjectScopedSerializerMixin, serializers.Serializer
 ):
     """Validate dismissal requests for pending theme suggestions."""
+
+    reason = serializers.CharField(max_length=500)
+
+    def validate_reason(self, value: str) -> str:
+        """Reject blank dismissal reasons."""
+
+        normalized = value.strip()
+        if not normalized:
+            raise serializers.ValidationError("Dismissal reason cannot be blank.")
+        return normalized
+
+
+class OriginalContentIdeaClusterSummarySerializer(serializers.Serializer):
+    """Serialize the related cluster summary embedded in original-content ideas."""
+
+    id = serializers.IntegerField()
+    label = serializers.CharField(allow_blank=True)
+    member_count = serializers.IntegerField()
+
+
+class OriginalContentIdeaSupportingContentSerializer(serializers.ModelSerializer):
+    """Serialize one supporting content row linked to an original-content idea."""
+
+    class Meta:
+        model = Content
+        fields = ["id", "url", "title", "published_date", "source_plugin"]
+        read_only_fields = fields
+
+
+class OriginalContentIdeaSerializer(serializers.ModelSerializer):
+    """Serialize one editor-facing original-content idea."""
+
+    related_cluster = OriginalContentIdeaClusterSummarySerializer(read_only=True)
+    supporting_contents = OriginalContentIdeaSupportingContentSerializer(
+        many=True,
+        read_only=True,
+    )
+    decided_by_username = serializers.CharField(
+        source="decided_by.username",
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = OriginalContentIdea
+        fields = [
+            "id",
+            "project",
+            "angle_title",
+            "summary",
+            "suggested_outline",
+            "why_now",
+            "supporting_contents",
+            "related_cluster",
+            "generated_by_model",
+            "self_critique_score",
+            "status",
+            "dismissal_reason",
+            "created_at",
+            "decided_at",
+            "decided_by",
+            "decided_by_username",
+        ]
+        read_only_fields = fields
+
+
+class OriginalContentIdeaDismissSerializer(
+    ProjectScopedSerializerMixin, serializers.Serializer
+):
+    """Validate dismissal requests for pending original-content ideas."""
 
     reason = serializers.CharField(max_length=500)
 

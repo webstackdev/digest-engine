@@ -207,6 +207,71 @@ class ThemeSuggestion(models.Model):
         return self.title
 
 
+class OriginalContentIdeaStatus(models.TextChoices):
+    """Workflow states for generated original content ideas."""
+
+    PENDING = "pending", "Pending"
+    ACCEPTED = "accepted", "Accepted"
+    DISMISSED = "dismissed", "Dismissed"
+    WRITTEN = "written", "Written"
+
+
+class OriginalContentIdea(models.Model):
+    """Persist one editor-facing original content idea grounded in cluster gaps."""
+
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="original_content_ideas",
+    )
+    angle_title = models.CharField(max_length=255)
+    summary = models.TextField()
+    suggested_outline = models.TextField()
+    why_now = models.TextField()
+    supporting_contents = models.ManyToManyField(
+        "content.Content",
+        related_name="supporting_ideas",
+        blank=True,
+    )
+    related_cluster = models.ForeignKey(
+        TopicCluster,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="original_content_ideas",
+    )
+    generated_by_model = models.CharField(max_length=128)
+    self_critique_score = models.FloatField()
+    status = models.CharField(
+        max_length=16,
+        choices=OriginalContentIdeaStatus.choices,
+        default=OriginalContentIdeaStatus.PENDING,
+    )
+    dismissal_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="decided_original_content_ideas",
+    )
+
+    class Meta:
+        ordering = ["-created_at", "id"]
+        db_table = "core_originalcontentidea"
+        indexes = [
+            models.Index(
+                fields=["project", "status", "-created_at"],
+                name="core_idea_project_7f21_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return self.angle_title
+
+
 class SourceDiversitySnapshot(models.Model):
     """Capture one project-level source diversity reading for a rolling window."""
 

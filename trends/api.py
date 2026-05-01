@@ -2,9 +2,10 @@
 
 from typing import Any
 
+from django.conf import settings
 from django.db.models import Avg, Count, OuterRef, Prefetch, Q, Subquery
-from drf_spectacular.utils import OpenApiParameter, extend_schema
-from rest_framework import serializers, viewsets
+from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
+from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
@@ -19,6 +20,7 @@ from core.api import (
 from core.permissions import IsProjectContributor, IsProjectMember
 from trends.models import (
     ContentClusterMembership,
+    OriginalContentIdea,
     SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
@@ -27,6 +29,8 @@ from trends.models import (
     TopicVelocitySnapshot,
 )
 from trends.serializers import (
+    OriginalContentIdeaDismissSerializer,
+    OriginalContentIdeaSerializer,
     SourceDiversityObservabilitySummarySerializer,
     SourceDiversitySnapshotSerializer,
     ThemeSuggestionDismissSerializer,
@@ -38,6 +42,12 @@ from trends.serializers import (
     TopicVelocitySnapshotSerializer,
 )
 from trends.tasks import accept_theme_suggestion, dismiss_theme_suggestion
+from trends.tasks import (
+    accept_original_content_idea,
+    dismiss_original_content_idea,
+    generate_original_content_ideas,
+    mark_original_content_idea_written,
+)
 
 
 def _require_pk(instance: Any) -> int:
@@ -275,6 +285,192 @@ class ThemeSuggestionViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
                 {"status": "Unable to dismiss this theme suggestion."}
             ) from exc
         response_serializer = self.get_serializer(suggestion)
+        return Response(response_serializer.data)
+
+
+@document_project_owned_viewset(
+    resource_plural="original content ideas",
+    resource_singular="original content idea",
+    create_description="Original content ideas are pipeline-managed rows and are exposed read-only aside from editorial workflow actions.",
+    tag="Trend Analysis",
+    action_overrides=build_crud_action_overrides(
+        OriginalContentIdeaSerializer,
+        resource_plural="original content ideas for the selected project",
+        resource_singular="original content idea",
+    ),
+)
+class OriginalContentIdeaViewSet(
+    ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewSet
+):
+    """Inspect and resolve project-scoped original-content ideas."""
+
+    serializer_class = OriginalContentIdeaSerializer
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["created_at", "self_critique_score", "status"]
+    ordering = ["status", "-self_critique_score", "-created_at"]
+    queryset = OriginalContentIdea.objects.select_related(
+        "project", "related_cluster", "decided_by"
+    )
+
+    def get_queryset(self):
+        """Prefetch supporting contents for original-content idea responses."""
+
+        return (
+            super()
+            .get_queryset()
+            .select_related("related_cluster__dominant_entity")
+            .prefetch_related(
+                Prefetch(
+                    "supporting_contents",
+                    queryset=Content.objects.order_by("-published_date", "-id"),
+                )
+            )
+        )
+
+    def get_permissions(self):
+        """Allow members to read ideas and contributors to resolve them."""
+
+        if self.action in {"accept", "dismiss", "mark_written", "generate"}:
+            return [IsProjectContributor()]
+        return [IsProjectMember()]
+
+    @extend_schema(
+        summary="Generate original content ideas",
+        description=(
+            "Trigger original-content idea generation for the selected project. "
+            "When Celery runs eagerly, ideas are generated before the response is returned. "
+            "Otherwise, the generation task is queued for background execution."
+        ),
+        request=None,
+        responses={
+            200: inline_serializer(
+                name="OriginalContentIdeaGenerateCompletedResponse",
+                fields={
+                    "status": serializers.CharField(),
+                    "project_id": serializers.IntegerField(),
+                    "result": inline_serializer(
+                        name="OriginalContentIdeaGenerateResult",
+                        fields={
+                            "project_id": serializers.IntegerField(),
+                            "clusters_considered": serializers.IntegerField(),
+                            "created": serializers.IntegerField(),
+                            "skipped": serializers.IntegerField(),
+                        },
+                    ),
+                },
+            ),
+            202: inline_serializer(
+                name="OriginalContentIdeaGenerateQueuedResponse",
+                fields={
+                    "status": serializers.CharField(),
+                    "project_id": serializers.IntegerField(),
+                },
+            ),
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Trend Analysis"],
+    )
+    @action(detail=False, methods=["post"], url_path="generate")
+    def generate(self, request, *args, **kwargs):
+        """Trigger original-content idea generation for the current project."""
+
+        project = self.get_project()
+        project_id = _require_pk(project)
+        if settings.CELERY_TASK_ALWAYS_EAGER:
+            result = generate_original_content_ideas(project_id)
+            return Response(
+                {
+                    "status": "completed",
+                    "project_id": project_id,
+                    "result": result,
+                }
+            )
+        generate_original_content_ideas.delay(project_id)
+        return Response(
+            {"status": "queued", "project_id": project_id},
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+    @extend_schema(
+        summary="Accept original content idea",
+        description="Mark a pending original content idea as accepted by the current editor.",
+        request=None,
+        responses={
+            200: OriginalContentIdeaSerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Trend Analysis"],
+    )
+    @action(detail=True, methods=["post"], url_path="accept")
+    def accept(self, request, *args, **kwargs):
+        """Accept the selected pending original-content idea."""
+
+        idea = self.get_object()
+        try:
+            accept_original_content_idea(idea, user_id=request.user.id)
+        except ValueError as exc:
+            raise serializers.ValidationError(
+                {"status": "Unable to accept this original content idea."}
+            ) from exc
+        response_serializer = self.get_serializer(idea)
+        return Response(response_serializer.data)
+
+    @extend_schema(
+        summary="Dismiss original content idea",
+        description="Dismiss a pending original content idea and persist the editor's reason.",
+        request=OriginalContentIdeaDismissSerializer,
+        responses={
+            200: OriginalContentIdeaSerializer,
+            400: OriginalContentIdeaDismissSerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Trend Analysis"],
+    )
+    @action(detail=True, methods=["post"], url_path="dismiss")
+    def dismiss(self, request, *args, **kwargs):
+        """Dismiss the selected pending original-content idea."""
+
+        idea = self.get_object()
+        serializer = OriginalContentIdeaDismissSerializer(
+            data=request.data,
+            context=self.get_serializer_context(),
+        )
+        serializer.is_valid(raise_exception=True)
+        try:
+            dismiss_original_content_idea(
+                idea,
+                user_id=request.user.id,
+                reason=serializer.validated_data["reason"],
+            )
+        except ValueError as exc:
+            raise serializers.ValidationError(
+                {"status": "Unable to dismiss this original content idea."}
+            ) from exc
+        response_serializer = self.get_serializer(idea)
+        return Response(response_serializer.data)
+
+    @extend_schema(
+        summary="Mark original content idea written",
+        description="Mark an accepted original content idea as written by the current editor.",
+        request=None,
+        responses={
+            200: OriginalContentIdeaSerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Trend Analysis"],
+    )
+    @action(detail=True, methods=["post"], url_path="mark_written")
+    def mark_written(self, request, *args, **kwargs):
+        """Mark the selected accepted original-content idea as written."""
+
+        idea = self.get_object()
+        try:
+            mark_original_content_idea_written(idea, user_id=request.user.id)
+        except ValueError as exc:
+            raise serializers.ValidationError(
+                {"status": "Unable to mark this original content idea as written."}
+            ) from exc
+        response_serializer = self.get_serializer(idea)
         return Response(response_serializer.data)
 
 
