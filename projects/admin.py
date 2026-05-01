@@ -11,7 +11,7 @@ from django.utils.safestring import mark_safe
 from import_export.admin import ExportActionMixin
 from unfold.admin import ModelAdmin
 
-from core.plugins import get_plugin_for_source_config, validate_plugin_config
+from ingestion.plugins import get_plugin_for_source_config, validate_plugin_config
 from projects.models import (
     BlueskyCredentials,
     MastodonCredentials,
@@ -190,7 +190,7 @@ class BlueskyCredentialsAdmin(ModelAdmin):
     def verify_selected_credentials(self, request, queryset):
         """Authenticate the selected Bluesky accounts and report the outcome."""
 
-        from core.plugins.bluesky import BlueskySourcePlugin
+        from ingestion.plugins.bluesky import BlueskySourcePlugin
 
         verified_credentials = []
         failed_credentials = []
@@ -279,7 +279,7 @@ class MastodonCredentialsAdmin(ModelAdmin):
     def verify_selected_credentials(self, request, queryset):
         """Authenticate the selected Mastodon tokens and report the outcome."""
 
-        from core.plugins.mastodon import MastodonSourcePlugin
+        from ingestion.plugins.mastodon import MastodonSourcePlugin
 
         verified_credentials = []
         failed_credentials = []

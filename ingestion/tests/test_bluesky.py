@@ -6,7 +6,7 @@ import pytest
 from core.models import (
     Entity,
 )
-from core.plugins.bluesky import BlueskySourcePlugin
+from ingestion.plugins.bluesky import BlueskySourcePlugin
 from ingestion.plugins.base import ContentItem
 from projects.model_support import SourcePluginName
 from projects.models import BlueskyCredentials, Project, SourceConfig
@@ -221,7 +221,7 @@ def test_bluesky_client_uses_authenticated_project_credentials(bluesky_context, 
     credentials.set_app_password("app-password")
     credentials.save()
     client = mocker.Mock()
-    client_cls = mocker.patch("core.plugins.bluesky.Client", return_value=client)
+    client_cls = mocker.patch("ingestion.plugins.bluesky.Client", return_value=client)
 
     plugin = BlueskySourcePlugin(bluesky_context.source_config)
 
@@ -260,7 +260,7 @@ def test_bluesky_verify_credentials_uses_authenticated_session_check(
     credentials.set_app_password("app-password")
     credentials.save()
     client = mocker.Mock()
-    client_cls = mocker.patch("core.plugins.bluesky.Client", return_value=client)
+    client_cls = mocker.patch("ingestion.plugins.bluesky.Client", return_value=client)
 
     BlueskySourcePlugin.verify_credentials(credentials)
 

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from core.plugins.rss import RSSSourcePlugin
+from ingestion.plugins.rss import RSSSourcePlugin
 from projects.model_support import SourcePluginName
 from projects.models import Project, SourceConfig
 
@@ -46,7 +46,7 @@ def test_rss_fetch_new_content_filters_invalid_and_old_entries(rss_context, mock
             ),
         ]
     )
-    mocker.patch("core.plugins.rss.feedparser.parse", return_value=parsed_feed)
+    mocker.patch("ingestion.plugins.rss.feedparser.parse", return_value=parsed_feed)
     plugin = RSSSourcePlugin(rss_context.source_config)
 
     items = plugin.fetch_new_content(since=datetime(2026, 4, 28, 11, 0, tzinfo=UTC))
@@ -71,7 +71,7 @@ def test_rss_fetch_new_content_uses_title_when_summary_and_description_missing(
             )
         ]
     )
-    mocker.patch("core.plugins.rss.feedparser.parse", return_value=parsed_feed)
+    mocker.patch("ingestion.plugins.rss.feedparser.parse", return_value=parsed_feed)
     plugin = RSSSourcePlugin(rss_context.source_config)
 
     items = plugin.fetch_new_content(since=None)
@@ -82,7 +82,8 @@ def test_rss_fetch_new_content_uses_title_when_summary_and_description_missing(
 
 def test_rss_health_check_returns_false_for_empty_feed(rss_context, mocker):
     mocker.patch(
-        "core.plugins.rss.feedparser.parse", return_value=SimpleNamespace(entries=[])
+        "ingestion.plugins.rss.feedparser.parse",
+        return_value=SimpleNamespace(entries=[]),
     )
     plugin = RSSSourcePlugin(rss_context.source_config)
 

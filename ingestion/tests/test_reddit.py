@@ -3,8 +3,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from core.plugins.reddit import RedditSourcePlugin
-from core.plugins.registry import validate_plugin_config
+from ingestion.plugins.reddit import RedditSourcePlugin
+from ingestion.plugins.registry import validate_plugin_config
 from projects.model_support import SourcePluginName
 from projects.models import Project, SourceConfig
 
@@ -113,7 +113,7 @@ def test_reddit_client_builds_praw_client(settings, mocker):
     settings.REDDIT_CLIENT_SECRET = "client-secret"
     settings.REDDIT_USER_AGENT = "newsletter-maker-test"
     reddit_cls = mocker.patch(
-        "core.plugins.reddit.praw.Reddit", return_value="reddit-client"
+        "ingestion.plugins.reddit.praw.Reddit", return_value="reddit-client"
     )
 
     client = RedditSourcePlugin._client()

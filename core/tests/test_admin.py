@@ -388,7 +388,7 @@ def test_verify_selected_bluesky_credentials_reports_success(
         app_password_encrypted="ciphertext",
     )
     verify_mock = mocker.patch(
-        "core.plugins.bluesky.BlueskySourcePlugin.verify_credentials"
+        "ingestion.plugins.bluesky.BlueskySourcePlugin.verify_credentials"
     )
     admin_instance = BlueskyCredentialsAdmin(BlueskyCredentials, AdminSite())
     message_user_mock = _message_user_mock(admin_instance, mocker)
@@ -415,7 +415,7 @@ def test_verify_selected_bluesky_credentials_reports_failures(
         app_password_encrypted="ciphertext",
     )
     mocker.patch(
-        "core.plugins.bluesky.BlueskySourcePlugin.verify_credentials",
+        "ingestion.plugins.bluesky.BlueskySourcePlugin.verify_credentials",
         side_effect=RuntimeError("bad login"),
     )
     admin_instance = BlueskyCredentialsAdmin(BlueskyCredentials, AdminSite())
@@ -463,7 +463,7 @@ def test_verify_selected_mastodon_credentials_reports_success(
         access_token_encrypted="ciphertext",
     )
     verify_mock = mocker.patch(
-        "core.plugins.mastodon.MastodonSourcePlugin.verify_credentials"
+        "ingestion.plugins.mastodon.MastodonSourcePlugin.verify_credentials"
     )
     admin_instance = MastodonCredentialsAdmin(MastodonCredentials, AdminSite())
     message_user_mock = _message_user_mock(admin_instance, mocker)
@@ -491,7 +491,7 @@ def test_verify_selected_mastodon_credentials_reports_failures(
         access_token_encrypted="ciphertext",
     )
     mocker.patch(
-        "core.plugins.mastodon.MastodonSourcePlugin.verify_credentials",
+        "ingestion.plugins.mastodon.MastodonSourcePlugin.verify_credentials",
         side_effect=RuntimeError("bad token"),
     )
     admin_instance = MastodonCredentialsAdmin(MastodonCredentials, AdminSite())

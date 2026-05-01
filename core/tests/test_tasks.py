@@ -76,7 +76,7 @@ def source_plugin_context(django_user_model):
 def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, mocker):
     upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
-    parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
+    parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -118,7 +118,7 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
 def test_run_ingestion_skips_same_source_duplicate_urls(source_plugin_context, mocker):
     upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
-    parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
+    parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -206,7 +206,7 @@ def test_ingest_source_config_allows_cross_plugin_duplicate_urls_for_pipeline_de
 def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, mocker):
     upsert_embedding_mock = mocker.patch("core.tasks.upsert_content_embedding")
     process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
-    reddit_mock = mocker.patch("core.plugins.reddit.praw.Reddit")
+    reddit_mock = mocker.patch("ingestion.plugins.reddit.praw.Reddit")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.REDDIT,
@@ -1139,7 +1139,7 @@ def test_accept_theme_suggestion_marks_cluster_members_for_newsletter_promotion(
 
 
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
-    parse_mock = mocker.patch("core.plugins.rss.feedparser.parse")
+    parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,

@@ -36,8 +36,8 @@ from core.permissions import (
     IsProjectMemberWritable,
     get_visible_projects_queryset,
 )
-from core.plugins.bluesky import BlueskySourcePlugin
-from core.plugins.mastodon import MastodonSourcePlugin
+from ingestion.plugins.bluesky import BlueskySourcePlugin
+from ingestion.plugins.mastodon import MastodonSourcePlugin
 from projects.models import (
     BlueskyCredentials,
     MastodonCredentials,

@@ -206,11 +206,9 @@ class BlueskySourcePlugin(SourcePlugin):
     def _client(self) -> Client:
         """Create a public or authenticated ATProto client for the project."""
 
-        from core.plugins.bluesky import Client as BlueskyClient
-
         credentials = self._credentials()
         if credentials is None:
-            return BlueskyClient(base_url=PUBLIC_APPVIEW_BASE_URL)
+            return Client(base_url=PUBLIC_APPVIEW_BASE_URL)
         return self._authenticated_client_for_credentials(credentials)
 
     def _credentials(self) -> BlueskyCredentials | None:
@@ -226,11 +224,9 @@ class BlueskySourcePlugin(SourcePlugin):
     ) -> Client:
         """Build an authenticated client from a stored credential record."""
 
-        from core.plugins.bluesky import Client as BlueskyClient
-
         if not credentials.has_app_password():
             raise RuntimeError("Bluesky credentials are missing an app password.")
-        client = BlueskyClient(base_url=credentials.client_base_url)
+        client = Client(base_url=credentials.client_base_url)
         client.login(login=credentials.handle, password=credentials.get_app_password())
         return client
 

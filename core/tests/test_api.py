@@ -1066,7 +1066,7 @@ class ProjectScopedApiTests(APITestCase):
             response.json(), "bluesky_credentials"
         )
 
-    @patch("core.plugins.bluesky.BlueskySourcePlugin.verify_credentials")
+    @patch("ingestion.plugins.bluesky.BlueskySourcePlugin.verify_credentials")
     def test_verify_bluesky_credentials_verifies_project_account(self, verify_mock):
         credentials = BlueskyCredentials(
             project=self.owner_project, handle="project.bsky.social"
@@ -1092,7 +1092,7 @@ class ProjectScopedApiTests(APITestCase):
 
     @patch("core.api.logger.exception")
     @patch(
-        "core.plugins.bluesky.BlueskySourcePlugin.verify_credentials",
+        "ingestion.plugins.bluesky.BlueskySourcePlugin.verify_credentials",
         side_effect=RuntimeError("bad login"),
     )
     def test_verify_bluesky_credentials_surfaces_verification_errors(
@@ -1136,7 +1136,7 @@ class ProjectScopedApiTests(APITestCase):
             response.json(), "mastodon_credentials"
         )
 
-    @patch("core.plugins.mastodon.MastodonSourcePlugin.verify_credentials")
+    @patch("ingestion.plugins.mastodon.MastodonSourcePlugin.verify_credentials")
     def test_verify_mastodon_credentials_verifies_project_account(self, verify_mock):
         credentials = MastodonCredentials(
             project=self.owner_project,
@@ -1165,7 +1165,7 @@ class ProjectScopedApiTests(APITestCase):
 
     @patch("core.api.logger.exception")
     @patch(
-        "core.plugins.mastodon.MastodonSourcePlugin.verify_credentials",
+        "ingestion.plugins.mastodon.MastodonSourcePlugin.verify_credentials",
         side_effect=RuntimeError("bad token"),
     )
     def test_verify_mastodon_credentials_surfaces_verification_errors(

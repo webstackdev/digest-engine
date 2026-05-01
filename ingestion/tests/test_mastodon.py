@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from core.models import Entity
-from core.plugins.mastodon import MastodonSourcePlugin
+from ingestion.plugins.mastodon import MastodonSourcePlugin
 from ingestion.plugins.base import ContentItem
 from projects.model_support import SourcePluginName
 from projects.models import MastodonCredentials, Project, SourceConfig
@@ -268,7 +268,9 @@ def test_mastodon_client_uses_authenticated_project_credentials(
     credentials.set_access_token("access-token")
     credentials.save()
     client = mocker.Mock()
-    mastodon_cls = mocker.patch("core.plugins.mastodon.Mastodon", return_value=client)
+    mastodon_cls = mocker.patch(
+        "ingestion.plugins.mastodon.Mastodon", return_value=client
+    )
 
     plugin = MastodonSourcePlugin(mastodon_context.source_config)
 
@@ -292,7 +294,9 @@ def test_mastodon_verify_credentials_updates_verified_account(mastodon_context, 
         "username": "alice",
         "url": "https://hachyderm.io/@alice",
     }
-    mastodon_cls = mocker.patch("core.plugins.mastodon.Mastodon", return_value=client)
+    mastodon_cls = mocker.patch(
+        "ingestion.plugins.mastodon.Mastodon", return_value=client
+    )
 
     MastodonSourcePlugin.verify_credentials(credentials)
 
