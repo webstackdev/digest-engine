@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -6,6 +6,7 @@ from django.db.models import Model
 
 from core.models import (
     Content,
+    ContentClusterMembership,
     Entity,
     EntityAuthoritySnapshot,
     EntityMention,
@@ -14,6 +15,11 @@ from core.models import (
     IngestionRun,
     RunStatus,
     SkillStatus,
+    ThemeSuggestion,
+    ThemeSuggestionStatus,
+    TopicCentroidSnapshot,
+    TopicCluster,
+    TopicVelocitySnapshot,
     UserFeedback,
 )
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
@@ -28,7 +34,14 @@ from ingestion.tasks import _ingest_source_config, run_all_ingestions, run_inges
 from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectConfig, SourceConfig
 from trends.tasks import (
+    TOPIC_CENTROID_MIN_UPVOTES,
+    accept_theme_suggestion,
+    assign_content_to_topic_cluster,
+    generate_theme_suggestions,
     queue_topic_centroid_recompute,
+    recompute_topic_centroid,
+    recompute_topic_clusters,
+    recompute_topic_velocity,
     run_all_topic_centroid_recomputations,
     run_all_topic_cluster_recomputations,
 )
@@ -557,301 +570,3 @@ def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
     )
 
 
-def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
-    parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
-    source_config = SourceConfig.objects.create(
-        project=source_plugin_context.project,
-        plugin_name=SourcePluginName.RSS,
-        config={"feed_url": "https://example.com/feed.xml"},
-    )
-    parse_mock.side_effect = RuntimeError("feed unavailable")
-
-    with pytest.raises(RuntimeError, match="feed unavailable"):
-        run_ingestion(_require_pk(source_config))
-
-    ingestion_run = IngestionRun.objects.get(
-        project=source_plugin_context.project, plugin_name=SourcePluginName.RSS
-    )
-    assert ingestion_run.status == RunStatus.FAILED
-    assert ingestion_run.error_message == "feed unavailable"
-
-
-def test_queue_content_skill_enqueues_relevance_task(source_plugin_context, mocker):
-    content = Content.objects.create(
-        project=source_plugin_context.project,
-        entity=source_plugin_context.entity,
-        url="https://example.com/manual-content",
-        title="Manual Content",
-        author="Author",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-20T12:00:00Z",
-        content_text="Manual content body",
-    )
-    delay_mock = mocker.patch("core.tasks.run_relevance_scoring_skill.delay")
-
-    skill_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
-
-    assert skill_result.status == SkillStatus.PENDING
-    delay_mock.assert_called_once_with(_require_pk(skill_result))
-
-
-def test_queue_content_skill_executes_inline_when_eager(
-    source_plugin_context, settings, mocker
-):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
-    content = Content.objects.create(
-        project=source_plugin_context.project,
-        entity=source_plugin_context.entity,
-        url="https://example.com/manual-inline-content",
-        title="Manual Inline Content",
-        author="Author",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-20T12:00:00Z",
-        content_text="Manual content body",
-    )
-    task_mock = mocker.patch("core.tasks.run_relevance_scoring_skill")
-    delay_mock = mocker.patch("core.tasks.run_relevance_scoring_skill.delay")
-
-    skill_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
-
-    assert skill_result.status == SkillStatus.PENDING
-    task_mock.assert_called_once_with(_require_pk(skill_result))
-    delay_mock.assert_not_called()
-
-
-def test_queue_content_skill_executes_summary_inline_when_eager(
-    source_plugin_context, settings, mocker
-):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
-    content = Content.objects.create(
-        project=source_plugin_context.project,
-        entity=source_plugin_context.entity,
-        url="https://example.com/manual-inline-summary",
-        title="Manual Inline Summary",
-        author="Author",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-20T12:00:00Z",
-        content_text="Manual content body",
-        relevance_score=0.9,
-    )
-    task_mock = mocker.patch("core.tasks.run_summarization_skill")
-    delay_mock = mocker.patch("core.tasks.run_summarization_skill.delay")
-
-    skill_result = queue_content_skill(content, SUMMARIZATION_SKILL_NAME)
-
-    assert skill_result.status == SkillStatus.PENDING
-    task_mock.assert_called_once_with(_require_pk(skill_result))
-    delay_mock.assert_not_called()
-
-
-def test_queue_topic_centroid_recompute_enqueues_background_task(
-    source_plugin_context, mocker
-):
-    cache_add_mock = mocker.patch("trends.tasks.cache.add", return_value=True)
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
-
-    queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
-
-    assert queued is True
-    cache_add_mock.assert_called_once()
-    delay_mock.assert_called_once_with(source_plugin_context.project.id)
-
-
-def test_queue_topic_centroid_recompute_skips_duplicate_queue_attempts(
-    source_plugin_context, mocker
-):
-    mocker.patch("trends.tasks.cache.add", return_value=False)
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
-
-    queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
-
-    assert queued is False
-    delay_mock.assert_not_called()
-
-
-def test_feedback_model_create_queues_topic_centroid_recompute(
-    source_plugin_context, mocker
-):
-    content = Content.objects.create(
-        project=source_plugin_context.project,
-        entity=source_plugin_context.entity,
-        url="https://example.com/direct-feedback-content",
-        title="Direct Feedback Content",
-        author="Author",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-20T12:00:00Z",
-        content_text="Manual content body",
-    )
-    queue_mock = mocker.patch("core.signals.queue_topic_centroid_recompute")
-
-    UserFeedback.objects.create(
-        project=source_plugin_context.project,
-        content=content,
-        user=source_plugin_context.user,
-        feedback_type=FeedbackType.UPVOTE,
-    )
-
-    queue_mock.assert_called_once_with(source_plugin_context.project.id)
-
-
-def test_feedback_model_update_queues_topic_centroid_recompute(
-    source_plugin_context, mocker
-):
-    content = Content.objects.create(
-        project=source_plugin_context.project,
-        entity=source_plugin_context.entity,
-        url="https://example.com/direct-feedback-update",
-        title="Direct Feedback Update",
-        author="Author",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-20T12:00:00Z",
-        content_text="Manual content body",
-    )
-    queue_mock = mocker.patch("core.signals.queue_topic_centroid_recompute")
-    feedback = UserFeedback.objects.create(
-        project=source_plugin_context.project,
-        content=content,
-        user=source_plugin_context.user,
-        feedback_type=FeedbackType.UPVOTE,
-    )
-
-    queue_mock.reset_mock()
-    feedback.feedback_type = FeedbackType.DOWNVOTE
-    feedback.save(update_fields=["feedback_type"])
-
-    queue_mock.assert_called_once_with(source_plugin_context.project.id)
-
-
-def test_feedback_save_skips_topic_centroid_recompute_when_project_config_disables_it(
-    source_plugin_context, mocker
-):
-    ProjectConfig.objects.create(
-        project=source_plugin_context.project,
-        recompute_topic_centroid_on_feedback_save=False,
-    )
-    content = Content.objects.create(
-        project=source_plugin_context.project,
-        entity=source_plugin_context.entity,
-        url="https://example.com/direct-feedback-disabled",
-        title="Direct Feedback Disabled",
-        author="Author",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-20T12:00:00Z",
-        content_text="Manual content body",
-    )
-    queue_mock = mocker.patch("core.signals.queue_topic_centroid_recompute")
-
-    feedback = UserFeedback.objects.create(
-        project=source_plugin_context.project,
-        content=content,
-        user=source_plugin_context.user,
-        feedback_type=FeedbackType.UPVOTE,
-    )
-    feedback.feedback_type = FeedbackType.DOWNVOTE
-    feedback.save(update_fields=["feedback_type"])
-
-    queue_mock.assert_not_called()
-
-
-def test_run_relevance_scoring_skill_updates_pending_result(
-    source_plugin_context, mocker
-):
-    content = Content.objects.create(
-        project=source_plugin_context.project,
-        entity=source_plugin_context.entity,
-        url="https://example.com/relevance-content",
-        title="Relevance Content",
-        author="Author",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-20T12:00:00Z",
-        content_text="Manual content body",
-    )
-    mocker.patch(
-        "core.pipeline.run_relevance_scoring",
-        return_value={
-            "relevance_score": 0.82,
-            "explanation": "Strong match for the project topic.",
-            "used_llm": False,
-            "model_used": "embedding:test",
-            "latency_ms": 0,
-        },
-    )
-    delay_mock = mocker.patch("core.tasks.run_relevance_scoring_skill.delay")
-
-    pending_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
-    delay_mock.assert_called_once_with(_require_pk(pending_result))
-
-    result = run_relevance_scoring_skill(_require_pk(pending_result))
-
-    content.refresh_from_db()
-    pending_result.refresh_from_db()
-    assert result.status == SkillStatus.COMPLETED
-    assert pending_result.status == SkillStatus.COMPLETED
-    assert content.relevance_score == pytest.approx(0.82)
-    assert content.is_active is True
-
-
-def test_run_summarization_skill_marks_result_failed_when_relevance_is_too_low(
-    source_plugin_context, mocker
-):
-    content = Content.objects.create(
-        project=source_plugin_context.project,
-        entity=source_plugin_context.entity,
-        url="https://example.com/summary-content",
-        title="Summary Content",
-        author="Author",
-        source_plugin=SourcePluginName.RSS,
-        published_date="2026-04-20T12:00:00Z",
-        content_text="Manual content body",
-        relevance_score=0.25,
-    )
-    delay_mock = mocker.patch("core.tasks.run_summarization_skill.delay")
-
-    pending_result = queue_content_skill(content, SUMMARIZATION_SKILL_NAME)
-    delay_mock.assert_called_once_with(_require_pk(pending_result))
-
-    result = run_summarization_skill(_require_pk(pending_result))
-
-    pending_result.refresh_from_db()
-    assert result.status == SkillStatus.FAILED
-    assert pending_result.status == SkillStatus.FAILED
-    assert "Summarization requires relevance_score" in pending_result.error_message
-
-
-def test_ingest_source_config_truncates_fields_and_processes_inline(
-    source_plugin_context, settings, mocker
-):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
-    plugin = mocker.Mock()
-    plugin.fetch_new_content.return_value = [
-        SimpleNamespace(
-            url="https://example.com/post-long",
-            title="T" * 600,
-            author="A" * 300,
-            source_plugin=SourcePluginName.RSS,
-            published_date=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
-            content_text="Summary",
-        )
-    ]
-    plugin.match_entity_for_url.return_value = source_plugin_context.entity
-    source_config = SourceConfig.objects.create(
-        project=source_plugin_context.project,
-        plugin_name=SourcePluginName.RSS,
-        config={"feed_url": "https://example.com/feed.xml"},
-    )
-    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
-    upsert_mock = mocker.patch("core.tasks.upsert_content_embedding")
-    process_mock = mocker.patch("core.tasks.process_content")
-    delay_mock = mocker.patch("core.tasks.process_content.delay")
-
-    items_fetched, items_ingested = _ingest_source_config(source_config)
-
-    created = Content.objects.get(url="https://example.com/post-long")
-    assert items_fetched == 1
-    assert items_ingested == 1
-    assert created.entity == source_plugin_context.entity
-    assert len(created.title) == 512
-    assert len(created.author) == 255
-    upsert_mock.assert_called_once_with(created)
-    process_mock.assert_called_once_with(_require_pk(created))
-    delay_mock.assert_not_called()
