@@ -63,4 +63,17 @@ describe("POST /api/projects/[id]/intake-allowlist", () => {
       "http://localhost/admin/sources?project=4&error=Create+allowlist+failed",
     )
   })
+
+  it("redirects with the fallback error when a non-Error value is thrown", async () => {
+    vi.mocked(createProjectIntakeAllowlistEntry).mockRejectedValue("boom")
+
+    const response = await POST(buildRequest(new FormData()), {
+      params: Promise.resolve({ id: "4" }),
+    })
+
+    expect(response.status).toBe(307)
+    await expect(getLocation(response)).resolves.toBe(
+      "http://localhost/admin/sources?error=Unable+to+update+intake+allowlist.",
+    )
+  })
 })

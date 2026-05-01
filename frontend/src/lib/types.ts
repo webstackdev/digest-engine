@@ -240,6 +240,195 @@ export type Content = {
   duplicate_signal_count: number
   is_reference: boolean
   is_active: boolean
+  newsletter_promotion_at?: string | null
+  newsletter_promotion_by?: number | null
+  newsletter_promotion_theme?: number | null
+}
+
+export type TopicClusterEntity = {
+  id: number
+  name: string
+  type: string
+}
+
+export type TopicClusterContentSummary = {
+  id: number
+  url: string
+  title: string
+  published_date: string
+  source_plugin: string
+}
+
+export type ContentClusterMembership = {
+  id: number
+  content: TopicClusterContentSummary
+  similarity: number
+  assigned_at: string
+}
+
+export type TopicVelocitySnapshot = {
+  id: number
+  cluster: number
+  project: number
+  computed_at: string
+  window_count: number
+  trailing_mean: number
+  trailing_stddev: number
+  z_score: number
+  velocity_score: number
+}
+
+export type TopicCluster = {
+  id: number
+  project: number
+  centroid_vector_id: string | null
+  label: string
+  first_seen_at: string
+  last_seen_at: string
+  is_active: boolean
+  member_count: number
+  dominant_entity: TopicClusterEntity | null
+  velocity_score: number | null
+  z_score: number | null
+  window_count: number | null
+  velocity_computed_at: string | null
+}
+
+export type TopicClusterDetail = TopicCluster & {
+  memberships: ContentClusterMembership[]
+  velocity_history: TopicVelocitySnapshot[]
+}
+
+export type ThemeSuggestionClusterSummary = {
+  id: number
+  label: string
+  member_count: number
+  velocity_score: number | null
+}
+
+export type ThemeSuggestionPromotedContent = {
+  id: number
+  url: string
+  title: string
+  published_date: string
+  source_plugin: string
+  newsletter_promotion_at: string | null
+}
+
+export type ThemeSuggestion = {
+  id: number
+  project: number
+  cluster: ThemeSuggestionClusterSummary | null
+  title: string
+  pitch: string
+  why_it_matters: string
+  suggested_angle: string
+  velocity_at_creation: number
+  novelty_score: number
+  status: "pending" | "accepted" | "dismissed" | "used"
+  dismissal_reason: string
+  created_at: string
+  decided_at: string | null
+  decided_by: number | null
+  decided_by_username: string | null
+  promoted_contents: ThemeSuggestionPromotedContent[]
+}
+
+export type OriginalContentIdeaClusterSummary = {
+  id: number
+  label: string
+  member_count: number
+}
+
+export type OriginalContentIdeaSupportingContent = {
+  id: number
+  url: string
+  title: string
+  published_date: string
+  source_plugin: string
+}
+
+export type OriginalContentIdea = {
+  id: number
+  project: number
+  angle_title: string
+  summary: string
+  suggested_outline: string
+  why_now: string
+  supporting_contents: OriginalContentIdeaSupportingContent[]
+  related_cluster: OriginalContentIdeaClusterSummary | null
+  generated_by_model: string
+  self_critique_score: number
+  status: "pending" | "accepted" | "dismissed" | "written"
+  dismissal_reason: string
+  created_at: string
+  decided_at: string | null
+  decided_by: number | null
+  decided_by_username: string | null
+}
+
+export type OriginalContentIdeaGenerationResult = {
+  project_id: number
+  clusters_considered: number
+  created: number
+  skipped: number
+}
+
+export type OriginalContentIdeaGenerationQueuedResponse = {
+  status: "queued"
+  project_id: number
+}
+
+export type OriginalContentIdeaGenerationCompletedResponse = {
+  status: "completed"
+  project_id: number
+  result: OriginalContentIdeaGenerationResult
+}
+
+export type OriginalContentIdeaGenerationResponse =
+  | OriginalContentIdeaGenerationQueuedResponse
+  | OriginalContentIdeaGenerationCompletedResponse
+
+export type SourceDiversityBreakdownCount = {
+  key: string
+  label: string
+  count: number
+  share: number
+}
+
+export type SourceDiversityAlert = {
+  code: string
+  severity: string
+  message: string
+}
+
+export type SourceDiversityBreakdown = {
+  total_content_count: number
+  plugin_counts: SourceDiversityBreakdownCount[]
+  source_counts: SourceDiversityBreakdownCount[]
+  author_counts: SourceDiversityBreakdownCount[]
+  cluster_counts: SourceDiversityBreakdownCount[]
+  alerts: SourceDiversityAlert[]
+}
+
+export type SourceDiversitySnapshot = {
+  id: number
+  project: number
+  computed_at: string
+  window_days: number
+  plugin_entropy: number
+  source_entropy: number
+  author_entropy: number
+  cluster_entropy: number
+  top_plugin_share: number
+  top_source_share: number
+  breakdown: SourceDiversityBreakdown
+}
+
+export type SourceDiversityObservabilitySummary = {
+  project: number
+  snapshot_count: number
+  latest_snapshot: SourceDiversitySnapshot | null
 }
 
 export type SkillResult = {

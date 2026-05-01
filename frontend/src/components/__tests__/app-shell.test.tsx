@@ -66,6 +66,18 @@ describe("AppShell", () => {
       "href",
       "/?project=2",
     )
+    expect(screen.getByRole("link", { name: "Trends" })).toHaveAttribute(
+      "href",
+      "/trends?project=2",
+    )
+    expect(screen.getByRole("link", { name: "Themes" })).toHaveAttribute(
+      "href",
+      "/themes?project=2",
+    )
+    expect(screen.getByRole("link", { name: "Ideas" })).toHaveAttribute(
+      "href",
+      "/ideas?project=2",
+    )
     expect(screen.getByRole("link", { name: "Entities" })).toHaveAttribute(
       "href",
       "/entities?project=2",

@@ -49,6 +49,24 @@ export function AppShell({
           </Link>
           <Link
             className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            href={`/trends${projectQuery}`}
+          >
+            Trends
+          </Link>
+          <Link
+            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            href={`/themes${projectQuery}`}
+          >
+            Themes
+          </Link>
+          <Link
+            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
+            href={`/ideas${projectQuery}`}
+          >
+            Ideas
+          </Link>
+          <Link
+            className="rounded-panel border border-sidebar-ink/8 bg-sidebar-ink/3 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ink/22 hover:bg-sidebar-ink/6"
             href={`/entities${projectQuery}`}
           >
             Entities

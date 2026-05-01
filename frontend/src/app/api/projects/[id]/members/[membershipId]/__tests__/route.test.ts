@@ -68,4 +68,39 @@ describe("POST /api/projects/[id]/members/[membershipId]", () => {
       "http://localhost/projects/4/members?project=4&message=Member+removed.",
     )
   })
+
+  it("redirects with the thrown error message when updating a role fails", async () => {
+    vi.mocked(updateProjectMembership).mockRejectedValue(
+      new Error("Update membership failed"),
+    )
+
+    const formData = new FormData()
+    formData.set("redirectTo", "/projects/4/members?project=4")
+    formData.set("role", "reader")
+
+    const response = await POST(buildRequest(formData), {
+      params: Promise.resolve({ id: "4", membershipId: "7" }),
+    })
+
+    expect(response.status).toBe(307)
+    await expect(getLocation(response)).resolves.toBe(
+      "http://localhost/projects/4/members?project=4&error=Update+membership+failed",
+    )
+  })
+
+  it("redirects with the fallback error when a non-Error value is thrown", async () => {
+    vi.mocked(deleteProjectMembership).mockRejectedValue("boom")
+
+    const formData = new FormData()
+    formData.set("intent", "remove")
+
+    const response = await POST(buildRequest(formData), {
+      params: Promise.resolve({ id: "4", membershipId: "7" }),
+    })
+
+    expect(response.status).toBe(307)
+    await expect(getLocation(response)).resolves.toBe(
+      "http://localhost/projects/4/members?error=Unable+to+update+membership.",
+    )
+  })
 })

@@ -216,6 +216,14 @@ export default async function ContentDetailPage({
                   Duplicate of #{content.duplicate_of}
                 </Link>
               ) : null}
+              {content.newsletter_promotion_at ? (
+                <Link
+                  className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink transition hover:bg-primary/12"
+                  href={content.newsletter_promotion_theme ? `/themes?project=${selectedProject.id}&theme=${content.newsletter_promotion_theme}` : `/themes?project=${selectedProject.id}`}
+                >
+                  Promoted {formatDate(content.newsletter_promotion_at)}
+                </Link>
+              ) : null}
             </div>
 
             <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-muted md:text-base">
@@ -328,6 +336,30 @@ export default async function ContentDetailPage({
                 </p>
               </div>
             ))}
+          </article>
+
+          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Promotion state</p>
+            {content.newsletter_promotion_at ? (
+              <div className="space-y-3 text-sm leading-6 text-muted">
+                <p className="m-0">Promoted at {formatDate(content.newsletter_promotion_at)}</p>
+                {content.newsletter_promotion_by ? (
+                  <p className="m-0">Promoted by editor #{content.newsletter_promotion_by}</p>
+                ) : null}
+                {content.newsletter_promotion_theme ? (
+                  <Link
+                    className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink transition hover:bg-primary/12"
+                    href={`/themes?project=${selectedProject.id}&theme=${content.newsletter_promotion_theme}`}
+                  >
+                    Open promoting theme #{content.newsletter_promotion_theme}
+                  </Link>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm leading-6 text-muted">
+                This content has not been promoted by a theme suggestion yet.
+              </p>
+            )}
           </article>
 
           <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">

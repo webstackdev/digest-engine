@@ -6,15 +6,19 @@ import {
   getProjectIngestionRuns,
   getProjects,
   getProjectSourceConfigs,
+  getProjectSourceDiversitySnapshots,
+  getProjectSourceDiversitySummary,
   getProjectTopicCentroidSnapshots,
   getProjectTopicCentroidSummary,
 } from "@/lib/api"
 import type {
   HealthStatus,
+  SourceDiversityObservabilitySummary,
+  SourceDiversitySnapshot,
   TopicCentroidObservabilitySummary,
   TopicCentroidSnapshot,
 } from "@/lib/types"
-import { formatDate, healthTone, selectProject } from "@/lib/view-helpers"
+import { formatDate, formatPercentScore, healthTone, selectProject } from "@/lib/view-helpers"
 
 type HealthPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -74,6 +78,24 @@ export function deriveCentroidStatus(
 }
 
 /**
+ * Map source-diversity summary state onto the shared health badge states.
+ *
+ * @param summary - Project-level source-diversity payload.
+ * @returns The badge state for the source-diversity section.
+ */
+export function deriveSourceDiversityStatus(
+  summary: SourceDiversityObservabilitySummary,
+): HealthStatus {
+  if (!summary.latest_snapshot) {
+    return "idle"
+  }
+  if ((summary.latest_snapshot.breakdown.alerts ?? []).length > 0) {
+    return "degraded"
+  }
+  return "healthy"
+}
+
+/**
  * Format a centroid drift value as a one-decimal percentage.
  *
  * @param value - Normalized cosine-distance drift or `null` when unavailable.
@@ -116,6 +138,35 @@ export function buildCentroidDriftTrendPoints(
 }
 
 /**
+ * Build sparkline points for top-plugin share across recent source-diversity snapshots.
+ *
+ * @param snapshots - Persisted source-diversity snapshots for the selected project.
+ * @returns SVG polyline points spanning recent source concentration history.
+ */
+export function buildSourceDiversityTrendPoints(
+  snapshots: SourceDiversitySnapshot[],
+) {
+  if (snapshots.length <= 1) {
+    return "0,36 220,36"
+  }
+
+  const orderedSnapshots = snapshots
+    .slice()
+    .sort(
+      (left, right) =>
+        new Date(left.computed_at).getTime() - new Date(right.computed_at).getTime(),
+    )
+
+  return orderedSnapshots
+    .map((snapshot, index) => {
+      const x = (index / (orderedSnapshots.length - 1)) * 220
+      const y = 72 - snapshot.top_plugin_share * 72
+      return `${x.toFixed(1)},${y.toFixed(1)}`
+    })
+    .join(" ")
+}
+
+/**
  * Render the source-by-source ingestion health view for the selected project.
  *
  * The page resolves the active project from the URL search params, loads source
@@ -147,11 +198,20 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
     )
   }
 
-  const [sourceConfigs, ingestionRuns, centroidSummary, centroidSnapshots] = await Promise.all([
+  const [
+    sourceConfigs,
+    ingestionRuns,
+    centroidSummary,
+    centroidSnapshots,
+    sourceDiversitySummary,
+    sourceDiversitySnapshots,
+  ] = await Promise.all([
     getProjectSourceConfigs(selectedProject.id),
     getProjectIngestionRuns(selectedProject.id),
     getProjectTopicCentroidSummary(selectedProject.id),
     getProjectTopicCentroidSnapshots(selectedProject.id),
+    getProjectSourceDiversitySummary(selectedProject.id),
+    getProjectSourceDiversitySnapshots(selectedProject.id),
   ])
   const sortedCentroidSnapshots = centroidSnapshots
     .slice()
@@ -162,6 +222,16 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
   const visibleCentroidSnapshots = sortedCentroidSnapshots.slice(0, 12)
   const centroidDriftTrendPoints = buildCentroidDriftTrendPoints(
     visibleCentroidSnapshots,
+  )
+  const sortedSourceDiversitySnapshots = sourceDiversitySnapshots
+    .slice()
+    .sort(
+      (left, right) =>
+        new Date(right.computed_at).getTime() - new Date(left.computed_at).getTime(),
+    )
+  const visibleSourceDiversitySnapshots = sortedSourceDiversitySnapshots.slice(0, 12)
+  const sourceDiversityTrendPoints = buildSourceDiversityTrendPoints(
+    visibleSourceDiversitySnapshots,
   )
 
   const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
@@ -343,6 +413,150 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Source diversity</h2>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Entropy, source concentration, and advisory alerts derived from the latest source-diversity snapshot.
+            </p>
+          </div>
+          <StatusBadge tone={healthTone(deriveSourceDiversityStatus(sourceDiversitySummary))}>
+            {sourceDiversitySummary.latest_snapshot ? "tracked" : "idle"}
+          </StatusBadge>
+        </div>
+
+        {sourceDiversitySummary.latest_snapshot ? (
+          <>
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-panel bg-ink/6 px-4 py-4">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Plugin diversity</p>
+                <p className="mt-2 text-2xl font-semibold text-ink">
+                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.plugin_entropy)}
+                </p>
+              </div>
+              <div className="rounded-panel bg-ink/6 px-4 py-4">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Source diversity</p>
+                <p className="mt-2 text-2xl font-semibold text-ink">
+                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.source_entropy)}
+                </p>
+              </div>
+              <div className="rounded-panel bg-ink/6 px-4 py-4">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Author diversity</p>
+                <p className="mt-2 text-2xl font-semibold text-ink">
+                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.author_entropy)}
+                </p>
+              </div>
+              <div className="rounded-panel bg-ink/6 px-4 py-4">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Cluster diversity</p>
+                <p className="mt-2 text-2xl font-semibold text-ink">
+                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.cluster_entropy)}
+                </p>
+              </div>
+              <div className="rounded-panel bg-ink/6 px-4 py-4">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Top plugin share</p>
+                <p className="mt-2 text-2xl font-semibold text-ink">
+                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.top_plugin_share)}
+                </p>
+              </div>
+              <div className="rounded-panel bg-ink/6 px-4 py-4">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Top source share</p>
+                <p className="mt-2 text-2xl font-semibold text-ink">
+                  {formatPercentScore(sourceDiversitySummary.latest_snapshot.top_source_share)}
+                </p>
+              </div>
+            </div>
+
+            {visibleSourceDiversitySnapshots.length > 1 ? (
+              <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4">
+                <div className="flex items-center justify-between gap-3 text-sm text-muted">
+                  <span>Top plugin share trend</span>
+                  <span>Last {visibleSourceDiversitySnapshots.length} snapshots</span>
+                </div>
+                <svg
+                  aria-label="Source diversity trend"
+                  className="mt-3 h-20 w-full overflow-visible text-ink"
+                  role="img"
+                  viewBox="0 0 220 72"
+                >
+                  <polyline
+                    fill="none"
+                    points={sourceDiversityTrendPoints}
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="3"
+                  />
+                </svg>
+              </div>
+            ) : null}
+
+            {(sourceDiversitySummary.latest_snapshot.breakdown.alerts ?? []).length > 0 ? (
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {sourceDiversitySummary.latest_snapshot.breakdown.alerts.map((alert) => (
+                  <div key={alert.code} className="rounded-panel bg-warning/14 px-4 py-4 text-sm leading-6 text-ink">
+                    <strong className="font-medium">{alert.code}</strong>
+                    <p className="mt-2 m-0">{alert.message}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+                No source-diversity alerts are active for this project.
+              </div>
+            )}
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              <div className="rounded-panel bg-ink/6 px-4 py-4">
+                <p className="m-0 text-sm font-medium text-ink">Top plugin buckets</p>
+                <div className="mt-3 space-y-3">
+                  {sourceDiversitySummary.latest_snapshot.breakdown.plugin_counts.slice(0, 4).map((item) => (
+                    <div key={item.key}>
+                      <div className="flex items-center justify-between gap-3 text-sm text-muted">
+                        <span>{item.label}</span>
+                        <span>{formatPercentScore(item.share)}</span>
+                      </div>
+                      <div className="mt-2 h-2 rounded-full bg-ink/10">
+                        <div className="h-2 rounded-full bg-ink" style={{ width: `${Math.max(item.share * 100, 4)}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="rounded-panel bg-ink/6 px-4 py-4">
+                <p className="m-0 text-sm font-medium text-ink">Top source buckets</p>
+                <div className="mt-3 space-y-3">
+                  {sourceDiversitySummary.latest_snapshot.breakdown.source_counts.slice(0, 4).map((item) => (
+                    <div key={item.key}>
+                      <div className="flex items-center justify-between gap-3 text-sm text-muted">
+                        <span>{item.label}</span>
+                        <span>{formatPercentScore(item.share)}</span>
+                      </div>
+                      <div className="mt-2 h-2 rounded-full bg-ink/10">
+                        <div className="h-2 rounded-full bg-ink" style={{ width: `${Math.max(item.share * 100, 4)}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <details className="mt-4 rounded-panel bg-ink/6 px-4 py-4">
+              <summary className="cursor-pointer text-sm font-medium text-ink">
+                View raw breakdown JSON
+              </summary>
+              <pre className="mt-3 overflow-auto rounded-2xl bg-sidebar/95 p-4 text-sm text-sidebar-ink">
+                {JSON.stringify(sourceDiversitySummary.latest_snapshot.breakdown, null, 2)}
+              </pre>
+            </details>
+          </>
+        ) : (
+          <div className="mt-4 rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+            No source-diversity snapshots exist for this project yet.
           </div>
         )}
       </section>

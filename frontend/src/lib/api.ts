@@ -16,6 +16,8 @@ import type {
   MastodonCredentials,
   MembershipInvitation,
   NewsletterIntake,
+  OriginalContentIdea,
+  OriginalContentIdeaGenerationResponse,
   Project,
   ProjectBlueskyVerification,
   ProjectMastodonVerification,
@@ -24,8 +26,14 @@ import type {
   ReviewQueueItem,
   SkillResult,
   SourceConfig,
+  SourceDiversityObservabilitySummary,
+  SourceDiversitySnapshot,
+  ThemeSuggestion,
   TopicCentroidObservabilitySummary,
   TopicCentroidSnapshot,
+  TopicCluster,
+  TopicClusterDetail,
+  TopicVelocitySnapshot,
   UserFeedback,
   UserProfile,
 } from "@/lib/types"
@@ -949,6 +957,235 @@ export async function getProjectSourceConfigs(
   projectId: number,
 ): Promise<SourceConfig[]> {
   return apiFetch<SourceConfig[]>(`/api/v1/projects/${projectId}/source-configs/`)
+}
+
+/**
+ * Fetch active and historical topic clusters for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Project-scoped topic cluster rows sorted by backend defaults.
+ */
+export async function getProjectTopicClusters(
+  projectId: number,
+): Promise<TopicCluster[]> {
+  return apiFetch<TopicCluster[]>(`/api/v1/projects/${projectId}/clusters/`)
+}
+
+/**
+ * Fetch one topic cluster detail row with memberships and velocity history.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param clusterId - Numeric topic-cluster identifier inside the project.
+ * @returns The requested topic cluster detail payload.
+ */
+export async function getProjectTopicCluster(
+  projectId: number,
+  clusterId: number,
+): Promise<TopicClusterDetail> {
+  return apiFetch<TopicClusterDetail>(
+    `/api/v1/projects/${projectId}/clusters/${clusterId}/`,
+  )
+}
+
+/**
+ * Fetch velocity history snapshots for one topic cluster.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param clusterId - Numeric topic-cluster identifier inside the project.
+ * @param limit - Optional maximum number of snapshots to request.
+ * @returns Persisted velocity snapshots for the requested cluster.
+ */
+export async function getProjectTopicClusterVelocityHistory(
+  projectId: number,
+  clusterId: number,
+  limit?: number,
+): Promise<TopicVelocitySnapshot[]> {
+  const querySuffix = limit ? `?limit=${limit}` : ""
+  return apiFetch<TopicVelocitySnapshot[]>(
+    `/api/v1/projects/${projectId}/clusters/${clusterId}/velocity_history/${querySuffix}`,
+  )
+}
+
+/**
+ * Fetch theme suggestions for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Theme suggestions visible to the current editor.
+ */
+export async function getProjectThemeSuggestions(
+  projectId: number,
+): Promise<ThemeSuggestion[]> {
+  return apiFetch<ThemeSuggestion[]>(`/api/v1/projects/${projectId}/themes/`)
+}
+
+/**
+ * Accept one theme suggestion.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param suggestionId - Numeric theme-suggestion identifier.
+ * @returns The updated theme suggestion payload.
+ */
+export async function acceptProjectThemeSuggestion(
+  projectId: number,
+  suggestionId: number,
+): Promise<ThemeSuggestion> {
+  return apiFetch<ThemeSuggestion>(
+    `/api/v1/projects/${projectId}/themes/${suggestionId}/accept/`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+/**
+ * Dismiss one theme suggestion with editorial feedback.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param suggestionId - Numeric theme-suggestion identifier.
+ * @param reason - Human-authored dismissal reason.
+ * @returns The updated theme suggestion payload.
+ */
+export async function dismissProjectThemeSuggestion(
+  projectId: number,
+  suggestionId: number,
+  reason: string,
+): Promise<ThemeSuggestion> {
+  return apiFetch<ThemeSuggestion>(
+    `/api/v1/projects/${projectId}/themes/${suggestionId}/dismiss/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    },
+  )
+}
+
+/**
+ * Fetch original-content ideas for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Original-content ideas visible to the current editor.
+ */
+export async function getProjectOriginalContentIdeas(
+  projectId: number,
+): Promise<OriginalContentIdea[]> {
+  return apiFetch<OriginalContentIdea[]>(`/api/v1/projects/${projectId}/ideas/`)
+}
+
+/**
+ * Trigger original-content idea generation for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Either a queued or completed generation response.
+ */
+export async function generateProjectOriginalContentIdeas(
+  projectId: number,
+): Promise<OriginalContentIdeaGenerationResponse> {
+  return apiFetch<OriginalContentIdeaGenerationResponse>(
+    `/api/v1/projects/${projectId}/ideas/generate/`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+/**
+ * Narrow a generation response to the completed result branch.
+ *
+ * @param response - Generation response returned by the backend.
+ * @returns `true` when the response includes immediate generation counts.
+ */
+export function isCompletedOriginalContentIdeaGeneration(
+  response: OriginalContentIdeaGenerationResponse,
+): response is Extract<OriginalContentIdeaGenerationResponse, { status: "completed" }> {
+  return response.status === "completed"
+}
+
+/**
+ * Accept one original-content idea.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param ideaId - Numeric original-content idea identifier.
+ * @returns The updated original-content idea payload.
+ */
+export async function acceptProjectOriginalContentIdea(
+  projectId: number,
+  ideaId: number,
+): Promise<OriginalContentIdea> {
+  return apiFetch<OriginalContentIdea>(
+    `/api/v1/projects/${projectId}/ideas/${ideaId}/accept/`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+/**
+ * Dismiss one original-content idea with editorial feedback.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param ideaId - Numeric original-content idea identifier.
+ * @param reason - Human-authored dismissal reason.
+ * @returns The updated original-content idea payload.
+ */
+export async function dismissProjectOriginalContentIdea(
+  projectId: number,
+  ideaId: number,
+  reason: string,
+): Promise<OriginalContentIdea> {
+  return apiFetch<OriginalContentIdea>(
+    `/api/v1/projects/${projectId}/ideas/${ideaId}/dismiss/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    },
+  )
+}
+
+/**
+ * Mark one accepted original-content idea as written.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param ideaId - Numeric original-content idea identifier.
+ * @returns The updated original-content idea payload.
+ */
+export async function markProjectOriginalContentIdeaWritten(
+  projectId: number,
+  ideaId: number,
+): Promise<OriginalContentIdea> {
+  return apiFetch<OriginalContentIdea>(
+    `/api/v1/projects/${projectId}/ideas/${ideaId}/mark_written/`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+/**
+ * Fetch project-level source diversity observability metrics.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Snapshot count plus the latest source-diversity snapshot.
+ */
+export async function getProjectSourceDiversitySummary(
+  projectId: number,
+): Promise<SourceDiversityObservabilitySummary> {
+  return apiFetch<SourceDiversityObservabilitySummary>(
+    `/api/v1/projects/${projectId}/source-diversity-snapshots/summary/`,
+  )
+}
+
+/**
+ * Fetch persisted source-diversity snapshots for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Source-diversity snapshots for the selected project.
+ */
+export async function getProjectSourceDiversitySnapshots(
+  projectId: number,
+): Promise<SourceDiversitySnapshot[]> {
+  return apiFetch<SourceDiversitySnapshot[]>(
+    `/api/v1/projects/${projectId}/source-diversity-snapshots/`,
+  )
 }
 
 /**

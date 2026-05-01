@@ -49,4 +49,35 @@ describe("POST /api/projects/[id]/rotate-intake-token", () => {
       "http://localhost/admin/sources?project=4&message=Rotated+intake+token+to+rotated-token.",
     )
   })
+
+  it("redirects with the fallback error when a non-Error value is thrown", async () => {
+    vi.mocked(rotateProjectIntakeToken).mockRejectedValue("boom")
+
+    const response = await POST(buildRequest(new FormData()), {
+      params: Promise.resolve({ id: "4" }),
+    })
+
+    expect(response.status).toBe(307)
+    await expect(getLocation(response)).resolves.toBe(
+      "http://localhost/admin/sources?error=Unable+to+rotate+intake+token.",
+    )
+  })
+
+  it("redirects with the thrown error message when token rotation fails", async () => {
+    vi.mocked(rotateProjectIntakeToken).mockRejectedValue(
+      new Error("Rotate token failed"),
+    )
+
+    const formData = new FormData()
+    formData.set("redirectTo", "/admin/sources?project=4")
+
+    const response = await POST(buildRequest(formData), {
+      params: Promise.resolve({ id: "4" }),
+    })
+
+    expect(response.status).toBe(307)
+    await expect(getLocation(response)).resolves.toBe(
+      "http://localhost/admin/sources?project=4&error=Rotate+token+failed",
+    )
+  })
 })

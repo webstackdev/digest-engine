@@ -6,6 +6,8 @@ import type {
   IngestionRun,
   Project,
   SourceConfig,
+  SourceDiversityObservabilitySummary,
+  SourceDiversitySnapshot,
   TopicCentroidObservabilitySummary,
   TopicCentroidSnapshot,
 } from "@/lib/types"
@@ -13,6 +15,8 @@ import type {
 const {
   getProjectIngestionRunsMock,
   getProjectsMock,
+  getProjectSourceDiversitySnapshotsMock,
+  getProjectSourceDiversitySummaryMock,
   getProjectSourceConfigsMock,
   getProjectTopicCentroidSnapshotsMock,
   getProjectTopicCentroidSummaryMock,
@@ -20,6 +24,8 @@ const {
 } = vi.hoisted(() => ({
   getProjectIngestionRunsMock: vi.fn(),
   getProjectsMock: vi.fn(),
+  getProjectSourceDiversitySnapshotsMock: vi.fn(),
+  getProjectSourceDiversitySummaryMock: vi.fn(),
   getProjectSourceConfigsMock: vi.fn(),
   getProjectTopicCentroidSnapshotsMock: vi.fn(),
   getProjectTopicCentroidSummaryMock: vi.fn(),
@@ -61,6 +67,8 @@ vi.mock("@/components/status-badge", () => ({
 vi.mock("@/lib/api", () => ({
   getProjectIngestionRuns: getProjectIngestionRunsMock,
   getProjects: getProjectsMock,
+  getProjectSourceDiversitySnapshots: getProjectSourceDiversitySnapshotsMock,
+  getProjectSourceDiversitySummary: getProjectSourceDiversitySummaryMock,
   getProjectSourceConfigs: getProjectSourceConfigsMock,
   getProjectTopicCentroidSnapshots: getProjectTopicCentroidSnapshotsMock,
   getProjectTopicCentroidSummary: getProjectTopicCentroidSummaryMock,
@@ -151,6 +159,47 @@ function createTopicCentroidSnapshot(
   }
 }
 
+function createSourceDiversitySnapshot(
+  overrides: Partial<SourceDiversitySnapshot> = {},
+): SourceDiversitySnapshot {
+  return {
+    id: 3,
+    project: 1,
+    computed_at: "2026-04-28T08:00:00Z",
+    window_days: 14,
+    plugin_entropy: 0.65,
+    source_entropy: 0.72,
+    author_entropy: 0.48,
+    cluster_entropy: 0.58,
+    top_plugin_share: 0.62,
+    top_source_share: 0.44,
+    breakdown: {
+      total_content_count: 12,
+      plugin_counts: [
+        { key: "rss", label: "rss", count: 7, share: 0.58 },
+      ],
+      source_counts: [
+        { key: "feed:1", label: "Example Feed", count: 5, share: 0.42 },
+      ],
+      author_counts: [],
+      cluster_counts: [],
+      alerts: [],
+    },
+    ...overrides,
+  }
+}
+
+function createSourceDiversitySummary(
+  overrides: Partial<SourceDiversityObservabilitySummary> = {},
+): SourceDiversityObservabilitySummary {
+  return {
+    project: 1,
+    snapshot_count: 0,
+    latest_snapshot: null,
+    ...overrides,
+  }
+}
+
 async function loadHealthPageModule() {
   return import("../page")
 }
@@ -237,6 +286,8 @@ describe("HealthPage", () => {
     getProjectsMock.mockReset()
     getProjectSourceConfigsMock.mockReset()
     getProjectIngestionRunsMock.mockReset()
+    getProjectSourceDiversitySnapshotsMock.mockReset()
+    getProjectSourceDiversitySummaryMock.mockReset()
     getProjectTopicCentroidSnapshotsMock.mockReset()
     getProjectTopicCentroidSummaryMock.mockReset()
     selectProjectMock.mockReset()
@@ -244,6 +295,10 @@ describe("HealthPage", () => {
     getProjectsMock.mockResolvedValue([defaultProject])
     getProjectSourceConfigsMock.mockResolvedValue([])
     getProjectIngestionRunsMock.mockResolvedValue([])
+    getProjectSourceDiversitySnapshotsMock.mockResolvedValue([])
+    getProjectSourceDiversitySummaryMock.mockResolvedValue(
+      createSourceDiversitySummary(),
+    )
     getProjectTopicCentroidSnapshotsMock.mockResolvedValue([])
     getProjectTopicCentroidSummaryMock.mockResolvedValue(
       createTopicCentroidSummary(),
@@ -268,6 +323,8 @@ describe("HealthPage", () => {
     ).toBeInTheDocument()
     expect(getProjectSourceConfigsMock).not.toHaveBeenCalled()
     expect(getProjectIngestionRunsMock).not.toHaveBeenCalled()
+    expect(getProjectSourceDiversitySnapshotsMock).not.toHaveBeenCalled()
+    expect(getProjectSourceDiversitySummaryMock).not.toHaveBeenCalled()
     expect(getProjectTopicCentroidSnapshotsMock).not.toHaveBeenCalled()
     expect(getProjectTopicCentroidSummaryMock).not.toHaveBeenCalled()
   })
@@ -279,10 +336,15 @@ describe("HealthPage", () => {
       screen.getByText("No centroid snapshots exist for this project yet."),
     ).toBeInTheDocument()
     expect(
+      screen.getByText("No source-diversity snapshots exist for this project yet."),
+    ).toBeInTheDocument()
+    expect(
       screen.getByText("No source configurations exist for this project yet."),
     ).toBeInTheDocument()
     expect(getProjectSourceConfigsMock).toHaveBeenCalledWith(1)
     expect(getProjectIngestionRunsMock).toHaveBeenCalledWith(1)
+    expect(getProjectSourceDiversitySnapshotsMock).toHaveBeenCalledWith(1)
+    expect(getProjectSourceDiversitySummaryMock).toHaveBeenCalledWith(1)
     expect(getProjectTopicCentroidSnapshotsMock).toHaveBeenCalledWith(1)
     expect(getProjectTopicCentroidSummaryMock).toHaveBeenCalledWith(1)
   })
@@ -405,5 +467,56 @@ describe("HealthPage", () => {
       screen.getByText("Centroid snapshot history"),
     ).toBeInTheDocument()
     expect(screen.getByText("Showing 3 of 3 snapshots")).toBeInTheDocument()
+  })
+
+  it("renders source diversity metrics and alert details", async () => {
+    getProjectSourceDiversitySummaryMock.mockResolvedValue(
+      createSourceDiversitySummary({
+        snapshot_count: 2,
+        latest_snapshot: createSourceDiversitySnapshot({
+          top_plugin_share: 0.74,
+          breakdown: {
+            total_content_count: 14,
+            plugin_counts: [
+              { key: "rss", label: "rss", count: 10, share: 0.74 },
+            ],
+            source_counts: [
+              { key: "feed:1", label: "Example Feed", count: 8, share: 0.57 },
+            ],
+            author_counts: [],
+            cluster_counts: [],
+            alerts: [
+              {
+                code: "top_plugin_share",
+                severity: "warning",
+                message: "Your stream is 70%+ from RSS this week.",
+              },
+            ],
+          },
+        }),
+      }),
+    )
+    getProjectSourceDiversitySnapshotsMock.mockResolvedValue([
+      createSourceDiversitySnapshot({
+        id: 1,
+        computed_at: "2026-04-27T08:00:00Z",
+        top_plugin_share: 0.68,
+      }),
+      createSourceDiversitySnapshot({
+        id: 2,
+        computed_at: "2026-04-28T08:00:00Z",
+        top_plugin_share: 0.74,
+      }),
+    ])
+
+    await renderHealthPage()
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Source diversity" }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Your stream is 70%+ from RSS this week.")).toBeInTheDocument()
+    expect(screen.getAllByText("74%").length).toBeGreaterThan(0)
+    expect(screen.getByText("View raw breakdown JSON")).toBeInTheDocument()
+    expect(screen.getByLabelText("Source diversity trend")).toBeInTheDocument()
   })
 })

@@ -350,6 +350,24 @@ describe("ContentDetailPage", () => {
     expect(screen.getByText("Also seen in 2 sources")).toBeInTheDocument()
   })
 
+  it("renders promotion state when the content was promoted by a theme", async () => {
+    getProjectContentMock.mockResolvedValue(
+      createContent({
+        newsletter_promotion_at: "2026-04-28T12:00:00Z",
+        newsletter_promotion_by: 6,
+        newsletter_promotion_theme: 14,
+      }),
+    )
+
+    await renderContentDetailPage({ project: "1" }, { id: "42" })
+
+    expect(screen.getAllByText(/Promoted Apr 28, 2026/).length).toBeGreaterThan(0)
+    expect(screen.getByText("Promoted by editor #6")).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Open promoting theme #14" }),
+    ).toHaveAttribute("href", "/themes?project=1&theme=14")
+  })
+
   it("renders filtered skill results, review items, feedback counts, and action-bar props", async () => {
     const selectedProject = createProject({ id: 3 })
     getProjectsMock.mockResolvedValue([selectedProject])

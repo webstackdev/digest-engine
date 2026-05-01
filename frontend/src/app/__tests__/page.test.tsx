@@ -8,6 +8,8 @@ import type {
   Project,
   ReviewQueueItem,
   SourceConfig,
+  TopicCluster,
+  TopicClusterDetail,
   UserFeedback,
 } from "@/lib/types"
 
@@ -19,6 +21,8 @@ const {
   getProjectsMock,
   getProjectReviewQueueMock,
   getProjectSourceConfigsMock,
+  getProjectTopicClusterMock,
+  getProjectTopicClustersMock,
   selectProjectMock,
 } = vi.hoisted(() => ({
   buildDashboardViewMock: vi.fn(),
@@ -28,6 +32,8 @@ const {
   getProjectsMock: vi.fn(),
   getProjectReviewQueueMock: vi.fn(),
   getProjectSourceConfigsMock: vi.fn(),
+  getProjectTopicClusterMock: vi.fn(),
+  getProjectTopicClustersMock: vi.fn(),
   selectProjectMock: vi.fn(),
 }))
 
@@ -70,6 +76,8 @@ vi.mock("@/lib/api", () => ({
   getProjects: getProjectsMock,
   getProjectReviewQueue: getProjectReviewQueueMock,
   getProjectSourceConfigs: getProjectSourceConfigsMock,
+  getProjectTopicCluster: getProjectTopicClusterMock,
+  getProjectTopicClusters: getProjectTopicClustersMock,
 }))
 
 vi.mock("@/lib/dashboard-view", () => ({
@@ -187,6 +195,53 @@ function createFeedback(overrides: Partial<UserFeedback> = {}): UserFeedback {
   }
 }
 
+function createTopicCluster(overrides: Partial<TopicCluster> = {}): TopicCluster {
+  return {
+    id: 5,
+    project: 1,
+    centroid_vector_id: "cluster-1",
+    label: "Platform Signals",
+    first_seen_at: "2026-04-26T08:00:00Z",
+    last_seen_at: "2026-04-28T08:00:00Z",
+    is_active: true,
+    member_count: 1,
+    dominant_entity: {
+      id: 3,
+      name: "OpenAI",
+      type: "vendor",
+    },
+    velocity_score: 0.81,
+    z_score: 1.7,
+    window_count: 4,
+    velocity_computed_at: "2026-04-28T08:00:00Z",
+    ...overrides,
+  }
+}
+
+function createTopicClusterDetail(
+  overrides: Partial<TopicClusterDetail> = {},
+): TopicClusterDetail {
+  return {
+    ...createTopicCluster(),
+    memberships: [
+      {
+        id: 10,
+        content: {
+          id: 41,
+          url: "https://example.com/post",
+          title: "Useful AI briefing",
+          published_date: "2026-04-28T09:00:00Z",
+          source_plugin: "rss",
+        },
+        similarity: 0.92,
+        assigned_at: "2026-04-28T10:00:00Z",
+      },
+    ],
+    velocity_history: [],
+    ...overrides,
+  }
+}
+
 function createDashboardView(overrides: Record<string, unknown> = {}) {
   return {
     contentMap: new Map<number, Content>(),
@@ -240,6 +295,8 @@ describe("HomePage", () => {
     getProjectFeedbackMock.mockReset()
     buildDashboardViewMock.mockReset()
     selectProjectMock.mockReset()
+    getProjectTopicClustersMock.mockReset()
+    getProjectTopicClusterMock.mockReset()
 
     getProjectsMock.mockResolvedValue([defaultProject])
     getProjectContentsMock.mockResolvedValue(contents)
@@ -247,6 +304,8 @@ describe("HomePage", () => {
     getProjectEntitiesMock.mockResolvedValue(entities)
     getProjectSourceConfigsMock.mockResolvedValue(sourceConfigs)
     getProjectFeedbackMock.mockResolvedValue(feedback)
+    getProjectTopicClustersMock.mockResolvedValue([])
+    getProjectTopicClusterMock.mockResolvedValue(createTopicClusterDetail())
     selectProjectMock.mockImplementation((projects: Project[]) => {
       return projects[0] ?? null
     })
@@ -279,6 +338,7 @@ describe("HomePage", () => {
     ).toBeInTheDocument()
     expect(getProjectContentsMock).not.toHaveBeenCalled()
     expect(buildDashboardViewMock).not.toHaveBeenCalled()
+    expect(getProjectTopicClustersMock).not.toHaveBeenCalled()
   })
 
   it("renders the content view with summaries, flash messages, and content cards", async () => {
@@ -288,6 +348,8 @@ describe("HomePage", () => {
       is_active: false,
       relevance_score: 0.84,
       authority_adjusted_score: 0.88,
+      newsletter_promotion_at: "2026-04-28T11:00:00Z",
+      newsletter_promotion_theme: 14,
     })
     const reviewItem = createReviewQueueItem({ content: content.id })
     const feedback = [
@@ -307,6 +369,25 @@ describe("HomePage", () => {
     getProjectReviewQueueMock.mockResolvedValue([reviewItem])
     getProjectSourceConfigsMock.mockResolvedValue(sourceConfigs)
     getProjectFeedbackMock.mockResolvedValue(feedback)
+    getProjectTopicClustersMock.mockResolvedValue([createTopicCluster()])
+    getProjectTopicClusterMock.mockResolvedValue(
+      createTopicClusterDetail({
+        memberships: [
+          {
+            id: 10,
+            content: {
+              id: content.id,
+              url: content.url,
+              title: content.title,
+              published_date: content.published_date,
+              source_plugin: content.source_plugin,
+            },
+            similarity: 0.92,
+            assigned_at: "2026-04-28T10:00:00Z",
+          },
+        ],
+      }),
+    )
     buildDashboardViewMock.mockReturnValue(
       createDashboardView({
         contentMap: new Map([[content.id, content]]),
@@ -355,6 +436,14 @@ describe("HomePage", () => {
     ).toHaveLength(5)
     expect(screen.getByText("reference")).toBeInTheDocument()
     expect(screen.getByText("archived")).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: /Trend Platform Signals/i }),
+    ).toHaveAttribute("href", "/trends?project=1&cluster=5")
+    expect(
+      screen.getByRole("link", { name: /Promoted Apr 28, 2026/i }),
+    ).toHaveAttribute("href", "/themes?project=1&theme=14")
+    expect(getProjectTopicClustersMock).toHaveBeenCalledWith(1)
+    expect(getProjectTopicClusterMock).toHaveBeenCalledWith(1, 5)
 
     const badges = screen.getAllByTestId("status-badge")
     expect(badges).toHaveLength(1)

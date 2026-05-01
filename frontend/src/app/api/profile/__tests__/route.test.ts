@@ -68,4 +68,64 @@ describe("/api/profile route", () => {
     })
     expect(response.status).toBe(200)
   })
+
+  it("returns the thrown error message when loading the profile fails", async () => {
+    vi.mocked(getCurrentUserProfile).mockRejectedValue(
+      new Error("Load profile failed"),
+    )
+
+    const response = await GET()
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: "Load profile failed",
+    })
+  })
+
+  it("returns the fallback load error for non-Error failures", async () => {
+    vi.mocked(getCurrentUserProfile).mockRejectedValue("boom")
+
+    const response = await GET()
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: "Unable to load profile.",
+    })
+  })
+
+  it("returns the thrown error message when saving the profile fails", async () => {
+    vi.mocked(updateCurrentUserProfile).mockRejectedValue(
+      new Error("Save profile failed"),
+    )
+
+    const response = await PATCH(
+      new Request("http://localhost/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: "Updated Editor" }),
+      }),
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: "Save profile failed",
+    })
+  })
+
+  it("returns the fallback save error for non-Error failures", async () => {
+    vi.mocked(updateCurrentUserProfile).mockRejectedValue("boom")
+
+    const response = await PATCH(
+      new Request("http://localhost/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: "Updated Editor" }),
+      }),
+    )
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: "Unable to save profile.",
+    })
+  })
 })

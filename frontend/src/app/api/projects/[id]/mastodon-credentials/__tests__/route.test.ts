@@ -80,4 +80,36 @@ describe("POST /api/projects/[id]/mastodon-credentials", () => {
       "http://localhost/admin/sources?project=4&message=Mastodon+credentials+updated.",
     )
   })
+
+  it("redirects with the thrown error message when saving fails", async () => {
+    vi.mocked(createProjectMastodonCredentials).mockRejectedValue(
+      new Error("Save Mastodon failed"),
+    )
+
+    const formData = new FormData()
+    formData.set("redirectTo", "/admin/sources?project=4")
+    formData.set("instance_url", "https://hachyderm.io")
+
+    const response = await POST(buildRequest(formData), {
+      params: Promise.resolve({ id: "4" }),
+    })
+
+    expect(response.status).toBe(307)
+    await expect(getLocation(response)).resolves.toBe(
+      "http://localhost/admin/sources?project=4&error=Save+Mastodon+failed",
+    )
+  })
+
+  it("redirects with the fallback error when a non-Error value is thrown", async () => {
+    vi.mocked(createProjectMastodonCredentials).mockRejectedValue("boom")
+
+    const response = await POST(buildRequest(new FormData()), {
+      params: Promise.resolve({ id: "4" }),
+    })
+
+    expect(response.status).toBe(307)
+    await expect(getLocation(response)).resolves.toBe(
+      "http://localhost/admin/sources?error=Unable+to+save+Mastodon+credentials.",
+    )
+  })
 })

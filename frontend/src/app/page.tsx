@@ -9,8 +9,11 @@ import {
   getProjectReviewQueue,
   getProjects,
   getProjectSourceConfigs,
+  getProjectTopicCluster,
+  getProjectTopicClusters,
 } from "@/lib/api"
 import { buildDashboardView } from "@/lib/dashboard-view"
+import type { TopicClusterDetail } from "@/lib/types"
 import {
   formatDate,
   formatPercentScore,
@@ -23,6 +26,34 @@ import {
 
 type HomePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+type ContentClusterBadge = {
+  clusterId: number
+  label: string
+  velocityScore: number | null
+}
+
+function buildContentClusterLookup(clusterDetails: TopicClusterDetail[]) {
+  const lookup = new Map<number, ContentClusterBadge>()
+
+  for (const clusterDetail of clusterDetails) {
+    for (const membership of clusterDetail.memberships) {
+      const current = lookup.get(membership.content.id)
+      const candidateVelocity = clusterDetail.velocity_score ?? 0
+      const currentVelocity = current?.velocityScore ?? -1
+
+      if (!current || candidateVelocity > currentVelocity) {
+        lookup.set(membership.content.id, {
+          clusterId: clusterDetail.id,
+          label: clusterDetail.label || `Cluster ${clusterDetail.id}`,
+          velocityScore: clusterDetail.velocity_score,
+        })
+      }
+    }
+  }
+
+  return lookup
 }
 
 /**
@@ -57,14 +88,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     )
   }
 
-  const [contents, reviewQueue, entities, sourceConfigs, feedback] =
+  const [contents, reviewQueue, entities, sourceConfigs, feedback, topicClusters] =
     await Promise.all([
       getProjectContents(selectedProject.id),
       getProjectReviewQueue(selectedProject.id),
       getProjectEntities(selectedProject.id),
       getProjectSourceConfigs(selectedProject.id),
       getProjectFeedback(selectedProject.id),
+      getProjectTopicClusters(selectedProject.id),
     ])
+  const clusterDetails = await Promise.all(
+    topicClusters.map((cluster) => getProjectTopicCluster(selectedProject.id, cluster.id)),
+  )
+  const contentClusterLookup = buildContentClusterLookup(clusterDetails)
 
   const {
     contentMap,
@@ -381,6 +417,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
+                  {contentClusterLookup.get(content.id) ? (
+                    <Link
+                      className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink transition hover:bg-primary/12"
+                      href={`/trends?project=${selectedProject.id}&cluster=${contentClusterLookup.get(content.id)?.clusterId}`}
+                    >
+                      Trend {contentClusterLookup.get(content.id)?.label} · {formatPercentScore(contentClusterLookup.get(content.id)?.velocityScore ?? null)}
+                    </Link>
+                  ) : null}
                   {content.authority_adjusted_score !== null ? (
                     <span className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink">
                       Base {formatPercentScore(content.relevance_score)}
@@ -405,6 +449,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   ) : null}
                   {!content.is_active ? (
                     <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface-strong/55 px-3 py-1 text-sm text-ink">archived</span>
+                  ) : null}
+                  {content.newsletter_promotion_at ? (
+                    <Link
+                      className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-ink transition hover:bg-primary/12"
+                      href={content.newsletter_promotion_theme ? `/themes?project=${selectedProject.id}&theme=${content.newsletter_promotion_theme}` : `/themes?project=${selectedProject.id}`}
+                    >
+                      Promoted {formatDate(content.newsletter_promotion_at)}
+                    </Link>
                   ) : null}
                 </div>
 

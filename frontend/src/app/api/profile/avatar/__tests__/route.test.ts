@@ -44,6 +44,66 @@ describe("/api/profile/avatar route", () => {
     expect(response.status).toBe(200)
   })
 
+  it("returns a validation error when no avatar file is provided", async () => {
+    const formData = new FormData()
+
+    const request = {
+      formData: vi.fn().mockResolvedValue(formData),
+    } as unknown as Request
+
+    const response = await POST(request)
+
+    expect(uploadCurrentUserAvatar).not.toHaveBeenCalled()
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: "Select an avatar image to upload.",
+    })
+  })
+
+  it("returns the thrown upload error message", async () => {
+    vi.mocked(uploadCurrentUserAvatar).mockRejectedValue(
+      new Error("Upload avatar failed"),
+    )
+
+    const formData = new FormData()
+    formData.set(
+      "avatar",
+      new File(["avatar"], "avatar.png", { type: "image/png" }),
+    )
+
+    const request = {
+      formData: vi.fn().mockResolvedValue(formData),
+    } as unknown as Request
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: "Upload avatar failed",
+    })
+  })
+
+  it("returns the fallback upload error for non-Error failures", async () => {
+    vi.mocked(uploadCurrentUserAvatar).mockRejectedValue("boom")
+
+    const formData = new FormData()
+    formData.set(
+      "avatar",
+      new File(["avatar"], "avatar.png", { type: "image/png" }),
+    )
+
+    const request = {
+      formData: vi.fn().mockResolvedValue(formData),
+    } as unknown as Request
+
+    const response = await POST(request)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: "Unable to upload avatar.",
+    })
+  })
+
   it("deletes the current avatar image", async () => {
     vi.mocked(deleteCurrentUserAvatar).mockResolvedValue({
       id: 5,
@@ -62,5 +122,29 @@ describe("/api/profile/avatar route", () => {
 
     expect(deleteCurrentUserAvatar).toHaveBeenCalled()
     expect(response.status).toBe(200)
+  })
+
+  it("returns the thrown delete error message", async () => {
+    vi.mocked(deleteCurrentUserAvatar).mockRejectedValue(
+      new Error("Delete avatar failed"),
+    )
+
+    const response = await DELETE()
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: "Delete avatar failed",
+    })
+  })
+
+  it("returns the fallback delete error for non-Error failures", async () => {
+    vi.mocked(deleteCurrentUserAvatar).mockRejectedValue("boom")
+
+    const response = await DELETE()
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toEqual({
+      error: "Unable to remove avatar.",
+    })
   })
 })
