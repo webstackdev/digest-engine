@@ -2,9 +2,12 @@ import json
 from base64 import b64encode
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
 from django.core import mail
+from django.core.mail import EmailMultiAlternatives
+from django.db.models import Model
 from django.urls import reverse
 from svix.webhooks import Webhook
 
@@ -23,6 +26,15 @@ from core.newsletters import (
 from core.signals import handle_anymail_inbound
 
 pytestmark = pytest.mark.django_db
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for typed newsletter test assertions."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
 
 
 @pytest.fixture
@@ -170,7 +182,7 @@ def test_handle_anymail_inbound_queues_confirmed_sender(settings, mocker, projec
     handle_anymail_inbound(sender=object(), event=event, esp_name="Resend")
 
     intake = NewsletterIntake.objects.get(message_id="msg-456")
-    delay_mock.assert_called_once_with(intake.id)
+    delay_mock.assert_called_once_with(_require_pk(intake))
     send_mock.assert_not_called()
 
 
@@ -311,7 +323,7 @@ def test_send_confirmation_email_uses_django_mail_backend(settings):
     )
 
     assert len(mail.outbox) == 1
-    message = mail.outbox[0]
+    message = cast(EmailMultiAlternatives, mail.outbox[0])
     assert (
         message.subject == "Confirm newsletter intake for Platform Engineering Weekly"
     )
@@ -319,7 +331,9 @@ def test_send_confirmation_email_uses_django_mail_backend(settings):
     assert message.to == ["newsletter@example.com"]
     assert "https://example.com/confirm/token" in message.body
     assert any(
-        mimetype == "text/html" and "Confirm sender" in content
+        mimetype == "text/html"
+        and isinstance(content, str)
+        and "Confirm sender" in content
         for content, mimetype in message.alternatives
     )
 
@@ -349,7 +363,7 @@ def test_confirm_newsletter_sender_confirms_allowlist_and_queues_pending_intakes
     assert response.status_code == 200
     allowlist.refresh_from_db()
     assert allowlist.confirmed_at is not None
-    delay_mock.assert_called_once_with(intake.id)
+    delay_mock.assert_called_once_with(_require_pk(intake))
 
 
 def test_process_newsletter_intake_creates_content_for_confirmed_sender(
@@ -374,7 +388,7 @@ def test_process_newsletter_intake_creates_content_for_confirmed_sender(
 
     from core.tasks import process_newsletter_intake
 
-    result = process_newsletter_intake(intake.id)
+    result = process_newsletter_intake(_require_pk(intake))
 
     assert result["items_ingested"] == 1
     intake.refresh_from_db()
@@ -382,6 +396,6 @@ def test_process_newsletter_intake_creates_content_for_confirmed_sender(
     assert intake.status == NewsletterIntakeStatus.EXTRACTED
     assert intake.extraction_result["method"] == "heuristic"
     assert content.source_plugin == "newsletter"
-    assert content.source_metadata["newsletter_intake_id"] == intake.id
+    assert content.source_metadata["newsletter_intake_id"] == _require_pk(intake)
     upsert_mock.assert_called_once_with(content)
-    delay_mock.assert_called_once_with(content.id)
+    delay_mock.assert_called_once_with(_require_pk(content))

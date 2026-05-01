@@ -1,7 +1,10 @@
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 from django.contrib.auth.models import AnonymousUser
+from django.db.models import Model
+from rest_framework import serializers as drf_serializers
 
 from core.models import (
     Content,
@@ -18,7 +21,13 @@ from core.serializers import (
     UserFeedbackSerializer,
 )
 from projects.model_support import SourcePluginName
-from projects.models import Project, ProjectMembership, ProjectRole, SourceConfig
+from projects.models import (
+    MastodonCredentials,
+    Project,
+    ProjectMembership,
+    ProjectRole,
+    SourceConfig,
+)
 from projects.serializers import (
     MastodonCredentialsSerializer,
     ProjectSerializer,
@@ -26,6 +35,37 @@ from projects.serializers import (
 )
 
 pytestmark = pytest.mark.django_db
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for typed serializer assertions."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
+
+
+def _serializer_fields(
+    serializer: drf_serializers.BaseSerializer[Any],
+) -> dict[str, Any]:
+    """Return serializer fields with a mapping type Pylance can index."""
+
+    return cast(dict[str, Any], cast(Any, serializer).fields)
+
+
+def _serializer_data(serializer: drf_serializers.BaseSerializer[Any]) -> dict[str, Any]:
+    """Return serializer output data as a dictionary for typed assertions."""
+
+    return cast(dict[str, Any], serializer.data)
+
+
+def _validated_data(
+    serializer: drf_serializers.BaseSerializer[Any],
+) -> dict[str, Any]:
+    """Return validated serializer data as a standard dictionary."""
+
+    return cast(dict[str, Any], serializer.validated_data)
 
 
 @pytest.fixture
@@ -115,12 +155,11 @@ def test_project_scoped_serializer_filters_related_querysets_with_project_contex
             "project": serializer_context.project,
         }
     )
+    fields = _serializer_fields(serializer)
 
-    assert list(serializer.fields["content"].queryset) == [serializer_context.content]
-    assert list(serializer.fields["superseded_by"].queryset) == [
-        serializer_context.skill_result
-    ]
-    assert list(serializer.fields["project"].queryset) == [serializer_context.project]
+    assert list(fields["content"].queryset) == [serializer_context.content]
+    assert list(fields["superseded_by"].queryset) == [serializer_context.skill_result]
+    assert list(fields["project"].queryset) == [serializer_context.project]
 
 
 def test_project_scoped_serializer_filters_related_querysets_without_project_context(
@@ -129,21 +168,22 @@ def test_project_scoped_serializer_filters_related_querysets_without_project_con
     serializer = ContentSerializer(
         context={"request": _request_for(serializer_context.user)}
     )
+    fields = _serializer_fields(serializer)
 
-    assert list(serializer.fields["entity"].queryset) == [serializer_context.entity]
-    assert list(serializer.fields["project"].queryset) == [serializer_context.project]
+    assert list(fields["entity"].queryset) == [serializer_context.entity]
+    assert list(fields["project"].queryset) == [serializer_context.project]
 
 
 def test_project_scoped_serializer_skips_filtering_for_anonymous_user():
     serializer = ProjectSerializer(context={"request": _request_for(AnonymousUser())})
 
-    assert "project" not in serializer.fields
+    assert "project" not in _serializer_fields(serializer)
 
 
 def test_content_serializer_rejects_cross_project_entity(serializer_context):
     serializer = ContentSerializer(
         instance=serializer_context.content,
-        data={"entity": serializer_context.other_entity.id},
+        data={"entity": _require_pk(serializer_context.other_entity)},
         partial=True,
         context={"project": serializer_context.project},
     )
@@ -176,10 +216,11 @@ def test_content_serializer_exposes_duplicate_state_as_read_only_fields(
     )
 
     serializer = ContentSerializer(instance=duplicate)
+    data = _serializer_data(serializer)
 
-    assert serializer.data["canonical_url"] == "https://example.com/serializer-content"
-    assert serializer.data["duplicate_of"] == serializer_context.content.id
-    assert serializer.data["duplicate_signal_count"] == 0
+    assert data["canonical_url"] == "https://example.com/serializer-content"
+    assert data["duplicate_of"] == _require_pk(serializer_context.content)
+    assert data["duplicate_signal_count"] == 0
 
 
 def test_content_serializer_ignores_duplicate_fields_on_update(serializer_context):
@@ -187,7 +228,7 @@ def test_content_serializer_ignores_duplicate_fields_on_update(serializer_contex
         instance=serializer_context.content,
         data={
             "canonical_url": "https://malicious.example/canonical",
-            "duplicate_of": serializer_context.other_content.id,
+            "duplicate_of": _require_pk(serializer_context.other_content),
             "duplicate_signal_count": 99,
         },
         partial=True,
@@ -195,7 +236,7 @@ def test_content_serializer_ignores_duplicate_fields_on_update(serializer_contex
     )
 
     assert serializer.is_valid(), serializer.errors
-    updated = serializer.save()
+    updated = cast(Content, serializer.save())
 
     assert updated.canonical_url == ""
     assert updated.duplicate_of is None
@@ -205,7 +246,7 @@ def test_content_serializer_ignores_duplicate_fields_on_update(serializer_contex
 def test_skill_result_serializer_rejects_cross_project_content(serializer_context):
     serializer = SkillResultSerializer(
         data={
-            "content": serializer_context.other_content.id,
+            "content": _require_pk(serializer_context.other_content),
             "skill_name": "summarization",
             "status": "completed",
         },
@@ -223,7 +264,7 @@ def test_skill_result_serializer_rejects_cross_project_content(serializer_contex
 def test_review_queue_serializer_rejects_cross_project_content(serializer_context):
     serializer = ReviewQueueSerializer(
         data={
-            "content": serializer_context.other_content.id,
+            "content": _require_pk(serializer_context.other_content),
             "reason": ReviewReason.BORDERLINE_RELEVANCE,
             "confidence": 0.5,
         },
@@ -252,7 +293,7 @@ def test_source_config_serializer_normalizes_valid_config(serializer_context):
     )
 
     assert serializer.is_valid(), serializer.errors
-    assert serializer.validated_data["config"] == {
+    assert _validated_data(serializer)["config"] == {
         "feed_url": "https://example.com/feed.xml"
     }
 
@@ -292,7 +333,7 @@ def test_source_config_serializer_normalizes_bluesky_author_handle_config(
     )
 
     assert serializer.is_valid(), serializer.errors
-    assert serializer.validated_data["config"] == {
+    assert _validated_data(serializer)["config"] == {
         "author_handle": "alice.bsky.social",
         "include_replies": False,
         "max_posts_per_fetch": 100,
@@ -318,7 +359,7 @@ def test_source_config_serializer_normalizes_mastodon_hashtag_config(
     )
 
     assert serializer.is_valid(), serializer.errors
-    assert serializer.validated_data["config"] == {
+    assert _validated_data(serializer)["config"] == {
         "instance_url": "https://hachyderm.io",
         "hashtag": "platformengineering",
         "include_replies": False,
@@ -342,7 +383,10 @@ def test_mastodon_credentials_serializer_encrypts_access_token(serializer_contex
     )
 
     assert serializer.is_valid(), serializer.errors
-    credentials = serializer.save(project=serializer_context.project)
+    credentials = cast(
+        MastodonCredentials,
+        serializer.save(project=serializer_context.project),
+    )
 
     assert credentials.instance_url == "https://hachyderm.io"
     assert credentials.account_acct == "alice@hachyderm.io"
@@ -355,13 +399,15 @@ def test_entity_serializer_filters_project_queryset_to_request_user(serializer_c
         context={"request": _request_for(serializer_context.user)}
     )
 
-    assert list(serializer.fields["project"].queryset) == [serializer_context.project]
+    assert list(_serializer_fields(serializer)["project"].queryset) == [
+        serializer_context.project
+    ]
 
 
 def test_user_feedback_serializer_rejects_cross_project_content(serializer_context):
     serializer = UserFeedbackSerializer(
         data={
-            "content": serializer_context.other_content.id,
+            "content": _require_pk(serializer_context.other_content),
             "feedback_type": "upvote",
         },
         context={
@@ -378,7 +424,7 @@ def test_user_feedback_serializer_rejects_cross_project_content(serializer_conte
 def test_review_queue_serializer_accepts_same_project_content(serializer_context):
     serializer = ReviewQueueSerializer(
         data={
-            "content": serializer_context.content.id,
+            "content": _require_pk(serializer_context.content),
             "reason": ReviewReason.BORDERLINE_RELEVANCE,
             "confidence": 0.5,
         },
@@ -388,7 +434,8 @@ def test_review_queue_serializer_accepts_same_project_content(serializer_context
     )
 
     assert serializer.is_valid(), serializer.errors
-    assert serializer.validated_data["content"] == serializer_context.content
+    validated_data = cast(dict[str, Content | Any], serializer.validated_data)
+    assert validated_data["content"] == serializer_context.content
 
 
 def test_source_config_serializer_skips_plugin_validation_when_plugin_name_missing(
@@ -406,7 +453,7 @@ def test_source_config_serializer_skips_plugin_validation_when_plugin_name_missi
     )
 
     assert serializer.is_valid(), serializer.errors
-    assert serializer.validated_data["config"] == {}
+    assert _validated_data(serializer)["config"] == {}
 
 
 def test_ingestion_run_serializer_filters_project_queryset(serializer_context):
@@ -414,4 +461,6 @@ def test_ingestion_run_serializer_filters_project_queryset(serializer_context):
         context={"request": _request_for(serializer_context.user)}
     )
 
-    assert list(serializer.fields["project"].queryset) == [serializer_context.project]
+    assert list(_serializer_fields(serializer)["project"].queryset) == [
+        serializer_context.project
+    ]

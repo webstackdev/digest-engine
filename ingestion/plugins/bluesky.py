@@ -132,7 +132,7 @@ class BlueskySourcePlugin(SourcePlugin):
         """Convert one AppView post into the shared plugin payload."""
 
         author_handle = normalize_bluesky_handle(
-            self._nested_value(post, "author", "handle")
+            str(self._nested_value(post, "author", "handle") or "")
         )
         external_url = self._nested_value(post, "embed", "external", "uri")
         external_title = (
@@ -178,7 +178,7 @@ class BlueskySourcePlugin(SourcePlugin):
 
         actor = (
             normalize_bluesky_handle(
-                BlueskySourcePlugin._nested_value(post, "author", "handle")
+                str(BlueskySourcePlugin._nested_value(post, "author", "handle") or "")
             )
             or BlueskySourcePlugin._nested_value(post, "author", "did")
             or ""

@@ -1,10 +1,14 @@
 from datetime import timedelta
 from types import SimpleNamespace
-from unittest.mock import ANY
+from typing import Any, cast
+from unittest.mock import ANY, Mock
 
 import pytest
 from django.contrib import messages
 from django.contrib.admin.sites import AdminSite
+from django.db.models import Model
+from django.http import HttpRequest
+from django.test import RequestFactory
 from django.utils import timezone
 
 from content.admin import ContentAdmin, UserFeedbackAdmin
@@ -56,10 +60,63 @@ from projects.models import (
 pytestmark = pytest.mark.django_db
 
 
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for typed admin test assertions."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
+
+
+def _create_user(user_model: Any, **kwargs: object):
+    """Create a user through the custom manager with a typed escape hatch."""
+
+    return cast(Any, user_model.objects).create_user(**kwargs)
+
+
+def _request(query_params: dict[str, str] | None = None) -> HttpRequest:
+    """Build a typed request object for admin actions and filters."""
+
+    return RequestFactory().get("/admin/", data=query_params or {})
+
+
+def _params(**kwargs: str) -> dict[str, list[str]]:
+    """Build typed admin filter params."""
+
+    return {key: [value] for key, value in kwargs.items()}
+
+
+def _message_user_mock(admin_instance: Any, mocker: Any) -> Mock:
+    """Install a mock for ModelAdmin.message_user and return it for assertions."""
+
+    message_mock = cast(Mock, mocker.Mock())
+    admin_instance.message_user = message_mock
+    return message_mock
+
+
+def _context(response: object) -> dict[str, Any]:
+    """Cast admin changelist extra_context payloads for typed assertions."""
+
+    return cast(dict[str, Any], response)
+
+
+def _dashboard_stats(response: object) -> list[dict[str, Any]]:
+    """Return typed dashboard stats rows from a changelist extra_context payload."""
+
+    return cast(list[dict[str, Any]], _context(response)["dashboard_stats"])
+
+
+def _drilldowns(response: object) -> list[dict[str, Any]]:
+    """Return typed centroid drilldowns from a changelist extra_context payload."""
+
+    return cast(list[dict[str, Any]], _context(response)["centroid_project_drilldowns"])
+
+
 @pytest.fixture
 def source_admin_context(django_user_model):
-    user = django_user_model.objects.create_user(
-        username="admin-owner", password="testpass123"
+    user = _create_user(
+        django_user_model, username="admin-owner", password="testpass123"
     )
     project = Project.objects.create(name="Admin Project", topic_description="Infra")
     return SimpleNamespace(user=user, project=project)
@@ -81,10 +138,10 @@ def test_test_source_connection_reports_success(source_admin_context, mocker):
         "projects.admin.get_plugin_for_source_config", return_value=plugin
     )
     admin_instance = SourceConfigAdmin(SourceConfig, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    message_user_mock = _message_user_mock(admin_instance, mocker)
 
     admin_instance.test_source_connection(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=SourceConfig.objects.filter(pk=source_config.pk),
     )
 
@@ -93,7 +150,7 @@ def test_test_source_connection_reports_success(source_admin_context, mocker):
     )
     get_plugin_mock.assert_called_once()
     plugin.health_check.assert_called_once_with()
-    admin_instance.message_user.assert_called_once_with(
+    message_user_mock.assert_called_once_with(
         ANY,
         "Connectivity check passed for 1 source(s).",
         messages.SUCCESS,
@@ -107,7 +164,7 @@ def test_project_config_admin_exposes_centroid_toggle_field(source_admin_context
     assert "recompute_topic_centroid_on_feedback_save" in admin_instance.list_display
     assert "recompute_topic_centroid_on_feedback_save" in admin_instance.list_filter
     assert "recompute_topic_centroid_on_feedback_save" in admin_instance.get_fields(
-        request=SimpleNamespace(), obj=config
+        request=_request(), obj=config
     )
 
 
@@ -172,28 +229,30 @@ def test_topic_centroid_snapshot_admin_changelist_view_builds_dashboard_stats(
     )
     mocker.patch("trends.admin.timezone.now", return_value=fixed_now)
 
-    response = admin_instance.changelist_view(request=SimpleNamespace())
+    response = admin_instance.changelist_view(request=_request())
+    dashboard_stats = _dashboard_stats(response)
+    centroid_project_drilldowns = _drilldowns(response)
 
     super_changelist_view.assert_called_once()
     assert (
         admin_instance.list_before_template
         == "admin/topic_centroid_snapshot_changelist_widget.html"
     )
-    assert response["dashboard_stats"][0]["value"] == "1 / 2"
-    assert response["dashboard_stats"][0]["color"] == "warning"
-    assert response["dashboard_stats"][1]["value"] == "10.0%"
-    assert response["dashboard_stats"][1]["color"] == "success"
-    assert response["dashboard_stats"][2]["value"] == "20.0%"
-    assert response["dashboard_stats"][2]["color"] == "warning"
-    assert response["dashboard_stats"][3]["value"] == "6h ago"
-    assert response["dashboard_stats"][3]["color"] == "success"
-    assert len(response["centroid_project_drilldowns"]) == 2
-    assert response["centroid_project_drilldowns"][0]["project_name"] == "Admin Project"
-    assert response["centroid_project_drilldowns"][0]["href"] == (
+    assert dashboard_stats[0]["value"] == "1 / 2"
+    assert dashboard_stats[0]["color"] == "warning"
+    assert dashboard_stats[1]["value"] == "10.0%"
+    assert dashboard_stats[1]["color"] == "success"
+    assert dashboard_stats[2]["value"] == "20.0%"
+    assert dashboard_stats[2]["color"] == "warning"
+    assert dashboard_stats[3]["value"] == "6h ago"
+    assert dashboard_stats[3]["color"] == "success"
+    assert len(centroid_project_drilldowns) == 2
+    assert centroid_project_drilldowns[0]["project_name"] == "Admin Project"
+    assert centroid_project_drilldowns[0]["href"] == (
         "/admin/trends/topiccentroidsnapshot/?project__id__exact="
-        f"{source_admin_context.project.id}"
+        f"{_require_pk(source_admin_context.project)}"
     )
-    assert response["centroid_project_drilldowns"][0]["drift_from_previous"] == "10.0%"
+    assert centroid_project_drilldowns[0]["drift_from_previous"] == "10.0%"
 
 
 def test_test_source_connection_reports_failures(source_admin_context, mocker):
@@ -207,14 +266,14 @@ def test_test_source_connection_reports_failures(source_admin_context, mocker):
         side_effect=ValueError("Missing required config field: feed_url"),
     )
     admin_instance = SourceConfigAdmin(SourceConfig, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    message_user_mock = _message_user_mock(admin_instance, mocker)
 
     admin_instance.test_source_connection(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=SourceConfig.objects.filter(pk=source_config.pk),
     )
 
-    admin_instance.message_user.assert_called_once_with(
+    message_user_mock.assert_called_once_with(
         ANY,
         "Connectivity check failed for: rss source for Admin Project: Missing required config field: feed_url",
         messages.ERROR,
@@ -266,11 +325,12 @@ def test_review_queue_changelist_view_builds_dashboard_stats(
         side_effect=lambda request, extra_context=None: extra_context,
     )
 
-    response = admin_instance.changelist_view(request=SimpleNamespace())
+    response = admin_instance.changelist_view(request=_request())
+    dashboard_stats = _dashboard_stats(response)
 
     super_changelist_view.assert_called_once()
-    assert response["dashboard_stats"][0]["value"] == 1
-    assert response["dashboard_stats"][1]["value"] == "42%"
+    assert dashboard_stats[0]["value"] == 1
+    assert dashboard_stats[1]["value"] == "42%"
 
 
 def test_review_queue_display_confidence_renders_without_django6_format_error(
@@ -302,7 +362,7 @@ def test_review_queue_display_confidence_renders_without_django6_format_error(
 def test_bluesky_credentials_admin_form_encrypts_app_password(source_admin_context):
     form = BlueskyCredentialsAdminForm(
         data={
-            "project": source_admin_context.project.id,
+            "project": _require_pk(source_admin_context.project),
             "handle": "@Alice.BSKY.social",
             "credential_input": "app-password",
             "pds_url": "https://pds.example.com/xrpc/",
@@ -331,15 +391,15 @@ def test_verify_selected_bluesky_credentials_reports_success(
         "core.plugins.bluesky.BlueskySourcePlugin.verify_credentials"
     )
     admin_instance = BlueskyCredentialsAdmin(BlueskyCredentials, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    message_user_mock = _message_user_mock(admin_instance, mocker)
 
     admin_instance.verify_selected_credentials(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=BlueskyCredentials.objects.filter(pk=credentials.pk),
     )
 
     verify_mock.assert_called_once_with(credentials)
-    admin_instance.message_user.assert_called_once_with(
+    message_user_mock.assert_called_once_with(
         ANY,
         "Credential verification passed for 1 account(s).",
         messages.SUCCESS,
@@ -359,14 +419,14 @@ def test_verify_selected_bluesky_credentials_reports_failures(
         side_effect=RuntimeError("bad login"),
     )
     admin_instance = BlueskyCredentialsAdmin(BlueskyCredentials, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    message_user_mock = _message_user_mock(admin_instance, mocker)
 
     admin_instance.verify_selected_credentials(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=BlueskyCredentials.objects.filter(pk=credentials.pk),
     )
 
-    admin_instance.message_user.assert_called_once_with(
+    message_user_mock.assert_called_once_with(
         ANY,
         "Credential verification failed for: Bluesky credentials for Admin Project: bad login",
         messages.ERROR,
@@ -376,7 +436,7 @@ def test_verify_selected_bluesky_credentials_reports_failures(
 def test_mastodon_credentials_admin_form_encrypts_access_token(source_admin_context):
     form = MastodonCredentialsAdminForm(
         data={
-            "project": source_admin_context.project.id,
+            "project": _require_pk(source_admin_context.project),
             "instance_url": "https://hachyderm.io/@alice/",
             "account_acct": "@Alice",
             "credential_input": "access-token",
@@ -406,15 +466,15 @@ def test_verify_selected_mastodon_credentials_reports_success(
         "core.plugins.mastodon.MastodonSourcePlugin.verify_credentials"
     )
     admin_instance = MastodonCredentialsAdmin(MastodonCredentials, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    message_user_mock = _message_user_mock(admin_instance, mocker)
 
     admin_instance.verify_selected_credentials(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=MastodonCredentials.objects.filter(pk=credentials.pk),
     )
 
     verify_mock.assert_called_once_with(credentials)
-    admin_instance.message_user.assert_called_once_with(
+    message_user_mock.assert_called_once_with(
         ANY,
         "Credential verification passed for 1 account(s).",
         messages.SUCCESS,
@@ -435,14 +495,14 @@ def test_verify_selected_mastodon_credentials_reports_failures(
         side_effect=RuntimeError("bad token"),
     )
     admin_instance = MastodonCredentialsAdmin(MastodonCredentials, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    message_user_mock = _message_user_mock(admin_instance, mocker)
 
     admin_instance.verify_selected_credentials(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=MastodonCredentials.objects.filter(pk=credentials.pk),
     )
 
-    admin_instance.message_user.assert_called_once_with(
+    message_user_mock.assert_called_once_with(
         ANY,
         "Credential verification failed for: Mastodon credentials for Admin Project: bad token",
         messages.ERROR,
@@ -545,7 +605,7 @@ def test_content_view_trace_falls_back_to_skill_runs_changelist(source_admin_con
     rendered = admin_instance.view_trace(content)
 
     assert "🧠 Skill runs" in rendered
-    assert f"content__id__exact={content.id}" in rendered
+    assert f"content__id__exact={_require_pk(content)}" in rendered
 
 
 def test_content_changelist_view_builds_dashboard_stats(source_admin_context, mocker):
@@ -580,12 +640,13 @@ def test_content_changelist_view_builds_dashboard_stats(source_admin_context, mo
         side_effect=lambda request, extra_context=None: extra_context,
     )
 
-    response = admin_instance.changelist_view(request=SimpleNamespace())
+    response = admin_instance.changelist_view(request=_request())
+    dashboard_stats = _dashboard_stats(response)
 
     super_changelist_view.assert_called_once()
-    assert response["dashboard_stats"][0]["value"] == "60.0%"
-    assert response["dashboard_stats"][1]["value"] == "65.0%"
-    assert response["dashboard_stats"][2]["value"] == 2
+    assert dashboard_stats[0]["value"] == "60.0%"
+    assert dashboard_stats[1]["value"] == "65.0%"
+    assert dashboard_stats[2]["value"] == 2
 
 
 def test_content_admin_score_columns_render_expected_values(source_admin_context):
@@ -634,19 +695,19 @@ def test_generate_newsletter_ideas_queues_selected_content(
     )
     delay_mock = mocker.patch("core.tasks.process_content.delay")
     admin_instance = ContentAdmin(Content, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    message_user_mock = _message_user_mock(admin_instance, mocker)
 
     admin_instance.generate_newsletter_ideas(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=Content.objects.filter(
-            id__in=[first_content.id, second_content.id]
+            id__in=[_require_pk(first_content), _require_pk(second_content)]
         ).order_by("id"),
     )
 
-    delay_mock.assert_any_call(first_content.id)
-    delay_mock.assert_any_call(second_content.id)
+    delay_mock.assert_any_call(_require_pk(first_content))
+    delay_mock.assert_any_call(_require_pk(second_content))
     assert delay_mock.call_count == 2
-    admin_instance.message_user.assert_called_once_with(
+    message_user_mock.assert_called_once_with(
         ANY,
         "Successfully queued the pipeline for 2 items.",
         messages.SUCCESS,
@@ -786,10 +847,10 @@ def test_accept_selected_entity_candidates_creates_entity_and_backfills_mentions
         occurrence_count=2,
     )
     admin_instance = EntityCandidateAdmin(EntityCandidate, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    _message_user_mock(admin_instance, mocker)
 
     admin_instance.accept_selected_candidates(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=EntityCandidate.objects.filter(pk=candidate.pk),
     )
 
@@ -802,9 +863,9 @@ def test_accept_selected_entity_candidates_creates_entity_and_backfills_mentions
     mention = EntityMention.objects.get(content=content, entity=entity)
 
     assert candidate.status == EntityCandidateStatus.ACCEPTED
-    assert candidate.merged_into_id == entity.id
+    assert candidate.merged_into == entity
     assert mention.role == "subject"
-    assert content.entity_id == entity.id
+    assert content.entity == entity
 
 
 def test_reject_selected_entity_candidates_marks_candidates_rejected(
@@ -816,10 +877,10 @@ def test_reject_selected_entity_candidates_marks_candidates_rejected(
         suggested_type="vendor",
     )
     admin_instance = EntityCandidateAdmin(EntityCandidate, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    _message_user_mock(admin_instance, mocker)
 
     admin_instance.reject_selected_candidates(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=EntityCandidate.objects.filter(pk=candidate.pk),
     )
 
@@ -852,17 +913,17 @@ def test_merge_selected_entity_candidates_uses_existing_same_name_entity(
         first_seen_in=content,
     )
     admin_instance = EntityCandidateAdmin(EntityCandidate, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    _message_user_mock(admin_instance, mocker)
 
     admin_instance.merge_into_existing_entities(
-        request=SimpleNamespace(),
+        request=_request(),
         queryset=EntityCandidate.objects.filter(pk=candidate.pk),
     )
 
     candidate.refresh_from_db()
 
     assert candidate.status == EntityCandidateStatus.MERGED
-    assert candidate.merged_into_id == entity.id
+    assert candidate.merged_into == entity
 
 
 def test_high_value_filter_only_returns_high_value_reference_content(
@@ -891,14 +952,14 @@ def test_high_value_filter_only_returns_high_value_reference_content(
         is_reference=False,
     )
     filter_instance = HighValueFilter(
-        request=SimpleNamespace(GET={}),
-        params={"value_tier": "high_value"},
+        request=_request(),
+        params=_params(value_tier="high_value"),
         model=Content,
         model_admin=ContentAdmin(Content, AdminSite()),
     )
     filter_instance.value = lambda: "high_value"
 
-    filtered = filter_instance.queryset(SimpleNamespace(), Content.objects.all())
+    filtered = filter_instance.queryset(_request(), Content.objects.all())
 
     assert list(filtered) == [high_value]
 
@@ -928,14 +989,14 @@ def test_duplicate_state_filter_returns_canonical_rows_with_duplicate_signals(
         content_text="Plain content.",
     )
     filter_instance = DuplicateStateFilter(
-        request=SimpleNamespace(GET={}),
-        params={"duplicate_state": "canonical_with_duplicates"},
+        request=_request(),
+        params=_params(duplicate_state="canonical_with_duplicates"),
         model=Content,
         model_admin=ContentAdmin(Content, AdminSite()),
     )
     filter_instance.value = lambda: "canonical_with_duplicates"
 
-    filtered = filter_instance.queryset(SimpleNamespace(), Content.objects.all())
+    filtered = filter_instance.queryset(_request(), Content.objects.all())
 
     assert list(filtered) == [canonical]
 
@@ -966,14 +1027,14 @@ def test_duplicate_state_filter_returns_suppressed_duplicates(
         is_active=False,
     )
     filter_instance = DuplicateStateFilter(
-        request=SimpleNamespace(GET={}),
-        params={"duplicate_state": "suppressed_duplicates"},
+        request=_request(),
+        params=_params(duplicate_state="suppressed_duplicates"),
         model=Content,
         model_admin=ContentAdmin(Content, AdminSite()),
     )
     filter_instance.value = lambda: "suppressed_duplicates"
 
-    filtered = filter_instance.queryset(SimpleNamespace(), Content.objects.all())
+    filtered = filter_instance.queryset(_request(), Content.objects.all())
 
     assert list(filtered) == [duplicate]
 
@@ -1001,7 +1062,7 @@ def test_content_view_trace_builds_template_trace_url(source_admin_context, sett
     rendered = admin_instance.view_trace(content)
 
     assert (
-        f"https://trace.example/{content.project_id}/summarization/{skill_result.id}/trace-123/{content.id}/trace-123"
+        f"https://trace.example/{_require_pk(source_admin_context.project)}/summarization/{_require_pk(skill_result)}/trace-123/{_require_pk(content)}/trace-123"
         in rendered
     )
 
@@ -1070,21 +1131,22 @@ def test_skill_result_admin_helpers_and_dashboard_stats(source_admin_context, mo
         superseded_by=current_result,
     )
     admin_instance = SkillResultAdmin(SkillResult, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    message_user_mock = _message_user_mock(admin_instance, mocker)
     super_changelist_view = mocker.patch(
         "core.admin.ModelAdmin.changelist_view",
         side_effect=lambda request, extra_context=None: extra_context,
     )
 
     admin_instance.retry_selected_skills(
-        SimpleNamespace(), SkillResult.objects.filter(pk=current_result.pk)
+        _request(), SkillResult.objects.filter(pk=current_result.pk)
     )
     current_result.refresh_from_db()
-    response = admin_instance.changelist_view(SimpleNamespace())
+    response = admin_instance.changelist_view(_request())
+    dashboard_stats = _dashboard_stats(response)
 
     assert current_result.status == "pending"
     assert current_result.error_message == ""
-    admin_instance.message_user.assert_called_once_with(
+    message_user_mock.assert_called_once_with(
         ANY,
         "Successfully reset 1 skills to PENDING for retry.",
         messages.SUCCESS,
@@ -1102,16 +1164,16 @@ def test_skill_result_admin_helpers_and_dashboard_stats(source_admin_context, mo
     assert "Draft summary" in admin_instance.pretty_result_data(current_result)
     assert admin_instance.pretty_result_data(superseded_result) == "No data available"
     super_changelist_view.assert_called_once()
-    assert response["dashboard_stats"][0]["value"] == "750ms"
-    assert response["dashboard_stats"][1]["value"] == "0.0%"
+    assert dashboard_stats[0]["value"] == "750ms"
+    assert dashboard_stats[1]["value"] == "0.0%"
 
 
 def test_user_feedback_admin_helpers_and_dashboard_stats(
     source_admin_context, django_user_model, mocker
 ):
     mocker.patch("core.signals.queue_topic_centroid_recompute")
-    user = django_user_model.objects.create_user(
-        username="feedback-user", password="testpass123"
+    user = _create_user(
+        django_user_model, username="feedback-user", password="testpass123"
     )
     content = Content.objects.create(
         project=source_admin_context.project,
@@ -1142,8 +1204,8 @@ def test_user_feedback_admin_helpers_and_dashboard_stats(
     UserFeedback.objects.create(
         content=other_content,
         project=source_admin_context.project,
-        user=django_user_model.objects.create_user(
-            username="feedback-user-2", password="testpass123"
+        user=_create_user(
+            django_user_model, username="feedback-user-2", password="testpass123"
         ),
         feedback_type="downvote",
     )
@@ -1153,7 +1215,8 @@ def test_user_feedback_admin_helpers_and_dashboard_stats(
         side_effect=lambda request, extra_context=None: extra_context,
     )
 
-    response = admin_instance.changelist_view(SimpleNamespace())
+    response = admin_instance.changelist_view(_request())
+    dashboard_stats = _dashboard_stats(response)
 
     assert "👍" in admin_instance.display_feedback(upvote)
     assert admin_instance.get_content_title(upvote).endswith("...")
@@ -1163,8 +1226,8 @@ def test_user_feedback_admin_helpers_and_dashboard_stats(
     downvote = UserFeedback.objects.get(content=other_content)
     assert admin_instance.get_ai_score(downvote) == "-"
     super_changelist_view.assert_called_once()
-    assert response["dashboard_stats"][0]["value"] == "50.0%"
-    assert response["dashboard_stats"][1]["value"] == 2
+    assert dashboard_stats[0]["value"] == "50.0%"
+    assert dashboard_stats[1]["value"] == 2
 
 
 def test_ingestion_run_display_duration_handles_running_and_completed(
@@ -1184,8 +1247,8 @@ def test_ingestion_run_display_duration_handles_running_and_completed(
         items_fetched=10,
         items_ingested=10,
     )
-    completed_run.started_at = timezone.now() - timezone.timedelta(minutes=3, seconds=5)
-    completed_run.completed_at = completed_run.started_at + timezone.timedelta(
+    completed_run.started_at = timezone.now() - timedelta(minutes=3, seconds=5)
+    completed_run.completed_at = completed_run.started_at + timedelta(
         minutes=3, seconds=5
     )
     completed_run.save(update_fields=["started_at", "completed_at"])
@@ -1222,13 +1285,13 @@ def test_review_queue_actions_update_resolution_and_emit_message(
         resolved=False,
     )
     admin_instance = ReviewQueueAdmin(ReviewQueue, AdminSite())
-    admin_instance.message_user = mocker.Mock()
+    message_user_mock = _message_user_mock(admin_instance, mocker)
 
     admin_instance.mark_as_approved(
-        SimpleNamespace(), ReviewQueue.objects.filter(pk=approve_item.pk)
+        _request(), ReviewQueue.objects.filter(pk=approve_item.pk)
     )
     admin_instance.mark_as_rejected(
-        SimpleNamespace(), ReviewQueue.objects.filter(pk=reject_item.pk)
+        _request(), ReviewQueue.objects.filter(pk=reject_item.pk)
     )
 
     approve_item.refresh_from_db()
@@ -1237,12 +1300,12 @@ def test_review_queue_actions_update_resolution_and_emit_message(
     assert approve_item.resolution == "APPROVED"
     assert reject_item.resolved is True
     assert reject_item.resolution == "REJECTED"
-    assert admin_instance.message_user.call_count == 2
+    assert message_user_mock.call_count == 2
 
 
 def test_high_value_filter_lookups_and_noop_queryset(source_admin_context):
     filter_instance = HighValueFilter(
-        request=SimpleNamespace(GET={}),
+        request=_request(),
         params={},
         model=Content,
         model_admin=ContentAdmin(Content, AdminSite()),
@@ -1258,10 +1321,10 @@ def test_high_value_filter_lookups_and_noop_queryset(source_admin_context):
         content_text="noop",
     )
 
-    assert filter_instance.lookups(None, None) == (
+    assert filter_instance.lookups(_request(), ContentAdmin(Content, AdminSite())) == (
         ("high_value", "🔥 High Value (Score > 80 & Reference)"),
     )
-    assert list(filter_instance.queryset(SimpleNamespace(), Content.objects.all())) == [
+    assert list(filter_instance.queryset(_request(), Content.objects.all())) == [
         content
     ]
 
@@ -1334,11 +1397,12 @@ def test_skill_result_changelist_view_uses_warning_and_danger_colors(
         side_effect=lambda request, extra_context=None: extra_context,
     )
 
-    response = admin_instance.changelist_view(SimpleNamespace())
+    response = admin_instance.changelist_view(_request())
+    dashboard_stats = _dashboard_stats(response)
 
     super_changelist_view.assert_called_once()
-    assert response["dashboard_stats"][0]["color"] == "warning"
-    assert response["dashboard_stats"][1]["color"] == "danger"
+    assert dashboard_stats[0]["color"] == "warning"
+    assert dashboard_stats[1]["color"] == "danger"
 
 
 def test_user_feedback_admin_upvote_and_orange_score_branches(
@@ -1400,8 +1464,8 @@ def test_user_feedback_changelist_view_uses_success_color_for_high_approval(
     UserFeedback.objects.create(
         content=second_content,
         project=source_admin_context.project,
-        user=django_user_model.objects.create_user(
-            username="feedback-success-2", password="testpass123"
+        user=_create_user(
+            django_user_model, username="feedback-success-2", password="testpass123"
         ),
         feedback_type="upvote",
     )
@@ -1411,11 +1475,12 @@ def test_user_feedback_changelist_view_uses_success_color_for_high_approval(
         side_effect=lambda request, extra_context=None: extra_context,
     )
 
-    response = admin_instance.changelist_view(SimpleNamespace())
+    response = admin_instance.changelist_view(_request())
+    dashboard_stats = _dashboard_stats(response)
 
     super_changelist_view.assert_called_once()
-    assert response["dashboard_stats"][0]["color"] == "success"
-    assert response["dashboard_stats"][0]["value"] == "100.0%"
+    assert dashboard_stats[0]["color"] == "success"
+    assert dashboard_stats[0]["value"] == "100.0%"
 
 
 def test_ingestion_run_admin_status_efficiency_and_dashboard_branches(
@@ -1441,7 +1506,8 @@ def test_ingestion_run_admin_status_efficiency_and_dashboard_branches(
         side_effect=lambda request, extra_context=None: extra_context,
     )
 
-    response = admin_instance.changelist_view(SimpleNamespace())
+    response = admin_instance.changelist_view(_request())
+    dashboard_stats = _dashboard_stats(response)
 
     assert "danger" in admin_instance.display_status(
         IngestionRun.objects.filter(status="failed").first()
@@ -1454,8 +1520,8 @@ def test_ingestion_run_admin_status_efficiency_and_dashboard_branches(
     )
     assert "info" in admin_instance.display_status(running_run)
     super_changelist_view.assert_called_once()
-    assert response["dashboard_stats"][0]["value"] == "5"
-    assert response["dashboard_stats"][1]["color"] == "warning"
+    assert dashboard_stats[0]["value"] == "5"
+    assert dashboard_stats[1]["color"] == "warning"
 
 
 def test_source_config_admin_health_pretty_config_and_dashboard_branches(
@@ -1466,7 +1532,7 @@ def test_source_config_admin_health_pretty_config_and_dashboard_branches(
         plugin_name=SourcePluginName.RSS,
         config={"feed_url": "https://example.com/stale.xml"},
         is_active=True,
-        last_fetched_at=timezone.now() - timezone.timedelta(days=2),
+        last_fetched_at=timezone.now() - timedelta(days=2),
     )
     paused_config = SourceConfig.objects.create(
         project=source_admin_context.project,
@@ -1487,15 +1553,16 @@ def test_source_config_admin_health_pretty_config_and_dashboard_branches(
         side_effect=lambda request, extra_context=None: extra_context,
     )
 
-    response = admin_instance.changelist_view(SimpleNamespace())
+    response = admin_instance.changelist_view(_request())
+    dashboard_stats = _dashboard_stats(response)
 
     assert "Stale" in admin_instance.display_health(stale_config)
     assert "Paused" in admin_instance.display_health(paused_config)
     assert "Never Run" in admin_instance.display_health(never_run_config)
     assert admin_instance.pretty_config(paused_config) == "Empty"
     super_changelist_view.assert_called_once()
-    assert response["dashboard_stats"][0]["color"] == "warning"
-    assert response["dashboard_stats"][1]["value"] == 2
+    assert dashboard_stats[0]["color"] == "warning"
+    assert dashboard_stats[1]["value"] == 2
 
 
 @pytest.mark.parametrize(

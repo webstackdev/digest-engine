@@ -2,7 +2,11 @@
 
 from rest_framework_nested.routers import NestedSimpleRouter
 
-from trends.api import TopicCentroidSnapshotViewSet, TopicClusterViewSet
+from trends.api import (
+    ThemeSuggestionViewSet,
+    TopicCentroidSnapshotViewSet,
+    TopicClusterViewSet,
+)
 
 
 def register_project_routes(project_router: NestedSimpleRouter) -> None:
@@ -12,6 +16,11 @@ def register_project_routes(project_router: NestedSimpleRouter) -> None:
         r"clusters",
         TopicClusterViewSet,
         basename="project-topic-cluster",
+    )
+    project_router.register(
+        r"themes",
+        ThemeSuggestionViewSet,
+        basename="project-theme-suggestion",
     )
     project_router.register(
         r"topic-centroid-snapshots",

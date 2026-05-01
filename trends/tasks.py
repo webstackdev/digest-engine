@@ -3,13 +3,14 @@
 from collections import Counter
 import math
 from datetime import datetime, timedelta
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 from celery import shared_task
+from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
-from django.db.models import Model
+from django.db.models import Model, OuterRef, Prefetch, Subquery
 from django.utils import timezone
 
 from core.embeddings import (
@@ -18,12 +19,15 @@ from core.embeddings import (
     embed_text,
     upsert_topic_centroid,
 )
+from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
 from content.models import Content, FeedbackType, UserFeedback
 from entities.models import Entity, EntityMention
 from projects.models import Project
 
 from .models import (
     ContentClusterMembership,
+    ThemeSuggestion,
+    ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
     TopicVelocitySnapshot,
@@ -39,6 +43,11 @@ TOPIC_CLUSTER_SIMILARITY_THRESHOLD = 0.85
 TOPIC_CLUSTER_MIN_MEMBERS = 3
 TOPIC_VELOCITY_TRAILING_DAYS = 7
 TOPIC_VELOCITY_EMA_ALPHA = 0.5
+THEME_DETECTION_SKILL_NAME = "theme_detection"
+THEME_SUGGESTION_DAILY_CAP = 5
+THEME_NOVELTY_LOOKBACK_DAYS = 30
+THEME_NOVELTY_MIN_SCORE = 0.6
+THEME_CLUSTER_CONTEXT_LIMIT = 5
 
 
 class DelayedTask(Protocol):
@@ -299,7 +308,11 @@ def recompute_topic_velocity(project_id: int) -> dict[str, int]:
     )
     snapshot_count = 0
     for cluster in clusters:
-        memberships = list(cluster.memberships.all())
+        memberships = list(
+            ContentClusterMembership.objects.filter(cluster=cluster).select_related(
+                "content"
+            )
+        )
         published_dates = [
             membership.content.published_date
             for membership in memberships
@@ -324,7 +337,11 @@ def recompute_topic_velocity(project_id: int) -> dict[str, int]:
         trailing_stddev = _population_stddev(trailing_counts, trailing_mean)
         z_score = _capped_z_score(window_count, trailing_mean, trailing_stddev)
         normalized_score = (z_score + 3.0) / 6.0
-        previous_snapshot = cluster.velocity_snapshots.first()
+        previous_snapshot = (
+            TopicVelocitySnapshot.objects.filter(cluster=cluster)
+            .order_by("-computed_at")
+            .first()
+        )
         velocity_score = _smooth_velocity_score(
             normalized_score,
             previous_snapshot.velocity_score if previous_snapshot is not None else None,
@@ -339,10 +356,95 @@ def recompute_topic_velocity(project_id: int) -> dict[str, int]:
             velocity_score=velocity_score,
         )
         snapshot_count += 1
+    if settings.CELERY_TASK_ALWAYS_EAGER:
+        generate_theme_suggestions(project_id)
+    else:
+        _enqueue_task(generate_theme_suggestions, project_id)
     return {
         "project_id": project_id,
         "clusters_evaluated": len(clusters),
         "snapshots_created": snapshot_count,
+    }
+
+
+@shared_task(name="core.tasks.generate_theme_suggestions")
+def generate_theme_suggestions(project_id: int) -> dict[str, int]:
+    """Generate pending editor-facing theme suggestions for one project."""
+
+    now = timezone.now()
+    clusters = list(_clusters_with_latest_velocity(project_id))
+    accepted_history = list(
+        ThemeSuggestion.objects.filter(
+            project_id=project_id,
+            status=ThemeSuggestionStatus.ACCEPTED,
+            created_at__gte=now - timedelta(days=THEME_NOVELTY_LOOKBACK_DAYS),
+        )
+        .only("title", "pitch", "why_it_matters")
+        .order_by("-created_at")
+    )
+    created_today = ThemeSuggestion.objects.filter(
+        project_id=project_id,
+        status=ThemeSuggestionStatus.PENDING,
+        created_at__date=now.date(),
+    ).count()
+    remaining_slots = max(0, THEME_SUGGESTION_DAILY_CAP - created_today)
+    created_count = 0
+    updated_count = 0
+    skipped_count = 0
+
+    for cluster in clusters:
+        latest_velocity = float(getattr(cluster, "velocity_score", 0.0) or 0.0)
+        existing_pending = (
+            ThemeSuggestion.objects.filter(
+                project_id=project_id,
+                cluster=cluster,
+                status=ThemeSuggestionStatus.PENDING,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if existing_pending is not None:
+            existing_pending.velocity_at_creation = latest_velocity
+            existing_pending.save(update_fields=["velocity_at_creation"])
+            updated_count += 1
+            continue
+        if remaining_slots <= 0:
+            skipped_count += 1
+            continue
+
+        cluster_context = _build_theme_cluster_context(cluster)
+        theme_payload = _synthesize_theme_payload(
+            cluster=cluster,
+            cluster_context=cluster_context,
+        )
+        novelty_score = _score_theme_novelty(
+            project=cluster.project,
+            theme_payload=theme_payload,
+            recent_accepted_themes=accepted_history,
+        )
+        if novelty_score < THEME_NOVELTY_MIN_SCORE:
+            skipped_count += 1
+            continue
+
+        ThemeSuggestion.objects.create(
+            project_id=project_id,
+            cluster=cluster,
+            title=str(theme_payload["title"]),
+            pitch=str(theme_payload["one_sentence_pitch"]),
+            why_it_matters=str(theme_payload["why_it_matters"]),
+            suggested_angle=str(theme_payload.get("suggested_angle", "")),
+            velocity_at_creation=latest_velocity,
+            novelty_score=novelty_score,
+        )
+        created_count += 1
+        remaining_slots -= 1
+
+    return {
+        "project_id": project_id,
+        "clusters_considered": len(clusters),
+        "created": created_count,
+        "updated": updated_count,
+        "skipped": skipped_count,
     }
 
 
@@ -367,9 +469,12 @@ def assign_content_to_topic_cluster(content_id: int) -> dict[str, object]:
     if content is None:
         return {"content_id": content_id, "assigned": False, "reason": "missing"}
 
+    project_id = _require_pk(content.project)
+    content_pk = _require_pk(content)
+
     memberships = ContentClusterMembership.objects.filter(
-        project_id=content.project_id,
-        content_id=content.id,
+        project_id=project_id,
+        content_id=content_pk,
     )
     if not content.is_active or content.published_date < timezone.now() - timedelta(
         days=TOPIC_CLUSTER_LOOKBACK_DAYS
@@ -381,7 +486,7 @@ def assign_content_to_topic_cluster(content_id: int) -> dict[str, object]:
         return {"content_id": content_id, "assigned": False, "reason": "outside_window"}
 
     active_clusters = list(
-        TopicCluster.objects.filter(project_id=content.project_id, is_active=True)
+        TopicCluster.objects.filter(project_id=project_id, is_active=True)
         .prefetch_related("memberships__content")
         .only(
             "id",
@@ -398,13 +503,21 @@ def assign_content_to_topic_cluster(content_id: int) -> dict[str, object]:
 
     vector_cache: dict[int, list[float]] = {}
     content_vector = _content_vector(content, vector_cache)
+    memberships_by_cluster: dict[int, list[ContentClusterMembership]] = {}
+    for membership in ContentClusterMembership.objects.filter(
+        cluster__in=active_clusters
+    ).select_related("content"):
+        memberships_by_cluster.setdefault(_require_pk(membership.cluster), []).append(
+            membership
+        )
     best_cluster: TopicCluster | None = None
     best_similarity = -1.0
     for cluster in active_clusters:
+        cluster_pk = _require_pk(cluster)
         member_contents = [
             membership.content
-            for membership in cluster.memberships.all()
-            if membership.content_id != content.id
+            for membership in memberships_by_cluster.get(cluster_pk, [])
+            if _require_pk(membership.content) != content_pk
         ]
         centroid_vector = _cluster_centroid_for_contents(member_contents, vector_cache)
         if not centroid_vector:
@@ -428,17 +541,18 @@ def assign_content_to_topic_cluster(content_id: int) -> dict[str, object]:
     ContentClusterMembership.objects.create(
         content=content,
         cluster=best_cluster,
-        project_id=content.project_id,
+        project_id=project_id,
         similarity=best_similarity,
     )
     cluster_ids_to_refresh = set(removed_cluster_ids)
-    cluster_ids_to_refresh.add(best_cluster.id)
+    best_cluster_pk = _require_pk(best_cluster)
+    cluster_ids_to_refresh.add(best_cluster_pk)
     for cluster_id in cluster_ids_to_refresh:
         _refresh_cluster_rollup(cluster_id)
     return {
         "content_id": content_id,
         "assigned": True,
-        "cluster_id": best_cluster.id,
+        "cluster_id": best_cluster_pk,
         "similarity": best_similarity,
     }
 
@@ -603,21 +717,22 @@ def _sync_topic_clusters(
     """Persist the current cluster rebuild and retire stale active clusters."""
 
     existing_clusters = list(
-        TopicCluster.objects.filter(project_id=project_id)
-        .prefetch_related("memberships")
-        .order_by("id")
+        TopicCluster.objects.filter(project_id=project_id).order_by("id")
     )
-    existing_memberships = {
-        cluster.id: set(cluster.memberships.values_list("content_id", flat=True))
-        for cluster in existing_clusters
+    existing_memberships: dict[int, set[int]] = {
+        _require_pk(cluster): set() for cluster in existing_clusters
     }
+    for cluster_id, content_id in ContentClusterMembership.objects.filter(
+        cluster__in=existing_clusters
+    ).values_list("cluster_id", "content_id"):
+        existing_memberships.setdefault(int(cluster_id), set()).add(int(content_id))
     matched_cluster_ids: set[int] = set()
     clusters_updated = 0
 
     with transaction.atomic():
         for group in cluster_groups:
             contents = cast(list[Content], group["contents"])
-            member_ids = {content.id for content in contents}
+            member_ids = {_require_pk(content) for content in contents}
             cluster = _match_existing_cluster(
                 existing_clusters,
                 existing_memberships,
@@ -635,7 +750,7 @@ def _sync_topic_clusters(
                 )
                 existing_clusters.append(cluster)
             else:
-                matched_cluster_ids.add(cluster.id)
+                matched_cluster_ids.add(_require_pk(cluster))
                 cluster.first_seen_at = min(
                     cluster.first_seen_at,
                     min(content.published_date for content in contents),
@@ -656,7 +771,7 @@ def _sync_topic_clusters(
                     ]
                 )
 
-            matched_cluster_ids.add(cluster.id)
+            matched_cluster_ids.add(_require_pk(cluster))
             ContentClusterMembership.objects.filter(cluster=cluster).delete()
             centroid_vector = _cluster_centroid_for_contents(contents, {})
             ContentClusterMembership.objects.bulk_create(
@@ -676,7 +791,7 @@ def _sync_topic_clusters(
             clusters_updated += 1
 
         for cluster in existing_clusters:
-            if cluster.id in matched_cluster_ids:
+            if _require_pk(cluster) in matched_cluster_ids:
                 continue
             ContentClusterMembership.objects.filter(cluster=cluster).delete()
             if cluster.is_active or cluster.member_count != 0:
@@ -702,9 +817,10 @@ def _match_existing_cluster(
     best_overlap_count = 0
     best_overlap_ratio = 0.0
     for cluster in existing_clusters:
-        if cluster.id in matched_cluster_ids:
+        cluster_id = _require_pk(cluster)
+        if cluster_id in matched_cluster_ids:
             continue
-        prior_member_ids = existing_memberships.get(cluster.id, set())
+        prior_member_ids = existing_memberships.get(cluster_id, set())
         overlap_count = len(prior_member_ids & member_ids)
         if overlap_count <= 0:
             continue
@@ -755,14 +871,74 @@ def _refresh_cluster_rollup(cluster_id: int) -> None:
     )
 
 
+def accept_theme_suggestion(
+    theme_suggestion: ThemeSuggestion, *, user_id: int
+) -> ThemeSuggestion:
+    """Mark a pending theme suggestion as accepted."""
+
+    if theme_suggestion.status != ThemeSuggestionStatus.PENDING:
+        raise ValueError("Only pending theme suggestions can be accepted.")
+    accepted_at = timezone.now()
+    with transaction.atomic():
+        theme_suggestion.status = ThemeSuggestionStatus.ACCEPTED
+        theme_suggestion.decided_at = accepted_at
+        theme_suggestion.decided_by = get_user_model()._default_manager.get(pk=user_id)
+        theme_suggestion.dismissal_reason = ""
+        theme_suggestion.save(
+            update_fields=["status", "decided_at", "decided_by", "dismissal_reason"]
+        )
+        cluster = theme_suggestion.cluster
+        project_id = _require_pk(theme_suggestion.project)
+        if cluster is not None:
+            cluster_id = _require_pk(cluster)
+            promoted_content_ids = list(
+                ContentClusterMembership.objects.filter(
+                    project_id=project_id,
+                    cluster_id=cluster_id,
+                ).values_list("content_id", flat=True)
+            )
+            if promoted_content_ids:
+                Content.objects.filter(
+                    project_id=project_id,
+                    id__in=promoted_content_ids,
+                ).update(
+                    newsletter_promotion_at=accepted_at,
+                    newsletter_promotion_by_id=user_id,
+                    newsletter_promotion_theme=theme_suggestion,
+                )
+    return theme_suggestion
+
+
+def dismiss_theme_suggestion(
+    theme_suggestion: ThemeSuggestion,
+    *,
+    user_id: int,
+    reason: str,
+) -> ThemeSuggestion:
+    """Mark a pending theme suggestion as dismissed with editorial feedback."""
+
+    if theme_suggestion.status != ThemeSuggestionStatus.PENDING:
+        raise ValueError("Only pending theme suggestions can be dismissed.")
+    theme_suggestion.status = ThemeSuggestionStatus.DISMISSED
+    theme_suggestion.decided_at = timezone.now()
+    theme_suggestion.decided_by = get_user_model()._default_manager.get(pk=user_id)
+    theme_suggestion.dismissal_reason = reason.strip()
+    theme_suggestion.save(
+        update_fields=["status", "decided_at", "decided_by", "dismissal_reason"]
+    )
+    return theme_suggestion
+
+
 def _resolve_dominant_entity(contents: list[Content]) -> Entity | None:
     """Return the most frequently referenced entity across clustered content."""
 
     if not contents:
         return None
-    content_ids = [content.id for content in contents]
+    content_ids = [_require_pk(content) for content in contents]
     entity_counts: Counter[int] = Counter(
-        content.entity_id for content in contents if content.entity_id is not None
+        _require_pk(content.entity)
+        for content in contents
+        if content.entity is not None
     )
     entity_counts.update(
         entity_id
@@ -778,17 +954,272 @@ def _resolve_dominant_entity(contents: list[Content]) -> Entity | None:
     return Entity.objects.filter(pk=dominant_entity_id).first()
 
 
+def _clusters_with_latest_velocity(project_id: int):
+    """Return active clusters annotated with their latest velocity metrics."""
+
+    latest_snapshot_queryset = TopicVelocitySnapshot.objects.filter(
+        cluster_id=OuterRef("pk")
+    ).order_by("-computed_at")
+    return (
+        TopicCluster.objects.filter(
+            project_id=project_id,
+            is_active=True,
+            member_count__gte=TOPIC_CLUSTER_MIN_MEMBERS,
+        )
+        .select_related("project", "dominant_entity")
+        .annotate(
+            velocity_score=Subquery(
+                latest_snapshot_queryset.values("velocity_score")[:1]
+            ),
+            z_score=Subquery(latest_snapshot_queryset.values("z_score")[:1]),
+        )
+        .prefetch_related(
+            Prefetch(
+                "memberships",
+                queryset=ContentClusterMembership.objects.select_related(
+                    "content"
+                ).order_by("-similarity", "-assigned_at"),
+            )
+        )
+        .order_by("-velocity_score", "-last_seen_at")
+    )
+
+
+def _build_theme_cluster_context(cluster: TopicCluster) -> dict[str, Any]:
+    """Serialize the most relevant cluster context for theme generation."""
+
+    memberships = list(
+        ContentClusterMembership.objects.filter(cluster=cluster).select_related(
+            "content"
+        )[:THEME_CLUSTER_CONTEXT_LIMIT]
+    )
+    recent_feedback = _recent_feedback_signals(
+        [_require_pk(membership.content) for membership in memberships]
+    )
+    cluster_id = _require_pk(cluster)
+    dominant_entity = cluster.dominant_entity
+    dominant_entity_id = (
+        _require_pk(dominant_entity) if dominant_entity is not None else None
+    )
+    return {
+        "cluster_id": cluster_id,
+        "dominant_entity": (
+            {
+                "id": dominant_entity_id,
+                "name": dominant_entity.name,
+                "type": dominant_entity.type,
+            }
+            if dominant_entity_id is not None and dominant_entity is not None
+            else None
+        ),
+        "velocity_score": float(getattr(cluster, "velocity_score", 0.0) or 0.0),
+        "z_score": float(getattr(cluster, "z_score", 0.0) or 0.0),
+        "member_count": cluster.member_count,
+        "latest_members": [
+            {
+                "content_id": _require_pk(membership.content),
+                "title": membership.content.title,
+                "url": membership.content.url,
+                "source_plugin": membership.content.source_plugin,
+                "published_date": membership.content.published_date.isoformat(),
+                "summary": membership.content.content_text[:400],
+                "similarity": membership.similarity,
+                "feedback_signals": recent_feedback.get(
+                    _require_pk(membership.content), {}
+                ),
+            }
+            for membership in memberships
+        ],
+    }
+
+
+def _synthesize_theme_payload(
+    *,
+    cluster: TopicCluster,
+    cluster_context: dict[str, Any],
+) -> dict[str, str]:
+    """Generate one editor-facing theme suggestion payload."""
+
+    if settings.OPENROUTER_API_KEY:
+        try:
+            response = openrouter_chat_json(
+                model=settings.AI_SUMMARIZATION_MODEL,
+                system_prompt=get_skill_definition(
+                    THEME_DETECTION_SKILL_NAME
+                ).instructions_markdown,
+                user_prompt=build_skill_user_prompt(
+                    THEME_DETECTION_SKILL_NAME,
+                    {
+                        "project_topic": cluster.project.topic_description,
+                        "cluster_context": cluster_context,
+                        "recent_accepted_themes": [],
+                    },
+                ),
+            )
+            payload = response.payload
+            return {
+                "title": str(payload.get("title", "")).strip()
+                or _fallback_theme_title(cluster_context),
+                "one_sentence_pitch": str(payload.get("one_sentence_pitch", "")).strip()
+                or _fallback_theme_pitch(cluster_context),
+                "why_it_matters": str(payload.get("why_it_matters", "")).strip()
+                or _fallback_theme_why(cluster_context),
+                "suggested_angle": str(payload.get("suggested_angle", "")).strip(),
+            }
+        except Exception:
+            pass
+
+    return {
+        "title": _fallback_theme_title(cluster_context),
+        "one_sentence_pitch": _fallback_theme_pitch(cluster_context),
+        "why_it_matters": _fallback_theme_why(cluster_context),
+        "suggested_angle": _fallback_theme_angle(cluster_context),
+    }
+
+
+def _score_theme_novelty(
+    *,
+    project: Project,
+    theme_payload: dict[str, str],
+    recent_accepted_themes: list[ThemeSuggestion],
+) -> float:
+    """Estimate how novel a generated theme is versus recent accepted themes."""
+
+    heuristic_score = (
+        _heuristic_theme_novelty_score(theme_payload, recent_accepted_themes)
+        if recent_accepted_themes
+        else 1.0
+    )
+    if settings.OPENROUTER_API_KEY:
+        try:
+            response = openrouter_chat_json(
+                model=settings.AI_RELEVANCE_MODEL,
+                system_prompt=(
+                    "Score the novelty of a proposed newsletter theme against recent accepted themes. "
+                    "Return JSON with fields novelty_score and explanation. novelty_score must be between 0 and 1, where 1 is highly novel."
+                ),
+                user_prompt=(
+                    f"project_topic:\n{project.topic_description}\n\n"
+                    f"candidate_theme:\n{theme_payload}\n\n"
+                    f"recent_accepted_themes:\n{[{'title': theme.title, 'pitch': theme.pitch, 'why_it_matters': theme.why_it_matters} for theme in recent_accepted_themes[:10]]}\n\n"
+                    "Return only a JSON object with fields novelty_score and explanation."
+                ),
+            )
+            payload = response.payload
+            novelty_score = float(payload.get("novelty_score", heuristic_score))
+            return max(0.0, min(1.0, novelty_score))
+        except Exception:
+            pass
+    return heuristic_score
+
+
+def _recent_feedback_signals(content_ids: list[int]) -> dict[int, dict[str, int]]:
+    """Summarize recent feedback counts for the supplied content rows."""
+
+    if not content_ids:
+        return {}
+    feedback_counts: dict[int, dict[str, int]] = {
+        content_id: {"upvotes": 0, "downvotes": 0} for content_id in content_ids
+    }
+    for content_id, feedback_type in UserFeedback.objects.filter(
+        content_id__in=content_ids
+    ).values_list("content_id", "feedback_type"):
+        if feedback_type == FeedbackType.UPVOTE:
+            feedback_counts[content_id]["upvotes"] += 1
+        elif feedback_type == FeedbackType.DOWNVOTE:
+            feedback_counts[content_id]["downvotes"] += 1
+    return feedback_counts
+
+
+def _fallback_theme_title(cluster_context: dict[str, Any]) -> str:
+    """Build a deterministic fallback theme title from cluster context."""
+
+    dominant_entity = cluster_context.get("dominant_entity") or {}
+    if dominant_entity.get("name"):
+        return f"Why {dominant_entity['name']} keeps surfacing right now"
+    latest_members = cluster_context.get("latest_members", [])
+    if latest_members:
+        return str(latest_members[0]["title"])[:255]
+    return "Emerging theme"
+
+
+def _fallback_theme_pitch(cluster_context: dict[str, Any]) -> str:
+    """Build a deterministic fallback pitch from cluster velocity context."""
+
+    latest_members = cluster_context.get("latest_members", [])
+    if latest_members:
+        return (
+            f"This cluster is accelerating across {cluster_context.get('member_count', 0)} recent items, "
+            f"with '{latest_members[0]['title']}' leading the current signal."
+        )
+    return "This cluster is accelerating across the project's recent content."
+
+
+def _fallback_theme_why(cluster_context: dict[str, Any]) -> str:
+    """Explain why the fallback theme matters now."""
+
+    return (
+        f"The cluster's current velocity score is {cluster_context.get('velocity_score', 0.0):.2f}, "
+        f"which indicates a faster-than-baseline increase in related coverage."
+    )
+
+
+def _fallback_theme_angle(cluster_context: dict[str, Any]) -> str:
+    """Suggest a deterministic editorial angle when the LLM is unavailable."""
+
+    dominant_entity = cluster_context.get("dominant_entity") or {}
+    if dominant_entity.get("name"):
+        return f"Explain what changed around {dominant_entity['name']} and why it matters for the project topic."
+    return "Identify the common thread across the latest members and explain why it is accelerating now."
+
+
+def _heuristic_theme_novelty_score(
+    theme_payload: dict[str, str],
+    recent_accepted_themes: list[ThemeSuggestion],
+) -> float:
+    """Estimate novelty using simple token overlap with accepted themes."""
+
+    candidate_tokens = _normalized_theme_tokens(
+        f"{theme_payload.get('title', '')} {theme_payload.get('one_sentence_pitch', '')}"
+    )
+    if not candidate_tokens:
+        return 0.0
+    max_overlap = 0.0
+    for theme in recent_accepted_themes:
+        prior_tokens = _normalized_theme_tokens(f"{theme.title} {theme.pitch}")
+        if not prior_tokens:
+            continue
+        overlap = len(candidate_tokens & prior_tokens) / len(
+            candidate_tokens | prior_tokens
+        )
+        max_overlap = max(max_overlap, overlap)
+    return max(0.0, min(1.0, 1.0 - max_overlap))
+
+
+def _normalized_theme_tokens(text: str) -> set[str]:
+    """Normalize free text into a small token set for novelty heuristics."""
+
+    return {
+        token
+        for token in "".join(
+            char.lower() if char.isalnum() else " " for char in text
+        ).split()
+        if len(token) > 2
+    }
+
+
 def _content_vector(
     content: Content,
     vector_cache: dict[int, list[float]],
 ) -> list[float]:
     """Return one content embedding, caching repeated lookups within a task."""
 
-    vector = vector_cache.get(content.id)
+    content_pk = _require_pk(content)
+    vector = vector_cache.get(content_pk)
     if vector is not None:
         return vector
     vector = embed_text(build_content_embedding_text(content))
-    vector_cache[content.id] = vector
+    vector_cache[content_pk] = vector
     return vector
 
 
@@ -868,7 +1299,7 @@ def _create_topic_velocity_snapshot(
 
     snapshot = TopicVelocitySnapshot.objects.create(
         cluster=cluster,
-        project_id=cluster.project_id,
+        project_id=_require_pk(cluster.project),
         window_count=window_count,
         trailing_mean=trailing_mean,
         trailing_stddev=trailing_stddev,

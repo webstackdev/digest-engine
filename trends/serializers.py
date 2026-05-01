@@ -2,8 +2,12 @@
 
 from rest_framework import serializers
 
+from content.models import Content
+from core.serializer_mixins import ProjectScopedSerializerMixin
 from trends.models import (
     ContentClusterMembership,
+    ThemeSuggestion,
+    ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
     TopicVelocitySnapshot,
@@ -102,6 +106,83 @@ class TopicClusterDetailSerializer(TopicClusterSerializer):
             "memberships",
             "velocity_history",
         ]
+
+
+class ThemeSuggestionClusterSummarySerializer(serializers.Serializer):
+    """Serialize the cluster summary embedded in theme suggestions."""
+
+    id = serializers.IntegerField()
+    label = serializers.CharField(allow_blank=True)
+    member_count = serializers.IntegerField()
+    velocity_score = serializers.FloatField(read_only=True, allow_null=True)
+
+
+class ThemeSuggestionPromotedContentSerializer(serializers.ModelSerializer):
+    """Serialize one content row marked for newsletter promotion by a theme."""
+
+    class Meta:
+        model = Content
+        fields = [
+            "id",
+            "url",
+            "title",
+            "published_date",
+            "source_plugin",
+            "newsletter_promotion_at",
+        ]
+        read_only_fields = fields
+
+
+class ThemeSuggestionSerializer(serializers.ModelSerializer):
+    """Serialize one editor-facing theme suggestion."""
+
+    cluster = ThemeSuggestionClusterSummarySerializer(read_only=True)
+    promoted_contents = ThemeSuggestionPromotedContentSerializer(
+        many=True, read_only=True
+    )
+    decided_by_username = serializers.CharField(
+        source="decided_by.username",
+        read_only=True,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = ThemeSuggestion
+        fields = [
+            "id",
+            "project",
+            "cluster",
+            "title",
+            "pitch",
+            "why_it_matters",
+            "suggested_angle",
+            "velocity_at_creation",
+            "novelty_score",
+            "status",
+            "dismissal_reason",
+            "created_at",
+            "decided_at",
+            "decided_by",
+            "decided_by_username",
+            "promoted_contents",
+        ]
+        read_only_fields = fields
+
+
+class ThemeSuggestionDismissSerializer(
+    ProjectScopedSerializerMixin, serializers.Serializer
+):
+    """Validate dismissal requests for pending theme suggestions."""
+
+    reason = serializers.CharField(max_length=500)
+
+    def validate_reason(self, value: str) -> str:
+        """Reject blank dismissal reasons."""
+
+        normalized = value.strip()
+        if not normalized:
+            raise serializers.ValidationError("Dismissal reason cannot be blank.")
+        return normalized
 
 
 class TopicCentroidSnapshotSerializer(serializers.ModelSerializer):

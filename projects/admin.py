@@ -1,6 +1,7 @@
 """Admin configuration for project-owned models."""
 
 import json
+from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
 from django.contrib import admin, messages
@@ -19,6 +20,16 @@ from projects.models import (
     ProjectMembership,
     SourceConfig,
 )
+
+if TYPE_CHECKING:
+
+    class ProjectAdminBase(ModelAdmin):
+        """Typed admin base that avoids import-export stub conflicts."""
+
+else:
+
+    class ProjectAdminBase(ExportActionMixin, ModelAdmin):
+        """Runtime admin base that preserves export support."""
 
 
 class ProjectMembershipInline(admin.TabularInline):
@@ -47,7 +58,7 @@ class BlueskyCredentialsAdminForm(forms.ModelForm):
     def clean(self):
         """Require a credential when creating the record for the first time."""
 
-        cleaned_data = super().clean()
+        cleaned_data = super().clean() or {}
         credential_input = cleaned_data.get("credential_input", "")
         if not self.instance.has_stored_credential() and not credential_input:
             self.add_error("credential_input", "A Bluesky app credential is required.")
@@ -83,7 +94,7 @@ class MastodonCredentialsAdminForm(forms.ModelForm):
     def clean(self):
         """Require a token when creating the record for the first time."""
 
-        cleaned_data = super().clean()
+        cleaned_data = super().clean() or {}
         credential_input = cleaned_data.get("credential_input", "")
         if not self.instance.has_stored_credential() and not credential_input:
             self.add_error("credential_input", "A Mastodon access token is required.")
@@ -102,7 +113,7 @@ class MastodonCredentialsAdminForm(forms.ModelForm):
 
 
 @admin.register(Project)
-class ProjectAdmin(ExportActionMixin, admin.ModelAdmin):
+class ProjectAdmin(ProjectAdminBase):
     """Admin configuration for top-level project workspaces."""
 
     list_display = ("name", "content_retention_days", "created_at")
@@ -414,7 +425,7 @@ class SourceConfigAdmin(ModelAdmin):
         """Augment the changelist with source-count and diversity stats."""
 
         qs = self.get_queryset(request)
-        extra_context = extra_context or {}
+        extra_context = cast(dict[str, Any], extra_context or {})
         active_count = qs.filter(is_active=True).count()
         total_count = qs.count() or 1
 

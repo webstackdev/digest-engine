@@ -1,5 +1,7 @@
 """Trends-domain API viewsets kept under the existing nested project routes."""
 
+from typing import Any
+
 from django.db.models import Avg, Count, OuterRef, Prefetch, Q, Subquery
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, viewsets
@@ -7,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 
+from content.models import Content
 from core.api import (
     AUTHENTICATION_REQUIRED_RESPONSE,
     ProjectOwnedQuerysetMixin,
@@ -16,17 +19,31 @@ from core.api import (
 from core.permissions import IsProjectContributor, IsProjectMember
 from trends.models import (
     ContentClusterMembership,
+    ThemeSuggestion,
+    ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
     TopicVelocitySnapshot,
 )
 from trends.serializers import (
+    ThemeSuggestionDismissSerializer,
+    ThemeSuggestionSerializer,
     TopicClusterDetailSerializer,
     TopicClusterSerializer,
     TopicCentroidObservabilitySummarySerializer,
     TopicCentroidSnapshotSerializer,
     TopicVelocitySnapshotSerializer,
 )
+from trends.tasks import accept_theme_suggestion, dismiss_theme_suggestion
+
+
+def _require_pk(instance: Any) -> int:
+    """Return a saved model primary key for trends API response payloads."""
+
+    instance_pk = getattr(instance, "pk", None)
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
 
 
 @document_project_owned_viewset(
@@ -91,7 +108,7 @@ class TopicClusterViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewS
             )
         return queryset
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Any:
         """Return the detail serializer for cluster drill-down responses."""
 
         if self.action == "retrieve":
@@ -145,6 +162,116 @@ class TopicClusterViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewS
 
 
 @document_project_owned_viewset(
+    resource_plural="theme suggestions",
+    resource_singular="theme suggestion",
+    create_description="Theme suggestions are pipeline-managed rows and are exposed read-only aside from editorial workflow actions.",
+    tag="Trend Analysis",
+    action_overrides=build_crud_action_overrides(
+        ThemeSuggestionSerializer,
+        resource_plural="theme suggestions for the selected project",
+        resource_singular="theme suggestion",
+    ),
+)
+class ThemeSuggestionViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
+    """Inspect and resolve project-scoped theme suggestions."""
+
+    serializer_class = ThemeSuggestionSerializer
+    filter_backends = [OrderingFilter]
+    ordering_fields = ["created_at", "velocity_at_creation", "novelty_score", "status"]
+    ordering = ["status", "-velocity_at_creation", "-created_at"]
+    queryset = ThemeSuggestion.objects.select_related(
+        "project", "cluster", "decided_by"
+    )
+
+    def get_queryset(self):
+        """Annotate suggestion clusters with their latest velocity when present."""
+
+        latest_snapshot_queryset = TopicVelocitySnapshot.objects.filter(
+            cluster_id=OuterRef("cluster_id")
+        ).order_by("-computed_at")
+        return (
+            super()
+            .get_queryset()
+            .select_related("cluster__dominant_entity")
+            .prefetch_related(
+                Prefetch(
+                    "promoted_contents",
+                    queryset=Content.objects.order_by(
+                        "-newsletter_promotion_at", "-published_date"
+                    ),
+                )
+            )
+            .annotate(
+                cluster__velocity_score=Subquery(
+                    latest_snapshot_queryset.values("velocity_score")[:1]
+                )
+            )
+        )
+
+    def get_permissions(self):
+        """Allow members to read suggestions and contributors to resolve them."""
+
+        if self.action in {"accept", "dismiss"}:
+            return [IsProjectContributor()]
+        return [IsProjectMember()]
+
+    @extend_schema(
+        summary="Accept theme suggestion",
+        description="Mark a pending theme suggestion as accepted by the current editor.",
+        request=None,
+        responses={
+            200: ThemeSuggestionSerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Trend Analysis"],
+    )
+    @action(detail=True, methods=["post"], url_path="accept")
+    def accept(self, request, *args, **kwargs):
+        """Accept the selected pending theme suggestion."""
+
+        suggestion = self.get_object()
+        try:
+            accept_theme_suggestion(suggestion, user_id=request.user.id)
+        except ValueError as exc:
+            raise serializers.ValidationError({"status": str(exc)}) from exc
+        suggestion = self.get_queryset().get(pk=suggestion.pk)
+        serializer = self.get_serializer(suggestion)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="Dismiss theme suggestion",
+        description="Dismiss a pending theme suggestion and persist the editor's reason.",
+        request=ThemeSuggestionDismissSerializer,
+        responses={
+            200: ThemeSuggestionSerializer,
+            400: ThemeSuggestionDismissSerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Trend Analysis"],
+    )
+    @action(detail=True, methods=["post"], url_path="dismiss")
+    def dismiss(self, request, *args, **kwargs):
+        """Dismiss the selected pending theme suggestion."""
+
+        suggestion = self.get_object()
+        serializer = ThemeSuggestionDismissSerializer(
+            data=request.data,
+            context=self.get_serializer_context(),
+        )
+        serializer.is_valid(raise_exception=True)
+        try:
+            dismiss_theme_suggestion(
+                suggestion,
+                user_id=request.user.id,
+                reason=serializer.validated_data["reason"],
+            )
+        except ValueError as exc:
+            raise serializers.ValidationError({"status": str(exc)}) from exc
+        response_serializer = self.get_serializer(suggestion)
+        return Response(response_serializer.data)
+
+
+@document_project_owned_viewset(
     resource_plural="topic centroid snapshots",
     resource_singular="topic centroid snapshot",
     create_description="Topic centroid snapshots are pipeline-managed history rows and are exposed read-only for observability.",
@@ -165,7 +292,6 @@ class TopicCentroidSnapshotViewSet(
 
     def get_permissions(self):
         """Restrict centroid observability to project contributors."""
-
         return [IsProjectContributor()]
 
     @extend_schema(
@@ -194,7 +320,7 @@ class TopicCentroidSnapshotViewSet(
         )
         serializer = TopicCentroidObservabilitySummarySerializer(
             {
-                "project": self.get_project().id,
+                "project": _require_pk(self.get_project()),
                 "snapshot_count": metrics["snapshot_count"],
                 "active_snapshot_count": metrics["active_snapshot_count"],
                 "avg_drift_from_previous": metrics["avg_drift_from_previous"],

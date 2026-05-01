@@ -11,10 +11,10 @@ import logging
 import re
 from datetime import timedelta
 from functools import lru_cache
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal, TypedDict, cast
 
 from django.conf import settings
-from django.db.models import F
+from django.db.models import F, Model
 from django.utils import timezone
 from langgraph.graph import END, StateGraph
 
@@ -29,6 +29,7 @@ from core.embeddings import (
 )
 from core.entity_extraction import run_entity_extraction
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
+from entities.models import EntityMention
 from pipeline.models import ReviewQueue, ReviewReason, SkillResult, SkillStatus
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,30 @@ class PipelineState(TypedDict, total=False):
     relevance: dict[str, Any] | None
     summary: dict[str, Any] | None
     status: str
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for typed pipeline operations."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
+
+
+def _project_pk(content: Content) -> int:
+    """Return the content row's owning project primary key."""
+
+    return _require_pk(content.project)
+
+
+def _content_id_from_state(state: PipelineState) -> int:
+    """Extract a required content id from pipeline state."""
+
+    content_id = state.get("content_id")
+    if content_id is None:
+        raise ValueError("Pipeline state is missing content_id.")
+    return content_id
 
 
 @lru_cache(maxsize=1)
@@ -128,11 +153,11 @@ def process_content_pipeline(content_id: int) -> PipelineState:
 
     content = Content.objects.select_related("project").get(pk=content_id)
     initial_state: PipelineState = {
-        "content_id": content.id,
-        "project_id": content.project_id,
+        "content_id": _require_pk(content),
+        "project_id": _project_pk(content),
         "status": "processing",
     }
-    return get_ingestion_graph().invoke(initial_state)
+    return cast(PipelineState, get_ingestion_graph().invoke(initial_state))
 
 
 def deduplicate_node(state: PipelineState) -> PipelineState:
@@ -332,7 +357,7 @@ def run_deduplication(content: Content) -> dict[str, Any]:
         return {
             "is_duplicate": True,
             "canonical_url": canonical_url,
-            "matched_content_id": exact_duplicate.id,
+            "matched_content_id": _require_pk(exact_duplicate),
             "matched_stage": "exact",
             "similarity_score": None,
             "used_llm": False,
@@ -343,9 +368,9 @@ def run_deduplication(content: Content) -> dict[str, Any]:
         }
 
     recent_candidates = {
-        candidate.id: _root_duplicate_target(candidate)
+        _require_pk(candidate): _root_duplicate_target(candidate)
         for candidate in Content.objects.filter(
-            project_id=content.project_id,
+            project_id=_project_pk(content),
             is_reference=False,
             is_active=True,
             published_date__gte=timezone.now()
@@ -381,7 +406,7 @@ def run_deduplication(content: Content) -> dict[str, Any]:
             return {
                 "is_duplicate": True,
                 "canonical_url": canonical_url,
-                "matched_content_id": duplicate_target.id,
+                "matched_content_id": _require_pk(duplicate_target),
                 "matched_stage": "semantic",
                 "similarity_score": similarity,
                 "used_llm": False,
@@ -403,7 +428,7 @@ def run_deduplication(content: Content) -> dict[str, Any]:
             return {
                 "is_duplicate": True,
                 "canonical_url": canonical_url,
-                "matched_content_id": duplicate_target.id,
+                "matched_content_id": _require_pk(duplicate_target),
                 "matched_stage": "llm",
                 "similarity_score": similarity,
                 "used_llm": True,
@@ -471,7 +496,7 @@ def run_content_classification(content: Content) -> dict[str, Any]:
         except Exception:
             logger.exception(
                 "Classification model call failed; falling back to heuristic classifier",
-                extra={"content_id": content.id},
+                extra={"content_id": _require_pk(content)},
             )
     return _heuristic_classification(content)
 
@@ -481,7 +506,7 @@ def _find_exact_duplicate(content: Content, canonical_url: str) -> Content | Non
 
     exact_match = (
         Content.objects.filter(
-            project_id=content.project_id, canonical_url=canonical_url
+            project_id=_project_pk(content), canonical_url=canonical_url
         )
         .exclude(pk=content.pk)
         .select_related("duplicate_of")
@@ -492,7 +517,7 @@ def _find_exact_duplicate(content: Content, canonical_url: str) -> Content | Non
         return _root_duplicate_target(exact_match)
 
     for candidate in (
-        Content.objects.filter(project_id=content.project_id, canonical_url="")
+        Content.objects.filter(project_id=_project_pk(content), canonical_url="")
         .exclude(pk=content.pk)
         .select_related("duplicate_of")
         .order_by("ingested_at", "id")
@@ -510,7 +535,7 @@ def _root_duplicate_target(content: Content) -> Content:
     """Resolve a duplicate chain to its retained canonical content row."""
 
     current = content
-    while current.duplicate_of_id:
+    while True:
         duplicate_of = current.duplicate_of
         if duplicate_of is None:
             break
@@ -558,7 +583,10 @@ def _run_deduplication_tiebreak(
     except Exception:
         logger.exception(
             "Deduplication tiebreak model call failed; treating the borderline pair as distinct",
-            extra={"content_id": content.id, "candidate_content_id": candidate.id},
+            extra={
+                "content_id": _require_pk(content),
+                "candidate_content_id": _require_pk(candidate),
+            },
         )
         return {
             "is_duplicate": False,
@@ -613,9 +641,9 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
     """
 
     vector = embed_text(build_content_embedding_text(content))
-    reference_similarity = float(get_reference_similarity(content.project_id, vector))
+    reference_similarity = float(get_reference_similarity(_project_pk(content), vector))
     centroid_similarity = float(
-        get_topic_centroid_similarity(content.project_id, vector)
+        get_topic_centroid_similarity(_project_pk(content), vector)
     )
     similarity = max(reference_similarity, centroid_similarity)
     if (
@@ -669,7 +697,7 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
         except Exception:
             logger.exception(
                 "Relevance model call failed; falling back to heuristic relevance",
-                extra={"content_id": content.id},
+                extra={"content_id": _require_pk(content)},
             )
 
     return {
@@ -721,7 +749,7 @@ def run_summarization(content: Content) -> dict[str, Any]:
         except Exception:
             logger.exception(
                 "Summarization model call failed; falling back to heuristic summary",
-                extra={"content_id": content.id},
+                extra={"content_id": _require_pk(content)},
             )
     return {
         "summary": _heuristic_summary(content),
@@ -800,7 +828,7 @@ def execute_background_skill_result(
     ).get(pk=skill_result_id)
     if skill_result.skill_name != skill_name:
         raise ValueError(
-            f"Skill result {skill_result.id} is for {skill_result.skill_name}, not {skill_name}."
+            f"Skill result {_require_pk(skill_result)} is for {skill_result.skill_name}, not {skill_name}."
         )
 
     _update_skill_result(skill_result, status=SkillStatus.RUNNING, error_message="")
@@ -1013,10 +1041,12 @@ def _apply_authority_adjustment(
 def _get_primary_authority_entity(content: Content):
     """Choose the best entity to use for authority-aware relevance bumping."""
 
-    if content.entity_id:
+    if content.entity is not None:
         return content.entity
 
-    mentions = list(content.entity_mentions.select_related("entity").all())
+    mentions = list(
+        EntityMention.objects.filter(content=content).select_related("entity")
+    )
     if not mentions:
         return None
 
@@ -1149,7 +1179,9 @@ def _clamp_score(value: Any) -> float:
 
 
 def _get_content(state: PipelineState) -> Content:
-    return Content.objects.select_related("project").get(pk=state["content_id"])
+    return Content.objects.select_related("project").get(
+        pk=_content_id_from_state(state)
+    )
 
 
 def _upsert_review_queue_item(

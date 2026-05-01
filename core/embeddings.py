@@ -15,6 +15,7 @@ from uuid import uuid4
 
 import httpx
 from django.conf import settings as django_settings
+from django.db.models import Model
 from django.utils.dateparse import parse_datetime
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -32,6 +33,15 @@ from entities.models import Entity
 
 SentenceTransformer = None
 settings = cast(CoreSettings, django_settings)
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for typed Qdrant payload construction."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
 
 
 def get_sentence_transformer_class():
@@ -90,7 +100,10 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
     def get_embedding_dimension(self) -> int:
         """Return the model's native embedding dimension without probing text."""
 
-        return int(self.model.get_sentence_embedding_dimension())
+        dimension = self.model.get_sentence_embedding_dimension()
+        if dimension is None:
+            raise RuntimeError("Embedding model did not report a vector dimension.")
+        return int(dimension)
 
 
 class OllamaEmbeddingProvider(EmbeddingProvider):
@@ -222,18 +235,20 @@ def upsert_content_embedding(content: Content) -> str:
     """
 
     client = get_qdrant_client()
-    ensure_project_collection(content.project_id)
+    project_id = _require_pk(content.project)
+    content_id = _require_pk(content)
+    ensure_project_collection(project_id)
     embedding_id = content.embedding_id or str(uuid4())
     vector = embed_text(build_content_embedding_text(content))
     client.upsert(
-        collection_name=collection_name_for_project(content.project_id),
+        collection_name=collection_name_for_project(project_id),
         points=[
             PointStruct(
                 id=embedding_id,
                 vector=vector,
                 payload={
-                    "content_id": content.id,
-                    "project_id": content.project_id,
+                    "content_id": content_id,
+                    "project_id": project_id,
                     "url": content.url,
                     "title": content.title,
                     "published_date": serialize_published_date(content.published_date),
@@ -254,18 +269,20 @@ def upsert_entity_embedding(entity: Entity) -> str:
     """Write or update an entity embedding in the project's entity collection."""
 
     client = get_qdrant_client()
-    ensure_project_entity_collection(entity.project_id)
+    project_id = _require_pk(entity.project)
+    entity_id = _require_pk(entity)
+    ensure_project_entity_collection(project_id)
     vector = embed_text(build_entity_embedding_text(entity))
-    embedding_id = f"entity-{entity.id}"
+    embedding_id = f"entity-{entity_id}"
     client.upsert(
-        collection_name=entity_collection_name_for_project(entity.project_id),
+        collection_name=entity_collection_name_for_project(project_id),
         points=[
             PointStruct(
                 id=embedding_id,
                 vector=vector,
                 payload={
-                    "entity_id": entity.id,
-                    "project_id": entity.project_id,
+                    "entity_id": entity_id,
+                    "project_id": project_id,
                     "name": entity.name,
                     "type": entity.type,
                 },
@@ -343,11 +360,11 @@ def search_similar_content(
     """Find content similar to an existing content row within the same project."""
 
     return search_similar(
-        content.project_id,
+        _require_pk(content.project),
         embed_text(build_content_embedding_text(content)),
         limit=limit,
         is_reference=is_reference,
-        exclude_content_id=content.id,
+        exclude_content_id=_require_pk(content),
     )
 
 
@@ -370,9 +387,10 @@ def search_similar_entities(
 def search_similar_entities_for_content(content: Content, limit: int = 8):
     """Find tracked entities whose embeddings are close to a content item."""
 
-    sync_project_entity_embeddings(content.project_id)
+    project_id = _require_pk(content.project)
+    sync_project_entity_embeddings(project_id)
     return search_similar_entities(
-        content.project_id,
+        project_id,
         embed_text(build_content_embedding_text(content)),
         limit=limit,
     )

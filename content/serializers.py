@@ -32,6 +32,9 @@ class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
             "duplicate_signal_count",
             "is_reference",
             "is_active",
+            "newsletter_promotion_at",
+            "newsletter_promotion_by",
+            "newsletter_promotion_theme",
         ]
         read_only_fields = [
             "id",
@@ -42,6 +45,9 @@ class ContentSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
             "embedding_id",
             "duplicate_of",
             "duplicate_signal_count",
+            "newsletter_promotion_at",
+            "newsletter_promotion_by",
+            "newsletter_promotion_theme",
         ]
 
     def validate(self, attrs):

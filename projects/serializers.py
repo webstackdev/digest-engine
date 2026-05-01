@@ -57,13 +57,10 @@ class ProjectSerializer(ProjectScopedSerializerMixin, serializers.ModelSerialize
             return None
         return get_user_role(request.user, obj)
 
-    def _get_bluesky_credentials(self, obj: Project):
+    def _get_bluesky_credentials(self, obj: Project) -> BlueskyCredentials | None:
         """Return the project's stored Bluesky credentials, if configured."""
 
-        try:
-            return obj.bluesky_credentials
-        except Project.bluesky_credentials.RelatedObjectDoesNotExist:
-            return None
+        return BlueskyCredentials.objects.filter(project=obj).first()
 
     def get_has_bluesky_credentials(self, obj: Project) -> bool:
         """Return whether the project has stored Bluesky credentials."""

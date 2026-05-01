@@ -7,6 +7,7 @@ from core.models import (
     Entity,
 )
 from core.plugins.bluesky import BlueskySourcePlugin
+from ingestion.plugins.base import ContentItem
 from projects.model_support import SourcePluginName
 from projects.models import BlueskyCredentials, Project, SourceConfig
 
@@ -162,8 +163,13 @@ def test_bluesky_match_entity_for_item_uses_bluesky_handle(bluesky_context):
     plugin = BlueskySourcePlugin(bluesky_context.source_config)
 
     result = plugin.match_entity_for_item(
-        SimpleNamespace(
+        ContentItem(
             url="https://irrelevant.example.com/article",
+            title="Ignored title",
+            author="alice.bsky.social",
+            published_date=datetime.now(tz=UTC),
+            content_text="Ignored body",
+            source_plugin=SourcePluginName.BLUESKY,
             source_metadata={"author_handle": "Alice.BSky.social"},
         )
     )

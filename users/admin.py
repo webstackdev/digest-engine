@@ -1,5 +1,7 @@
 """Django admin registration for the custom application user model."""
 
+from typing import Any, cast
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
@@ -21,27 +23,35 @@ class AppUserAdmin(UserAdmin):
         "is_staff",
         "is_active",
     )
-    fieldsets = UserAdmin.fieldsets + (
-        (
-            "Profile",
-            {
-                "fields": (
-                    "display_name",
-                    "avatar",
-                    "bio",
-                    "timezone",
-                )
-            },
-        ),
+    fieldsets = cast(
+        Any,
+        [
+            *(UserAdmin.fieldsets or []),
+            (
+                "Profile",
+                {
+                    "fields": (
+                        "display_name",
+                        "avatar",
+                        "bio",
+                        "timezone",
+                    )
+                },
+            ),
+        ],
     )
-    add_fieldsets = UserAdmin.add_fieldsets + (
-        (
-            "Profile",
-            {
-                "fields": (
-                    "display_name",
-                    "email",
-                )
-            },
-        ),
+    add_fieldsets = cast(
+        Any,
+        [
+            *(UserAdmin.add_fieldsets or []),
+            (
+                "Profile",
+                {
+                    "fields": (
+                        "display_name",
+                        "email",
+                    )
+                },
+            ),
+        ],
     )

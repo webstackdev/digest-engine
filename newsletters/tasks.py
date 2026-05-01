@@ -1,13 +1,36 @@
 """Celery tasks and helpers for newsletter intake processing."""
 
+from typing import Protocol, cast
+
 from celery import shared_task
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Model, Q
 from django.utils import timezone
 
 from content.models import Content
 from core.deduplication import canonicalize_url
 from newsletters.models import IntakeAllowlist, NewsletterIntake, NewsletterIntakeStatus
+
+
+class DelayedTask(Protocol):
+    """Protocol for Celery tasks dispatched through ``delay``."""
+
+    def delay(self, *args: object, **kwargs: object) -> object: ...
+
+
+def _enqueue_task(task: object, *args: object) -> None:
+    """Dispatch a Celery task through a typed ``delay`` seam."""
+
+    cast(DelayedTask, task).delay(*args)
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for newsletter intake processing."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
 
 
 @shared_task(name="core.tasks.process_newsletter_intake")
@@ -56,7 +79,7 @@ def process_newsletter_intake(intake_id: int):
             published_date=timezone.now(),
             content_text=item.excerpt or intake.raw_text,
             source_metadata={
-                "newsletter_intake_id": intake.id,
+                "newsletter_intake_id": _require_pk(intake),
                 "sender_email": intake.sender_email,
                 "position": item.position,
             },
@@ -92,8 +115,9 @@ def _schedule_content_processing(content: Content) -> None:
     )
 
     upsert_content_embedding(content)
-    assign_content_to_topic_cluster(content.id)
+    content_id = _require_pk(content)
+    assign_content_to_topic_cluster(content_id)
     if settings.CELERY_TASK_ALWAYS_EAGER:
-        process_content(content.id)
+        process_content(content_id)
     else:
-        process_content.delay(content.id)
+        _enqueue_task(process_content, content_id)

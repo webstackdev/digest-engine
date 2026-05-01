@@ -187,6 +187,10 @@ class MastodonSourcePlugin(SourcePlugin):
         elif config.get("account_acct"):
             account = client.account_lookup(config["account_acct"])
             account_id = self._nested_value(account, "id")
+            if isinstance(account_id, bool) or not isinstance(account_id, (str, int)):
+                raise RuntimeError(
+                    "Mastodon account lookup did not return a usable account ID."
+                )
             statuses = client.account_statuses(
                 account_id,
                 limit=request_limit,

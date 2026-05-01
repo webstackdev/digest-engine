@@ -1,10 +1,12 @@
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.db.models import Model
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
 from core.models import (
     Content,
@@ -24,6 +26,8 @@ from core.models import (
     RunStatus,
     SkillResult,
     SkillStatus,
+    ThemeSuggestion,
+    ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
     TopicVelocitySnapshot,
@@ -41,14 +45,33 @@ from projects.models import (
 )
 
 
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for typed API test assertions."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
+
+
+def _typed_client(client: object) -> APIClient:
+    """Cast the DRF test client so Pylance sees APIClient helpers."""
+
+    return cast(APIClient, client)
+
+
+def _create_user(user_model: type[Any], **kwargs: object):
+    """Create a user through the custom manager with a typed escape hatch."""
+
+    return cast(Any, user_model.objects).create_user(**kwargs)
+
+
 class ProjectScopedApiTests(APITestCase):
     def setUp(self):
         user_model = get_user_model()
-        self.owner = user_model.objects.create_user(
-            username="owner", password="testpass123"
-        )
-        self.other_user = user_model.objects.create_user(
-            username="other", password="testpass123"
+        self.owner = _create_user(user_model, username="owner", password="testpass123")
+        self.other_user = _create_user(
+            user_model, username="other", password="testpass123"
         )
         self.owner_project = Project.objects.create(
             name="Owner Project",
@@ -157,14 +180,14 @@ class ProjectScopedApiTests(APITestCase):
             drift_from_previous=0.1,
             drift_from_week_ago=0.2,
         )
-        self.client.force_authenticate(self.owner)
+        _typed_client(self.client).force_authenticate(self.owner)
 
     def assert_standardized_validation_error(self, payload, attr):
         self.assertEqual(payload["type"], "validation_error")
         self.assertTrue(any(error["attr"] == attr for error in payload["errors"]))
 
     def test_project_list_requires_authentication(self):
-        self.client.force_authenticate(user=None)
+        _typed_client(self.client).force_authenticate(user=None)
 
         response = self.client.get(reverse("v1:project-list"), HTTP_HOST="localhost")
 
@@ -195,7 +218,7 @@ class ProjectScopedApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["id"], self.owner_project.id)
+        self.assertEqual(response.json()[0]["id"], _require_pk(self.owner_project))
         self.assertEqual(response.json()[0]["user_role"], ProjectRole.ADMIN)
         self.assertEqual(
             response.json()[0]["intake_token"], self.owner_project.intake_token
@@ -214,7 +237,7 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-rotate-intake-token",
-                kwargs={"id": self.owner_project.id},
+                kwargs={"id": _require_pk(self.owner_project)},
             ),
             format="json",
         )
@@ -229,13 +252,14 @@ class ProjectScopedApiTests(APITestCase):
     def test_entity_list_is_scoped_to_request_user_project(self):
         response = self.client.get(
             reverse(
-                "v1:project-entity-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-entity-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["id"], self.owner_entity.id)
+        self.assertEqual(response.json()[0]["id"], _require_pk(self.owner_entity))
 
     def test_entity_list_includes_recent_mentions(self):
         mention = EntityMention.objects.create(
@@ -250,13 +274,16 @@ class ProjectScopedApiTests(APITestCase):
 
         response = self.client.get(
             reverse(
-                "v1:project-entity-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-entity-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()[0]["mention_count"], 1)
-        self.assertEqual(response.json()[0]["latest_mentions"][0]["id"], mention.id)
+        self.assertEqual(
+            response.json()[0]["latest_mentions"][0]["id"], _require_pk(mention)
+        )
         self.assertEqual(
             response.json()[0]["latest_mentions"][0]["content_title"],
             self.owner_content.title,
@@ -296,16 +323,16 @@ class ProjectScopedApiTests(APITestCase):
             reverse(
                 "v1:project-entity-mentions",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_entity.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_entity),
                 },
             )
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 2)
-        self.assertEqual(response.json()[0]["id"], second_mention.id)
-        self.assertEqual(response.json()[1]["id"], first_mention.id)
+        self.assertEqual(response.json()[0]["id"], _require_pk(second_mention))
+        self.assertEqual(response.json()[1]["id"], _require_pk(first_mention))
         self.assertEqual(response.json()[0]["content_title"], second_content.title)
 
     def test_intake_allowlist_list_is_scoped_to_request_user_project(self):
@@ -317,21 +344,23 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.get(
             reverse(
                 "v1:project-intake-allowlist-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["id"], self.owner_intake_allowlist.id)
+        self.assertEqual(
+            response.json()[0]["id"], _require_pk(self.owner_intake_allowlist)
+        )
         self.assertFalse(response.json()[0]["is_confirmed"])
-        self.assertNotEqual(response.json()[0]["id"], other_allowlist.id)
+        self.assertNotEqual(response.json()[0]["id"], _require_pk(other_allowlist))
 
     def test_intake_allowlist_create_and_delete_manage_project_senders(self):
         create_response = self.client.post(
             reverse(
                 "v1:project-intake-allowlist-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"sender_email": "new-sender@example.com"},
             format="json",
@@ -342,29 +371,31 @@ class ProjectScopedApiTests(APITestCase):
             project=self.owner_project,
             sender_email="new-sender@example.com",
         )
-        self.assertEqual(create_response.json()["project"], self.owner_project.id)
+        self.assertEqual(
+            create_response.json()["project"], _require_pk(self.owner_project)
+        )
         self.assertFalse(create_response.json()["is_confirmed"])
 
         delete_response = self.client.delete(
             reverse(
                 "v1:project-intake-allowlist-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": created_allowlist.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(created_allowlist),
                 },
             )
         )
 
         self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(
-            IntakeAllowlist.objects.filter(pk=created_allowlist.id).exists()
+            IntakeAllowlist.objects.filter(pk=_require_pk(created_allowlist)).exists()
         )
 
     def test_bluesky_credentials_list_create_and_update_hide_stored_password(self):
         list_response = self.client.get(
             reverse(
                 "v1:project-bluesky-credentials-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
 
@@ -374,7 +405,7 @@ class ProjectScopedApiTests(APITestCase):
         create_response = self.client.post(
             reverse(
                 "v1:project-bluesky-credentials-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {
                 "handle": "@Owner.Project.BSKY.social",
@@ -397,8 +428,8 @@ class ProjectScopedApiTests(APITestCase):
             reverse(
                 "v1:project-bluesky-credentials-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": credentials.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(credentials),
                 },
             ),
             {
@@ -419,7 +450,7 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-bluesky-credentials-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {
                 "handle": "owner.bsky.social",
@@ -445,19 +476,21 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.get(
             reverse(
                 "v1:project-newsletter-intake-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["id"], self.owner_newsletter_intake.id)
+        self.assertEqual(
+            response.json()[0]["id"], _require_pk(self.owner_newsletter_intake)
+        )
         self.assertEqual(response.json()[0]["status"], NewsletterIntakeStatus.EXTRACTED)
         self.assertEqual(
             response.json()[0]["extraction_result"]["items"][0]["title"],
             "Example Post",
         )
-        self.assertNotEqual(response.json()[0]["id"], other_intake.id)
+        self.assertNotEqual(response.json()[0]["id"], _require_pk(other_intake))
 
     def test_entity_list_supports_authority_score_ordering(self):
         second_entity = Entity.objects.create(
@@ -471,14 +504,15 @@ class ProjectScopedApiTests(APITestCase):
 
         response = self.client.get(
             reverse(
-                "v1:project-entity-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-entity-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"ordering": "-authority_score"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()[0]["id"], second_entity.id)
-        self.assertEqual(response.json()[1]["id"], self.owner_entity.id)
+        self.assertEqual(response.json()[0]["id"], _require_pk(second_entity))
+        self.assertEqual(response.json()[1]["id"], _require_pk(self.owner_entity))
 
     def test_entity_authority_history_action_returns_recent_snapshots(self):
         first_snapshot = EntityAuthoritySnapshot.objects.create(
@@ -504,8 +538,8 @@ class ProjectScopedApiTests(APITestCase):
             reverse(
                 "v1:project-entity-authority-history",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_entity.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_entity),
                 },
             ),
             {"limit": 1},
@@ -513,8 +547,8 @@ class ProjectScopedApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["id"], second_snapshot.id)
-        self.assertNotEqual(response.json()[0]["id"], first_snapshot.id)
+        self.assertEqual(response.json()[0]["id"], _require_pk(second_snapshot))
+        self.assertNotEqual(response.json()[0]["id"], _require_pk(first_snapshot))
 
     def test_topic_centroid_summary_action_returns_latest_snapshot_and_averages(self):
         latest_snapshot = TopicCentroidSnapshot.objects.create(
@@ -531,15 +565,17 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.get(
             reverse(
                 "v1:project-topic-centroid-snapshot-summary",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json()["project"], self.owner_project.id)
+        self.assertEqual(response.json()["project"], _require_pk(self.owner_project))
         self.assertEqual(response.json()["snapshot_count"], 2)
         self.assertEqual(response.json()["active_snapshot_count"], 2)
-        self.assertEqual(response.json()["latest_snapshot"]["id"], latest_snapshot.id)
+        self.assertEqual(
+            response.json()["latest_snapshot"]["id"], _require_pk(latest_snapshot)
+        )
         self.assertAlmostEqual(response.json()["avg_drift_from_previous"], 0.2)
         self.assertAlmostEqual(response.json()["avg_drift_from_week_ago"], 0.3)
 
@@ -565,17 +601,17 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.get(
             reverse(
                 "v1:project-topic-cluster-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"ordering": "-velocity_score"},
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["id"], cluster.id)
+        self.assertEqual(response.json()[0]["id"], _require_pk(cluster))
         self.assertEqual(response.json()[0]["member_count"], 3)
         self.assertEqual(
-            response.json()[0]["dominant_entity"]["id"], self.owner_entity.id
+            response.json()[0]["dominant_entity"]["id"], _require_pk(self.owner_entity)
         )
         self.assertAlmostEqual(response.json()[0]["velocity_score"], 1.0)
         self.assertAlmostEqual(response.json()[0]["z_score"], 3.0)
@@ -624,33 +660,230 @@ class ProjectScopedApiTests(APITestCase):
         detail_response = self.client.get(
             reverse(
                 "v1:project-topic-cluster-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": cluster.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(cluster),
+                },
             )
         )
         history_response = self.client.get(
             reverse(
                 "v1:project-topic-cluster-velocity-history",
-                kwargs={"project_id": self.owner_project.id, "pk": cluster.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(cluster),
+                },
             ),
             {"limit": 1},
         )
 
         self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(detail_response.json()["id"], cluster.id)
+        self.assertEqual(detail_response.json()["id"], _require_pk(cluster))
         self.assertEqual(len(detail_response.json()["memberships"]), 1)
         self.assertEqual(
             detail_response.json()["memberships"][0]["content"]["id"],
-            self.owner_content.id,
+            _require_pk(self.owner_content),
         )
         self.assertEqual(len(detail_response.json()["velocity_history"]), 2)
         self.assertEqual(
             detail_response.json()["velocity_history"][0]["id"],
-            second_snapshot.id,
+            _require_pk(second_snapshot),
         )
 
         self.assertEqual(history_response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(history_response.json()), 1)
-        self.assertEqual(history_response.json()[0]["id"], second_snapshot.id)
+        self.assertEqual(history_response.json()[0]["id"], _require_pk(second_snapshot))
+
+    def test_theme_suggestion_list_is_scoped_to_project(self):
+        cluster = TopicCluster.objects.create(
+            project=self.owner_project,
+            first_seen_at="2026-04-22T00:00:00Z",
+            last_seen_at="2026-04-24T00:00:00Z",
+            is_active=True,
+            member_count=3,
+            dominant_entity=self.owner_entity,
+        )
+        suggestion = ThemeSuggestion.objects.create(
+            project=self.owner_project,
+            cluster=cluster,
+            title="Owner Theme",
+            pitch="Owner pitch",
+            why_it_matters="Owner why",
+            suggested_angle="Owner angle",
+            velocity_at_creation=0.9,
+            novelty_score=0.8,
+        )
+        other_cluster = TopicCluster.objects.create(
+            project=self.other_project,
+            first_seen_at="2026-04-22T00:00:00Z",
+            last_seen_at="2026-04-24T00:00:00Z",
+            is_active=True,
+            member_count=3,
+            dominant_entity=self.other_entity,
+        )
+        ThemeSuggestion.objects.create(
+            project=self.other_project,
+            cluster=other_cluster,
+            title="Other Theme",
+            pitch="Other pitch",
+            why_it_matters="Other why",
+            suggested_angle="Other angle",
+            velocity_at_creation=0.8,
+            novelty_score=0.7,
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-theme-suggestion-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["id"], _require_pk(suggestion))
+        self.assertEqual(response.json()[0]["status"], ThemeSuggestionStatus.PENDING)
+
+    def test_theme_suggestion_accept_and_dismiss_actions_update_workflow_fields(self):
+        cluster = TopicCluster.objects.create(
+            project=self.owner_project,
+            first_seen_at="2026-04-22T00:00:00Z",
+            last_seen_at="2026-04-24T00:00:00Z",
+            is_active=True,
+            member_count=3,
+            dominant_entity=self.owner_entity,
+        )
+        promoted_content = Content.objects.create(
+            project=self.owner_project,
+            url="https://example.com/promoted-by-theme",
+            title="Promoted by Theme",
+            author="Owner Author",
+            entity=self.owner_entity,
+            source_plugin=SourcePluginName.RSS,
+            published_date="2026-04-24T00:00:00Z",
+            content_text="Promoted content text",
+        )
+        ContentClusterMembership.objects.create(
+            content=promoted_content,
+            cluster=cluster,
+            project=self.owner_project,
+            similarity=0.94,
+        )
+        accept_suggestion = ThemeSuggestion.objects.create(
+            project=self.owner_project,
+            cluster=cluster,
+            title="Accept Theme",
+            pitch="Pitch",
+            why_it_matters="Why",
+            suggested_angle="Angle",
+            velocity_at_creation=0.9,
+            novelty_score=0.8,
+        )
+        dismiss_suggestion = ThemeSuggestion.objects.create(
+            project=self.owner_project,
+            cluster=cluster,
+            title="Dismiss Theme",
+            pitch="Pitch",
+            why_it_matters="Why",
+            suggested_angle="Angle",
+            velocity_at_creation=0.7,
+            novelty_score=0.75,
+        )
+
+        accept_response = self.client.post(
+            reverse(
+                "v1:project-theme-suggestion-accept",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(accept_suggestion),
+                },
+            ),
+            format="json",
+        )
+        dismiss_response = self.client.post(
+            reverse(
+                "v1:project-theme-suggestion-dismiss",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(dismiss_suggestion),
+                },
+            ),
+            {"reason": "already covered"},
+            format="json",
+        )
+
+        accept_suggestion.refresh_from_db()
+        dismiss_suggestion.refresh_from_db()
+        promoted_content.refresh_from_db()
+        self.assertEqual(accept_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(accept_suggestion.status, ThemeSuggestionStatus.ACCEPTED)
+        self.assertEqual(accept_suggestion.decided_by, self.owner)
+        self.assertIsNotNone(accept_suggestion.decided_at)
+        self.assertEqual(promoted_content.newsletter_promotion_theme, accept_suggestion)
+        self.assertEqual(promoted_content.newsletter_promotion_by, self.owner)
+        self.assertIsNotNone(promoted_content.newsletter_promotion_at)
+        self.assertEqual(len(accept_response.json()["promoted_contents"]), 1)
+        self.assertEqual(
+            accept_response.json()["promoted_contents"][0]["id"],
+            _require_pk(promoted_content),
+        )
+
+        self.assertEqual(dismiss_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(dismiss_suggestion.status, ThemeSuggestionStatus.DISMISSED)
+        self.assertEqual(dismiss_suggestion.dismissal_reason, "already covered")
+        self.assertEqual(dismiss_suggestion.decided_by, self.owner)
+
+    def test_content_detail_includes_newsletter_promotion_state(self):
+        cluster = TopicCluster.objects.create(
+            project=self.owner_project,
+            first_seen_at="2026-04-22T00:00:00Z",
+            last_seen_at="2026-04-24T00:00:00Z",
+            is_active=True,
+            member_count=1,
+            dominant_entity=self.owner_entity,
+        )
+        suggestion = ThemeSuggestion.objects.create(
+            project=self.owner_project,
+            cluster=cluster,
+            title="Promoted Theme",
+            pitch="Pitch",
+            why_it_matters="Why",
+            suggested_angle="Angle",
+            velocity_at_creation=0.9,
+            novelty_score=0.8,
+            status=ThemeSuggestionStatus.ACCEPTED,
+            decided_by=self.owner,
+        )
+        self.owner_content.newsletter_promotion_theme = suggestion
+        self.owner_content.newsletter_promotion_by = self.owner
+        self.owner_content.newsletter_promotion_at = "2026-04-24T00:00:00Z"
+        self.owner_content.save(
+            update_fields=[
+                "newsletter_promotion_theme",
+                "newsletter_promotion_by",
+                "newsletter_promotion_at",
+            ]
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-content-detail",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_content),
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json()["newsletter_promotion_theme"],
+            _require_pk(suggestion),
+        )
+        self.assertEqual(
+            response.json()["newsletter_promotion_by"], _require_pk(self.owner)
+        )
+        self.assertIsNotNone(response.json()["newsletter_promotion_at"])
 
     def test_content_detail_includes_duplicate_state(self):
         canonical = self.owner_content
@@ -674,19 +907,23 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.get(
             reverse(
                 "v1:project-content-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": duplicate.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(duplicate),
+                },
             )
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["canonical_url"], "https://example.com/owner")
-        self.assertEqual(response.json()["duplicate_of"], canonical.id)
+        self.assertEqual(response.json()["duplicate_of"], _require_pk(canonical))
         self.assertEqual(response.json()["duplicate_signal_count"], 0)
 
     def test_nested_entity_list_rejects_other_users_project(self):
         response = self.client.get(
             reverse(
-                "v1:project-entity-list", kwargs={"project_id": self.other_project.id}
+                "v1:project-entity-list",
+                kwargs={"project_id": _require_pk(self.other_project)},
             )
         )
 
@@ -709,13 +946,13 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.get(
             reverse(
                 "v1:project-entity-candidate-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
-        self.assertEqual(response.json()[0]["id"], owner_candidate.id)
+        self.assertEqual(response.json()[0]["id"], _require_pk(owner_candidate))
 
     def test_entity_candidate_accept_action_returns_updated_candidate(self):
         candidate = EntityCandidate.objects.create(
@@ -728,7 +965,10 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-entity-candidate-accept",
-                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(candidate),
+                },
             ),
             format="json",
         )
@@ -736,7 +976,7 @@ class ProjectScopedApiTests(APITestCase):
         candidate.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(candidate.status, EntityCandidateStatus.ACCEPTED)
-        self.assertIsNotNone(candidate.merged_into_id)
+        self.assertIsNotNone(candidate.merged_into)
         self.assertEqual(response.json()["status"], EntityCandidateStatus.ACCEPTED)
 
     def test_entity_candidate_reject_action_returns_updated_candidate(self):
@@ -750,7 +990,10 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-entity-candidate-reject",
-                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(candidate),
+                },
             ),
             format="json",
         )
@@ -771,9 +1014,12 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-entity-candidate-merge",
-                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(candidate),
+                },
             ),
-            {"merged_into": self.other_entity.id},
+            {"merged_into": _require_pk(self.other_entity)},
             format="json",
         )
 
@@ -791,23 +1037,26 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-entity-candidate-merge",
-                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(candidate),
+                },
             ),
-            {"merged_into": self.owner_entity.id},
+            {"merged_into": _require_pk(self.owner_entity)},
             format="json",
         )
 
         candidate.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(candidate.status, EntityCandidateStatus.MERGED)
-        self.assertEqual(candidate.merged_into_id, self.owner_entity.id)
-        self.assertEqual(response.json()["merged_into"], self.owner_entity.id)
+        self.assertEqual(candidate.merged_into, self.owner_entity)
+        self.assertEqual(response.json()["merged_into"], _require_pk(self.owner_entity))
 
     def test_verify_bluesky_credentials_requires_project_credentials(self):
         response = self.client.post(
             reverse(
                 "v1:project-verify-bluesky-credentials",
-                kwargs={"id": self.owner_project.id},
+                kwargs={"id": _require_pk(self.owner_project)},
             ),
             format="json",
         )
@@ -828,7 +1077,7 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-verify-bluesky-credentials",
-                kwargs={"id": self.owner_project.id},
+                kwargs={"id": _require_pk(self.owner_project)},
             ),
             format="json",
         )
@@ -836,7 +1085,7 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         verify_mock.assert_called_once()
         verified_credentials = verify_mock.call_args.args[0]
-        self.assertEqual(verified_credentials.id, credentials.id)
+        self.assertEqual(verified_credentials, credentials)
         self.assertEqual(response.json()["status"], "verified")
         self.assertEqual(response.json()["handle"], "project.bsky.social")
         self.assertEqual(response.json()["last_error"], "")
@@ -858,7 +1107,7 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-verify-bluesky-credentials",
-                kwargs={"id": self.owner_project.id},
+                kwargs={"id": _require_pk(self.owner_project)},
             ),
             format="json",
         )
@@ -870,14 +1119,14 @@ class ProjectScopedApiTests(APITestCase):
         self.assertNotIn("bad login", str(response.json()))
         logger_exception_mock.assert_called_once_with(
             "Bluesky credential verification failed for project id=%s",
-            self.owner_project.id,
+            _require_pk(self.owner_project),
         )
 
     def test_verify_mastodon_credentials_requires_configured_project_credentials(self):
         response = self.client.post(
             reverse(
                 "v1:project-verify-mastodon-credentials",
-                kwargs={"id": self.owner_project.id},
+                kwargs={"id": _require_pk(self.owner_project)},
             ),
             format="json",
         )
@@ -900,7 +1149,7 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-verify-mastodon-credentials",
-                kwargs={"id": self.owner_project.id},
+                kwargs={"id": _require_pk(self.owner_project)},
             ),
             format="json",
         )
@@ -908,7 +1157,7 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         verify_mock.assert_called_once()
         verified_credentials = verify_mock.call_args.args[0]
-        self.assertEqual(verified_credentials.id, credentials.id)
+        self.assertEqual(verified_credentials, credentials)
         self.assertEqual(response.json()["status"], "verified")
         self.assertEqual(response.json()["account_acct"], "alice@hachyderm.io")
         self.assertEqual(response.json()["instance_url"], "https://hachyderm.io")
@@ -933,7 +1182,7 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-verify-mastodon-credentials",
-                kwargs={"id": self.owner_project.id},
+                kwargs={"id": _require_pk(self.owner_project)},
             ),
             format="json",
         )
@@ -945,17 +1194,18 @@ class ProjectScopedApiTests(APITestCase):
         self.assertNotIn("bad token", str(response.json()))
         logger_exception_mock.assert_called_once_with(
             "Mastodon credential verification failed for project id=%s",
-            self.owner_project.id,
+            _require_pk(self.owner_project),
         )
 
     @patch("core.signals.queue_topic_centroid_recompute")
     def test_feedback_create_assigns_current_user(self, queue_centroid_mock):
         response = self.client.post(
             reverse(
-                "v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-feedback-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {
-                "content": self.owner_content.id,
+                "content": _require_pk(self.owner_content),
                 "feedback_type": FeedbackType.UPVOTE,
             },
             format="json",
@@ -965,15 +1215,16 @@ class ProjectScopedApiTests(APITestCase):
         feedback = UserFeedback.objects.get()
         self.assertEqual(feedback.user, self.owner)
         self.assertEqual(feedback.feedback_type, FeedbackType.UPVOTE)
-        queue_centroid_mock.assert_called_once_with(self.owner_project.id)
+        queue_centroid_mock.assert_called_once_with(_require_pk(self.owner_project))
 
     def test_feedback_rejects_cross_project_content(self):
         response = self.client.post(
             reverse(
-                "v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-feedback-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {
-                "content": self.other_content.id,
+                "content": _require_pk(self.other_content),
                 "feedback_type": FeedbackType.DOWNVOTE,
             },
             format="json",
@@ -985,17 +1236,18 @@ class ProjectScopedApiTests(APITestCase):
     def test_content_create_uses_project_from_url(self):
         response = self.client.post(
             reverse(
-                "v1:project-content-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-content-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {
                 "url": "https://example.com/new",
                 "title": "New Content",
                 "author": "Owner Author",
-                "entity": self.owner_entity.id,
+                "entity": _require_pk(self.owner_entity),
                 "source_plugin": "rss",
                 "published_date": "2026-04-22T00:00:00Z",
                 "content_text": "Nested content text",
-                "project": self.other_project.id,
+                "project": _require_pk(self.other_project),
             },
             format="json",
         )
@@ -1010,7 +1262,7 @@ class ProjectScopedApiTests(APITestCase):
     ):
 
         response = self.client.post(
-            f"/api/v1/projects/{self.owner_project.id}/contents/{self.owner_content.id}/skills/relevance_scoring/",
+            f"/api/v1/projects/{_require_pk(self.owner_project)}/contents/{_require_pk(self.owner_content)}/skills/relevance_scoring/",
             format="json",
         )
 
@@ -1020,7 +1272,9 @@ class ProjectScopedApiTests(APITestCase):
             skill_name="relevance_scoring",
             superseded_by__isnull=True,
         )
-        run_relevance_scoring_delay_mock.assert_called_once_with(pending_result.id)
+        run_relevance_scoring_delay_mock.assert_called_once_with(
+            _require_pk(pending_result)
+        )
         self.owner_content.refresh_from_db()
         self.assertIsNone(self.owner_content.relevance_score)
         self.assertEqual(response.json()["skill_name"], "relevance_scoring")
@@ -1034,7 +1288,7 @@ class ProjectScopedApiTests(APITestCase):
         self.owner_content.save(update_fields=["relevance_score"])
 
         response = self.client.post(
-            f"/api/v1/projects/{self.owner_project.id}/contents/{self.owner_content.id}/skills/summarization/",
+            f"/api/v1/projects/{_require_pk(self.owner_project)}/contents/{_require_pk(self.owner_content)}/skills/summarization/",
             format="json",
         )
 
@@ -1044,7 +1298,9 @@ class ProjectScopedApiTests(APITestCase):
             skill_name="summarization",
             superseded_by__isnull=True,
         )
-        run_summarization_delay_mock.assert_called_once_with(pending_result.id)
+        run_summarization_delay_mock.assert_called_once_with(
+            _require_pk(pending_result)
+        )
         self.assertEqual(response.json()["skill_name"], "summarization")
         self.assertEqual(response.json()["status"], SkillStatus.PENDING)
 
@@ -1054,7 +1310,7 @@ class ProjectScopedApiTests(APITestCase):
             SimpleNamespace(
                 score=0.91,
                 payload={
-                    "content_id": self.other_content.id,
+                    "content_id": _require_pk(self.other_content),
                     "title": self.other_content.title,
                     "url": self.other_content.url,
                     "published_date": self.other_content.published_date,
@@ -1064,7 +1320,7 @@ class ProjectScopedApiTests(APITestCase):
         ]
 
         response = self.client.post(
-            f"/api/v1/projects/{self.owner_project.id}/contents/{self.owner_content.id}/skills/find_related/",
+            f"/api/v1/projects/{_require_pk(self.owner_project)}/contents/{_require_pk(self.owner_content)}/skills/find_related/",
             format="json",
         )
 
@@ -1073,62 +1329,66 @@ class ProjectScopedApiTests(APITestCase):
         self.assertEqual(response.json()["status"], SkillStatus.COMPLETED)
         self.assertEqual(
             response.json()["result_data"]["related_items"][0]["content_id"],
-            self.other_content.id,
+            _require_pk(self.other_content),
         )
 
     def test_authenticated_nested_list_endpoints_smoke(self):
         list_endpoints = [
             reverse(
-                "v1:project-config-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-config-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
-                "v1:project-entity-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-entity-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-entity-candidate-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
-                "v1:project-content-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-content-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-skill-result-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
-                "v1:project-feedback-list", kwargs={"project_id": self.owner_project.id}
+                "v1:project-feedback-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-ingestion-run-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-bluesky-credentials-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-mastodon-credentials-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-intake-allowlist-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-newsletter-intake-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-source-config-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-topic-centroid-snapshot-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             reverse(
                 "v1:project-review-queue-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
         ]
 
@@ -1143,71 +1403,71 @@ class ProjectScopedApiTests(APITestCase):
             reverse(
                 "v1:project-config-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_config.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_config),
                 },
             ),
             reverse(
                 "v1:project-entity-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_entity.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_entity),
                 },
             ),
             reverse(
                 "v1:project-content-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_content.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_content),
                 },
             ),
             reverse(
                 "v1:project-skill-result-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_skill_result.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_skill_result),
                 },
             ),
             reverse(
                 "v1:project-ingestion-run-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_ingestion_run.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_ingestion_run),
                 },
             ),
             reverse(
                 "v1:project-intake-allowlist-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_intake_allowlist.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_intake_allowlist),
                 },
             ),
             reverse(
                 "v1:project-newsletter-intake-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_newsletter_intake.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_newsletter_intake),
                 },
             ),
             reverse(
                 "v1:project-source-config-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_source_config.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_source_config),
                 },
             ),
             reverse(
                 "v1:project-topic-centroid-snapshot-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_topic_centroid_snapshot.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_topic_centroid_snapshot),
                 },
             ),
             reverse(
                 "v1:project-review-queue-detail",
                 kwargs={
-                    "project_id": self.owner_project.id,
-                    "pk": self.owner_review_queue.id,
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_review_queue),
                 },
             ),
         ]
@@ -1221,7 +1481,10 @@ class ProjectScopedApiTests(APITestCase):
         detail_endpoints.append(
             reverse(
                 "v1:project-entity-candidate-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": candidate.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(candidate),
+                },
             )
         )
 
@@ -1234,7 +1497,10 @@ class ProjectScopedApiTests(APITestCase):
         detail_endpoints.append(
             reverse(
                 "v1:project-feedback-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": feedback.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(feedback),
+                },
             )
         )
 
@@ -1245,7 +1511,10 @@ class ProjectScopedApiTests(APITestCase):
         detail_endpoints.append(
             reverse(
                 "v1:project-bluesky-credentials-detail",
-                kwargs={"project_id": self.owner_project.id, "pk": credentials.id},
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(credentials),
+                },
             )
         )
 
@@ -1258,7 +1527,7 @@ class ProjectScopedApiTests(APITestCase):
         response = self.client.post(
             reverse(
                 "v1:project-source-config-list",
-                kwargs={"project_id": self.owner_project.id},
+                kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"plugin_name": SourcePluginName.RSS, "config": {}},
             format="json",

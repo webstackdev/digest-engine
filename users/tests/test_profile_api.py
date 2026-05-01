@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from typing import Any, cast
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -13,6 +14,12 @@ from rest_framework.test import APIClient
 from users.models import AppUser
 
 pytestmark = pytest.mark.django_db
+
+
+def _response(value: object) -> Any:
+    """Return a typed API response for response assertions in tests."""
+
+    return cast(Any, value)
 
 
 def make_avatar_file(
@@ -41,7 +48,7 @@ def test_profile_get_returns_the_authenticated_user(tmp_path):
     client.force_authenticate(user)
 
     with override_settings(MEDIA_ROOT=tmp_path):
-        response = client.get("/api/v1/profile/")
+        response = _response(client.get("/api/v1/profile/"))
 
     assert response.status_code == 200
     assert response.json()["username"] == "profile-reader"
@@ -59,14 +66,16 @@ def test_profile_patch_updates_profile_fields(tmp_path):
     client.force_authenticate(user)
 
     with override_settings(MEDIA_ROOT=tmp_path):
-        response = client.patch(
-            "/api/v1/profile/",
-            {
-                "display_name": "Profile Editor",
-                "bio": "Owns the editorial calendar.",
-                "timezone": "America/New_York",
-            },
-            format="json",
+        response = _response(
+            client.patch(
+                "/api/v1/profile/",
+                {
+                    "display_name": "Profile Editor",
+                    "bio": "Owns the editorial calendar.",
+                    "timezone": "America/New_York",
+                },
+                format="json",
+            )
         )
 
     user.refresh_from_db()
@@ -85,10 +94,12 @@ def test_profile_avatar_upload_returns_avatar_and_thumbnail_urls(tmp_path):
     client.force_authenticate(user)
 
     with override_settings(MEDIA_ROOT=tmp_path):
-        response = client.post(
-            "/api/v1/profile/avatar/",
-            {"avatar": make_avatar_file()},
-            format="multipart",
+        response = _response(
+            client.post(
+                "/api/v1/profile/avatar/",
+                {"avatar": make_avatar_file()},
+                format="multipart",
+            )
         )
 
         user.refresh_from_db()
@@ -112,14 +123,16 @@ def test_profile_avatar_delete_clears_avatar_and_thumbnail(tmp_path):
     client.force_authenticate(user)
 
     with override_settings(MEDIA_ROOT=tmp_path):
-        upload_response = client.post(
-            "/api/v1/profile/avatar/",
-            {"avatar": make_avatar_file()},
-            format="multipart",
+        upload_response = _response(
+            client.post(
+                "/api/v1/profile/avatar/",
+                {"avatar": make_avatar_file()},
+                format="multipart",
+            )
         )
         assert upload_response.status_code == 200
 
-        response = client.delete("/api/v1/profile/avatar/")
+        response = _response(client.delete("/api/v1/profile/avatar/"))
         user.refresh_from_db()
         thumbnail_path = tmp_path / f"avatars/{user.id}/thumb.webp"
 

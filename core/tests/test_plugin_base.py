@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from typing import Callable, cast
 
 import pytest
 
@@ -119,12 +120,20 @@ def test_source_plugin_match_entity_for_item_delegates_to_url_matching(plugin_co
 
 def test_source_plugin_abstract_methods_raise_not_implemented(plugin_context):
     plugin = DummySourcePlugin(plugin_context.source_config)
+    fetch_method = cast(
+        Callable[[SourcePlugin, datetime | None], list[ContentItem]],
+        SourcePlugin.__dict__["fetch_new_content"],
+    )
+    health_check_method = cast(
+        Callable[[SourcePlugin], bool],
+        SourcePlugin.__dict__["health_check"],
+    )
 
     with pytest.raises(NotImplementedError):
-        SourcePlugin.fetch_new_content(plugin, since=None)
+        fetch_method(plugin, None)
 
     with pytest.raises(NotImplementedError):
-        SourcePlugin.health_check(plugin)
+        health_check_method(plugin)
 
 
 def test_dummy_source_plugin_implements_abstract_contract(plugin_context):

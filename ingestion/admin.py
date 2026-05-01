@@ -1,5 +1,7 @@
 """Admin configuration for ingestion-domain models."""
 
+from typing import Any, cast
+
 from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
@@ -82,7 +84,7 @@ class IngestionRunAdmin(ModelAdmin):
         """Augment the changelist with ingestion success statistics."""
 
         qs = self.get_queryset(request)
-        extra_context = extra_context or {}
+        extra_context = cast(dict[str, Any], extra_context or {})
         total_runs = qs.count()
         failed_runs = qs.filter(status="failed").count()
         total_ingested = sum(qs.values_list("items_ingested", flat=True))

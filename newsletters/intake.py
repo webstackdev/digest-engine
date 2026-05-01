@@ -5,11 +5,12 @@ from __future__ import annotations
 from email.utils import parseaddr
 from html import escape
 from html.parser import HTMLParser
-from typing import Any, Iterable, cast
+from typing import Any, Iterable, Protocol, cast
 
 from celery import current_app
 from django.conf import settings as django_settings
 from django.core.mail import EmailMultiAlternatives
+from django.db.models import Model
 from django.urls import reverse
 
 from core.newsletter_extraction import extract_newsletter_items
@@ -18,6 +19,33 @@ from newsletters.models import IntakeAllowlist, NewsletterIntake
 from projects.models import Project
 
 settings = cast(CoreSettings, django_settings)
+
+
+class QueuedTask(Protocol):
+    """Protocol for Celery tasks used by newsletter intake dispatch."""
+
+    def apply(self, *args: object, **kwargs: object) -> object: ...
+
+    def delay(self, *args: object, **kwargs: object) -> object: ...
+
+
+def _require_pk(instance: Model) -> int:
+    """Return a saved model primary key for newsletter intake responses."""
+
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
+
+
+def _process_newsletter_intake_task() -> QueuedTask:
+    """Resolve the Celery task used to process stored intake rows."""
+
+    task = cast(Any, current_app.tasks).get("core.tasks.process_newsletter_intake")
+    if task is None:
+        raise RuntimeError("core.tasks.process_newsletter_intake is not registered")
+    return cast(QueuedTask, task)
+
 
 __all__ = [
     "build_confirmation_url",
@@ -257,8 +285,9 @@ def process_inbound_newsletter(
         message_id=normalized_message_id,
         defaults=defaults,
     )
+    intake_id = _require_pk(intake)
     if not created:
-        return {"id": intake.id, "status": intake.status, "duplicate": True}
+        return {"id": intake_id, "status": intake.status, "duplicate": True}
 
     allowlist, allowlist_created = IntakeAllowlist.objects.get_or_create(
         project=project,
@@ -266,8 +295,8 @@ def process_inbound_newsletter(
     )
 
     if allowlist.is_confirmed:
-        core_newsletters.queue_newsletter_intake(intake.id)
-        return {"id": intake.id, "status": intake.status}
+        core_newsletters.queue_newsletter_intake(intake_id)
+        return {"id": intake_id, "status": intake.status}
 
     if allowlist_created:
         core_newsletters.send_confirmation_email(
@@ -276,15 +305,13 @@ def process_inbound_newsletter(
             project_name=project.name,
         )
 
-    return {"id": intake.id, "status": intake.status, "confirmation_required": True}
+    return {"id": intake_id, "status": intake.status, "confirmation_required": True}
 
 
 def queue_newsletter_intake(intake_id: int) -> None:
     """Dispatch newsletter extraction for a stored intake row."""
 
-    process_newsletter_intake = current_app.tasks[
-        "core.tasks.process_newsletter_intake"
-    ]
+    process_newsletter_intake = _process_newsletter_intake_task()
     if settings.CELERY_TASK_ALWAYS_EAGER:
         process_newsletter_intake.apply(args=(intake_id,), throw=True)
     else:

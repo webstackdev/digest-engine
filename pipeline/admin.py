@@ -1,6 +1,7 @@
 """Admin configuration for pipeline-domain models."""
 
 import json
+from typing import Any, cast
 
 from django.contrib import admin, messages
 from django.db.models import Avg
@@ -123,7 +124,7 @@ class SkillResultAdmin(ModelAdmin):
         """Augment the changelist with latency and failure-rate statistics."""
 
         qs = self.get_queryset(request)
-        extra_context = extra_context or {}
+        extra_context = cast(dict[str, Any], extra_context or {})
         avg_latency = qs.aggregate(avg_latency=Avg("latency_ms"))["avg_latency"]
         total_count = qs.count()
         failure_count = qs.filter(status__iexact="failed").count()
@@ -202,7 +203,7 @@ class ReviewQueueAdmin(ModelAdmin):
         """Augment the changelist with pending-volume and confidence stats."""
 
         qs = self.get_queryset(request)
-        extra_context = extra_context or {}
+        extra_context = cast(dict[str, Any], extra_context or {})
         pending_count = qs.filter(resolved=False).count()
         avg_conf = qs.aggregate(avg_confidence=Avg("confidence"))["avg_confidence"] or 0
 

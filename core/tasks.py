@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from trends.tasks import (
         TOPIC_CENTROID_MIN_UPVOTES,
         assign_content_to_topic_cluster,
+        generate_theme_suggestions,
         queue_topic_centroid_recompute,
         recompute_topic_centroid,
         recompute_topic_clusters,
@@ -68,6 +69,10 @@ _COMPAT_TASK_EXPORTS = {
     "assign_content_to_topic_cluster": (
         "trends.tasks",
         "assign_content_to_topic_cluster",
+    ),
+    "generate_theme_suggestions": (
+        "trends.tasks",
+        "generate_theme_suggestions",
     ),
     "TOPIC_CENTROID_MIN_UPVOTES": (
         "trends.tasks",
@@ -94,6 +99,7 @@ __all__ = [
     "process_newsletter_intake",
     "run_all_ingestions",
     "assign_content_to_topic_cluster",
+    "generate_theme_suggestions",
     "run_ingestion",
     "TOPIC_CENTROID_MIN_UPVOTES",
     "queue_topic_centroid_recompute",

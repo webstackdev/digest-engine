@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import secrets
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
@@ -72,9 +72,9 @@ class AppUser(AbstractUser):
         db_table="auth_user_user_permissions",
     )
 
-    objects: ClassVar[AppUserManager] = AppUserManager()
+    objects: ClassVar[Any] = AppUserManager()
 
-    class Meta:
+    class Meta(AbstractUser.Meta):
         db_table = "auth_user"
         verbose_name = "User"
         verbose_name_plural = "Users"
