@@ -25,6 +25,14 @@ frontend-dev:
     if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
     cd frontend && npm run dev
 
+storybook-dev:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
+    cd frontend && npm run storybook
+
+storybook-build:
+    if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi
+    cd frontend && npm run build-storybook
+
 dev:
     if [ ! -f .env ]; then cp .env.example .env; fi
     {{compose}} up

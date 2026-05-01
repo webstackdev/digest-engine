@@ -17,3 +17,6 @@ frontend/coverage/
 frontend/node_modules/
 
 docs/
+
+*storybook.log
+storybook-static

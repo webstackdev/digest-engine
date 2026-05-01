@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
 	--font-body: var(--font-body-source), sans-serif;
 	--font-display: var(--font-display-source), serif;
@@ -46,12 +48,48 @@
 	--shadow-panel: 0 24px 60px rgba(35, 30, 22, 0.12);
 }
 
+.dark {
+	--color-primary: #4ab7ab;
+	--color-primary-strong: #72d0c6;
+	--color-primary-soft: #2a8a80;
+
+	--color-danger: #df8575;
+	--color-danger-strong: #ef9a8c;
+	--color-danger-ink: #2d110c;
+	--color-danger-soft: #8a4337;
+
+	--color-warning: #d9a454;
+	--color-warning-soft: #7f6233;
+
+	--color-ink: #f2ece3;
+	--color-muted: #b7c1bc;
+	--color-paper: #101816;
+	--color-surface: #16211e;
+	--color-surface-strong: #1e2b27;
+	--color-surface-soft: #22322d;
+	--color-canvas-start: #101816;
+	--color-canvas-end: #0b1110;
+
+	--color-sidebar: #0b1110;
+	--color-sidebar-ink: #f2ece3;
+	--color-sidebar-muted: #c7d0cb;
+
+	--shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.36);
+}
+
 @layer base {
 	body {
 		@apply bg-paper text-ink;
 		background-image:
 			radial-gradient(circle at top left, rgba(21, 111, 104, 0.14), transparent 38%),
 			radial-gradient(circle at top right, rgba(194, 122, 44, 0.14), transparent 28%),
+			linear-gradient(180deg, var(--color-canvas-start) 0%, var(--color-canvas-end) 100%);
+	}
+
+	.dark body {
+		background-image:
+			radial-gradient(circle at top left, rgba(74, 183, 171, 0.18), transparent 34%),
+			radial-gradient(circle at top right, rgba(217, 164, 84, 0.16), transparent 24%),
 			linear-gradient(180deg, var(--color-canvas-start) 0%, var(--color-canvas-end) 100%);
 	}
 }
