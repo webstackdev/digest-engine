@@ -1,10 +1,10 @@
 import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell"
+import { OriginalContentIdeaCard } from "@/app/ideas/_components/OriginalContentIdeaCard"
 import {
   DEFAULT_IDEA_DISMISSAL_REASONS,
-  OriginalContentIdeaCard,
-} from "@/components/original-content-idea-card"
+} from "@/app/ideas/_components/OriginalContentIdeaCard"
+import { AppShell } from "@/components/layout/AppShell"
 import { getProjectOriginalContentIdeas, getProjects } from "@/lib/api"
 import { getErrorMessage, getSuccessMessage, selectProject } from "@/lib/view-helpers"
 

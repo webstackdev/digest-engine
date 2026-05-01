@@ -1,6 +1,6 @@
 import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell"
+import { AppShell } from "@/components/layout/AppShell"
 import { getProjects } from "@/lib/api"
 import { getErrorMessage, getSuccessMessage } from "@/lib/view-helpers"
 

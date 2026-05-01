@@ -1,6 +1,6 @@
-import { AppShell } from "@/components/app-shell"
-import { CopyButton } from "@/components/copy-button"
-import { StatusBadge } from "@/components/status-badge"
+import { AppShell } from "@/components/layout/AppShell"
+import { CopyButton } from "@/components/ui/CopyButton"
+import { StatusBadge } from "@/components/ui/StatusBadge"
 import {
   getProjectBlueskyCredentials,
   getProjectIngestionRuns,

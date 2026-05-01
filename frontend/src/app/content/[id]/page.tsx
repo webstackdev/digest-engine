@@ -1,8 +1,8 @@
 import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell"
-import { SkillActionBar } from "@/components/skill-action-bar"
-import { StatusBadge } from "@/components/status-badge"
+import { SkillActionBar } from "@/app/content/[id]/_components/SkillActionBar"
+import { AppShell } from "@/components/layout/AppShell"
+import { StatusBadge } from "@/components/ui/StatusBadge"
 import {
   getProjectContent,
   getProjectFeedback,

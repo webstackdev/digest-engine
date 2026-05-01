@@ -1,7 +1,7 @@
 import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell"
-import { CopyButton } from "@/components/copy-button"
+import { AppShell } from "@/components/layout/AppShell"
+import { CopyButton } from "@/components/ui/CopyButton"
 import {
   getProjectInvitations,
   getProjectMemberships,

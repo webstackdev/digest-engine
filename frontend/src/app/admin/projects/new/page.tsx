@@ -1,4 +1,4 @@
-import { AppShell } from "@/components/app-shell"
+import { AppShell } from "@/components/layout/AppShell"
 import { getProjects } from "@/lib/api"
 import {
   getErrorMessage,

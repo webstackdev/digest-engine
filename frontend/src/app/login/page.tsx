@@ -1,4 +1,4 @@
-import LoginForm from "@/components/auth/login-form"
+import LoginForm from "@/app/login/_components/LoginForm"
 
 type LoginPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>

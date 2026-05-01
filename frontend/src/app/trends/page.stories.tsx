@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell"
-import { StatusBadge } from "@/components/status-badge"
-import { TopicClusterCard } from "@/components/topic-cluster-card"
+import { TopicClusterCard } from "@/app/trends/_components/TopicClusterCard"
+import { AppShell } from "@/components/layout/AppShell"
+import { StatusBadge } from "@/components/ui/StatusBadge"
 import {
   createProject,
   createTopicClusterDetail,

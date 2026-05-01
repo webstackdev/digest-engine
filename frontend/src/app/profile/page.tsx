@@ -1,5 +1,5 @@
-import { AppShell } from "@/components/app-shell"
-import { ProfileSettingsPanel } from "@/components/profile/profile-settings-panel"
+import { ProfileSettingsPanel } from "@/app/profile/_components/ProfileSettingsPanel"
+import { AppShell } from "@/components/layout/AppShell"
 import { getProjects } from "@/lib/api"
 import { selectProject } from "@/lib/view-helpers"
 

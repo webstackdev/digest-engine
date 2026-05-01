@@ -7,7 +7,7 @@ const { loginFormMock } = vi.hoisted(() => ({
   )),
 }))
 
-vi.mock("@/components/auth/login-form", () => ({
+vi.mock("@/app/login/_components/LoginForm", () => ({
   default: loginFormMock,
 }))
 

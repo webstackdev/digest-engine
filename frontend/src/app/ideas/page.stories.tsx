@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
-import { AppShell } from "@/components/app-shell"
-import { OriginalContentIdeaCard } from "@/components/original-content-idea-card"
+import { OriginalContentIdeaCard } from "@/app/ideas/_components/OriginalContentIdeaCard"
+import { AppShell } from "@/components/layout/AppShell"
 import {
   createOriginalContentIdea,
   createProject,

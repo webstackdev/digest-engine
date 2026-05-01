@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
-import { AppShell } from "@/components/app-shell"
-import { ThemeSuggestionCard } from "@/components/theme-suggestion-card"
+import { ThemeSuggestionCard } from "@/app/themes/_components/ThemeSuggestionCard"
+import { AppShell } from "@/components/layout/AppShell"
 import {
   createProject,
   createThemeSuggestion,

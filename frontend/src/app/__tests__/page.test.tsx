@@ -37,7 +37,7 @@ const {
   selectProjectMock: vi.fn(),
 }))
 
-vi.mock("@/components/app-shell", () => ({
+vi.mock("@/components/layout/AppShell", () => ({
   AppShell: ({
     children,
     description,
@@ -55,7 +55,7 @@ vi.mock("@/components/app-shell", () => ({
   ),
 }))
 
-vi.mock("@/components/status-badge", () => ({
+vi.mock("@/components/ui/StatusBadge", () => ({
   StatusBadge: ({
     children,
     tone,

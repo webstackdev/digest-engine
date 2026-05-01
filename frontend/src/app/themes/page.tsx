@@ -1,10 +1,10 @@
 import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell"
+import { ThemeSuggestionCard } from "@/app/themes/_components/ThemeSuggestionCard"
 import {
   DEFAULT_THEME_DISMISSAL_REASONS,
-  ThemeSuggestionCard,
-} from "@/components/theme-suggestion-card"
+} from "@/app/themes/_components/ThemeSuggestionCard"
+import { AppShell } from "@/components/layout/AppShell"
 import {
   getProjects,
   getProjectThemeSuggestions,

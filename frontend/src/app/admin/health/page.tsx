@@ -1,8 +1,8 @@
 import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell"
-import { SourceDiversityPanel } from "@/components/source-diversity-panel"
-import { StatusBadge } from "@/components/status-badge"
+import { SourceDiversityPanel } from "@/app/admin/health/_components/SourceDiversityPanel"
+import { AppShell } from "@/components/layout/AppShell"
+import { StatusBadge } from "@/components/ui/StatusBadge"
 import {
   getProjectIngestionRuns,
   getProjects,
