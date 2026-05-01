@@ -7,7 +7,7 @@ from typing import Any
 from anymail.signals import inbound
 from django.dispatch import receiver
 
-from core.newsletters import process_inbound_newsletter
+from newsletters.intake import process_inbound_newsletter
 
 
 def _address_to_string(address) -> str:

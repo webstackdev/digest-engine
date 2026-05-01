@@ -7,8 +7,9 @@ from django.conf import settings
 from django.db.models import Model, Q
 from django.utils import timezone
 
+from content.deduplication import canonicalize_url
 from content.models import Content
-from core.deduplication import canonicalize_url
+from newsletters.extraction import extract_newsletter_items
 from newsletters.models import IntakeAllowlist, NewsletterIntake, NewsletterIntakeStatus
 
 
@@ -37,8 +38,6 @@ def _require_pk(instance: Model) -> int:
 @shared_task(name="core.tasks.process_newsletter_intake")
 def process_newsletter_intake(intake_id: int):
     """Convert a stored newsletter email into content rows."""
-
-    from core.newsletters import extract_newsletter_items
 
     intake = NewsletterIntake.objects.select_related("project").get(pk=intake_id)
 

@@ -11,7 +11,7 @@ from django.utils import timezone
 from httpx import HTTPError
 from qdrant_client.http.exceptions import ResponseHandlingException
 
-from core.deduplication import canonicalize_url
+from content.deduplication import canonicalize_url
 from core.embeddings import upsert_content_embedding
 from core.models import (
     Content,

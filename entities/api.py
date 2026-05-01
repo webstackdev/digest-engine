@@ -13,7 +13,7 @@ from core.api import (
     build_crud_action_overrides,
     document_project_owned_viewset,
 )
-from core.entity_extraction import (
+from entities.extraction import (
     accept_entity_candidate,
     merge_entity_candidate,
     reject_entity_candidate,

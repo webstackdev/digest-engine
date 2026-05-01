@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 from django.db.models import Model
 
-from core.deduplication import canonicalize_url
+from content.deduplication import canonicalize_url
 from core.models import (
     Content,
     Entity,
@@ -1200,7 +1200,7 @@ def test_run_entity_extraction_persists_mentions_and_candidates(
     )
     pipeline_context.content.save(update_fields=["title", "content_text"])
     mocker.patch(
-        "core.entity_extraction.search_similar_entities_for_content",
+        "entities.extraction.search_similar_entities_for_content",
         return_value=[
             SimpleNamespace(score=0.91, payload={"entity_id": _require_pk(entity)})
         ],

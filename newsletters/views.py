@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 
-from core.newsletters import queue_newsletter_intake
+from newsletters.intake import queue_newsletter_intake
 from newsletters.models import IntakeAllowlist, NewsletterIntake, NewsletterIntakeStatus
 
 

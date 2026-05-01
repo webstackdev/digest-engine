@@ -18,7 +18,7 @@ from core.models import (
     NewsletterIntakeStatus,
     Project,
 )
-from core.newsletters import (
+from newsletters.intake import (
     extract_newsletter_items,
     sanitize_newsletter_html,
     send_confirmation_email,
@@ -131,7 +131,7 @@ def test_handle_anymail_inbound_creates_pending_intake_and_sends_confirmation(
     settings, mocker, project
 ):
     settings.NEWSLETTER_API_BASE_URL = "https://example.com"
-    send_mock = mocker.patch("core.newsletters.send_confirmation_email")
+    send_mock = mocker.patch("newsletters.intake.send_confirmation_email")
     event = SimpleNamespace(
         message=FakeInboundMessage(
             envelope_recipient=f"intake+{project.intake_token}@inbox.example.com",
@@ -160,7 +160,7 @@ def test_handle_anymail_inbound_creates_pending_intake_and_sends_confirmation(
 
 def test_handle_anymail_inbound_queues_confirmed_sender(settings, mocker, project):
     settings.CELERY_TASK_ALWAYS_EAGER = False
-    send_mock = mocker.patch("core.newsletters.send_confirmation_email")
+    send_mock = mocker.patch("newsletters.intake.send_confirmation_email")
     delay_mock = mocker.patch("core.tasks.process_newsletter_intake.delay")
     IntakeAllowlist.objects.create(
         project=project,

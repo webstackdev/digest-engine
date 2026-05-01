@@ -13,8 +13,8 @@ from django.core.mail import EmailMultiAlternatives
 from django.db.models import Model
 from django.urls import reverse
 
-from core.newsletter_extraction import extract_newsletter_items
 from core.settings_types import CoreSettings
+from newsletters.extraction import extract_newsletter_items
 from newsletters.models import IntakeAllowlist, NewsletterIntake
 from projects.models import Project
 
@@ -265,8 +265,6 @@ def process_inbound_newsletter(
 ) -> dict[str, Any]:
     """Persist and route one inbound newsletter message."""
 
-    from core import newsletters as core_newsletters
-
     project = _find_intake_project(recipients)
     if project is None:
         return {"status": "ignored", "reason": "no_matching_project"}
@@ -297,11 +295,11 @@ def process_inbound_newsletter(
     )
 
     if allowlist.is_confirmed:
-        core_newsletters.queue_newsletter_intake(intake_id)
+        queue_newsletter_intake(intake_id)
         return {"id": intake_id, "status": intake.status}
 
     if allowlist_created:
-        core_newsletters.send_confirmation_email(
+        send_confirmation_email(
             to_email=normalized_sender_email,
             confirm_url=build_confirmation_url(allowlist.confirmation_token),
             project_name=project.name,

@@ -7,8 +7,8 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
+from content.deduplication import canonicalize_url
 from content.models import Content
-from core.deduplication import canonicalize_url
 from ingestion.models import IngestionRun, RunStatus
 from ingestion.plugins import get_plugin_for_source_config
 from projects.models import SourceConfig

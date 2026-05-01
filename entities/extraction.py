@@ -12,13 +12,9 @@ from django.db import transaction
 from django.db.models import Model
 from django.utils import timezone
 
+from content.models import Content
 from core.embeddings import search_similar_entities_for_content
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
-from core.models import (
-    Content,
-    SkillResult,
-    SkillStatus,
-)
 from entities.models import (
     Entity,
     EntityCandidate,
@@ -28,6 +24,7 @@ from entities.models import (
     EntityMentionSentiment,
     EntityType,
 )
+from pipeline.models import SkillResult, SkillStatus
 
 ENTITY_EXTRACTION_SKILL_NAME = "entity_extraction"
 ENTITY_RETRIEVAL_LIMIT = 8

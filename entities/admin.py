@@ -5,7 +5,7 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 from django.utils.html import format_html
 
-from core.entity_extraction import (
+from entities.extraction import (
     accept_entity_candidate,
     merge_entity_candidate,
     reject_entity_candidate,
