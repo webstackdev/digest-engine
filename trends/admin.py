@@ -8,7 +8,7 @@ from django.db.models import Avg, Max
 from django.urls import reverse
 from django.utils import timezone
 
-from trends.models import TopicCentroidSnapshot
+from trends.models import SourceDiversitySnapshot, TopicCentroidSnapshot
 
 
 def _project_pk(snapshot: TopicCentroidSnapshot) -> int:
@@ -40,6 +40,32 @@ def _drift_card_color(value) -> str:
     if numeric_value <= 0.15:
         return "success"
     if numeric_value <= 0.35:
+        return "warning"
+    return "danger"
+
+
+def _diversity_card_color(value) -> str:
+    """Return an admin card severity for normalized diversity scores."""
+
+    if value is None:
+        return "info"
+    numeric_value = float(value)
+    if numeric_value >= 0.75:
+        return "success"
+    if numeric_value >= 0.4:
+        return "warning"
+    return "danger"
+
+
+def _share_card_color(value) -> str:
+    """Return an admin card severity for concentration share metrics."""
+
+    if value is None:
+        return "info"
+    numeric_value = float(value)
+    if numeric_value <= 0.4:
+        return "success"
+    if numeric_value <= 0.7:
         return "warning"
     return "danger"
 
@@ -108,6 +134,46 @@ def _build_topic_centroid_project_drilldowns(queryset, changelist_url: str):
                     if snapshot.drift_from_week_ago is not None
                     else "n/a"
                 ),
+                "href": f"{changelist_url}?{urlencode({'project__id__exact': project_id})}",
+            }
+        )
+
+    return project_drilldowns
+
+
+def _build_source_diversity_project_drilldowns(queryset, changelist_url: str):
+    """Build one filtered-history drilldown row per project."""
+
+    latest_by_project: dict[int, SourceDiversitySnapshot] = {}
+    snapshot_counts: dict[int, int] = {}
+    ordered_snapshots = queryset.select_related("project").order_by(
+        "project_id", "-computed_at"
+    )
+
+    for snapshot in ordered_snapshots:
+        project_id = int(snapshot.project_id)
+        snapshot_counts[project_id] = snapshot_counts.get(project_id, 0) + 1
+        latest_by_project.setdefault(project_id, snapshot)
+
+    project_drilldowns = []
+    for snapshot in sorted(
+        latest_by_project.values(),
+        key=lambda value: value.project.name.lower(),
+    ):
+        project_id = int(snapshot.project_id)
+        alerts = cast(
+            list[dict[str, Any]], (snapshot.breakdown or {}).get("alerts", [])
+        )
+        project_drilldowns.append(
+            {
+                "project_id": project_id,
+                "project_name": snapshot.project.name,
+                "snapshot_count": snapshot_counts[project_id],
+                "latest_snapshot": _format_snapshot_freshness(snapshot.computed_at),
+                "plugin_entropy": f"{_score_to_percent(snapshot.plugin_entropy):.1f}%",
+                "source_entropy": f"{_score_to_percent(snapshot.source_entropy):.1f}%",
+                "top_plugin_share": f"{_score_to_percent(snapshot.top_plugin_share):.1f}%",
+                "alert_count": len(alerts),
                 "href": f"{changelist_url}?{urlencode({'project__id__exact': project_id})}",
             }
         )
@@ -217,5 +283,122 @@ class TopicCentroidSnapshotAdmin(admin.ModelAdmin):
         ]
         extra_context["centroid_project_drilldowns"] = (
             _build_topic_centroid_project_drilldowns(queryset, changelist_url)
+        )
+        return super().changelist_view(request, extra_context=extra_context)
+
+
+@admin.register(SourceDiversitySnapshot)
+class SourceDiversitySnapshotAdmin(admin.ModelAdmin):
+    """Admin view for persisted source-diversity history and concentration alerts."""
+
+    list_before_template = "admin/source_diversity_snapshot_changelist_widget.html"
+    list_display = (
+        "project",
+        "display_plugin_entropy",
+        "display_source_entropy",
+        "display_author_entropy",
+        "display_top_plugin_share",
+        "computed_at",
+    )
+    list_filter = (
+        "window_days",
+        ("project", admin.RelatedOnlyFieldListFilter),
+        "computed_at",
+    )
+    search_fields = ("project__name",)
+    autocomplete_fields = ("project",)
+
+    @admin.display(description="Plugin Diversity", ordering="plugin_entropy")
+    def display_plugin_entropy(self, obj):
+        """Render normalized plugin diversity as a percentage."""
+
+        return f"{_score_to_percent(obj.plugin_entropy):.1f}%"
+
+    @admin.display(description="Source Diversity", ordering="source_entropy")
+    def display_source_entropy(self, obj):
+        """Render normalized source diversity as a percentage."""
+
+        return f"{_score_to_percent(obj.source_entropy):.1f}%"
+
+    @admin.display(description="Author Diversity", ordering="author_entropy")
+    def display_author_entropy(self, obj):
+        """Render normalized author diversity as a percentage."""
+
+        return f"{_score_to_percent(obj.author_entropy):.1f}%"
+
+    @admin.display(description="Top Plugin Share", ordering="top_plugin_share")
+    def display_top_plugin_share(self, obj):
+        """Render the largest plugin share as a percentage."""
+
+        return f"{_score_to_percent(obj.top_plugin_share):.1f}%"
+
+    def changelist_view(self, request, extra_context=None):
+        """Augment the changelist with diversity summaries and alert callouts."""
+
+        queryset = self.get_queryset(request)
+        changelist_url = reverse(
+            f"{self.admin_site.name}:{self.model._meta.app_label}_{self.model._meta.model_name}_changelist"
+        )
+        metrics = queryset.aggregate(
+            avg_plugin_entropy=Avg("plugin_entropy"),
+            avg_source_entropy=Avg("source_entropy"),
+            avg_author_entropy=Avg("author_entropy"),
+            avg_top_plugin_share=Avg("top_plugin_share"),
+            latest_snapshot_at=Max("computed_at"),
+        )
+        alerts = [
+            alert
+            for snapshot in queryset.order_by("project_id", "-computed_at")
+            for alert in cast(
+                list[dict[str, Any]], (snapshot.breakdown or {}).get("alerts", [])
+            )
+        ]
+
+        extra_context = cast(dict[str, Any], extra_context or {})
+        extra_context["dashboard_stats"] = [
+            {
+                "title": "Plugin Diversity",
+                "value": (
+                    f"{_score_to_percent(metrics['avg_plugin_entropy']):.1f}%"
+                    if metrics["avg_plugin_entropy"] is not None
+                    else "-"
+                ),
+                "icon": "hub",
+                "color": _diversity_card_color(metrics["avg_plugin_entropy"]),
+            },
+            {
+                "title": "Source Diversity",
+                "value": (
+                    f"{_score_to_percent(metrics['avg_source_entropy']):.1f}%"
+                    if metrics["avg_source_entropy"] is not None
+                    else "-"
+                ),
+                "icon": "lan",
+                "color": _diversity_card_color(metrics["avg_source_entropy"]),
+            },
+            {
+                "title": "Author Diversity",
+                "value": (
+                    f"{_score_to_percent(metrics['avg_author_entropy']):.1f}%"
+                    if metrics["avg_author_entropy"] is not None
+                    else "-"
+                ),
+                "icon": "group",
+                "color": _diversity_card_color(metrics["avg_author_entropy"]),
+            },
+            {
+                "title": "Top Plugin Share",
+                "value": (
+                    f"{_score_to_percent(metrics['avg_top_plugin_share']):.1f}%"
+                    if metrics["avg_top_plugin_share"] is not None
+                    else "-"
+                ),
+                "icon": "pie_chart",
+                "color": _share_card_color(metrics["avg_top_plugin_share"]),
+            },
+        ]
+        extra_context["source_diversity_alerts"] = alerts
+        extra_context["source_diversity_project_drilldowns"] = (
+            _build_source_diversity_project_drilldowns(queryset, changelist_url)
         )
         return super().changelist_view(request, extra_context=extra_context)

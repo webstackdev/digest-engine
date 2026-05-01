@@ -205,3 +205,35 @@ class ThemeSuggestion(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+
+class SourceDiversitySnapshot(models.Model):
+    """Capture one project-level source diversity reading for a rolling window."""
+
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="source_diversity_snapshots",
+    )
+    computed_at = models.DateTimeField(auto_now_add=True)
+    window_days = models.PositiveIntegerField(default=14)
+    plugin_entropy = models.FloatField()
+    source_entropy = models.FloatField()
+    author_entropy = models.FloatField()
+    cluster_entropy = models.FloatField()
+    top_plugin_share = models.FloatField()
+    top_source_share = models.FloatField()
+    breakdown = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-computed_at", "id"]
+        db_table = "core_sourcediversitysnapshot"
+        indexes = [
+            models.Index(
+                fields=["project", "-computed_at"],
+                name="core_sourced_project_4bf5_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"Source diversity snapshot for {self.project.name}"

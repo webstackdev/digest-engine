@@ -12,6 +12,7 @@ from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectConfig, ProjectMembership, ProjectRole
 from trends.models import (
     ContentClusterMembership,
+    SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
@@ -392,3 +393,69 @@ class TrendsApiTests(APITestCase):
         self.assertEqual(dismiss_suggestion.status, ThemeSuggestionStatus.DISMISSED)
         self.assertEqual(dismiss_suggestion.dismissal_reason, "already covered")
         self.assertEqual(dismiss_suggestion.decided_by, self.owner)
+
+    def test_source_diversity_snapshot_list_and_summary_are_scoped_to_project(self):
+        owner_snapshot = SourceDiversitySnapshot.objects.create(
+            project=self.owner_project,
+            window_days=14,
+            plugin_entropy=0.8,
+            source_entropy=0.75,
+            author_entropy=0.5,
+            cluster_entropy=0.6,
+            top_plugin_share=0.7,
+            top_source_share=0.65,
+            breakdown={
+                "total_content_count": 4,
+                "plugin_counts": [],
+                "source_counts": [],
+                "author_counts": [],
+                "cluster_counts": [],
+                "alerts": [],
+            },
+        )
+        other_snapshot = SourceDiversitySnapshot.objects.create(
+            project=self.other_project,
+            window_days=14,
+            plugin_entropy=0.2,
+            source_entropy=0.3,
+            author_entropy=0.1,
+            cluster_entropy=0.4,
+            top_plugin_share=0.95,
+            top_source_share=0.95,
+            breakdown={
+                "total_content_count": 8,
+                "plugin_counts": [],
+                "source_counts": [],
+                "author_counts": [],
+                "cluster_counts": [],
+                "alerts": [],
+            },
+        )
+
+        list_response = self.client.get(
+            reverse(
+                "v1:project-source-diversity-snapshot-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            )
+        )
+        summary_response = self.client.get(
+            reverse(
+                "v1:project-source-diversity-snapshot-summary",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            )
+        )
+
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.json()), 1)
+        self.assertEqual(list_response.json()[0]["id"], _require_pk(owner_snapshot))
+        self.assertNotEqual(_require_pk(owner_snapshot), _require_pk(other_snapshot))
+
+        self.assertEqual(summary_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            summary_response.json()["project"], _require_pk(self.owner_project)
+        )
+        self.assertEqual(summary_response.json()["snapshot_count"], 1)
+        self.assertEqual(
+            summary_response.json()["latest_snapshot"]["id"],
+            _require_pk(owner_snapshot),
+        )

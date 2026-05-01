@@ -7,9 +7,10 @@ from django.db.models import Model
 from content.models import Content, FeedbackType, UserFeedback
 from entities.models import Entity, EntityMention, EntityMentionRole
 from projects.model_support import SourcePluginName
-from projects.models import Project
+from projects.models import Project, SourceConfig
 from trends.models import (
     ContentClusterMembership,
+    SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
@@ -22,6 +23,7 @@ from trends.tasks import (
     assign_content_to_topic_cluster,
     generate_theme_suggestions,
     queue_topic_centroid_recompute,
+    recompute_source_diversity,
     recompute_topic_centroid,
     recompute_topic_clusters,
     recompute_topic_velocity,
@@ -278,6 +280,113 @@ def test_run_all_topic_cluster_recomputations_enqueues_all_projects(
     delay_mock.assert_any_call(source_plugin_context.project.id)
     delay_mock.assert_any_call(_require_pk(other_project))
     assert delay_mock.call_count == 2
+
+
+def test_recompute_source_diversity_persists_entropy_breakdown_and_alerts(
+    source_plugin_context,
+):
+    project = source_plugin_context.project
+    rss_source = SourceConfig.objects.create(
+        project=project,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
+    )
+    reddit_source = SourceConfig.objects.create(
+        project=project,
+        plugin_name=SourcePluginName.REDDIT,
+        config={"subreddit": "MachineLearning"},
+    )
+    first_cluster = TopicCluster.objects.create(
+        project=project,
+        first_seen_at="2026-04-20T00:00:00Z",
+        last_seen_at="2026-04-24T00:00:00Z",
+        is_active=True,
+        member_count=3,
+        dominant_entity=source_plugin_context.entity,
+        label="Platform Signals",
+    )
+    second_cluster = TopicCluster.objects.create(
+        project=project,
+        first_seen_at="2026-04-20T00:00:00Z",
+        last_seen_at="2026-04-24T00:00:00Z",
+        is_active=True,
+        member_count=1,
+        dominant_entity=source_plugin_context.entity,
+        label="Community Chatter",
+    )
+
+    contents = []
+    for index in range(3):
+        contents.append(
+            Content.objects.create(
+                project=project,
+                entity=source_plugin_context.entity,
+                url=f"https://example.com/rss-{index}",
+                title=f"RSS {index}",
+                author="Author",
+                source_plugin=SourcePluginName.RSS,
+                published_date="2026-04-24T12:00:00Z",
+                content_text="Manual content body",
+                source_metadata={"source_config_id": _require_pk(rss_source)},
+            )
+        )
+    contents.append(
+        Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url="https://example.com/reddit-0",
+            title="Reddit 0",
+            author="Author",
+            source_plugin=SourcePluginName.REDDIT,
+            published_date="2026-04-24T12:00:00Z",
+            content_text="Manual content body",
+            source_metadata={"source_config_id": _require_pk(reddit_source)},
+        )
+    )
+    for content in contents[:3]:
+        ContentClusterMembership.objects.create(
+            content=content,
+            cluster=first_cluster,
+            project=project,
+            similarity=0.95,
+        )
+    ContentClusterMembership.objects.create(
+        content=contents[3],
+        cluster=second_cluster,
+        project=project,
+        similarity=0.91,
+    )
+
+    result = recompute_source_diversity(_require_pk(project))
+    snapshot = SourceDiversitySnapshot.objects.get(project=project)
+
+    assert result["project_id"] == _require_pk(project)
+    assert result["content_count"] == 4
+    assert snapshot.window_days == 14
+    assert snapshot.plugin_entropy == pytest.approx(0.811278, rel=1e-4)
+    assert snapshot.source_entropy == pytest.approx(0.811278, rel=1e-4)
+    assert snapshot.author_entropy == 0.0
+    assert snapshot.cluster_entropy == pytest.approx(0.811278, rel=1e-4)
+    assert snapshot.top_plugin_share == pytest.approx(0.75)
+    assert snapshot.top_source_share == pytest.approx(0.75)
+    assert snapshot.breakdown["plugin_counts"][0]["key"] == SourcePluginName.RSS
+    assert snapshot.breakdown["plugin_counts"][0]["count"] == 3
+    assert snapshot.breakdown["source_counts"][0]["label"] == (
+        f"rss #{_require_pk(rss_source)}"
+    )
+    assert snapshot.breakdown["cluster_counts"][0]["label"] == "Platform Signals"
+    assert snapshot.breakdown["alerts"] == [
+        {
+            "code": "top_plugin_share",
+            "severity": "warning",
+            "message": "Your stream is 75% from rss this week.",
+        },
+        {
+            "code": "author_entropy",
+            "severity": "warning",
+            "message": "Three authors account for most of your content.",
+        },
+    ]
 
 
 def test_queue_topic_centroid_recompute_enqueues_background_task(
