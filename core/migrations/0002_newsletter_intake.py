@@ -1,7 +1,19 @@
+import secrets
+
 from django.db import migrations, models
 import django.db.models.deletion
 
-import core.models
+
+def generate_project_intake_token() -> str:
+    """Generate the stable intake token used by the historical migration state."""
+
+    return secrets.token_hex(16)
+
+
+def generate_confirmation_token() -> str:
+    """Generate the allowlist confirmation token used by the historical migration state."""
+
+    return secrets.token_urlsafe(24)
 
 
 class Migration(migrations.Migration):
@@ -20,7 +32,7 @@ class Migration(migrations.Migration):
             model_name="project",
             name="intake_token",
             field=models.CharField(
-                default=core.models.generate_project_intake_token,
+                default=generate_project_intake_token,
                 editable=False,
                 max_length=64,
                 unique=True,
@@ -48,7 +60,7 @@ class Migration(migrations.Migration):
                 (
                     "confirmation_token",
                     models.CharField(
-                        default=core.models.generate_confirmation_token,
+                        default=generate_confirmation_token,
                         max_length=64,
                         unique=True,
                     ),

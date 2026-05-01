@@ -1,32 +1,13 @@
-"""Signal handlers for cross-cutting core behaviors."""
+"""Signal handlers for content-owned behaviors."""
 
 from __future__ import annotations
-
-from typing import Any
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from core.models import UserFeedback
-from newsletters.signals import handle_anymail_inbound as _handle_anymail_inbound
+from content.models import UserFeedback
 from projects.models import ProjectConfig
 from trends.tasks import queue_topic_centroid_recompute
-
-
-def handle_anymail_inbound(
-    sender: Any,
-    event: Any,
-    esp_name: str,
-    **kwargs: Any,
-) -> None:
-    """Preserve the legacy core.signals import path for inbound handling."""
-
-    _handle_anymail_inbound(
-        sender=sender,
-        event=event,
-        esp_name=esp_name,
-        **kwargs,
-    )
 
 
 @receiver(post_save, sender=UserFeedback)

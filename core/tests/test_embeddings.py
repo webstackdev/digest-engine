@@ -10,6 +10,7 @@ from django.db.models import Count
 from qdrant_client.http.exceptions import ResponseHandlingException
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 
+from content.models import Content, UserFeedback
 from core import embeddings
 from core.embeddings import (
     build_content_embedding_text,
@@ -24,19 +25,14 @@ from core.embeddings import (
     upsert_content_embedding,
     upsert_topic_centroid,
 )
-from core.models import (
-    Content,
-    Entity,
-    IngestionRun,
-    ReviewQueue,
-    SkillResult,
-    UserFeedback,
-)
 from core.pipeline import (
     CLASSIFICATION_SKILL_NAME,
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
 )
+from entities.models import Entity
+from ingestion.models import IngestionRun
+from pipeline.models import ReviewQueue, SkillResult
 from projects.model_support import SourcePluginName
 from projects.models import Project, SourceConfig
 
@@ -379,7 +375,7 @@ def test_embedding_smoke_command_can_upsert_content(embedding_context, mocker, c
 
 
 def test_seed_demo_creates_reference_corpus_and_embeds_demo_content(mocker, capsys):
-    mocker.patch("core.signals.queue_topic_centroid_recompute")
+    mocker.patch("content.signals.queue_topic_centroid_recompute")
     upsert_mock = mocker.patch(
         "core.management.commands.seed_demo.upsert_content_embedding"
     )
@@ -426,7 +422,7 @@ def test_seed_demo_creates_reference_corpus_and_embeds_demo_content(mocker, caps
 
 
 def test_seed_demo_is_stable_on_rerun(mocker):
-    mocker.patch("core.signals.queue_topic_centroid_recompute")
+    mocker.patch("content.signals.queue_topic_centroid_recompute")
     mocker.patch("core.management.commands.seed_demo.upsert_content_embedding")
 
     call_command("seed_demo")
@@ -444,7 +440,7 @@ def test_seed_demo_is_stable_on_rerun(mocker):
 
 
 def test_seed_demo_skips_embeddings_when_vector_stack_is_unavailable(mocker, capsys):
-    mocker.patch("core.signals.queue_topic_centroid_recompute")
+    mocker.patch("content.signals.queue_topic_centroid_recompute")
     upsert_mock = mocker.patch(
         "core.management.commands.seed_demo.upsert_content_embedding",
         side_effect=ResponseHandlingException(httpx.ConnectError("connection refused")),

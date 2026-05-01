@@ -4,8 +4,7 @@ import logging
 import math
 from collections import defaultdict
 from datetime import timedelta
-from importlib import import_module
-from typing import TYPE_CHECKING, Any, Protocol, cast
+from typing import Protocol, cast
 
 from celery import shared_task
 from django.conf import settings
@@ -13,14 +12,8 @@ from django.db import transaction
 from django.db.models import Count, Model
 from django.utils import timezone
 
-from core.embeddings import (
-    upsert_content_embedding,
-)
-from core.models import (
-    Content,
-    FeedbackType,
-    UserFeedback,
-)
+from content.models import Content, FeedbackType, UserFeedback
+from core.embeddings import upsert_content_embedding
 from core.pipeline import (
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
@@ -44,91 +37,14 @@ AUTHORITY_ROLE_SIGNALS = (
     EntityMentionRole.SUBJECT,
 )
 
-if TYPE_CHECKING:
-    from ingestion.tasks import run_all_ingestions, run_ingestion
-    from newsletters.tasks import process_newsletter_intake
-    from trends.tasks import (
-        TOPIC_CENTROID_MIN_UPVOTES,
-        assign_content_to_topic_cluster,
-        generate_theme_suggestions,
-        queue_topic_centroid_recompute,
-        recompute_topic_centroid,
-        recompute_topic_clusters,
-        recompute_topic_velocity,
-        run_all_topic_centroid_recomputations,
-        run_all_topic_cluster_recomputations,
-    )
-
-_COMPAT_TASK_EXPORTS = {
-    "process_newsletter_intake": (
-        "newsletters.tasks",
-        "process_newsletter_intake",
-    ),
-    "run_all_ingestions": ("ingestion.tasks", "run_all_ingestions"),
-    "run_ingestion": ("ingestion.tasks", "run_ingestion"),
-    "assign_content_to_topic_cluster": (
-        "trends.tasks",
-        "assign_content_to_topic_cluster",
-    ),
-    "generate_theme_suggestions": (
-        "trends.tasks",
-        "generate_theme_suggestions",
-    ),
-    "TOPIC_CENTROID_MIN_UPVOTES": (
-        "trends.tasks",
-        "TOPIC_CENTROID_MIN_UPVOTES",
-    ),
-    "recompute_topic_clusters": ("trends.tasks", "recompute_topic_clusters"),
-    "queue_topic_centroid_recompute": (
-        "trends.tasks",
-        "queue_topic_centroid_recompute",
-    ),
-    "recompute_topic_centroid": ("trends.tasks", "recompute_topic_centroid"),
-    "recompute_topic_velocity": ("trends.tasks", "recompute_topic_velocity"),
-    "run_all_topic_cluster_recomputations": (
-        "trends.tasks",
-        "run_all_topic_cluster_recomputations",
-    ),
-    "run_all_topic_centroid_recomputations": (
-        "trends.tasks",
-        "run_all_topic_centroid_recomputations",
-    ),
-}
-
 __all__ = [
-    "process_newsletter_intake",
-    "run_all_ingestions",
-    "assign_content_to_topic_cluster",
-    "generate_theme_suggestions",
-    "run_ingestion",
-    "TOPIC_CENTROID_MIN_UPVOTES",
-    "queue_topic_centroid_recompute",
     "recompute_authority_scores",
-    "recompute_topic_clusters",
-    "recompute_topic_centroid",
-    "recompute_topic_velocity",
     "run_all_authority_recomputations",
-    "run_all_topic_cluster_recomputations",
-    "run_all_topic_centroid_recomputations",
     "run_relevance_scoring_skill",
     "run_summarization_skill",
     "queue_content_skill",
     "process_content",
-    "upsert_content_embedding",
 ]
-
-
-def __getattr__(name: str) -> Any:
-    """Resolve compatibility task re-exports lazily."""
-
-    try:
-        module_name, attribute_name = _COMPAT_TASK_EXPORTS[name]
-    except KeyError as exc:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc
-
-    value = getattr(import_module(module_name), attribute_name)
-    globals()[name] = value
-    return value
 
 
 class DelayedTask(Protocol):

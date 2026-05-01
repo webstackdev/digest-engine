@@ -6,20 +6,13 @@ from django.contrib.auth.models import AnonymousUser
 from django.db.models import Model
 from rest_framework import serializers as drf_serializers
 
-from core.models import (
-    Content,
-    Entity,
-    ReviewReason,
-    SkillResult,
-)
-from core.serializers import (
-    ContentSerializer,
-    EntitySerializer,
-    IngestionRunSerializer,
-    ReviewQueueSerializer,
-    SkillResultSerializer,
-    UserFeedbackSerializer,
-)
+from content.models import Content
+from content.serializers import ContentSerializer, UserFeedbackSerializer
+from entities.models import Entity
+from entities.serializers import EntitySerializer
+from ingestion.serializers import IngestionRunSerializer
+from pipeline.models import ReviewReason, SkillResult
+from pipeline.serializers import ReviewQueueSerializer, SkillResultSerializer
 from projects.model_support import SourcePluginName
 from projects.models import (
     MastodonCredentials,

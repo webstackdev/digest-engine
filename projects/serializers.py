@@ -4,9 +4,9 @@ import logging
 
 from rest_framework import serializers
 
-from core.plugins import validate_plugin_config
 from core.permissions import get_user_role
 from core.serializer_mixins import ProjectScopedSerializerMixin
+from ingestion.plugins import validate_plugin_config
 from projects.models import (
     BlueskyCredentials,
     MastodonCredentials,

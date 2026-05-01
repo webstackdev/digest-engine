@@ -7,8 +7,8 @@ from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
+from content.deduplication import canonicalize_url
 from content.models import Content
-from core.deduplication import canonicalize_url
 from ingestion.models import IngestionRun, RunStatus
 from ingestion.plugins import get_plugin_for_source_config
 from projects.models import SourceConfig
@@ -135,11 +135,9 @@ def _match_entity_for_item(plugin, item):
 def _schedule_content_processing(content: Content) -> None:
     """Ensure a content row is embedded before it enters the AI pipeline."""
 
-    from core.tasks import (
-        assign_content_to_topic_cluster,
-        process_content,
-        upsert_content_embedding,
-    )
+    from core.embeddings import upsert_content_embedding
+    from core.tasks import process_content
+    from trends.tasks import assign_content_to_topic_cluster
 
     upsert_content_embedding(content)
     assign_content_to_topic_cluster(content.id)

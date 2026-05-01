@@ -7,20 +7,12 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from core.models import (
-    Content,
-    Entity,
-    EntityCandidate,
-    FeedbackType,
-    ReviewQueue,
-    ReviewReason,
-    ThemeSuggestion,
-    TopicCentroidSnapshot,
-    TopicCluster,
-    UserFeedback,
-)
+from content.models import Content, FeedbackType, UserFeedback
+from entities.models import Entity, EntityCandidate
+from pipeline.models import ReviewQueue, ReviewReason
 from projects.model_support import SourcePluginName
 from projects.models import BlueskyCredentials, Project, ProjectMembership, ProjectRole
+from trends.models import ThemeSuggestion, TopicCentroidSnapshot, TopicCluster
 
 
 def _require_pk(instance: Model) -> int:
@@ -46,7 +38,7 @@ def _create_user(user_model: type[Any], **kwargs: object):
 
 class ProjectRolePermissionTests(APITestCase):
     def setUp(self):
-        queue_centroid_patcher = patch("core.signals.queue_topic_centroid_recompute")
+        queue_centroid_patcher = patch("content.signals.queue_topic_centroid_recompute")
         queue_centroid_patcher.start()
         self.addCleanup(queue_centroid_patcher.stop)
 

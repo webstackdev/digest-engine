@@ -27,7 +27,7 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from core.models import Content
+from content.models import Content
 from core.settings_types import CoreSettings
 from entities.models import Entity
 

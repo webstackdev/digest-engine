@@ -18,8 +18,8 @@ from django.db.models import F, Model
 from django.utils import timezone
 from langgraph.graph import END, StateGraph
 
+from content.deduplication import canonicalize_url
 from content.models import Content
-from core.deduplication import canonicalize_url
 from core.embeddings import (
     build_content_embedding_text,
     embed_text,
@@ -27,8 +27,8 @@ from core.embeddings import (
     get_topic_centroid_similarity,
     search_similar_content,
 )
-from core.entity_extraction import run_entity_extraction
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
+from entities.extraction import run_entity_extraction
 from entities.models import EntityMention
 from pipeline.models import ReviewQueue, ReviewReason, SkillResult, SkillStatus
 

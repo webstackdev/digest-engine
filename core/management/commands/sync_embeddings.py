@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
+from content.models import Content
 from core.embeddings import upsert_content_embedding
-from core.models import Content
 
 
 class Command(BaseCommand):

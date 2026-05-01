@@ -4,9 +4,10 @@ from typing import Any, cast
 
 from rest_framework import serializers
 
-from core.models import Content, SkillResult
+from content.models import Content
 from core.permissions import get_visible_projects_queryset
 from entities.models import Entity
+from pipeline.models import SkillResult
 
 
 class ProjectScopedSerializerMixin:

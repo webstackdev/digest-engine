@@ -4,8 +4,9 @@ from typing import Callable, cast
 
 import pytest
 
-from core.models import Entity, Project
-from core.plugins.base import ContentItem, SourcePlugin
+from entities.models import Entity
+from ingestion.plugins.base import ContentItem, SourcePlugin
+from projects.models import Project
 
 pytestmark = pytest.mark.django_db
 

@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.utils.html import strip_tags
+from mastodon import Mastodon
 
 from ingestion.plugins.base import ContentItem, SourcePlugin
 from projects.model_support import (
@@ -247,8 +248,6 @@ class MastodonSourcePlugin(SourcePlugin):
     def _client(self):
         """Create an anonymous or authenticated Mastodon client."""
 
-        from core.plugins.mastodon import Mastodon
-
         credentials = self._credentials()
         if credentials is None:
             return Mastodon(api_base_url=self._instance_url())
@@ -277,8 +276,6 @@ class MastodonSourcePlugin(SourcePlugin):
     @staticmethod
     def _authenticated_client_for_credentials(credentials: MastodonCredentials):
         """Build an authenticated client from a stored credential record."""
-
-        from core.plugins.mastodon import Mastodon
 
         if not credentials.has_access_token():
             raise RuntimeError("Mastodon credentials are missing an access token.")
