@@ -3,6 +3,8 @@
 from collections import Counter
 import math
 from datetime import datetime, timedelta
+from functools import lru_cache
+from pathlib import Path
 from typing import Any, Protocol, cast
 
 from celery import shared_task
@@ -17,6 +19,7 @@ from core.embeddings import (
     build_content_embedding_text,
     delete_topic_centroid,
     embed_text,
+    get_topic_centroid_similarity,
     upsert_topic_centroid,
 )
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
@@ -26,6 +29,8 @@ from projects.models import Project, SourceConfig
 
 from .models import (
     ContentClusterMembership,
+    OriginalContentIdea,
+    OriginalContentIdeaStatus,
     SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
@@ -52,6 +57,15 @@ THEME_SUGGESTION_DAILY_CAP = 5
 THEME_NOVELTY_LOOKBACK_DAYS = 30
 THEME_NOVELTY_MIN_SCORE = 0.6
 THEME_CLUSTER_CONTEXT_LIMIT = 5
+ORIGINAL_CONTENT_IDEATION_SKILL_NAME = "original_content_ideation"
+ORIGINAL_CONTENT_IDEA_WEEKLY_CAP = 3
+ORIGINAL_CONTENT_IDEA_LOOKBACK_DAYS = 90
+ORIGINAL_CONTENT_IDEA_MIN_SUPPORTING_CONTENTS = 2
+ORIGINAL_CONTENT_IDEA_SUPPORTING_LIMIT = 3
+ORIGINAL_CONTENT_IDEA_MIN_GAP_SCORE = 0.55
+ORIGINAL_CONTENT_IDEA_MIN_SCORE = 0.6
+ORIGINAL_CONTENT_IDEA_CENTROID_SIMILARITY_MIN = 0.65
+ORIGINAL_CONTENT_IDEA_CENTROID_SIMILARITY_MAX = 0.8
 
 
 class DelayedTask(Protocol):
@@ -592,6 +606,169 @@ def generate_theme_suggestions(project_id: int) -> dict[str, int]:
     }
 
 
+@shared_task(name="core.tasks.run_all_original_content_idea_generations")
+def run_all_original_content_idea_generations() -> int:
+    """Queue original-content ideation generation for every project."""
+
+    project_ids = list(Project.objects.values_list("id", flat=True))
+    for project_id in project_ids:
+        if settings.CELERY_TASK_ALWAYS_EAGER:
+            generate_original_content_ideas(project_id)
+        else:
+            _enqueue_task(generate_original_content_ideas, project_id)
+    return len(project_ids)
+
+
+@shared_task(name="core.tasks.generate_original_content_ideas")
+def generate_original_content_ideas(project_id: int) -> dict[str, int]:
+    """Generate weekly original-content ideas grounded in project trend gaps."""
+
+    now = timezone.now()
+    project = Project.objects.only("id", "name", "topic_description").get(pk=project_id)
+    recent_accepted_themes = list(
+        ThemeSuggestion.objects.filter(
+            project_id=project_id,
+            status=ThemeSuggestionStatus.ACCEPTED,
+            created_at__gte=now - timedelta(days=ORIGINAL_CONTENT_IDEA_LOOKBACK_DAYS),
+        )
+        .only("title", "pitch", "why_it_matters")
+        .order_by("-created_at")
+    )
+    recent_dismissed_themes = list(
+        ThemeSuggestion.objects.filter(
+            project_id=project_id,
+            status=ThemeSuggestionStatus.DISMISSED,
+            created_at__gte=now - timedelta(days=ORIGINAL_CONTENT_IDEA_LOOKBACK_DAYS),
+        )
+        .only("title", "pitch", "dismissal_reason")
+        .order_by("-created_at")
+    )
+    recent_project_content = list(
+        Content.objects.filter(
+            project_id=project_id,
+            published_date__gte=now
+            - timedelta(days=ORIGINAL_CONTENT_IDEA_LOOKBACK_DAYS),
+        )
+        .only("title", "content_text")
+        .order_by("-published_date", "-id")[:50]
+    )
+    weekly_created_count = OriginalContentIdea.objects.filter(
+        project_id=project_id,
+        created_at__gte=now - timedelta(days=7),
+    ).count()
+    remaining_slots = max(0, ORIGINAL_CONTENT_IDEA_WEEKLY_CAP - weekly_created_count)
+    if remaining_slots <= 0:
+        return {
+            "project_id": project_id,
+            "clusters_considered": 0,
+            "created": 0,
+            "skipped": 0,
+        }
+
+    existing_pending_cluster_ids = set(
+        OriginalContentIdea.objects.filter(
+            project_id=project_id,
+            status=OriginalContentIdeaStatus.PENDING,
+            related_cluster__isnull=False,
+        ).values_list("related_cluster_id", flat=True)
+    )
+    recent_ideas = list(
+        OriginalContentIdea.objects.filter(
+            project_id=project_id,
+            created_at__gte=now - timedelta(days=ORIGINAL_CONTENT_IDEA_LOOKBACK_DAYS),
+        )
+        .only("angle_title", "summary")
+        .order_by("-created_at")
+    )
+    vector_cache: dict[int, list[float]] = {}
+    created_count = 0
+    skipped_count = 0
+    clusters = list(_clusters_with_latest_velocity(project_id))
+
+    for cluster in clusters:
+        if remaining_slots <= 0:
+            break
+        cluster_id = _require_pk(cluster)
+        if cluster_id in existing_pending_cluster_ids:
+            skipped_count += 1
+            continue
+
+        cluster_context = _build_theme_cluster_context(cluster)
+        supporting_memberships = list(
+            ContentClusterMembership.objects.filter(cluster=cluster)
+            .select_related("content", "content__entity")
+            .order_by("-similarity", "-assigned_at")[
+                :ORIGINAL_CONTENT_IDEA_SUPPORTING_LIMIT
+            ]
+        )
+        if len(supporting_memberships) < ORIGINAL_CONTENT_IDEA_MIN_SUPPORTING_CONTENTS:
+            skipped_count += 1
+            continue
+
+        gap_analysis = _detect_original_content_gap(
+            project=project,
+            cluster=cluster,
+            cluster_context=cluster_context,
+            supporting_memberships=supporting_memberships,
+            recent_accepted_themes=recent_accepted_themes,
+            recent_dismissed_themes=recent_dismissed_themes,
+            vector_cache=vector_cache,
+        )
+        if (
+            float(gap_analysis.get("gap_score", 0.0) or 0.0)
+            < ORIGINAL_CONTENT_IDEA_MIN_GAP_SCORE
+        ):
+            skipped_count += 1
+            continue
+
+        idea_payload, generated_by_model = _synthesize_original_content_payload(
+            project=project,
+            cluster=cluster,
+            cluster_context=cluster_context,
+            gap_analysis=gap_analysis,
+            supporting_memberships=supporting_memberships,
+            recent_accepted_themes=recent_accepted_themes,
+            recent_dismissed_themes=recent_dismissed_themes,
+        )
+        self_critique_score = _score_original_content_idea(
+            project=project,
+            cluster=cluster,
+            idea_payload=idea_payload,
+            gap_analysis=gap_analysis,
+            recent_project_content=recent_project_content,
+            recent_themes=recent_accepted_themes + recent_dismissed_themes,
+            recent_ideas=recent_ideas,
+        )
+        if self_critique_score < ORIGINAL_CONTENT_IDEA_MIN_SCORE:
+            skipped_count += 1
+            continue
+
+        idea = OriginalContentIdea.objects.create(
+            project_id=project_id,
+            angle_title=str(idea_payload["angle_title"]),
+            summary=str(idea_payload["summary"]),
+            suggested_outline=str(idea_payload["suggested_outline"]),
+            why_now=str(idea_payload["why_now"]),
+            related_cluster=cluster,
+            generated_by_model=generated_by_model,
+            self_critique_score=self_critique_score,
+        )
+        idea.supporting_contents.set(
+            [_require_pk(membership.content) for membership in supporting_memberships]
+        )
+        existing_pending_cluster_ids.add(cluster_id)
+        recent_ideas.insert(0, idea)
+        created_count += 1
+        remaining_slots -= 1
+
+    return {
+        "project_id": project_id,
+        "clusters_considered": len(clusters),
+        "created": created_count,
+        "skipped": skipped_count,
+    }
+
+
 @shared_task(name="core.tasks.assign_content_to_topic_cluster")
 def assign_content_to_topic_cluster(content_id: int) -> dict[str, object]:
     """Assign one content item to the nearest active cluster when it fits."""
@@ -1073,6 +1250,59 @@ def dismiss_theme_suggestion(
     return theme_suggestion
 
 
+def accept_original_content_idea(
+    original_content_idea: OriginalContentIdea, *, user_id: int
+) -> OriginalContentIdea:
+    """Mark a pending original-content idea as accepted."""
+
+    if original_content_idea.status != OriginalContentIdeaStatus.PENDING:
+        raise ValueError("Only pending original content ideas can be accepted.")
+    original_content_idea.status = OriginalContentIdeaStatus.ACCEPTED
+    original_content_idea.decided_at = timezone.now()
+    original_content_idea.decided_by = get_user_model()._default_manager.get(pk=user_id)
+    original_content_idea.dismissal_reason = ""
+    original_content_idea.save(
+        update_fields=["status", "decided_at", "decided_by", "dismissal_reason"]
+    )
+    return original_content_idea
+
+
+def dismiss_original_content_idea(
+    original_content_idea: OriginalContentIdea,
+    *,
+    user_id: int,
+    reason: str,
+) -> OriginalContentIdea:
+    """Mark a pending original-content idea as dismissed with editorial feedback."""
+
+    if original_content_idea.status != OriginalContentIdeaStatus.PENDING:
+        raise ValueError("Only pending original content ideas can be dismissed.")
+    original_content_idea.status = OriginalContentIdeaStatus.DISMISSED
+    original_content_idea.decided_at = timezone.now()
+    original_content_idea.decided_by = get_user_model()._default_manager.get(pk=user_id)
+    original_content_idea.dismissal_reason = reason.strip()
+    original_content_idea.save(
+        update_fields=["status", "decided_at", "decided_by", "dismissal_reason"]
+    )
+    return original_content_idea
+
+
+def mark_original_content_idea_written(
+    original_content_idea: OriginalContentIdea,
+    *,
+    user_id: int,
+) -> OriginalContentIdea:
+    """Mark an accepted original-content idea as written."""
+
+    if original_content_idea.status != OriginalContentIdeaStatus.ACCEPTED:
+        raise ValueError("Only accepted original content ideas can be marked written.")
+    original_content_idea.status = OriginalContentIdeaStatus.WRITTEN
+    original_content_idea.decided_at = timezone.now()
+    original_content_idea.decided_by = get_user_model()._default_manager.get(pk=user_id)
+    original_content_idea.save(update_fields=["status", "decided_at", "decided_by"])
+    return original_content_idea
+
+
 def _author_entities_for_contents(contents: list[Content]) -> dict[int, int | None]:
     """Resolve one best-effort author entity bucket per content row."""
 
@@ -1287,6 +1517,106 @@ def _clusters_with_latest_velocity(project_id: int):
     )
 
 
+def _detect_original_content_gap(
+    *,
+    project: Project,
+    cluster: TopicCluster,
+    cluster_context: dict[str, Any],
+    supporting_memberships: list[ContentClusterMembership],
+    recent_accepted_themes: list[ThemeSuggestion],
+    recent_dismissed_themes: list[ThemeSuggestion],
+    vector_cache: dict[int, list[float]],
+) -> dict[str, Any]:
+    """Describe one promising original-content gap around a high-velocity cluster."""
+
+    supporting_contents = [membership.content for membership in supporting_memberships]
+    authoritative_scores = [
+        float(content.entity.authority_score)
+        for content in supporting_contents
+        if content.entity is not None
+    ]
+    authoritative_coverage = (
+        sum(1.0 for score in authoritative_scores if score >= 0.7)
+        / len(authoritative_scores)
+        if authoritative_scores
+        else 0.0
+    )
+    authority_gap_score = 1.0 - authoritative_coverage
+    centroid_vector = _cluster_centroid_for_contents(supporting_contents, vector_cache)
+    centroid_similarity = (
+        get_topic_centroid_similarity(_require_pk(project), centroid_vector)
+        if centroid_vector
+        else 0.0
+    )
+    centroid_window_score = _similarity_window_score(
+        centroid_similarity,
+        minimum=ORIGINAL_CONTENT_IDEA_CENTROID_SIMILARITY_MIN,
+        maximum=ORIGINAL_CONTENT_IDEA_CENTROID_SIMILARITY_MAX,
+    )
+    overlap_penalty = _theme_overlap_penalty(
+        cluster_context=cluster_context,
+        recent_themes=recent_accepted_themes + recent_dismissed_themes,
+    )
+    velocity_score = float(cluster_context.get("velocity_score", 0.0) or 0.0)
+    heuristic_gap_score = max(
+        0.0,
+        min(
+            1.0,
+            0.4 * velocity_score
+            + 0.3 * authority_gap_score
+            + 0.2 * centroid_window_score
+            + 0.1 * (1.0 - overlap_penalty),
+        ),
+    )
+    fallback_gap = {
+        "gap_description": _fallback_original_content_gap_description(
+            cluster=cluster,
+            cluster_context=cluster_context,
+            authoritative_coverage=authoritative_coverage,
+            centroid_similarity=centroid_similarity,
+        ),
+        "gap_score": heuristic_gap_score,
+        "centroid_similarity": centroid_similarity,
+        "authority_gap_score": authority_gap_score,
+        "authoritative_coverage": authoritative_coverage,
+    }
+
+    if settings.OPENROUTER_API_KEY:
+        try:
+            response = openrouter_chat_json(
+                model=settings.AI_RELEVANCE_MODEL,
+                system_prompt=_original_content_prompt_resource("gap_detect"),
+                user_prompt=_build_original_content_step_prompt(
+                    project=project,
+                    cluster_context=cluster_context,
+                    supporting_memberships=supporting_memberships,
+                    recent_accepted_themes=recent_accepted_themes,
+                    recent_dismissed_themes=recent_dismissed_themes,
+                    extra_payload={
+                        "heuristic_gap": fallback_gap,
+                    },
+                ),
+            )
+            payload = response.payload
+            return {
+                **fallback_gap,
+                "gap_description": str(
+                    payload.get("gap_description", fallback_gap["gap_description"])
+                ).strip(),
+                "gap_score": max(
+                    0.0,
+                    min(
+                        1.0,
+                        float(payload.get("gap_score", fallback_gap["gap_score"])),
+                    ),
+                ),
+                "generated_by_model": response.model,
+            }
+        except Exception:
+            pass
+    return fallback_gap
+
+
 def _build_theme_cluster_context(cluster: TopicCluster) -> dict[str, Any]:
     """Serialize the most relevant cluster context for theme generation."""
 
@@ -1377,6 +1707,121 @@ def _synthesize_theme_payload(
         "why_it_matters": _fallback_theme_why(cluster_context),
         "suggested_angle": _fallback_theme_angle(cluster_context),
     }
+
+
+def _synthesize_original_content_payload(
+    *,
+    project: Project,
+    cluster: TopicCluster,
+    cluster_context: dict[str, Any],
+    gap_analysis: dict[str, Any],
+    supporting_memberships: list[ContentClusterMembership],
+    recent_accepted_themes: list[ThemeSuggestion],
+    recent_dismissed_themes: list[ThemeSuggestion],
+) -> tuple[dict[str, Any], str]:
+    """Generate one grounded original-content idea payload."""
+
+    fallback_payload = _fallback_original_content_payload(
+        project=project,
+        cluster=cluster,
+        cluster_context=cluster_context,
+        gap_analysis=gap_analysis,
+        supporting_memberships=supporting_memberships,
+    )
+    if settings.OPENROUTER_API_KEY:
+        try:
+            response = openrouter_chat_json(
+                model=settings.AI_SUMMARIZATION_MODEL,
+                system_prompt=_original_content_prompt_resource("generate"),
+                user_prompt=_build_original_content_step_prompt(
+                    project=project,
+                    cluster_context=cluster_context,
+                    supporting_memberships=supporting_memberships,
+                    recent_accepted_themes=recent_accepted_themes,
+                    recent_dismissed_themes=recent_dismissed_themes,
+                    extra_payload={
+                        "gap_analysis": gap_analysis,
+                        "fallback_payload": fallback_payload,
+                    },
+                ),
+            )
+            payload = response.payload
+            return (
+                {
+                    "angle_title": str(
+                        payload.get("angle_title", fallback_payload["angle_title"])
+                    ).strip()
+                    or fallback_payload["angle_title"],
+                    "summary": str(
+                        payload.get("summary", fallback_payload["summary"])
+                    ).strip()
+                    or fallback_payload["summary"],
+                    "suggested_outline": str(
+                        payload.get(
+                            "suggested_outline",
+                            fallback_payload["suggested_outline"],
+                        )
+                    ).strip()
+                    or fallback_payload["suggested_outline"],
+                    "why_now": str(
+                        payload.get("why_now", fallback_payload["why_now"])
+                    ).strip()
+                    or fallback_payload["why_now"],
+                },
+                response.model,
+            )
+        except Exception:
+            pass
+    return fallback_payload, "heuristic-original-content-ideation"
+
+
+def _score_original_content_idea(
+    *,
+    project: Project,
+    cluster: TopicCluster,
+    idea_payload: dict[str, Any],
+    gap_analysis: dict[str, Any],
+    recent_project_content: list[Content],
+    recent_themes: list[ThemeSuggestion],
+    recent_ideas: list[OriginalContentIdea],
+) -> float:
+    """Estimate whether a generated idea is aligned, novel, and plausible."""
+
+    heuristic_score = _heuristic_original_content_idea_score(
+        project=project,
+        cluster=cluster,
+        idea_payload=idea_payload,
+        gap_analysis=gap_analysis,
+        recent_project_content=recent_project_content,
+        recent_themes=recent_themes,
+        recent_ideas=recent_ideas,
+    )
+    if settings.OPENROUTER_API_KEY:
+        try:
+            response = openrouter_chat_json(
+                model=settings.AI_RELEVANCE_MODEL,
+                system_prompt=_original_content_prompt_resource("critique"),
+                user_prompt=(
+                    f"project_topic_description:\n{project.topic_description}\n\n"
+                    f"cluster_label:\n{cluster.label}\n\n"
+                    f"idea_payload:\n{idea_payload}\n\n"
+                    f"gap_analysis:\n{gap_analysis}\n\n"
+                    f"recent_content_titles:\n{[content.title for content in recent_project_content[:20]]}\n\n"
+                    f"recent_themes:\n{[{'title': theme.title, 'pitch': theme.pitch} for theme in recent_themes[:10]]}\n\n"
+                    f"recent_ideas:\n{[{'angle_title': idea.angle_title, 'summary': idea.summary} for idea in recent_ideas[:10]]}\n\n"
+                    "Return only a JSON object with fields self_critique_score and critique_summary."
+                ),
+            )
+            return max(
+                0.0,
+                min(
+                    1.0,
+                    float(response.payload.get("self_critique_score", heuristic_score)),
+                ),
+            )
+        except Exception:
+            pass
+    return heuristic_score
 
 
 def _score_theme_novelty(
@@ -1496,6 +1941,222 @@ def _heuristic_theme_novelty_score(
         )
         max_overlap = max(max_overlap, overlap)
     return max(0.0, min(1.0, 1.0 - max_overlap))
+
+
+def _fallback_original_content_gap_description(
+    *,
+    cluster: TopicCluster,
+    cluster_context: dict[str, Any],
+    authoritative_coverage: float,
+    centroid_similarity: float,
+) -> str:
+    """Describe the editorial gap around one cluster without LLM support."""
+
+    dominant_entity = cluster_context.get("dominant_entity") or {}
+    entity_name = dominant_entity.get("name") or "the current cluster"
+    return (
+        f"Coverage around {entity_name} is accelerating with a velocity score of "
+        f"{cluster_context.get('velocity_score', 0.0):.2f}, but only "
+        f"{authoritative_coverage:.0%} of the strongest supporting items come from "
+        f"high-authority entities. The cluster remains near the project's centroid "
+        f"at {centroid_similarity:.2f}, which makes it timely but not yet saturated."
+    )
+
+
+def _fallback_original_content_payload(
+    *,
+    project: Project,
+    cluster: TopicCluster,
+    cluster_context: dict[str, Any],
+    gap_analysis: dict[str, Any],
+    supporting_memberships: list[ContentClusterMembership],
+) -> dict[str, Any]:
+    """Build a deterministic original-content idea when LLM calls are unavailable."""
+
+    dominant_entity = cluster_context.get("dominant_entity") or {}
+    entity_name = str(dominant_entity.get("name", "this trend")).strip()
+    leading_title = (
+        supporting_memberships[0].content.title if supporting_memberships else ""
+    )
+    cluster_label = cluster.label or "emerging cluster"
+    angle_title = (
+        f"The angle authoritative voices are missing on {entity_name}"
+        if entity_name and entity_name != "this trend"
+        else f"The overlooked opportunity inside {cluster_label}"
+    )
+    summary = (
+        f"Write a project-owned piece that explains why {cluster_label} is accelerating, "
+        f"using '{leading_title}' and the surrounding signal as evidence for an angle the project has not fully covered yet."
+    )
+    suggested_outline = "\n".join(
+        [
+            "1. State the shift the cluster is capturing and why it matters to the project topic.",
+            "2. Compare what the current coverage says versus what high-authority sources have not yet explained.",
+            "3. Close with a concrete editorial thesis or recommendation the project can own.",
+        ]
+    )
+    why_now = (
+        f"This cluster is moving at {cluster_context.get('velocity_score', 0.0):.2f} velocity, "
+        f"and the current evidence suggests the project can publish a sharper take before the topic fully saturates."
+    )
+    return {
+        "angle_title": angle_title[:255],
+        "summary": summary,
+        "suggested_outline": suggested_outline,
+        "why_now": why_now,
+        "gap_description": gap_analysis.get("gap_description", ""),
+        "project_topic": project.topic_description,
+    }
+
+
+def _heuristic_original_content_idea_score(
+    *,
+    project: Project,
+    cluster: TopicCluster,
+    idea_payload: dict[str, Any],
+    gap_analysis: dict[str, Any],
+    recent_project_content: list[Content],
+    recent_themes: list[ThemeSuggestion],
+    recent_ideas: list[OriginalContentIdea],
+) -> float:
+    """Score originality and fit using overlap heuristics."""
+
+    candidate_tokens = _normalized_theme_tokens(
+        f"{idea_payload.get('angle_title', '')} {idea_payload.get('summary', '')}"
+    )
+    if not candidate_tokens:
+        return 0.0
+    project_tokens = _normalized_theme_tokens(project.topic_description)
+    cluster_tokens = _normalized_theme_tokens(cluster.label)
+    alignment_score = (
+        1.0 if candidate_tokens & (project_tokens | cluster_tokens) else 0.6
+    )
+    content_overlap = _max_token_overlap(
+        candidate_tokens,
+        [
+            _normalized_theme_tokens(f"{content.title} {content.content_text[:200]}")
+            for content in recent_project_content
+        ],
+    )
+    theme_overlap = _max_token_overlap(
+        candidate_tokens,
+        [
+            _normalized_theme_tokens(f"{theme.title} {theme.pitch}")
+            for theme in recent_themes
+        ],
+    )
+    idea_overlap = _max_token_overlap(
+        candidate_tokens,
+        [
+            _normalized_theme_tokens(f"{idea.angle_title} {idea.summary}")
+            for idea in recent_ideas
+        ],
+    )
+    why_now_tokens = _normalized_theme_tokens(str(idea_payload.get("why_now", "")))
+    plausibility_score = 1.0 if len(why_now_tokens) >= 8 else 0.5
+    gap_score = float(gap_analysis.get("gap_score", 0.0) or 0.0)
+    return max(
+        0.0,
+        min(
+            1.0,
+            0.25 * alignment_score
+            + 0.25 * (1.0 - content_overlap)
+            + 0.15 * (1.0 - theme_overlap)
+            + 0.15 * (1.0 - idea_overlap)
+            + 0.2 * ((plausibility_score + gap_score) / 2),
+        ),
+    )
+
+
+def _theme_overlap_penalty(
+    *,
+    cluster_context: dict[str, Any],
+    recent_themes: list[ThemeSuggestion],
+) -> float:
+    """Estimate overlap between a cluster and prior theme history."""
+
+    dominant_entity = cluster_context.get("dominant_entity") or {}
+    candidate_tokens = _normalized_theme_tokens(
+        f"{cluster_context.get('cluster_id', '')} {dominant_entity.get('name', '')}"
+    )
+    if not candidate_tokens:
+        return 0.0
+    return _max_token_overlap(
+        candidate_tokens,
+        [
+            _normalized_theme_tokens(f"{theme.title} {theme.pitch}")
+            for theme in recent_themes
+        ],
+    )
+
+
+def _max_token_overlap(
+    candidate_tokens: set[str],
+    prior_token_sets: list[set[str]],
+) -> float:
+    """Return the largest Jaccard overlap against prior token sets."""
+
+    max_overlap = 0.0
+    for prior_tokens in prior_token_sets:
+        if not prior_tokens:
+            continue
+        overlap = len(candidate_tokens & prior_tokens) / len(
+            candidate_tokens | prior_tokens
+        )
+        max_overlap = max(max_overlap, overlap)
+    return max_overlap
+
+
+def _similarity_window_score(
+    similarity: float, *, minimum: float, maximum: float
+) -> float:
+    """Return a peak score for similarities that land inside the target window."""
+
+    if minimum <= similarity <= maximum:
+        return 1.0
+    if similarity < minimum:
+        if minimum <= 0:
+            return 0.0
+        return max(0.0, similarity / minimum)
+    if maximum >= 1.0:
+        return 0.0
+    return max(0.0, 1.0 - ((similarity - maximum) / (1.0 - maximum)))
+
+
+@lru_cache(maxsize=8)
+def _original_content_prompt_resource(resource_name: str) -> str:
+    """Load one original-content ideation prompt resource from disk."""
+
+    resource_path = (
+        Path(__file__).resolve().parent.parent
+        / "skills"
+        / ORIGINAL_CONTENT_IDEATION_SKILL_NAME
+        / "resources"
+        / f"{resource_name}.md"
+    )
+    return resource_path.read_text(encoding="utf-8").strip()
+
+
+def _build_original_content_step_prompt(
+    *,
+    project: Project,
+    cluster_context: dict[str, Any],
+    supporting_memberships: list[ContentClusterMembership],
+    recent_accepted_themes: list[ThemeSuggestion],
+    recent_dismissed_themes: list[ThemeSuggestion],
+    extra_payload: dict[str, Any],
+) -> str:
+    """Serialize ideation context into a stable prompt body."""
+
+    return (
+        f"project_topic_description:\n{project.topic_description}\n\n"
+        f"cluster_context:\n{cluster_context}\n\n"
+        f"supporting_contents:\n{[{'id': _require_pk(membership.content), 'title': membership.content.title, 'url': membership.content.url} for membership in supporting_memberships]}\n\n"
+        f"recent_themes_accepted:\n{[{'title': theme.title, 'pitch': theme.pitch, 'why_it_matters': theme.why_it_matters} for theme in recent_accepted_themes[:10]]}\n\n"
+        f"recent_themes_dismissed:\n{[{'title': theme.title, 'pitch': theme.pitch, 'dismissal_reason': theme.dismissal_reason} for theme in recent_dismissed_themes[:10]]}\n\n"
+        f"extra_payload:\n{extra_payload}\n\n"
+        "Return only a JSON object using the fields requested by the system prompt."
+    )
 
 
 def _normalized_theme_tokens(text: str) -> set[str]:

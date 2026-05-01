@@ -12,6 +12,8 @@ from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectConfig, ProjectMembership, ProjectRole
 from trends.models import (
     ContentClusterMembership,
+    OriginalContentIdea,
+    OriginalContentIdeaStatus,
     SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
@@ -393,6 +395,210 @@ class TrendsApiTests(APITestCase):
         self.assertEqual(dismiss_suggestion.status, ThemeSuggestionStatus.DISMISSED)
         self.assertEqual(dismiss_suggestion.dismissal_reason, "already covered")
         self.assertEqual(dismiss_suggestion.decided_by, self.owner)
+
+    def test_original_content_idea_list_is_scoped_to_project(self):
+        cluster = TopicCluster.objects.create(
+            project=self.owner_project,
+            first_seen_at="2026-04-22T00:00:00Z",
+            last_seen_at="2026-04-24T00:00:00Z",
+            is_active=True,
+            member_count=3,
+            dominant_entity=self.owner_entity,
+            label="Owner Cluster",
+        )
+        idea = OriginalContentIdea.objects.create(
+            project=self.owner_project,
+            related_cluster=cluster,
+            angle_title="Owner idea",
+            summary="Owner summary",
+            suggested_outline="Owner outline",
+            why_now="Owner why now",
+            generated_by_model="heuristic",
+            self_critique_score=0.82,
+        )
+        idea.supporting_contents.add(self.owner_content)
+
+        other_cluster = TopicCluster.objects.create(
+            project=self.other_project,
+            first_seen_at="2026-04-22T00:00:00Z",
+            last_seen_at="2026-04-24T00:00:00Z",
+            is_active=True,
+            member_count=2,
+            dominant_entity=self.other_entity,
+            label="Other Cluster",
+        )
+        other_idea = OriginalContentIdea.objects.create(
+            project=self.other_project,
+            related_cluster=other_cluster,
+            angle_title="Other idea",
+            summary="Other summary",
+            suggested_outline="Other outline",
+            why_now="Other why now",
+            generated_by_model="heuristic",
+            self_critique_score=0.7,
+        )
+        other_idea.supporting_contents.add(self.other_content)
+
+        response = self.client.get(
+            reverse(
+                "v1:project-original-content-idea-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["id"], _require_pk(idea))
+        self.assertEqual(
+            response.json()[0]["status"], OriginalContentIdeaStatus.PENDING
+        )
+        self.assertEqual(
+            response.json()[0]["related_cluster"]["id"], _require_pk(cluster)
+        )
+        self.assertEqual(len(response.json()[0]["supporting_contents"]), 1)
+        self.assertEqual(
+            response.json()[0]["supporting_contents"][0]["id"],
+            _require_pk(self.owner_content),
+        )
+
+    def test_original_content_idea_workflow_actions_update_status_fields(self):
+        cluster = TopicCluster.objects.create(
+            project=self.owner_project,
+            first_seen_at="2026-04-22T00:00:00Z",
+            last_seen_at="2026-04-24T00:00:00Z",
+            is_active=True,
+            member_count=3,
+            dominant_entity=self.owner_entity,
+            label="Idea Cluster",
+        )
+        accepted_then_written_idea = OriginalContentIdea.objects.create(
+            project=self.owner_project,
+            related_cluster=cluster,
+            angle_title="Accept me",
+            summary="Summary",
+            suggested_outline="Outline",
+            why_now="Why now",
+            generated_by_model="heuristic",
+            self_critique_score=0.8,
+        )
+        accepted_then_written_idea.supporting_contents.add(self.owner_content)
+        dismissed_idea = OriginalContentIdea.objects.create(
+            project=self.owner_project,
+            related_cluster=cluster,
+            angle_title="Dismiss me",
+            summary="Summary",
+            suggested_outline="Outline",
+            why_now="Why now",
+            generated_by_model="heuristic",
+            self_critique_score=0.75,
+        )
+
+        accept_response = self.client.post(
+            reverse(
+                "v1:project-original-content-idea-accept",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(accepted_then_written_idea),
+                },
+            ),
+            format="json",
+        )
+        dismiss_response = self.client.post(
+            reverse(
+                "v1:project-original-content-idea-dismiss",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(dismissed_idea),
+                },
+            ),
+            {"reason": "already assigned"},
+            format="json",
+        )
+        mark_written_response = self.client.post(
+            reverse(
+                "v1:project-original-content-idea-mark-written",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(accepted_then_written_idea),
+                },
+            ),
+            format="json",
+        )
+
+        accepted_then_written_idea.refresh_from_db()
+        dismissed_idea.refresh_from_db()
+
+        self.assertEqual(accept_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(accept_response.json()["status"], "accepted")
+        self.assertEqual(
+            mark_written_response.status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(mark_written_response.json()["status"], "written")
+        self.assertEqual(
+            accepted_then_written_idea.status,
+            OriginalContentIdeaStatus.WRITTEN,
+        )
+        self.assertEqual(accepted_then_written_idea.decided_by, self.owner)
+        self.assertIsNotNone(accepted_then_written_idea.decided_at)
+
+        self.assertEqual(dismiss_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            dismissed_idea.status,
+            OriginalContentIdeaStatus.DISMISSED,
+        )
+        self.assertEqual(dismissed_idea.dismissal_reason, "already assigned")
+        self.assertEqual(dismissed_idea.decided_by, self.owner)
+
+    def test_original_content_idea_generate_action_runs_immediately_in_eager_mode(
+        self,
+    ):
+        with self.settings(CELERY_TASK_ALWAYS_EAGER=True):
+            with self.subTest("generate now returns completed result"):
+                from unittest.mock import patch
+
+                with patch(
+                    "trends.api.generate_original_content_ideas",
+                    return_value={
+                        "project_id": _require_pk(self.owner_project),
+                        "clusters_considered": 4,
+                        "created": 2,
+                        "skipped": 1,
+                    },
+                ) as generate_mock:
+                    response = self.client.post(
+                        reverse(
+                            "v1:project-original-content-idea-generate",
+                            kwargs={"project_id": _require_pk(self.owner_project)},
+                        ),
+                        format="json",
+                    )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["status"], "completed")
+        self.assertEqual(response.json()["project_id"], _require_pk(self.owner_project))
+        self.assertEqual(response.json()["result"]["created"], 2)
+        generate_mock.assert_called_once_with(_require_pk(self.owner_project))
+
+    def test_original_content_idea_generate_action_queues_in_background_mode(self):
+        with self.settings(CELERY_TASK_ALWAYS_EAGER=False):
+            from unittest.mock import patch
+
+            with patch(
+                "trends.api.generate_original_content_ideas.delay"
+            ) as delay_mock:
+                response = self.client.post(
+                    reverse(
+                        "v1:project-original-content-idea-generate",
+                        kwargs={"project_id": _require_pk(self.owner_project)},
+                    ),
+                    format="json",
+                )
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json()["status"], "queued")
+        self.assertEqual(response.json()["project_id"], _require_pk(self.owner_project))
+        delay_mock.assert_called_once_with(_require_pk(self.owner_project))
 
     def test_source_diversity_snapshot_list_and_summary_are_scoped_to_project(self):
         owner_snapshot = SourceDiversitySnapshot.objects.create(

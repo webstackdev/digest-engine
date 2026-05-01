@@ -10,6 +10,8 @@ from projects.model_support import SourcePluginName
 from projects.models import Project, SourceConfig
 from trends.models import (
     ContentClusterMembership,
+    OriginalContentIdea,
+    OriginalContentIdeaStatus,
     SourceDiversitySnapshot,
     ThemeSuggestion,
     ThemeSuggestionStatus,
@@ -18,10 +20,13 @@ from trends.models import (
     TopicVelocitySnapshot,
 )
 from trends.tasks import (
+    ORIGINAL_CONTENT_IDEA_WEEKLY_CAP,
     TOPIC_CENTROID_MIN_UPVOTES,
     accept_theme_suggestion,
     assign_content_to_topic_cluster,
+    generate_original_content_ideas,
     generate_theme_suggestions,
+    mark_original_content_idea_written,
     queue_topic_centroid_recompute,
     recompute_source_diversity,
     recompute_topic_centroid,
@@ -387,6 +392,107 @@ def test_recompute_source_diversity_persists_entropy_breakdown_and_alerts(
             "message": "Three authors account for most of your content.",
         },
     ]
+
+
+def test_generate_original_content_ideas_creates_grounded_pending_idea(
+    source_plugin_context,
+):
+    project = source_plugin_context.project
+    source_plugin_context.entity.authority_score = 0.3
+    source_plugin_context.entity.save(update_fields=["authority_score"])
+    cluster = TopicCluster.objects.create(
+        project=project,
+        first_seen_at="2026-04-20T00:00:00Z",
+        last_seen_at="2026-04-24T00:00:00Z",
+        is_active=True,
+        member_count=3,
+        dominant_entity=source_plugin_context.entity,
+        label="Authoritative Gap",
+    )
+    TopicVelocitySnapshot.objects.create(
+        cluster=cluster,
+        project=project,
+        window_count=5,
+        trailing_mean=1.0,
+        trailing_stddev=0.5,
+        z_score=2.1,
+        velocity_score=0.88,
+    )
+    contents = []
+    for index in range(3):
+        content = Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url=f"https://example.com/idea-{index}",
+            title=f"Idea source {index}",
+            author="Author",
+            source_plugin=SourcePluginName.RSS,
+            published_date="2026-04-24T12:00:00Z",
+            content_text="Clusterable trend content with room for analysis.",
+        )
+        contents.append(content)
+        ContentClusterMembership.objects.create(
+            content=content,
+            cluster=cluster,
+            project=project,
+            similarity=0.95 - (index * 0.01),
+        )
+
+    result = generate_original_content_ideas(_require_pk(project))
+    idea = OriginalContentIdea.objects.get(project=project)
+
+    assert result["created"] == 1
+    assert idea.status == OriginalContentIdeaStatus.PENDING
+    assert idea.related_cluster == cluster
+    assert idea.generated_by_model == "heuristic-original-content-ideation"
+    assert idea.self_critique_score >= 0.6
+    assert list(
+        idea.supporting_contents.order_by("id").values_list("id", flat=True)
+    ) == [_require_pk(content) for content in contents]
+    assert "Authoritative Gap" in idea.summary
+    assert "velocity" in idea.why_now.lower()
+
+
+def test_generate_original_content_ideas_enforces_weekly_cap_and_written_workflow(
+    source_plugin_context,
+    django_user_model,
+):
+    project = source_plugin_context.project
+    editor = django_user_model.objects.create_user(
+        username="idea-editor",
+        password="testpass123",
+    )
+    for index in range(ORIGINAL_CONTENT_IDEA_WEEKLY_CAP):
+        OriginalContentIdea.objects.create(
+            project=project,
+            angle_title=f"Existing idea {index}",
+            summary="Summary",
+            suggested_outline="Outline",
+            why_now="Why now",
+            generated_by_model="heuristic",
+            self_critique_score=0.7,
+        )
+
+    capped_result = generate_original_content_ideas(_require_pk(project))
+
+    accepted_idea = OriginalContentIdea.objects.create(
+        project=project,
+        angle_title="Accepted idea",
+        summary="Summary",
+        suggested_outline="Outline",
+        why_now="Why now",
+        generated_by_model="heuristic",
+        self_critique_score=0.8,
+        status=OriginalContentIdeaStatus.ACCEPTED,
+    )
+    mark_original_content_idea_written(accepted_idea, user_id=_require_pk(editor))
+    accepted_idea.refresh_from_db()
+
+    assert capped_result["created"] == 0
+    assert capped_result["clusters_considered"] == 0
+    assert accepted_idea.status == OriginalContentIdeaStatus.WRITTEN
+    assert accepted_idea.decided_by == editor
+    assert accepted_idea.decided_at is not None
 
 
 def test_queue_topic_centroid_recompute_enqueues_background_task(
