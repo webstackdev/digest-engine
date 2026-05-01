@@ -11,19 +11,15 @@ from django.db.models import Model
 from django.urls import reverse
 from svix.webhooks import Webhook
 
-from core.models import (
-    Content,
-    IntakeAllowlist,
-    NewsletterIntake,
-    NewsletterIntakeStatus,
-    Project,
-)
 from newsletters.intake import (
     extract_newsletter_items,
     sanitize_newsletter_html,
     send_confirmation_email,
 )
-from core.signals import handle_anymail_inbound
+from newsletters.models import IntakeAllowlist, NewsletterIntake, NewsletterIntakeStatus
+from newsletters.signals import handle_anymail_inbound
+from content.models import Content
+from projects.models import Project
 
 pytestmark = pytest.mark.django_db
 

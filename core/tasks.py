@@ -13,13 +13,9 @@ from django.db import transaction
 from django.db.models import Count, Model
 from django.utils import timezone
 
+from content.models import Content, FeedbackType, UserFeedback
 from core.embeddings import (
     upsert_content_embedding,
-)
-from core.models import (
-    Content,
-    FeedbackType,
-    UserFeedback,
 )
 from core.pipeline import (
     RELEVANCE_SKILL_NAME,

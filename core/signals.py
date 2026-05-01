@@ -7,7 +7,7 @@ from typing import Any
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from core.models import UserFeedback
+from content.models import UserFeedback
 from newsletters.signals import handle_anymail_inbound as _handle_anymail_inbound
 from projects.models import ProjectConfig
 from trends.tasks import queue_topic_centroid_recompute

@@ -3,9 +3,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from core.models import Entity
 from ingestion.plugins.mastodon import MastodonSourcePlugin
 from ingestion.plugins.base import ContentItem
+from entities.models import Entity
 from projects.model_support import SourcePluginName
 from projects.models import MastodonCredentials, Project, SourceConfig
 

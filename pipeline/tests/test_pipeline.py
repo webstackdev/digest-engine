@@ -4,18 +4,6 @@ import pytest
 from django.db.models import Model
 
 from content.deduplication import canonicalize_url
-from core.models import (
-    Content,
-    Entity,
-    EntityCandidate,
-    EntityMention,
-    EntityMentionRole,
-    Project,
-    ReviewQueue,
-    ReviewReason,
-    SkillResult,
-    SkillStatus,
-)
 from core.pipeline import (
     CLASSIFICATION_SKILL_NAME,
     DEDUPLICATION_SKILL_NAME,
@@ -41,6 +29,15 @@ from core.pipeline import (
     run_summarization,
 )
 from core.tasks import process_content
+from content.models import Content
+from entities.models import (
+    Entity,
+    EntityCandidate,
+    EntityMention,
+    EntityMentionRole,
+)
+from pipeline.models import ReviewQueue, ReviewReason, SkillResult, SkillStatus
+from projects.models import Project
 
 pytestmark = pytest.mark.django_db
 

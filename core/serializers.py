@@ -5,14 +5,10 @@ from typing import TYPE_CHECKING, Any
 
 from rest_framework import serializers
 
-from core.models import (
-    Content,
-    IngestionRun,
-    IntakeAllowlist,
-    NewsletterIntake,
-    UserFeedback,
-)
+from content.models import Content, UserFeedback
 from core.serializer_mixins import ProjectScopedSerializerMixin
+from ingestion.models import IngestionRun
+from newsletters.models import IntakeAllowlist, NewsletterIntake
 
 if TYPE_CHECKING:
     from entities.serializers import (

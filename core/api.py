@@ -21,13 +21,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
-from core.models import (
-    Content,
-    IngestionRun,
-    IntakeAllowlist,
-    NewsletterIntake,
-    UserFeedback,
-)
+from content.models import Content, UserFeedback
 from core.permissions import (
     IsProjectAdmin,
     IsProjectContributor,
@@ -44,6 +38,8 @@ from core.serializers import (
     SkillResultSerializer,
     UserFeedbackSerializer,
 )
+from ingestion.models import IngestionRun
+from newsletters.models import IntakeAllowlist, NewsletterIntake
 from projects.models import Project
 
 CLASSIFICATION_SKILL_NAME = "content_classification"

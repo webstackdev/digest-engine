@@ -12,25 +12,22 @@ from httpx import HTTPError
 from qdrant_client.http.exceptions import ResponseHandlingException
 
 from content.deduplication import canonicalize_url
+from content.models import Content, FeedbackType, UserFeedback
 from core.embeddings import upsert_content_embedding
-from core.models import (
-    Content,
-    FeedbackType,
-    IngestionRun,
-    ReviewQueue,
-    ReviewReason,
-    ReviewResolution,
-    RunStatus,
-    SkillResult,
-    SkillStatus,
-    UserFeedback,
-)
 from core.pipeline import (
     CLASSIFICATION_SKILL_NAME,
     RELEVANCE_SKILL_NAME,
     SUMMARIZATION_SKILL_NAME,
 )
 from entities.models import Entity, EntityType
+from ingestion.models import IngestionRun, RunStatus
+from pipeline.models import (
+    ReviewQueue,
+    ReviewReason,
+    ReviewResolution,
+    SkillResult,
+    SkillStatus,
+)
 from projects.model_support import SourcePluginName
 from projects.models import (
     Project,
