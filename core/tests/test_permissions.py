@@ -263,88 +263,95 @@ class ProjectRolePermissionTests(APITestCase):
                 self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_member_can_use_contributor_endpoints_but_not_admin_only_ones(self):
-        _typed_client(self.client).force_authenticate(self.member_user)
+        with patch("entities.extraction.queue_entity_identity_enrichment"):
+            _typed_client(self.client).force_authenticate(self.member_user)
 
-        review_queue_response = self.client.get(
-            reverse(
-                "v1:project-review-queue-list",
-                kwargs={"project_id": _require_pk(self.project)},
+            review_queue_response = self.client.get(
+                reverse(
+                    "v1:project-review-queue-list",
+                    kwargs={"project_id": _require_pk(self.project)},
+                )
             )
-        )
-        self.assertEqual(review_queue_response.status_code, status.HTTP_200_OK)
+            self.assertEqual(review_queue_response.status_code, status.HTTP_200_OK)
 
-        source_config_response = self.client.post(
-            reverse(
-                "v1:project-source-config-list",
-                kwargs={"project_id": _require_pk(self.project)},
-            ),
-            {
-                "plugin_name": SourcePluginName.RSS,
-                "config": {"feed_url": "https://example.com/feed.xml"},
-                "is_active": True,
-            },
-            format="json",
-        )
-        self.assertEqual(source_config_response.status_code, status.HTTP_201_CREATED)
-
-        topic_summary_response = self.client.get(
-            reverse(
-                "v1:project-topic-centroid-snapshot-summary",
-                kwargs={"project_id": _require_pk(self.project)},
-            )
-        )
-        self.assertEqual(topic_summary_response.status_code, status.HTTP_200_OK)
-
-        accept_candidate_response = self.client.post(
-            reverse(
-                "v1:project-entity-candidate-accept",
-                kwargs={
-                    "project_id": _require_pk(self.project),
-                    "pk": _require_pk(self.entity_candidate),
+            source_config_response = self.client.post(
+                reverse(
+                    "v1:project-source-config-list",
+                    kwargs={"project_id": _require_pk(self.project)},
+                ),
+                {
+                    "plugin_name": SourcePluginName.RSS,
+                    "config": {"feed_url": "https://example.com/feed.xml"},
+                    "is_active": True,
                 },
-            ),
-            format="json",
-        )
-        self.assertEqual(accept_candidate_response.status_code, status.HTTP_200_OK)
-
-        delete_own_feedback_response = self.client.delete(
-            reverse(
-                "v1:project-feedback-detail",
-                kwargs={
-                    "project_id": _require_pk(self.project),
-                    "pk": _require_pk(self.member_feedback),
-                },
+                format="json",
             )
-        )
-        self.assertEqual(
-            delete_own_feedback_response.status_code, status.HTTP_204_NO_CONTENT
-        )
-
-        update_project_response = self.client.patch(
-            reverse("v1:project-detail", kwargs={"id": _require_pk(self.project)}),
-            {"name": "Member Update"},
-            format="json",
-        )
-        self.assertEqual(update_project_response.status_code, status.HTTP_403_FORBIDDEN)
-
-        list_credentials_response = self.client.get(
-            reverse(
-                "v1:project-bluesky-credentials-list",
-                kwargs={"project_id": _require_pk(self.project)},
+            self.assertEqual(
+                source_config_response.status_code, status.HTTP_201_CREATED
             )
-        )
-        self.assertEqual(
-            list_credentials_response.status_code, status.HTTP_403_FORBIDDEN
-        )
 
-        rotate_token_response = self.client.post(
-            reverse(
-                "v1:project-rotate-intake-token",
-                kwargs={"id": _require_pk(self.project)},
-            ),
-            format="json",
-        )
-        self.assertEqual(rotate_token_response.status_code, status.HTTP_403_FORBIDDEN)
+            topic_summary_response = self.client.get(
+                reverse(
+                    "v1:project-topic-centroid-snapshot-summary",
+                    kwargs={"project_id": _require_pk(self.project)},
+                )
+            )
+            self.assertEqual(topic_summary_response.status_code, status.HTTP_200_OK)
+
+            accept_candidate_response = self.client.post(
+                reverse(
+                    "v1:project-entity-candidate-accept",
+                    kwargs={
+                        "project_id": _require_pk(self.project),
+                        "pk": _require_pk(self.entity_candidate),
+                    },
+                ),
+                format="json",
+            )
+            self.assertEqual(accept_candidate_response.status_code, status.HTTP_200_OK)
+
+            delete_own_feedback_response = self.client.delete(
+                reverse(
+                    "v1:project-feedback-detail",
+                    kwargs={
+                        "project_id": _require_pk(self.project),
+                        "pk": _require_pk(self.member_feedback),
+                    },
+                )
+            )
+            self.assertEqual(
+                delete_own_feedback_response.status_code, status.HTTP_204_NO_CONTENT
+            )
+
+            update_project_response = self.client.patch(
+                reverse("v1:project-detail", kwargs={"id": _require_pk(self.project)}),
+                {"name": "Member Update"},
+                format="json",
+            )
+            self.assertEqual(
+                update_project_response.status_code, status.HTTP_403_FORBIDDEN
+            )
+
+            list_credentials_response = self.client.get(
+                reverse(
+                    "v1:project-bluesky-credentials-list",
+                    kwargs={"project_id": _require_pk(self.project)},
+                )
+            )
+            self.assertEqual(
+                list_credentials_response.status_code, status.HTTP_403_FORBIDDEN
+            )
+
+            rotate_token_response = self.client.post(
+                reverse(
+                    "v1:project-rotate-intake-token",
+                    kwargs={"id": _require_pk(self.project)},
+                ),
+                format="json",
+            )
+            self.assertEqual(
+                rotate_token_response.status_code, status.HTTP_403_FORBIDDEN
+            )
 
     def test_member_cannot_delete_other_users_feedback(self):
         _typed_client(self.client).force_authenticate(self.member_user)

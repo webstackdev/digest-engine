@@ -150,6 +150,7 @@ def test_entity_authority_snapshot_admin_helpers_render_expected_values(
 def test_accept_selected_entity_candidates_creates_entity_and_backfills_mentions(
     source_admin_context, mocker
 ):
+    mocker.patch("entities.extraction.queue_entity_identity_enrichment")
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/river-labs-launch",
@@ -212,6 +213,7 @@ def test_reject_selected_entity_candidates_marks_candidates_rejected(
 def test_merge_selected_entity_candidates_uses_existing_same_name_entity(
     source_admin_context, mocker
 ):
+    mocker.patch("entities.extraction.queue_entity_identity_enrichment")
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/acme-merge",

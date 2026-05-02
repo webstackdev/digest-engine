@@ -39,6 +39,16 @@ class EntityCandidateStatus(models.TextChoices):
     MERGED = "merged", "Merged"
 
 
+class IdentitySurface(models.TextChoices):
+    """Supported identity surfaces that can back an entity claim."""
+
+    GITHUB = "github", "GitHub"
+    LINKEDIN = "linkedin", "LinkedIn"
+    BLUESKY = "bluesky", "Bluesky"
+    MASTODON = "mastodon", "Mastodon"
+    WEBSITE = "website", "Website"
+
+
 class Entity(models.Model):
     """Represents a person, vendor, or organization tracked inside a project."""
 
@@ -68,6 +78,34 @@ class Entity(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class EntityIdentityClaim(models.Model):
+    """Stores one resolved external identity claim for a tracked entity."""
+
+    entity = models.ForeignKey(
+        Entity,
+        on_delete=models.CASCADE,
+        related_name="identity_claims",
+    )
+    surface = models.CharField(max_length=32, choices=IdentitySurface.choices)
+    claim_url = models.URLField()
+    verified = models.BooleanField(default=False)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    verification_method = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        ordering = ["surface", "claim_url"]
+        db_table = "core_entityidentityclaim"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["entity", "surface", "claim_url"],
+                name="core_entityidentityclaim_unique_entity_surface_url",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.entity.name} on {self.surface}"
 
 
 class EntityAuthoritySnapshot(models.Model):
@@ -169,6 +207,9 @@ class EntityCandidate(models.Model):
         related_name="entity_candidates",
     )
     occurrence_count = models.IntegerField(default=1)
+    cluster_key = models.CharField(max_length=64, blank=True, db_index=True)
+    auto_promotion_blocked_reason = models.CharField(max_length=128, blank=True)
+    contextual_embedding_id = models.UUIDField(null=True, blank=True)
     status = models.CharField(
         max_length=16,
         choices=EntityCandidateStatus.choices,
@@ -202,3 +243,55 @@ class EntityCandidate(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class EntityCandidateEvidence(models.Model):
+    """Captures one content-backed occurrence and identity hint for a candidate."""
+
+    candidate = models.ForeignKey(
+        EntityCandidate,
+        on_delete=models.CASCADE,
+        related_name="evidence",
+    )
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="entity_candidate_evidence",
+    )
+    content = models.ForeignKey(
+        "content.Content",
+        on_delete=models.CASCADE,
+        related_name="entity_candidate_evidence",
+    )
+    source_plugin = models.CharField(max_length=64)
+    context_excerpt = models.TextField(blank=True)
+    identity_surface = models.CharField(
+        max_length=32,
+        choices=IdentitySurface.choices,
+        blank=True,
+    )
+    claim_url = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        db_table = "core_entitycandidateevidence"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["candidate", "content"],
+                name="core_entitycandidateevidence_unique_candidate_content",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["candidate", "source_plugin"],
+                name="core_entitycand_candidate_source_idx",
+            ),
+            models.Index(
+                fields=["project", "created_at"],
+                name="core_entitycand_project_created_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.candidate.name} in {self.content.title}"

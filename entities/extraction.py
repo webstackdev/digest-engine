@@ -18,13 +18,22 @@ from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_c
 from entities.models import (
     Entity,
     EntityCandidate,
+    EntityCandidateEvidence,
     EntityCandidateStatus,
+    EntityIdentityClaim,
     EntityMention,
     EntityMentionRole,
     EntityMentionSentiment,
     EntityType,
+    IdentitySurface,
 )
 from pipeline.models import SkillResult, SkillStatus
+from projects.model_support import (
+    SourcePluginName,
+    normalize_bluesky_handle,
+    normalize_linkedin_url,
+    normalize_mastodon_handle,
+)
 
 ENTITY_EXTRACTION_SKILL_NAME = "entity_extraction"
 ENTITY_RETRIEVAL_LIMIT = 8
@@ -229,6 +238,11 @@ def persist_entity_candidates(
                 "status": EntityCandidateStatus.PENDING,
             },
         )
+        evidence_created = _record_candidate_evidence(
+            candidate,
+            content,
+            candidate_name=name,
+        )
         if not created:
             update_fields: list[str] = []
             suggested_type = candidate_payload.get(
@@ -241,7 +255,7 @@ def persist_entity_candidates(
             if candidate.first_seen_in is None:
                 candidate.first_seen_in = content
                 update_fields.append("first_seen_in")
-            if not is_rerun:
+            if evidence_created and not is_rerun:
                 candidate.occurrence_count += 1
                 update_fields.append("occurrence_count")
             if update_fields:
@@ -251,7 +265,11 @@ def persist_entity_candidates(
 
 
 @transaction.atomic
-def accept_entity_candidate(candidate: EntityCandidate) -> Entity:
+def accept_entity_candidate(
+    candidate: EntityCandidate,
+    *,
+    schedule_enrichment: bool = False,
+) -> Entity:
     """Accept a candidate, create the tracked entity, and backfill recent mentions."""
 
     entity, _ = Entity.objects.get_or_create(
@@ -263,19 +281,46 @@ def accept_entity_candidate(candidate: EntityCandidate) -> Entity:
     )
     candidate.status = EntityCandidateStatus.ACCEPTED
     candidate.merged_into = entity
-    candidate.save(update_fields=["status", "merged_into", "updated_at"])
+    candidate.auto_promotion_blocked_reason = ""
+    candidate.save(
+        update_fields=[
+            "status",
+            "merged_into",
+            "auto_promotion_blocked_reason",
+            "updated_at",
+        ]
+    )
     backfill_entity_mentions(entity, candidate_name=candidate.name)
+    _sync_identity_claims_from_candidate(entity, candidate)
+    if schedule_enrichment:
+        queue_entity_identity_enrichment(_require_pk(entity))
     return entity
 
 
 @transaction.atomic
-def merge_entity_candidate(candidate: EntityCandidate, entity: Entity) -> Entity:
+def merge_entity_candidate(
+    candidate: EntityCandidate,
+    entity: Entity,
+    *,
+    schedule_enrichment: bool = False,
+) -> Entity:
     """Merge a candidate into an existing tracked entity and backfill mentions."""
 
     candidate.status = EntityCandidateStatus.MERGED
     candidate.merged_into = entity
-    candidate.save(update_fields=["status", "merged_into", "updated_at"])
+    candidate.auto_promotion_blocked_reason = ""
+    candidate.save(
+        update_fields=[
+            "status",
+            "merged_into",
+            "auto_promotion_blocked_reason",
+            "updated_at",
+        ]
+    )
     backfill_entity_mentions(entity, candidate_name=candidate.name)
+    _sync_identity_claims_from_candidate(entity, candidate)
+    if schedule_enrichment:
+        queue_entity_identity_enrichment(_require_pk(entity))
     return entity
 
 
@@ -283,7 +328,21 @@ def reject_entity_candidate(candidate: EntityCandidate) -> None:
     """Reject an extracted candidate without creating a tracked entity."""
 
     candidate.status = EntityCandidateStatus.REJECTED
-    candidate.save(update_fields=["status", "updated_at"])
+    candidate.auto_promotion_blocked_reason = ""
+    candidate.save(
+        update_fields=["status", "auto_promotion_blocked_reason", "updated_at"]
+    )
+
+
+def queue_entity_identity_enrichment(entity_id: int) -> None:
+    """Queue the asynchronous identity-enrichment pass for a promoted entity."""
+
+    from entities.tasks import enrich_entity_identity
+
+    if settings.CELERY_TASK_ALWAYS_EAGER:
+        enrich_entity_identity(entity_id)
+        return
+    enrich_entity_identity.delay(entity_id)
 
 
 def backfill_entity_mentions(
@@ -706,9 +765,140 @@ def _serialize_candidate(candidate: EntityCandidate) -> dict[str, Any]:
         "id": _require_pk(candidate),
         "name": candidate.name,
         "suggested_type": candidate.suggested_type,
+        "cluster_key": candidate.cluster_key,
         "occurrence_count": candidate.occurrence_count,
         "status": candidate.status,
     }
+
+
+def _record_candidate_evidence(
+    candidate: EntityCandidate,
+    content: Content,
+    *,
+    candidate_name: str,
+) -> bool:
+    """Store one content-backed evidence row for a discovered candidate."""
+
+    identity_surface, claim_url = _candidate_identity_hint(content, candidate_name)
+    _evidence, created = EntityCandidateEvidence.objects.update_or_create(
+        candidate=candidate,
+        content=content,
+        defaults={
+            "project": content.project,
+            "source_plugin": content.source_plugin,
+            "context_excerpt": _candidate_context_excerpt(content, candidate_name),
+            "identity_surface": identity_surface,
+            "claim_url": claim_url,
+        },
+    )
+    return created
+
+
+def _candidate_context_excerpt(content: Content, candidate_name: str) -> str:
+    """Capture a short context window around the candidate occurrence."""
+
+    combined_text = "\n".join(
+        part
+        for part in [
+            content.author or "",
+            content.title or "",
+            content.content_text or "",
+        ]
+        if part
+    )
+    if not combined_text:
+        return ""
+    match = re.search(re.escape(candidate_name), combined_text, re.IGNORECASE)
+    if match is None:
+        return combined_text[:240].strip()
+    start = max(0, match.start() - 90)
+    end = min(len(combined_text), match.end() + 150)
+    return combined_text[start:end].strip()
+
+
+def _candidate_identity_hint(content: Content, candidate_name: str) -> tuple[str, str]:
+    """Extract one verified identity hint from plugin metadata when available."""
+
+    metadata = content.source_metadata or {}
+    if not _candidate_matches_author(content.author, candidate_name):
+        return "", ""
+
+    if content.source_plugin == SourcePluginName.BLUESKY:
+        author_handle = normalize_bluesky_handle(str(metadata.get("author_handle", "")))
+        if author_handle:
+            return IdentitySurface.BLUESKY, f"https://bsky.app/profile/{author_handle}"
+
+    if content.source_plugin == SourcePluginName.LINKEDIN:
+        author_profile_url = normalize_linkedin_url(
+            str(metadata.get("author_profile_url", ""))
+        )
+        if author_profile_url:
+            return IdentitySurface.LINKEDIN, author_profile_url
+
+    if content.source_plugin == SourcePluginName.MASTODON:
+        author_acct = normalize_mastodon_handle(
+            str(metadata.get("author_acct", "")),
+            instance_url=str(metadata.get("instance_url", "")),
+        )
+        if author_acct and "@" in author_acct:
+            username, host = author_acct.split("@", 1)
+            return IdentitySurface.MASTODON, f"https://{host}/@{username}"
+
+    website_url = _candidate_website_hint(content)
+    if website_url:
+        return IdentitySurface.WEBSITE, website_url
+    return "", ""
+
+
+def _candidate_matches_author(author: str, candidate_name: str) -> bool:
+    """Return whether the candidate name appears to be the content author."""
+
+    normalized_author = _normalize_name(author or "")
+    normalized_candidate = _normalize_name(candidate_name)
+    if not normalized_author or not normalized_candidate:
+        return False
+    return (
+        normalized_author == normalized_candidate
+        or normalized_candidate in normalized_author
+        or normalized_author in normalized_candidate
+    )
+
+
+def _candidate_website_hint(content: Content) -> str:
+    """Return a website claim when the content URL appears to be canonical."""
+
+    candidate_url = (content.canonical_url or content.url or "").strip()
+    if not candidate_url:
+        return ""
+    parsed_url = urlsplit(candidate_url)
+    if not parsed_url.scheme or not parsed_url.netloc:
+        return ""
+    return f"{parsed_url.scheme.lower()}://{parsed_url.netloc.lower()}"
+
+
+def _sync_identity_claims_from_candidate(
+    entity: Entity, candidate: EntityCandidate
+) -> None:
+    """Copy verified candidate identity hints onto the promoted entity."""
+
+    claim_rows = candidate.evidence.exclude(identity_surface="").exclude(claim_url="")
+    for evidence in claim_rows:
+        defaults = {
+            "verified": True,
+            "verified_at": timezone.now(),
+            "verification_method": "candidate_evidence",
+        }
+        claim, created = EntityIdentityClaim.objects.get_or_create(
+            entity=entity,
+            surface=evidence.identity_surface,
+            claim_url=evidence.claim_url,
+            defaults=defaults,
+        )
+        if not created and not claim.verified:
+            claim.verified = True
+            claim.verified_at = timezone.now()
+            claim.verification_method = "candidate_evidence"
+            claim.save(update_fields=["verified", "verified_at", "verification_method"])
 
 
 def _normalize_role(value: Any) -> str:

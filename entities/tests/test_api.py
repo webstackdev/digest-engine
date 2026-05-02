@@ -1,4 +1,5 @@
 from typing import Any, cast
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
@@ -12,6 +13,7 @@ from entities.models import (
     EntityAuthoritySnapshot,
     EntityCandidate,
     EntityCandidateStatus,
+    EntityIdentityClaim,
     EntityMention,
 )
 from projects.models import Project, ProjectMembership, ProjectRole
@@ -146,6 +148,27 @@ class EntityApiTests(APITestCase):
             self.owner_content.title,
         )
 
+    def test_entity_list_includes_identity_claims(self):
+        EntityIdentityClaim.objects.create(
+            entity=self.owner_entity,
+            surface="linkedin",
+            claim_url="https://www.linkedin.com/company/owner-entity",
+            verified=True,
+            verification_method="candidate_evidence",
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-entity-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json()[0]["identity_claims"][0]["surface"], "linkedin"
+        )
+
     def test_entity_mentions_action_returns_full_mention_history(self):
         first_mention = EntityMention.objects.create(
             project=self.owner_project,
@@ -266,6 +289,8 @@ class EntityApiTests(APITestCase):
             name="Owner Candidate",
             suggested_type="vendor",
             first_seen_in=self.owner_content,
+            cluster_key="owner-candidate-abcd1234",
+            auto_promotion_blocked_reason="needs_more_occurrences",
         )
         EntityCandidate.objects.create(
             project=self.other_project,
@@ -284,25 +309,31 @@ class EntityApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], _require_pk(owner_candidate))
+        self.assertEqual(response.json()[0]["cluster_key"], owner_candidate.cluster_key)
+        self.assertEqual(
+            response.json()[0]["auto_promotion_blocked_reason"],
+            owner_candidate.auto_promotion_blocked_reason,
+        )
 
     def test_entity_candidate_accept_action_returns_updated_candidate(self):
-        candidate = EntityCandidate.objects.create(
-            project=self.owner_project,
-            name="River Labs",
-            suggested_type="vendor",
-            first_seen_in=self.owner_content,
-        )
+        with patch("entities.extraction.queue_entity_identity_enrichment"):
+            candidate = EntityCandidate.objects.create(
+                project=self.owner_project,
+                name="River Labs",
+                suggested_type="vendor",
+                first_seen_in=self.owner_content,
+            )
 
-        response = self.client.post(
-            reverse(
-                "v1:project-entity-candidate-accept",
-                kwargs={
-                    "project_id": _require_pk(self.owner_project),
-                    "pk": _require_pk(candidate),
-                },
-            ),
-            format="json",
-        )
+            response = self.client.post(
+                reverse(
+                    "v1:project-entity-candidate-accept",
+                    kwargs={
+                        "project_id": _require_pk(self.owner_project),
+                        "pk": _require_pk(candidate),
+                    },
+                ),
+                format="json",
+            )
 
         candidate.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -358,29 +389,28 @@ class EntityApiTests(APITestCase):
         self.assert_standardized_validation_error(response.json(), "merged_into")
 
     def test_entity_candidate_merge_action_returns_updated_candidate(self):
-        candidate = EntityCandidate.objects.create(
-            project=self.owner_project,
-            name="Owner Entity Alias",
-            suggested_type="vendor",
-            first_seen_in=self.owner_content,
-        )
+        with patch("entities.extraction.queue_entity_identity_enrichment"):
+            candidate = EntityCandidate.objects.create(
+                project=self.owner_project,
+                name="Owner Entity Alias",
+                suggested_type="vendor",
+                first_seen_in=self.owner_content,
+            )
 
-        response = self.client.post(
-            reverse(
-                "v1:project-entity-candidate-merge",
-                kwargs={
-                    "project_id": _require_pk(self.owner_project),
-                    "pk": _require_pk(candidate),
-                },
-            ),
-            {"merged_into": _require_pk(self.owner_entity)},
-            format="json",
-        )
+            response = self.client.post(
+                reverse(
+                    "v1:project-entity-candidate-merge",
+                    kwargs={
+                        "project_id": _require_pk(self.owner_project),
+                        "pk": _require_pk(candidate),
+                    },
+                ),
+                {"merged_into": _require_pk(self.owner_entity)},
+                format="json",
+            )
 
         candidate.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(candidate.status, EntityCandidateStatus.MERGED)
         self.assertEqual(candidate.merged_into, self.owner_entity)
-        self.assertEqual(
-            response.json()["merged_into"], _require_pk(self.owner_entity)
-        )
+        self.assertEqual(response.json()["merged_into"], _require_pk(self.owner_entity))
