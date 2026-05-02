@@ -5,6 +5,7 @@ from rest_framework_nested.routers import NestedSimpleRouter
 
 from projects.api import (
     BlueskyCredentialsViewSet,
+    LinkedInCredentialsViewSet,
     MastodonCredentialsViewSet,
     ProjectConfigViewSet,
     ProjectInvitationViewSet,
@@ -41,6 +42,11 @@ def register_project_routes(project_router: NestedSimpleRouter) -> None:
         r"mastodon-credentials",
         MastodonCredentialsViewSet,
         basename="project-mastodon-credentials",
+    )
+    project_router.register(
+        r"linkedin-credentials",
+        LinkedInCredentialsViewSet,
+        basename="project-linkedin-credentials",
     )
     project_router.register(
         r"source-configs", SourceConfigViewSet, basename="project-source-config"

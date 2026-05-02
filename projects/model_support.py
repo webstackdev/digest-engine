@@ -79,6 +79,39 @@ def normalize_mastodon_handle(handle: str, *, instance_url: str = "") -> str:
     return normalized_handle
 
 
+def normalize_linkedin_url(linkedin_url: str) -> str:
+    """Normalize a LinkedIn profile or organization URL for stable matching."""
+
+    stripped_url = linkedin_url.strip().rstrip("/")
+    if not stripped_url:
+        return ""
+    parsed_url = urlsplit(stripped_url)
+    normalized_path = parsed_url.path.rstrip("/")
+    return urlunsplit(
+        (
+            parsed_url.scheme.lower(),
+            parsed_url.netloc.lower(),
+            normalized_path,
+            "",
+            "",
+        )
+    )
+
+
+def normalize_linkedin_urn(linkedin_urn: str) -> str:
+    """Normalize a LinkedIn URN while preserving the resource type and id."""
+
+    normalized_urn = linkedin_urn.strip()
+    if not normalized_urn:
+        return ""
+    if not normalized_urn.startswith("urn:li:"):
+        raise ValueError("LinkedIn URNs must start with urn:li:")
+    urn_parts = normalized_urn.split(":")
+    if len(urn_parts) != 4 or not urn_parts[2] or not urn_parts[3]:
+        raise ValueError("LinkedIn URNs must use the form urn:li:<type>:<id>")
+    return f"urn:li:{urn_parts[2].lower()}:{urn_parts[3]}"
+
+
 def bluesky_credentials_fernet() -> Fernet:
     """Build the symmetric cipher used for Bluesky app-password storage."""
 
@@ -105,6 +138,19 @@ def mastodon_credentials_fernet() -> Fernet:
     return Fernet(derived_key)
 
 
+def linkedin_credentials_fernet() -> Fernet:
+    """Build the symmetric cipher used for LinkedIn token storage."""
+
+    key_material = (
+        getattr(settings, "LINKEDIN_CREDENTIALS_ENCRYPTION_KEY", "")
+        or settings.SECRET_KEY
+    )
+    derived_key = base64.urlsafe_b64encode(
+        hashlib.sha256(key_material.encode("utf-8")).digest()
+    )
+    return Fernet(derived_key)
+
+
 class SourcePluginName(models.TextChoices):
     """Built-in ingestion plugins that can populate project content."""
 
@@ -112,3 +158,4 @@ class SourcePluginName(models.TextChoices):
     REDDIT = "reddit", "Reddit"
     BLUESKY = "bluesky", "Bluesky"
     MASTODON = "mastodon", "Mastodon"
+    LINKEDIN = "linkedin", "LinkedIn"

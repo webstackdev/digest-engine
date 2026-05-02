@@ -18,6 +18,7 @@ class ContentItem:
     published_date: datetime
     content_text: str
     source_plugin: str
+    content_type: str = ""
     source_metadata: dict[str, object] | None = None
 
 

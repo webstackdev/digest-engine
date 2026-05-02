@@ -1,15 +1,22 @@
 from typing import Any, cast
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
 from django.urls import reverse
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
+from projects.linkedin_oauth import (
+    build_linkedin_authorize_url,
+    build_linkedin_oauth_state,
+)
 from projects.model_support import SourcePluginName
 from projects.models import (
     BlueskyCredentials,
+    LinkedInCredentials,
     MastodonCredentials,
     Project,
     ProjectMembership,
@@ -295,6 +302,256 @@ class ProjectApiTests(APITestCase):
         self.assert_standardized_validation_error(
             response.json(), "mastodon_credentials"
         )
+
+    def test_linkedin_credentials_list_create_and_update_hide_stored_tokens(self):
+        list_response = self.client.get(
+            reverse(
+                "v1:project-linkedin-credentials-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            )
+        )
+
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.json(), [])
+
+        create_response = self.client.post(
+            reverse(
+                "v1:project-linkedin-credentials-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            ),
+            {
+                "member_urn": "urn:li:person:abc123",
+                "expires_at": "2026-04-27T13:00:00Z",
+                "is_active": True,
+                "access_token": "access-token",
+                "refresh_token": "refresh-token",
+            },
+            format="json",
+        )
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        credentials = LinkedInCredentials.objects.get(project=self.owner_project)
+        self.assertEqual(credentials.member_urn, "urn:li:person:abc123")
+        self.assertEqual(credentials.get_access_token(), "access-token")
+        self.assertEqual(credentials.get_refresh_token(), "refresh-token")
+        self.assertTrue(create_response.json()["has_stored_credential"])
+        self.assertNotIn("access_token", create_response.json())
+        self.assertNotIn("refresh_token", create_response.json())
+
+        update_response = self.client.patch(
+            reverse(
+                "v1:project-linkedin-credentials-detail",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(credentials),
+                },
+            ),
+            {
+                "member_urn": "urn:li:person:updated",
+                "is_active": False,
+            },
+            format="json",
+        )
+
+        credentials.refresh_from_db()
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(credentials.member_urn, "urn:li:person:updated")
+        self.assertFalse(credentials.is_active)
+        self.assertEqual(credentials.get_access_token(), "access-token")
+        self.assertEqual(credentials.get_refresh_token(), "refresh-token")
+
+    def test_linkedin_credentials_create_requires_both_oauth_tokens(self):
+        response = self.client.post(
+            reverse(
+                "v1:project-linkedin-credentials-list",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            ),
+            {
+                "member_urn": "urn:li:person:abc123",
+                "expires_at": "2026-04-27T13:00:00Z",
+                "is_active": True,
+                "access_token": "",
+                "refresh_token": "",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assert_standardized_validation_error(response.json(), "access_token")
+
+    def test_verify_linkedin_credentials_requires_configured_project_credentials(self):
+        response = self.client.post(
+            reverse(
+                "v1:project-verify-linkedin-credentials",
+                kwargs={"id": _require_pk(self.owner_project)},
+            ),
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assert_standardized_validation_error(
+            response.json(), "linkedin_credentials"
+        )
+
+    @patch("ingestion.plugins.linkedin.LinkedInSourcePlugin.verify_credentials")
+    def test_verify_linkedin_credentials_verifies_project_account(self, verify_mock):
+        credentials = LinkedInCredentials(
+            project=self.owner_project,
+            member_urn="urn:li:person:abc123",
+        )
+        credentials.set_access_token("access-token")
+        credentials.set_refresh_token("refresh-token")
+        credentials.save()
+
+        response = self.client.post(
+            reverse(
+                "v1:project-verify-linkedin-credentials",
+                kwargs={"id": _require_pk(self.owner_project)},
+            ),
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        verify_mock.assert_called_once()
+        verified_credentials = verify_mock.call_args.args[0]
+        self.assertEqual(verified_credentials, credentials)
+        self.assertEqual(response.json()["status"], "verified")
+        self.assertEqual(response.json()["member_urn"], "urn:li:person:abc123")
+        self.assertEqual(response.json()["last_error"], "")
+
+    @patch("projects.api.build_linkedin_authorize_url")
+    def test_start_linkedin_oauth_returns_authorize_url(self, build_authorize_url_mock):
+        build_authorize_url_mock.return_value = (
+            "https://www.linkedin.com/oauth/v2/authorization?state=signed-state"
+        )
+
+        response = self.client.post(
+            reverse(
+                "v1:project-start-linkedin-oauth",
+                kwargs={"id": _require_pk(self.owner_project)},
+            ),
+            {"redirect_to": "/admin/sources?project=1"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        build_authorize_url_mock.assert_called_once_with(
+            self.owner_project,
+            "/admin/sources?project=1",
+        )
+        self.assertEqual(
+            response.json(),
+            {
+                "authorize_url": (
+                    "https://www.linkedin.com/oauth/v2/authorization?state=signed-state"
+                )
+            },
+        )
+
+    @override_settings(
+        LINKEDIN_CLIENT_ID="linkedin-client-id",
+        LINKEDIN_CLIENT_SECRET="linkedin-client-secret",
+        LINKEDIN_OAUTH_SCOPES="openid email w_member_social",
+    )
+    def test_build_linkedin_authorize_url_uses_configured_scopes(self):
+        authorize_url = build_linkedin_authorize_url(
+            self.owner_project,
+            "/admin/sources?project=1",
+        )
+
+        parsed_url = urlparse(authorize_url)
+        query = parse_qs(parsed_url.query)
+
+        self.assertEqual(parsed_url.netloc, "www.linkedin.com")
+        self.assertEqual(
+            query["scope"],
+            ["openid email w_member_social"],
+        )
+
+    @patch("core.api.logger.exception")
+    @patch(
+        "ingestion.plugins.linkedin.LinkedInSourcePlugin.verify_credentials",
+        side_effect=RuntimeError("bad token"),
+    )
+    def test_verify_linkedin_credentials_surfaces_verification_errors(
+        self, _verify_mock, logger_exception_mock
+    ):
+        credentials = LinkedInCredentials(
+            project=self.owner_project,
+            member_urn="urn:li:person:abc123",
+        )
+        credentials.set_access_token("access-token")
+        credentials.set_refresh_token("refresh-token")
+        credentials.save()
+
+        response = self.client.post(
+            reverse(
+                "v1:project-verify-linkedin-credentials",
+                kwargs={"id": _require_pk(self.owner_project)},
+            ),
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assert_standardized_validation_error(
+            response.json(), "linkedin_credentials"
+        )
+        self.assertNotIn("bad token", str(response.json()))
+        logger_exception_mock.assert_called_once_with(
+            "LinkedIn credential verification failed for project id=%s",
+            _require_pk(self.owner_project),
+        )
+
+    @patch("projects.linkedin_oauth.LinkedInSourcePlugin.verify_credentials")
+    @patch("projects.linkedin_oauth.requests.post")
+    @override_settings(
+        LINKEDIN_CLIENT_ID="linkedin-client-id",
+        LINKEDIN_CLIENT_SECRET="linkedin-client-secret",
+    )
+    def test_linkedin_oauth_callback_persists_project_credentials(
+        self,
+        requests_post_mock,
+        verify_credentials_mock,
+    ):
+        token_response = requests_post_mock.return_value
+        token_response.raise_for_status.return_value = None
+        token_response.json.return_value = {
+            "access_token": "access-token",
+            "refresh_token": "refresh-token",
+            "expires_in": 3600,
+        }
+        state = build_linkedin_oauth_state(
+            self.owner_project,
+            "/admin/sources?project=1",
+        )
+
+        response = self.client.get(
+            reverse("v1:linkedin-oauth-callback"),
+            {"state": state, "code": "oauth-code"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn("/admin/sources?project=1", response.headers["Location"])
+        self.assertIn(
+            "message=LinkedIn+credentials+authorized.",
+            response.headers["Location"],
+        )
+
+        credentials = LinkedInCredentials.objects.get(project=self.owner_project)
+        self.assertEqual(credentials.get_access_token(), "access-token")
+        self.assertEqual(credentials.get_refresh_token(), "refresh-token")
+        self.assertTrue(credentials.is_active)
+        verify_credentials_mock.assert_called_once()
+
+    def test_linkedin_oauth_callback_rejects_invalid_state(self):
+        response = self.client.get(
+            reverse("v1:linkedin-oauth-callback"),
+            {"state": "bad-state", "code": "oauth-code"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn("/admin/sources", response.headers["Location"])
+        self.assertIn("error=", response.headers["Location"])
 
     @patch("ingestion.plugins.mastodon.MastodonSourcePlugin.verify_credentials")
     def test_verify_mastodon_credentials_verifies_project_account(self, verify_mock):

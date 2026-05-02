@@ -7,9 +7,14 @@ from django.db.models import Model
 from content.models import Content
 from entities.models import Entity
 from ingestion.models import IngestionRun, RunStatus
-from ingestion.tasks import _ingest_source_config, run_all_ingestions, run_ingestion
+from ingestion.tasks import (
+    _ingest_source_config,
+    refresh_linkedin_tokens,
+    run_all_ingestions,
+    run_ingestion,
+)
 from projects.model_support import SourcePluginName
-from projects.models import Project, SourceConfig
+from projects.models import LinkedInCredentials, Project, SourceConfig
 
 pytestmark = pytest.mark.django_db
 
@@ -303,6 +308,75 @@ def test_ingest_source_config_deduplicates_mastodon_statuses_by_status_uri(
     assert Content.objects.filter(project=source_plugin_context.project).count() == 1
     upsert_embedding_mock.assert_not_called()
     process_content_delay_mock.assert_not_called()
+
+
+def test_ingest_source_config_deduplicates_linkedin_posts_by_post_urn(
+    source_plugin_context, mocker
+):
+    upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
+    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    source_config = SourceConfig.objects.create(
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.LINKEDIN,
+        config={"organization_urn": "urn:li:organization:1337"},
+    )
+    Content.objects.create(
+        project=source_plugin_context.project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/existing-linkedin-article",
+        title="Existing LinkedIn Post",
+        author="Alice Example",
+        source_plugin=SourcePluginName.LINKEDIN,
+        content_type="article",
+        published_date="2026-04-20T12:00:00Z",
+        content_text="Existing content",
+        source_metadata={"post_urn": "urn:li:share:abc123"},
+    )
+    plugin = SimpleNamespace(
+        fetch_new_content=lambda since: [
+            SimpleNamespace(
+                url="https://example.com/new-canonical-url",
+                title="Duplicate LinkedIn Post",
+                author="Alice Example",
+                published_date=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc),
+                content_text="Duplicate content",
+                source_plugin=SourcePluginName.LINKEDIN,
+                content_type="article",
+                source_metadata={
+                    "author_profile_url": "https://www.linkedin.com/in/alice-example/",
+                    "post_urn": "urn:li:share:abc123",
+                },
+            )
+        ],
+        match_entity_for_item=lambda item: source_plugin_context.entity,
+    )
+    mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
+
+    items_fetched, items_ingested = _ingest_source_config(source_config)
+
+    assert items_fetched == 1
+    assert items_ingested == 0
+    assert Content.objects.filter(project=source_plugin_context.project).count() == 1
+    upsert_embedding_mock.assert_not_called()
+    process_content_delay_mock.assert_not_called()
+
+
+def test_refresh_linkedin_tokens_refreshes_expiring_credentials(
+    source_plugin_context, mocker
+):
+    credentials = LinkedInCredentials(project=source_plugin_context.project)
+    credentials.set_access_token("stale-access-token")
+    credentials.set_refresh_token("refresh-token")
+    credentials.expires_at = datetime.now(tz=timezone.utc)
+    credentials.save()
+    refresh_mock = mocker.patch(
+        "ingestion.plugins.linkedin.LinkedInSourcePlugin.refresh_credentials"
+    )
+
+    refreshed_count = refresh_linkedin_tokens()
+
+    assert refreshed_count == 1
+    refresh_mock.assert_called_once_with(credentials)
 
 
 def test_run_all_ingestions_enqueues_active_source_configs(

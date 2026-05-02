@@ -1,5 +1,6 @@
 """Aggregate app-owned API route registrations under the public v1 surface."""
 
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested.routers import NestedSimpleRouter
 
@@ -22,6 +23,7 @@ from projects.api_urls import (
 from projects.api_urls import (
     register_root_routes as register_projects_root_routes,
 )
+from projects.linkedin_oauth import linkedin_oauth_callback_view
 from trends.api_urls import register_project_routes as register_trends_project_routes
 
 app_name = "api"
@@ -39,6 +41,11 @@ register_newsletters_project_routes(project_router)
 register_trends_project_routes(project_router)
 
 urlpatterns = [
+    path(
+        "linkedin/oauth/callback/",
+        linkedin_oauth_callback_view,
+        name="linkedin-oauth-callback",
+    ),
     *router.urls,
     *project_router.urls,
 ]

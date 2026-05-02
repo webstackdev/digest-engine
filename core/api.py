@@ -107,6 +107,31 @@ MASTODON_CREDENTIALS_RESPONSE_EXAMPLE = OpenApiExample(
     response_only=True,
 )
 
+LINKEDIN_CREDENTIALS_RESPONSE_EXAMPLE = OpenApiExample(
+    "LinkedIn Credentials Response",
+    value={
+        "id": 1,
+        "project": 1,
+        "member_urn": "urn:li:person:abc123",
+        "expires_at": "2026-04-27T13:00:00Z",
+        "is_active": True,
+        "has_stored_credential": True,
+        "last_verified_at": "2026-04-26T13:00:00Z",
+        "last_error": "",
+        "created_at": "2026-04-26T12:30:00Z",
+        "updated_at": "2026-04-26T13:00:00Z",
+    },
+    response_only=True,
+)
+
+LINKEDIN_OAUTH_AUTHORIZE_RESPONSE_EXAMPLE = OpenApiExample(
+    "LinkedIn OAuth Authorize Response",
+    value={
+        "authorize_url": "https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=linkedin-client-id&redirect_uri=http%3A%2F%2F127.0.0.1%3A8080%2Fapi%2Fv1%2Flinkedin%2Foauth%2Fcallback%2F&scope=openid+profile+email+offline_access&state=signed-state-token",
+    },
+    response_only=True,
+)
+
 SOURCE_CONFIG_CREATE_REQUEST_EXAMPLE = OpenApiExample(
     "Create RSS Source Request",
     value={
@@ -157,6 +182,20 @@ SOURCE_CONFIG_MASTODON_REQUEST_EXAMPLE = OpenApiExample(
             "include_replies": False,
             "include_reblogs": True,
             "max_statuses_per_fetch": 100,
+        },
+        "is_active": True,
+    },
+    request_only=True,
+)
+
+SOURCE_CONFIG_LINKEDIN_REQUEST_EXAMPLE = OpenApiExample(
+    "Create LinkedIn Source Request",
+    value={
+        "plugin_name": "linkedin",
+        "config": {
+            "organization_urn": "urn:li:organization:1337",
+            "include_reshares": False,
+            "max_posts_per_fetch": 50,
         },
         "is_active": True,
     },
@@ -298,6 +337,24 @@ MASTODON_CREDENTIALS_VERIFY_RESPONSE = inline_serializer(
         "instance_url": serializers.URLField(),
         "last_verified_at": serializers.DateTimeField(allow_null=True),
         "last_error": serializers.CharField(allow_blank=True),
+    },
+)
+
+LINKEDIN_CREDENTIALS_VERIFY_RESPONSE = inline_serializer(
+    name="LinkedInCredentialsVerifyResponse",
+    fields={
+        "status": serializers.CharField(),
+        "member_urn": serializers.CharField(allow_blank=True),
+        "expires_at": serializers.DateTimeField(allow_null=True),
+        "last_verified_at": serializers.DateTimeField(allow_null=True),
+        "last_error": serializers.CharField(allow_blank=True),
+    },
+)
+
+LINKEDIN_OAUTH_AUTHORIZE_RESPONSE = inline_serializer(
+    name="LinkedInOAuthAuthorizeResponse",
+    fields={
+        "authorize_url": serializers.URLField(),
     },
 )
 

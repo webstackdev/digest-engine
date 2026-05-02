@@ -11,6 +11,8 @@ from projects.model_support import (
     SourcePluginName,
     bluesky_credentials_fernet,
     generate_project_intake_token,
+    linkedin_credentials_fernet,
+    normalize_linkedin_urn,
     mastodon_credentials_fernet,
     normalize_bluesky_handle,
     normalize_bluesky_pds_url,
@@ -268,6 +270,99 @@ class MastodonCredentials(models.Model):
             self.account_acct,
             instance_url=self.instance_url,
         )
+        super().save(*args, **kwargs)
+
+
+class LinkedInCredentials(models.Model):
+    """Stores one project's LinkedIn OAuth access and refresh tokens."""
+
+    project = models.OneToOneField(
+        Project, on_delete=models.CASCADE, related_name="linkedin_credentials"
+    )
+    member_urn = models.CharField(max_length=255, blank=True)
+    access_token_encrypted = models.TextField(blank=True)
+    refresh_token_encrypted = models.TextField(blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    last_verified_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["project__name"]
+        verbose_name_plural = "LinkedIn credentials"
+        db_table = "projects_linkedincredentials"
+
+    def __str__(self) -> str:
+        return f"LinkedIn credentials for {self.project.name}"
+
+    def has_access_token(self) -> bool:
+        """Return whether an encrypted LinkedIn access token has been stored."""
+
+        return bool(self.access_token_encrypted)
+
+    def has_refresh_token(self) -> bool:
+        """Return whether an encrypted LinkedIn refresh token has been stored."""
+
+        return bool(self.refresh_token_encrypted)
+
+    def has_stored_credential(self) -> bool:
+        """Return whether both encrypted LinkedIn OAuth tokens are present."""
+
+        return self.has_access_token() and self.has_refresh_token()
+
+    def set_access_token(self, access_token: str) -> None:
+        """Encrypt and store the given LinkedIn access token."""
+
+        if not access_token:
+            self.access_token_encrypted = ""
+            return
+        self.access_token_encrypted = (
+            linkedin_credentials_fernet()
+            .encrypt(access_token.encode("utf-8"))
+            .decode("utf-8")
+        )
+
+    def get_access_token(self) -> str:
+        """Decrypt and return the stored LinkedIn access token."""
+
+        if not self.access_token_encrypted:
+            return ""
+        return (
+            linkedin_credentials_fernet()
+            .decrypt(self.access_token_encrypted.encode("utf-8"))
+            .decode("utf-8")
+        )
+
+    def set_refresh_token(self, refresh_token: str) -> None:
+        """Encrypt and store the given LinkedIn refresh token."""
+
+        if not refresh_token:
+            self.refresh_token_encrypted = ""
+            return
+        self.refresh_token_encrypted = (
+            linkedin_credentials_fernet()
+            .encrypt(refresh_token.encode("utf-8"))
+            .decode("utf-8")
+        )
+
+    def get_refresh_token(self) -> str:
+        """Decrypt and return the stored LinkedIn refresh token."""
+
+        if not self.refresh_token_encrypted:
+            return ""
+        return (
+            linkedin_credentials_fernet()
+            .decrypt(self.refresh_token_encrypted.encode("utf-8"))
+            .decode("utf-8")
+        )
+
+    def save(self, *args, **kwargs):
+        """Normalize the stored LinkedIn member URN before save."""
+
+        if self.member_urn:
+            self.member_urn = normalize_linkedin_urn(self.member_urn)
         super().save(*args, **kwargs)
 
 

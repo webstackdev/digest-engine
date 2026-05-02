@@ -13,6 +13,8 @@ import type {
   EntityCandidate,
   IngestionRun,
   IntakeAllowlistEntry,
+  LinkedInCredentials,
+  LinkedInOAuthAuthorization,
   MastodonCredentials,
   MembershipInvitation,
   NewsletterIntake,
@@ -20,6 +22,7 @@ import type {
   OriginalContentIdeaGenerationResponse,
   Project,
   ProjectBlueskyVerification,
+  ProjectLinkedInVerification,
   ProjectMastodonVerification,
   ProjectMembership,
   PublicMembershipInvitation,
@@ -611,6 +614,57 @@ export async function verifyProjectMastodonCredentials(
     {
       method: "POST",
     },
+  )
+}
+
+/**
+ * Start the LinkedIn OAuth flow for one project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param redirectTo - Frontend path to return to after the OAuth callback completes.
+ * @returns The external LinkedIn authorization URL.
+ */
+export async function startProjectLinkedInOAuth(
+  projectId: number,
+  redirectTo: string,
+): Promise<LinkedInOAuthAuthorization> {
+  return apiFetch<LinkedInOAuthAuthorization>(
+    `/api/v1/projects/${projectId}/start-linkedin-oauth/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ redirect_to: redirectTo }),
+    },
+  )
+}
+
+/**
+ * Verify the stored LinkedIn credentials for one project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Verification status details for the stored LinkedIn account.
+ */
+export async function verifyProjectLinkedInCredentials(
+  projectId: number,
+): Promise<ProjectLinkedInVerification> {
+  return apiFetch<ProjectLinkedInVerification>(
+    `/api/v1/projects/${projectId}/verify-linkedin-credentials/`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+/**
+ * Fetch stored LinkedIn credentials for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Zero or one stored LinkedIn credential rows for the project.
+ */
+export async function getProjectLinkedInCredentials(
+  projectId: number,
+): Promise<LinkedInCredentials[]> {
+  return apiFetch<LinkedInCredentials[]>(
+    `/api/v1/projects/${projectId}/linkedin-credentials/`,
   )
 }
 

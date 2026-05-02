@@ -2,6 +2,8 @@ import importlib
 import os
 import sys
 
+from newsletter_maker.celery import app
+
 
 def _import_fresh(module_name: str):
     sys.modules.pop(module_name, None)
@@ -36,3 +38,7 @@ def test_wsgi_module_sets_default_settings_and_builds_application(mocker):
     )
     get_app_mock.assert_called_once_with()
     assert module.application == "wsgi-app"
+
+
+def test_celery_app_redirects_worker_stdout_at_info_level():
+    assert app.conf.worker_redirect_stdouts_level == "INFO"

@@ -15,6 +15,7 @@ from pipeline.models import ReviewReason, SkillResult
 from pipeline.serializers import ReviewQueueSerializer, SkillResultSerializer
 from projects.model_support import SourcePluginName
 from projects.models import (
+    LinkedInCredentials,
     MastodonCredentials,
     Project,
     ProjectMembership,
@@ -22,6 +23,7 @@ from projects.models import (
     SourceConfig,
 )
 from projects.serializers import (
+    LinkedInCredentialsSerializer,
     MastodonCredentialsSerializer,
     ProjectSerializer,
     SourceConfigSerializer,
@@ -361,6 +363,32 @@ def test_source_config_serializer_normalizes_mastodon_hashtag_config(
     }
 
 
+def test_source_config_serializer_normalizes_linkedin_organization_config(
+    serializer_context,
+):
+    serializer = SourceConfigSerializer(
+        data={
+            "plugin_name": SourcePluginName.LINKEDIN,
+            "config": {
+                "organization_urn": "urn:li:organization:1337",
+                "max_posts_per_fetch": "25",
+            },
+            "is_active": True,
+        },
+        context={
+            "request": _request_for(serializer_context.user),
+            "project": serializer_context.project,
+        },
+    )
+
+    assert serializer.is_valid(), serializer.errors
+    assert _validated_data(serializer)["config"] == {
+        "organization_urn": "urn:li:organization:1337",
+        "include_reshares": False,
+        "max_posts_per_fetch": 25,
+    }
+
+
 def test_mastodon_credentials_serializer_encrypts_access_token(serializer_context):
     serializer = MastodonCredentialsSerializer(
         data={
@@ -385,6 +413,33 @@ def test_mastodon_credentials_serializer_encrypts_access_token(serializer_contex
     assert credentials.account_acct == "alice@hachyderm.io"
     assert credentials.has_stored_credential() is True
     assert credentials.get_access_token() == "secret-token"
+
+
+def test_linkedin_credentials_serializer_encrypts_oauth_tokens(serializer_context):
+    serializer = LinkedInCredentialsSerializer(
+        data={
+            "member_urn": "urn:li:person:abc123",
+            "access_token": "access-token",
+            "refresh_token": "refresh-token",
+            "expires_at": "2026-04-27T13:00:00Z",
+            "is_active": True,
+        },
+        context={
+            "request": _request_for(serializer_context.user),
+            "project": serializer_context.project,
+        },
+    )
+
+    assert serializer.is_valid(), serializer.errors
+    credentials = cast(
+        LinkedInCredentials,
+        serializer.save(project=serializer_context.project),
+    )
+
+    assert credentials.member_urn == "urn:li:person:abc123"
+    assert credentials.has_stored_credential() is True
+    assert credentials.get_access_token() == "access-token"
+    assert credentials.get_refresh_token() == "refresh-token"
 
 
 def test_entity_serializer_filters_project_queryset_to_request_user(serializer_context):

@@ -14,6 +14,10 @@ from core.api import (
     AUTHENTICATION_REQUIRED_RESPONSE,
     BLUESKY_CREDENTIALS_RESPONSE_EXAMPLE,
     BLUESKY_CREDENTIALS_VERIFY_RESPONSE,
+    LINKEDIN_CREDENTIALS_RESPONSE_EXAMPLE,
+    LINKEDIN_OAUTH_AUTHORIZE_RESPONSE,
+    LINKEDIN_OAUTH_AUTHORIZE_RESPONSE_EXAMPLE,
+    LINKEDIN_CREDENTIALS_VERIFY_RESPONSE,
     MASTODON_CREDENTIALS_RESPONSE_EXAMPLE,
     MASTODON_CREDENTIALS_VERIFY_RESPONSE,
     PROJECT_CREATE_REQUEST_EXAMPLE,
@@ -21,6 +25,7 @@ from core.api import (
     ProjectOwnedQuerysetMixin,
     SOURCE_CONFIG_BLUESKY_REQUEST_EXAMPLE,
     SOURCE_CONFIG_CREATE_REQUEST_EXAMPLE,
+    SOURCE_CONFIG_LINKEDIN_REQUEST_EXAMPLE,
     SOURCE_CONFIG_MASTODON_REQUEST_EXAMPLE,
     SOURCE_CONFIG_REDDIT_REQUEST_EXAMPLE,
     SOURCE_CONFIG_RESPONSE_EXAMPLE,
@@ -37,9 +42,12 @@ from core.permissions import (
     get_visible_projects_queryset,
 )
 from ingestion.plugins.bluesky import BlueskySourcePlugin
+from ingestion.plugins.linkedin import LinkedInSourcePlugin
 from ingestion.plugins.mastodon import MastodonSourcePlugin
+from projects.linkedin_oauth import build_linkedin_authorize_url
 from projects.models import (
     BlueskyCredentials,
+    LinkedInCredentials,
     MastodonCredentials,
     Project,
     ProjectConfig,
@@ -50,6 +58,7 @@ from projects.models import (
 )
 from projects.serializers import (
     BlueskyCredentialsSerializer,
+    LinkedInCredentialsSerializer,
     MastodonCredentialsSerializer,
     ProjectConfigSerializer,
     ProjectMembershipSerializer,
@@ -129,7 +138,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
             "partial_update",
             "destroy",
             "rotate_intake_token",
+            "start_linkedin_oauth",
             "verify_bluesky_credentials",
+            "verify_linkedin_credentials",
             "verify_mastodon_credentials",
         }:
             permission_classes = [IsProjectAdmin]
@@ -247,6 +258,114 @@ class ProjectViewSet(viewsets.ModelViewSet):
             {
                 "status": "verified",
                 "handle": credentials.handle,
+                "last_verified_at": credentials.last_verified_at,
+                "last_error": "",
+            }
+        )
+
+    @extend_schema(
+        summary="Start LinkedIn OAuth",
+        description=(
+            "Build the LinkedIn authorization URL for the selected project so the "
+            "current admin can connect or re-authorize project-scoped LinkedIn credentials."
+        ),
+        tags=["Ingestion"],
+        request=inline_serializer(
+            name="LinkedInOAuthStartRequest",
+            fields={
+                "redirect_to": serializers.CharField(required=False),
+            },
+        ),
+        responses={
+            200: build_success_response(
+                LINKEDIN_OAUTH_AUTHORIZE_RESPONSE,
+                "The LinkedIn authorization URL was generated successfully.",
+                examples=[LINKEDIN_OAUTH_AUTHORIZE_RESPONSE_EXAMPLE],
+            ),
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="start-linkedin-oauth")
+    def start_linkedin_oauth(self, request, *args, **kwargs):
+        """Return the LinkedIn OAuth authorization URL for the selected project."""
+
+        project = self.get_object()
+        authorize_url = build_linkedin_authorize_url(
+            project,
+            request.data.get("redirect_to"),
+        )
+        return Response({"authorize_url": authorize_url})
+
+    @extend_schema(
+        summary="Verify LinkedIn credentials",
+        description=(
+            "Verify the selected project's stored LinkedIn credentials by calling "
+            "the LinkedIn member identity endpoint with the configured access token."
+        ),
+        tags=["Ingestion"],
+        request=None,
+        responses={
+            200: build_success_response(
+                LINKEDIN_CREDENTIALS_VERIFY_RESPONSE,
+                "The project's LinkedIn credentials were verified successfully.",
+            ),
+            400: OpenApiResponse(
+                response=inline_serializer(
+                    name="LinkedInCredentialsVerifyErrorResponse",
+                    fields={
+                        "type": serializers.CharField(),
+                        "errors": inline_serializer(
+                            name="LinkedInCredentialsVerifyError",
+                            fields={
+                                "code": serializers.CharField(),
+                                "detail": serializers.CharField(),
+                                "attr": serializers.CharField(allow_null=True),
+                            },
+                            many=True,
+                        ),
+                    },
+                ),
+                description="The project is missing LinkedIn credentials or verification failed.",
+            ),
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="verify-linkedin-credentials")
+    def verify_linkedin_credentials(self, request, *args, **kwargs):
+        """Verify the LinkedIn credentials stored for the selected project."""
+
+        project = self.get_object()
+        try:
+            credentials = project.linkedin_credentials
+        except LinkedInCredentials.DoesNotExist as exc:
+            raise serializers.ValidationError(
+                {
+                    "linkedin_credentials": "No LinkedIn credentials are configured for this project."
+                }
+            ) from exc
+
+        try:
+            LinkedInSourcePlugin.verify_credentials(credentials)
+        except Exception as exc:
+            logger.exception(
+                "LinkedIn credential verification failed for project id=%s",
+                project.id,
+            )
+            raise serializers.ValidationError(
+                {
+                    "linkedin_credentials": (
+                        "Credential verification failed. Please re-check the credentials "
+                        "and try again."
+                    )
+                }
+            ) from exc
+
+        credentials.refresh_from_db()
+        return Response(
+            {
+                "status": "verified",
+                "member_urn": credentials.member_urn,
+                "expires_at": credentials.expires_at,
                 "last_verified_at": credentials.last_verified_at,
                 "last_error": "",
             }
@@ -421,6 +540,38 @@ class MastodonCredentialsViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSe
 
 
 @document_project_owned_viewset(
+    resource_plural="LinkedIn credentials",
+    resource_singular="LinkedIn credentials",
+    create_description=(
+        "Create LinkedIn credentials for the selected project. The access token "
+        "and refresh token are accepted write-only and are never returned in API responses."
+    ),
+    tag="Ingestion",
+    action_overrides=build_crud_action_overrides(
+        LinkedInCredentialsSerializer,
+        resource_plural="LinkedIn credentials for the selected project",
+        resource_singular="LinkedIn credentials",
+        retrieve_examples=[LINKEDIN_CREDENTIALS_RESPONSE_EXAMPLE],
+    ),
+)
+class LinkedInCredentialsViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
+    """Manage project-scoped LinkedIn credentials."""
+
+    serializer_class = LinkedInCredentialsSerializer
+    queryset = LinkedInCredentials.objects.select_related("project")
+
+    def get_permissions(self):
+        """Restrict LinkedIn credential access to project admins."""
+
+        return [IsProjectAdmin()]
+
+    def get_queryset(self):
+        """Restrict credentials to the selected project and current user."""
+
+        return super().get_queryset().order_by("-updated_at")
+
+
+@document_project_owned_viewset(
     resource_plural="source configurations",
     resource_singular="source configuration",
     create_description="Create a new source configuration for the selected project. Plugin-specific configuration is validated before the record is saved.",
@@ -433,6 +584,7 @@ class MastodonCredentialsViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSe
             SOURCE_CONFIG_CREATE_REQUEST_EXAMPLE,
             SOURCE_CONFIG_REDDIT_REQUEST_EXAMPLE,
             SOURCE_CONFIG_BLUESKY_REQUEST_EXAMPLE,
+            SOURCE_CONFIG_LINKEDIN_REQUEST_EXAMPLE,
             SOURCE_CONFIG_MASTODON_REQUEST_EXAMPLE,
             SOURCE_CONFIG_RESPONSE_EXAMPLE,
         ],

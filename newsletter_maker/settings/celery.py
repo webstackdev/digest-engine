@@ -11,12 +11,17 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", default=False)
+CELERY_WORKER_REDIRECT_STDOUTS_LEVEL = "INFO"
 CELERY_TASK_TIME_LIMIT = 300
 CELERY_TASK_SOFT_TIME_LIMIT = 270
 CELERY_BEAT_SCHEDULE = {
     "run-all-source-ingestions-every-6-hours": {
         "task": "core.tasks.run_all_ingestions",
         "schedule": 60 * 60 * 6,
+    },
+    "refresh-linkedin-tokens-hourly": {
+        "task": "core.tasks.refresh_linkedin_tokens",
+        "schedule": 60 * 60,
     },
     "run-all-authority-recomputations-nightly": {
         "task": "core.tasks.run_all_authority_recomputations",
@@ -37,6 +42,7 @@ __all__ = [
     "CELERY_BROKER_URL",
     "CELERY_RESULT_BACKEND",
     "CELERY_TASK_ALWAYS_EAGER",
+    "CELERY_WORKER_REDIRECT_STDOUTS_LEVEL",
     "CELERY_TASK_TIME_LIMIT",
     "CELERY_TASK_SOFT_TIME_LIMIT",
     "CELERY_BEAT_SCHEDULE",

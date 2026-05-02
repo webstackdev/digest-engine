@@ -6,6 +6,7 @@ import type {
   BlueskyCredentials,
   IngestionRun,
   IntakeAllowlistEntry,
+  LinkedInCredentials,
   MastodonCredentials,
   NewsletterIntake,
   Project,
@@ -16,6 +17,7 @@ const {
   getProjectBlueskyCredentialsMock,
   getProjectIngestionRunsMock,
   getProjectIntakeAllowlistMock,
+  getProjectLinkedInCredentialsMock,
   getProjectMastodonCredentialsMock,
   getProjectNewsletterIntakesMock,
   getProjectsMock,
@@ -25,6 +27,7 @@ const {
   getProjectBlueskyCredentialsMock: vi.fn(),
   getProjectIngestionRunsMock: vi.fn(),
   getProjectIntakeAllowlistMock: vi.fn(),
+  getProjectLinkedInCredentialsMock: vi.fn(),
   getProjectMastodonCredentialsMock: vi.fn(),
   getProjectNewsletterIntakesMock: vi.fn(),
   getProjectsMock: vi.fn(),
@@ -68,6 +71,7 @@ vi.mock("@/lib/api", () => ({
   getProjectBlueskyCredentials: getProjectBlueskyCredentialsMock,
   getProjectIngestionRuns: getProjectIngestionRunsMock,
   getProjectIntakeAllowlist: getProjectIntakeAllowlistMock,
+  getProjectLinkedInCredentials: getProjectLinkedInCredentialsMock,
   getProjectMastodonCredentials: getProjectMastodonCredentialsMock,
   getProjectNewsletterIntakes: getProjectNewsletterIntakesMock,
   getProjects: getProjectsMock,
@@ -205,6 +209,24 @@ function createMastodonCredentials(
   }
 }
 
+function createLinkedInCredentials(
+  overrides: Partial<LinkedInCredentials> = {},
+): LinkedInCredentials {
+  return {
+    id: 10,
+    project: 1,
+    member_urn: "urn:li:person:abc123",
+    expires_at: "2026-04-30T10:00:00Z",
+    is_active: true,
+    has_stored_credential: true,
+    last_verified_at: "2026-04-29T10:00:00Z",
+    last_error: "",
+    created_at: "2026-04-29T09:00:00Z",
+    updated_at: "2026-04-29T10:00:00Z",
+    ...overrides,
+  }
+}
+
 async function loadSourcesPageModule() {
   return import("./page")
 }
@@ -267,6 +289,7 @@ describe("SourcesPage", () => {
     getProjectSourceConfigsMock.mockReset()
     getProjectIngestionRunsMock.mockReset()
     getProjectIntakeAllowlistMock.mockReset()
+    getProjectLinkedInCredentialsMock.mockReset()
     getProjectMastodonCredentialsMock.mockReset()
     getProjectNewsletterIntakesMock.mockReset()
     selectProjectMock.mockReset()
@@ -276,6 +299,7 @@ describe("SourcesPage", () => {
     getProjectSourceConfigsMock.mockResolvedValue([])
     getProjectIngestionRunsMock.mockResolvedValue([])
     getProjectIntakeAllowlistMock.mockResolvedValue([])
+    getProjectLinkedInCredentialsMock.mockResolvedValue([])
     getProjectMastodonCredentialsMock.mockResolvedValue([])
     getProjectNewsletterIntakesMock.mockResolvedValue([])
     selectProjectMock.mockImplementation((projects: Project[]) => {
@@ -300,6 +324,7 @@ describe("SourcesPage", () => {
     expect(getProjectIngestionRunsMock).not.toHaveBeenCalled()
     expect(getProjectBlueskyCredentialsMock).not.toHaveBeenCalled()
     expect(getProjectIntakeAllowlistMock).not.toHaveBeenCalled()
+    expect(getProjectLinkedInCredentialsMock).not.toHaveBeenCalled()
     expect(getProjectMastodonCredentialsMock).not.toHaveBeenCalled()
     expect(getProjectNewsletterIntakesMock).not.toHaveBeenCalled()
   })
@@ -340,6 +365,7 @@ describe("SourcesPage", () => {
     expect(getProjectIngestionRunsMock).toHaveBeenCalledWith(1)
     expect(getProjectBlueskyCredentialsMock).toHaveBeenCalledWith(1)
     expect(getProjectIntakeAllowlistMock).toHaveBeenCalledWith(1)
+    expect(getProjectLinkedInCredentialsMock).toHaveBeenCalledWith(1)
     expect(getProjectMastodonCredentialsMock).toHaveBeenCalledWith(1)
     expect(getProjectNewsletterIntakesMock).toHaveBeenCalledWith(1)
   })
@@ -471,6 +497,28 @@ describe("SourcesPage", () => {
     ).toBeEnabled()
   })
 
+  it("renders LinkedIn authorization controls from stored credentials", async () => {
+    const selectedProject = createProject({ id: 5 })
+
+    getProjectsMock.mockResolvedValue([selectedProject])
+    selectProjectMock.mockReturnValue(selectedProject)
+    getProjectLinkedInCredentialsMock.mockResolvedValue([
+      createLinkedInCredentials({ project: 5 }),
+    ])
+
+    await renderSourcesPage({ project: "5" })
+
+    expect(screen.getByText("urn:li:person:abc123")).toBeInTheDocument()
+    expect(screen.getByText("OAuth authorization")).toBeInTheDocument()
+    expect(screen.getByText(/Token expires/)).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Verify LinkedIn credentials" }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", { name: "Reauthorize LinkedIn" }),
+    ).toBeInTheDocument()
+  })
+
   it("renders source cards with badge tones and the latest run summary", async () => {
     const selectedProject = createProject({ id: 3 })
     getProjectsMock.mockResolvedValue([selectedProject])
@@ -522,7 +570,7 @@ describe("SourcesPage", () => {
     expect(screen.getByText("Rate limited")).toBeInTheDocument()
 
     const badges = screen.getAllByTestId("status-badge")
-    expect(badges).toHaveLength(5)
+    expect(badges).toHaveLength(6)
     expect(
       badges.some(
         (badge) =>
@@ -550,9 +598,12 @@ describe("SourcesPage", () => {
     expect(screen.getByText("No recent error")).toBeInTheDocument()
   })
 
-  it("includes Mastodon in the source creation options", async () => {
+  it("includes LinkedIn and Mastodon in the source creation options", async () => {
     await renderSourcesPage({ project: "1" })
 
+    expect(
+      screen.getByRole("option", { name: "LinkedIn" }),
+    ).toBeInTheDocument()
     expect(
       screen.getByRole("option", { name: "Mastodon" }),
     ).toBeInTheDocument()
