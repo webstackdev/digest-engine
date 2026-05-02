@@ -2,13 +2,13 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { ThemeSuggestionCard } from "@/app/themes/_components/ThemeSuggestionCard"
 import { AppShell } from "@/components/layout/AppShell"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 import {
   createProject,
   createThemeSuggestion,
   createTopicCluster,
   createTopicClusterDetail,
 } from "@/lib/storybook-fixtures"
-import { compactDocsParameters } from "@/lib/storybook-docs"
 
 type ThemesPreviewProps = {
   themes?: ReturnType<typeof createThemeSuggestion>[]

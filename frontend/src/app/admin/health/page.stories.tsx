@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { SourceDiversityPanel } from "@/app/admin/health/_components/SourceDiversityPanel"
-import { AppShell } from "@/components/layout/AppShell"
 import { StatusBadge } from "@/components/elements/StatusBadge"
+import { AppShell } from "@/components/layout/AppShell"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 import {
   createIngestionRun,
   createProject,
@@ -11,7 +12,6 @@ import {
   createSourceDiversitySummary,
   createTopicCentroidSummary,
 } from "@/lib/storybook-fixtures"
-import { compactDocsParameters } from "@/lib/storybook-docs"
 
 type HealthPreviewProps = {
   alerting?: boolean

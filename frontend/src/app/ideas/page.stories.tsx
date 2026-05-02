@@ -2,11 +2,11 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { OriginalContentIdeaCard } from "@/app/ideas/_components/OriginalContentIdeaCard"
 import { AppShell } from "@/components/layout/AppShell"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 import {
   createOriginalContentIdea,
   createProject,
 } from "@/lib/storybook-fixtures"
-import { compactDocsParameters } from "@/lib/storybook-docs"
 
 type IdeasPreviewProps = {
   ideas?: ReturnType<typeof createOriginalContentIdea>[]

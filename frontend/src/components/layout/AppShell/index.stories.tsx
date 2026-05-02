@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
-import { createProject } from "@/lib/storybook-fixtures"
 import { compactDocsParameters } from "@/lib/storybook-docs"
+import { createProject } from "@/lib/storybook-fixtures"
 
 import { AppShell } from "."
 

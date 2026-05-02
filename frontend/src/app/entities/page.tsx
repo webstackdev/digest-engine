@@ -1,7 +1,7 @@
 import Link from "next/link"
 
-import { AppShell } from "@/components/layout/AppShell"
 import { StatusBadge } from "@/components/elements/StatusBadge"
+import { AppShell } from "@/components/layout/AppShell"
 import {
   getProjectEntities,
   getProjectEntityCandidates,

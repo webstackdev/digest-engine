@@ -1,8 +1,8 @@
 import Link from "next/link"
 
 import { TopicClusterCard } from "@/app/trends/_components/TopicClusterCard"
-import { AppShell } from "@/components/layout/AppShell"
 import { StatusBadge } from "@/components/elements/StatusBadge"
+import { AppShell } from "@/components/layout/AppShell"
 import {
   getProjectContents,
   getProjects,

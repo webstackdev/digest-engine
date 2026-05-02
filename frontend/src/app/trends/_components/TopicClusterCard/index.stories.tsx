@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
-import { createTopicClusterDetail } from "@/lib/storybook-fixtures"
 import { compactDocsParameters } from "@/lib/storybook-docs"
+import { createTopicClusterDetail } from "@/lib/storybook-fixtures"
 
 import { TopicClusterCard } from "."
 

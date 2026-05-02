@@ -1,10 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
+import { compactDocsParameters } from "@/lib/storybook-docs"
 import {
   createSourceDiversitySnapshot,
   createSourceDiversitySummary,
 } from "@/lib/storybook-fixtures"
-import { compactDocsParameters } from "@/lib/storybook-docs"
 
 import { SourceDiversityPanel } from "."
 

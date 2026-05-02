@@ -1,11 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
+import { compactDocsParameters } from "@/lib/storybook-docs"
 import {
   createThemeSuggestion,
   createTopicCluster,
   createTopicClusterDetail,
 } from "@/lib/storybook-fixtures"
-import { compactDocsParameters } from "@/lib/storybook-docs"
 
 import { ThemeSuggestionCard } from "."
 

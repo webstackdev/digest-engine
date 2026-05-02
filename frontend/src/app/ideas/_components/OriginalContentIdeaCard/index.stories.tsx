@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
-import { createOriginalContentIdea } from "@/lib/storybook-fixtures"
 import { compactDocsParameters } from "@/lib/storybook-docs"
+import { createOriginalContentIdea } from "@/lib/storybook-fixtures"
 
 import { OriginalContentIdeaCard } from "."
 
