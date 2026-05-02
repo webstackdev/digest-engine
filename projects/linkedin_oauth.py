@@ -26,15 +26,7 @@ LINKEDIN_OAUTH_STATE_MAX_AGE_SECONDS = 900
 def _oauth_scopes() -> list[str]:
     """Return the configured LinkedIn OAuth scopes in request order."""
 
-    raw_scopes = getattr(
-        settings,
-        "LINKEDIN_OAUTH_SCOPES",
-        "openid profile email offline_access",
-    )
-    if isinstance(raw_scopes, str):
-        scopes = [scope for scope in raw_scopes.split() if scope]
-    else:
-        scopes = [str(scope).strip() for scope in raw_scopes if str(scope).strip()]
+    scopes = [scope for scope in settings.LINKEDIN_OAUTH_SCOPES.split() if scope]
     return scopes or ["openid", "profile", "email", "offline_access"]
 
 
@@ -214,7 +206,9 @@ def linkedin_oauth_callback_view(request: HttpRequest) -> HttpResponseRedirect:
 
         oauth_error = str(request.GET.get("error") or "").strip()
         if oauth_error:
-            error_detail = str(request.GET.get("error_description") or oauth_error).strip()
+            error_detail = str(
+                request.GET.get("error_description") or oauth_error
+            ).strip()
             return redirect(
                 _build_frontend_redirect_url(
                     redirect_to,
