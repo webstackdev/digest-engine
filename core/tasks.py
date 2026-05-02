@@ -41,6 +41,7 @@ AUTHORITY_ROLE_SIGNALS = (
 __all__ = [
     "recompute_source_quality",
     "recompute_authority_scores",
+    "run_all_source_quality_recomputations",
     "run_all_authority_recomputations",
     "run_relevance_scoring_skill",
     "run_summarization_skill",
@@ -91,6 +92,19 @@ def run_all_authority_recomputations():
         else:
             _enqueue_task(recompute_authority_scores, project_id)
 
+    return len(project_ids)
+
+
+@shared_task(name="core.tasks.run_all_source_quality_recomputations")
+def run_all_source_quality_recomputations() -> int:
+    """Queue source-quality recomputation for every project."""
+
+    project_ids = list(Project.objects.values_list("id", flat=True))
+    for project_id in project_ids:
+        if settings.CELERY_TASK_ALWAYS_EAGER:
+            recompute_source_quality(project_id)
+        else:
+            _enqueue_task(recompute_source_quality, project_id)
     return len(project_ids)
 
 
@@ -616,6 +630,8 @@ def _engagement_total_for_content(
             + _metadata_number(metadata.get("reply_count"))
             + _metadata_number(metadata.get("repost_count"))
         )
+    if content.source_plugin == "reddit":
+        return _metadata_number(metadata.get("score"))
     if content.source_plugin == "mastodon":
         return (
             _metadata_number(metadata.get("favorite_count"))

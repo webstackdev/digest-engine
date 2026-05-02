@@ -137,6 +137,32 @@ def test_project_config_admin_exposes_centroid_toggle_field(source_admin_context
     )
 
 
+def test_project_config_admin_recompute_action_queues_source_quality_and_authority(
+    source_admin_context, mocker
+):
+    config = ProjectConfig.objects.create(project=source_admin_context.project)
+    source_quality_delay_mock = mocker.patch(
+        "core.tasks.recompute_source_quality.delay"
+    )
+    authority_delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
+    admin_instance = ProjectConfigAdmin(ProjectConfig, AdminSite())
+    message_user_mock = _message_user_mock(admin_instance, mocker)
+
+    admin_instance.recompute_selected_authority_models(
+        request=_request(),
+        queryset=ProjectConfig.objects.filter(pk=config.pk),
+    )
+
+    project_id = _require_pk(source_admin_context.project)
+    source_quality_delay_mock.assert_called_once_with(project_id)
+    authority_delay_mock.assert_called_once_with(project_id)
+    message_user_mock.assert_called_once_with(
+        ANY,
+        "Queued source-quality and authority recomputation for 1 project config(s).",
+        messages.SUCCESS,
+    )
+
+
 def test_test_source_connection_reports_failures(source_admin_context, mocker):
     source_config = SourceConfig.objects.create(
         project=source_admin_context.project,

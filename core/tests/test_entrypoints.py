@@ -42,3 +42,16 @@ def test_wsgi_module_sets_default_settings_and_builds_application(mocker):
 
 def test_celery_app_redirects_worker_stdout_at_info_level():
     assert app.conf.worker_redirect_stdouts_level == "INFO"
+
+
+def test_celery_app_schedules_source_quality_before_authority_recompute():
+    beat_schedule = app.conf.beat_schedule
+
+    assert (
+        beat_schedule["run-all-source-quality-recomputations-nightly"]["task"]
+        == "core.tasks.run_all_source_quality_recomputations"
+    )
+    assert (
+        beat_schedule["run-all-authority-recomputations-nightly"]["task"]
+        == "core.tasks.run_all_authority_recomputations"
+    )

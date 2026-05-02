@@ -9,6 +9,7 @@ from core.tasks import (
     queue_content_skill,
     recompute_authority_scores,
     run_all_authority_recomputations,
+    run_all_source_quality_recomputations,
     run_relevance_scoring_skill,
     run_summarization_skill,
 )
@@ -78,6 +79,43 @@ def test_run_all_authority_recomputations_executes_inline_when_eager(
     )
 
     enqueued_count = run_all_authority_recomputations()
+
+    assert enqueued_count == 2
+    recompute_mock.assert_any_call(source_plugin_context.project.id)
+    recompute_mock.assert_any_call(_require_pk(other_project))
+    assert recompute_mock.call_count == 2
+    delay_mock.assert_not_called()
+
+
+def test_run_all_source_quality_recomputations_enqueues_all_projects(
+    source_plugin_context, mocker
+):
+    delay_mock = mocker.patch("core.tasks.recompute_source_quality.delay")
+    other_project = Project.objects.create(
+        name="Source Quality Project",
+        topic_description="Signals",
+    )
+
+    enqueued_count = run_all_source_quality_recomputations()
+
+    assert enqueued_count == 2
+    delay_mock.assert_any_call(source_plugin_context.project.id)
+    delay_mock.assert_any_call(_require_pk(other_project))
+    assert delay_mock.call_count == 2
+
+
+def test_run_all_source_quality_recomputations_executes_inline_when_eager(
+    source_plugin_context, settings, mocker
+):
+    settings.CELERY_TASK_ALWAYS_EAGER = True
+    recompute_mock = mocker.patch("core.tasks.recompute_source_quality")
+    delay_mock = mocker.patch("core.tasks.recompute_source_quality.delay")
+    other_project = Project.objects.create(
+        name="Inline Source Quality Project",
+        topic_description="Signals",
+    )
+
+    enqueued_count = run_all_source_quality_recomputations()
 
     assert enqueued_count == 2
     recompute_mock.assert_any_call(source_plugin_context.project.id)
@@ -196,6 +234,62 @@ def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
         config.authority_decay_rate * 0.5
     )
     assert primary_snapshot.weights_at_compute["engagement"] == pytest.approx(0.15)
+
+
+def test_recompute_authority_scores_uses_bluesky_and_reddit_engagement_metadata(
+    source_plugin_context, mocker
+):
+    mocker.patch("content.signals.queue_topic_centroid_recompute")
+    project = source_plugin_context.project
+    ProjectConfig.objects.create(project=project)
+    entity = source_plugin_context.entity
+    bluesky_content = Content.objects.create(
+        project=project,
+        entity=entity,
+        url="https://bsky.app/profile/example/post/abc",
+        canonical_url="https://bsky.app/profile/example/post/abc",
+        title="Bluesky authority content",
+        author="example.bsky.social",
+        source_plugin=SourcePluginName.BLUESKY,
+        published_date="2026-04-28T12:00:00Z",
+        content_text="Bluesky authority content.",
+        source_metadata={"like_count": 4, "reply_count": 1, "repost_count": 2},
+    )
+    reddit_content = Content.objects.create(
+        project=project,
+        entity=entity,
+        url="https://www.reddit.com/r/python/comments/abc123/test",
+        canonical_url="https://www.reddit.com/r/python/comments/abc123/test",
+        title="Reddit authority content",
+        author="redditor",
+        source_plugin=SourcePluginName.REDDIT,
+        published_date="2026-04-28T13:00:00Z",
+        content_text="Reddit authority content.",
+        source_metadata={"score": 10, "comment_count": 3},
+    )
+    EntityMention.objects.create(
+        project=project,
+        content=bluesky_content,
+        entity=entity,
+        role=EntityMentionRole.AUTHOR,
+        sentiment="positive",
+        span="Example",
+        confidence=0.9,
+    )
+    EntityMention.objects.create(
+        project=project,
+        content=reddit_content,
+        entity=entity,
+        role=EntityMentionRole.AUTHOR,
+        sentiment="neutral",
+        span="Example",
+        confidence=0.9,
+    )
+
+    recompute_authority_scores(project.id)
+
+    snapshot = EntityAuthoritySnapshot.objects.get(entity=entity)
+    assert snapshot.engagement_component == pytest.approx(1.0)
 
 
 def test_queue_content_skill_enqueues_relevance_task(source_plugin_context, mocker):

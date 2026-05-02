@@ -152,6 +152,7 @@ class BlueskySourcePlugin(SourcePlugin):
                 "author_did": self._nested_value(post, "author", "did") or "",
                 "author_handle": author_handle,
                 "embedded_url": external_url or "",
+                "like_count": getattr(post, "like_count", 0) or 0,
                 "post_uri": getattr(post, "uri", ""),
                 "reply_count": getattr(post, "reply_count", 0) or 0,
                 "repost_count": getattr(post, "repost_count", 0) or 0,

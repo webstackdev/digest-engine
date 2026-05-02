@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
 from django.contrib import admin, messages
+from django.conf import settings
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -459,6 +460,7 @@ class LinkedInCredentialsAdmin(ModelAdmin):
 class ProjectConfigAdmin(admin.ModelAdmin):
     """Admin configuration for per-project scoring settings."""
 
+    actions = ["recompute_selected_authority_models"]
     list_display = (
         "project",
         "authority_weight_mention",
@@ -488,6 +490,32 @@ class ProjectConfigAdmin(admin.ModelAdmin):
         "authority_decay_rate",
         "recompute_topic_centroid_on_feedback_save",
     )
+
+    @admin.action(description="Recompute source quality and authority")
+    def recompute_selected_authority_models(self, request, queryset):
+        """Trigger source-quality and authority recomputes for selected projects."""
+
+        from core.tasks import recompute_authority_scores, recompute_source_quality
+
+        selected_count = 0
+        for config in queryset.select_related("project"):
+            project_id = int(config.project_id)
+            if settings.CELERY_TASK_ALWAYS_EAGER:
+                recompute_source_quality(project_id)
+                recompute_authority_scores(project_id)
+            else:
+                recompute_source_quality.delay(project_id)
+                recompute_authority_scores.delay(project_id)
+            selected_count += 1
+        if selected_count:
+            self.message_user(
+                request,
+                (
+                    "Queued source-quality and authority recomputation for "
+                    f"{selected_count} project config(s)."
+                ),
+                messages.SUCCESS,
+            )
 
 
 @admin.register(SourceConfig)

@@ -189,6 +189,9 @@ def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, 
         title="Reddit Post",
         selftext="Post body",
         author="redditor",
+        num_comments=6,
+        score=14,
+        upvote_ratio=0.88,
         created_utc=datetime(2026, 4, 20, 12, 0, tzinfo=timezone.utc).timestamp(),
     )
     subreddit = SimpleNamespace(
@@ -205,6 +208,8 @@ def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, 
     process_content_delay_mock.assert_called_once_with(_require_pk(content))
     assert content.source_plugin == SourcePluginName.REDDIT
     assert content.entity is None
+    assert content.source_metadata["score"] == 14
+    assert content.source_metadata["comment_count"] == 6
 
 
 def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
