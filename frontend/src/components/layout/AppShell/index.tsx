@@ -68,6 +68,12 @@ export function AppShell({
           </Link>
           <Link
             className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
+            href={`/drafts${projectQuery}`}
+          >
+            Drafts
+          </Link>
+          <Link
+            className="rounded-panel border border-sidebar-border/60 bg-sidebar-accent/30 px-4 py-4 transition hover:-translate-y-0.5 hover:border-sidebar-ring/40 hover:bg-sidebar-accent/50"
             href={`/entities${projectQuery}`}
           >
             Entities

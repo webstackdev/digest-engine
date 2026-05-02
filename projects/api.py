@@ -468,11 +468,71 @@ class ProjectConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         """Allow all members to read project config, but only admins to modify it."""
 
-        if self.action in {"update", "partial_update", "create", "destroy"}:
+        if self.action in {
+            "update",
+            "partial_update",
+            "create",
+            "destroy",
+            "recompute_authority",
+        }:
             permission_classes = [IsProjectAdmin]
         else:
             permission_classes = [IsProjectMember]
         return [permission() for permission in permission_classes]
+
+    @extend_schema(
+        summary="Recompute project authority scores",
+        description=(
+            "Recompute source-quality inputs and authority-score snapshots for the "
+            "selected project configuration. When Celery runs eagerly, the "
+            "recomputation finishes before the response is returned. Otherwise, the "
+            "source-quality and authority tasks are queued for background execution."
+        ),
+        request=None,
+        responses={
+            200: inline_serializer(
+                name="ProjectConfigRecomputeCompletedResponse",
+                fields={
+                    "status": serializers.CharField(),
+                    "project_id": serializers.IntegerField(),
+                    "config_id": serializers.IntegerField(),
+                },
+            ),
+            202: inline_serializer(
+                name="ProjectConfigRecomputeQueuedResponse",
+                fields={
+                    "status": serializers.CharField(),
+                    "project_id": serializers.IntegerField(),
+                    "config_id": serializers.IntegerField(),
+                },
+            ),
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Project Management"],
+    )
+    @action(detail=True, methods=["post"], url_path="recompute_authority")
+    def recompute_authority(self, request, *args, **kwargs):
+        """Recompute source quality and entity authority for the selected project."""
+
+        from core.tasks import recompute_authority_scores, recompute_source_quality
+
+        config = self.get_object()
+        project_id = int(config.project_id)
+        payload = {
+            "status": "queued",
+            "project_id": project_id,
+            "config_id": int(config.pk),
+        }
+
+        if settings.CELERY_TASK_ALWAYS_EAGER:
+            recompute_source_quality(project_id)
+            recompute_authority_scores(project_id)
+            payload["status"] = "completed"
+            return Response(payload)
+
+        recompute_source_quality.delay(project_id)
+        recompute_authority_scores.delay(project_id)
+        return Response(payload, status=status.HTTP_202_ACCEPTED)
 
 
 @document_project_owned_viewset(

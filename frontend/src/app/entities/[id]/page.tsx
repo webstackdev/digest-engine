@@ -1,14 +1,18 @@
 import Link from "next/link"
 
+import { AuthorityWeightControls } from "@/app/entities/[id]/_components/AuthorityWeightControls"
 import { StatusBadge } from "@/components/elements/StatusBadge"
 import { AppShell } from "@/components/layout/AppShell"
 import {
+  getProjectConfig,
   getProjectEntities,
   getProjectEntity,
+  getProjectEntityAuthorityComponents,
   getProjectEntityAuthorityHistory,
   getProjectEntityMentions,
   getProjects,
 } from "@/lib/api"
+import type { EntityAuthoritySnapshot } from "@/lib/types"
 import {
   formatDate,
   formatPercentScore,
@@ -27,8 +31,9 @@ type EntityDetailPageProps = {
 /**
  * Render the detail view for one tracked entity in the selected project.
  *
- * The page joins the entity record with its extracted mention history so editors can
- * inspect how the pipeline is linking content to the entity over time.
+ * The page joins the entity record with its current authority breakdown, historical
+ * snapshots, and extracted mention history so editors can inspect how the pipeline is
+ * linking content and weighting authority over time.
  */
 export default async function EntityDetailPage({
   params,
@@ -54,17 +59,32 @@ export default async function EntityDetailPage({
   }
 
   const entityId = Number.parseInt(id, 10)
-  const [entity, mentions, authorityHistory, projectEntities] = await Promise.all([
+  const [
+    entity,
+    mentions,
+    authorityComponents,
+    authorityHistory,
+    projectEntities,
+    projectConfig,
+  ] = await Promise.all([
     getProjectEntity(selectedProject.id, entityId),
     getProjectEntityMentions(selectedProject.id, entityId),
+    getProjectEntityAuthorityComponents(selectedProject.id, entityId).catch(
+      () => null,
+    ),
     getProjectEntityAuthorityHistory(selectedProject.id, entityId),
     getProjectEntities(selectedProject.id),
+    selectedProject.user_role === "admin"
+      ? getProjectConfig(selectedProject.id)
+      : Promise.resolve(null),
   ])
   const errorMessage = getErrorMessage(resolvedSearchParams)
   const successMessage = getSuccessMessage(resolvedSearchParams)
   const siblingEntities = projectEntities.filter((candidate) => candidate.id !== entity.id)
-  const latestSnapshot = authorityHistory[0] ?? null
+  const latestSnapshot = authorityComponents ?? authorityHistory[0] ?? null
   const trendPoints = buildAuthorityTrendPoints(authorityHistory)
+  const componentMix = latestSnapshot ? buildAuthorityComponentMix(latestSnapshot) : []
+  const carryForwardWeight = latestSnapshot ? Math.max(0, latestSnapshot.decayed_prior) : 0
 
   return (
     <AppShell
@@ -170,9 +190,47 @@ export default async function EntityDetailPage({
                     {formatPercentScore(entity.authority_score)}
                   </p>
                   <p className="m-0 text-sm leading-6 text-muted">
-                    This reflects the latest blend of mention frequency, editorial feedback, duplicate corroboration, and carry-forward history.
+                    This reflects the latest blend of mention frequency, engagement, recency, source quality, cross-newsletter corroboration, editorial feedback, duplicate corroboration, and carry-forward history.
                   </p>
                 </div>
+                {latestSnapshot ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-sm text-muted">
+                      <span>Current component mix</span>
+                      <span>Carry-forward {formatPercentScore(carryForwardWeight)}</span>
+                    </div>
+                    <div
+                      aria-label="Authority component mix"
+                      className="overflow-hidden rounded-full border border-border/10 bg-card/80"
+                      role="img"
+                    >
+                      <svg className="block h-4 w-full" viewBox="0 0 100 8" preserveAspectRatio="none">
+                        {componentMix.map((component) => (
+                          <rect
+                            className={component.className}
+                            height="8"
+                            key={component.label}
+                            rx="0"
+                            ry="0"
+                            width={component.width}
+                            x={component.offset}
+                            y="0"
+                          >
+                            <title>{`${component.label} ${formatPercentScore(component.value)}`}</title>
+                          </rect>
+                        ))}
+                      </svg>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {componentMix.map((component) => (
+                        <div className="flex items-center gap-2 text-sm text-muted" key={component.label}>
+                          <span className={`h-3 w-3 rounded-full ${component.className}`} />
+                          <span>{component.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 {authorityHistory.length > 1 ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm text-muted">
@@ -214,8 +272,12 @@ export default async function EntityDetailPage({
                   ) : null}
                 </div>
                 {latestSnapshot ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     <AuthorityComponentCard label="Mention frequency" value={latestSnapshot.mention_component} />
+                    <AuthorityComponentCard label="Engagement" value={latestSnapshot.engagement_component} />
+                    <AuthorityComponentCard label="Recency" value={latestSnapshot.recency_component} />
+                    <AuthorityComponentCard label="Source quality" value={latestSnapshot.source_quality_component} />
+                    <AuthorityComponentCard label="Cross-newsletter" value={latestSnapshot.cross_newsletter_component} />
                     <AuthorityComponentCard label="Feedback" value={latestSnapshot.feedback_component} />
                     <AuthorityComponentCard label="Duplicate signal" value={latestSnapshot.duplicate_component} />
                     <AuthorityComponentCard label="Carry-forward" value={latestSnapshot.decayed_prior} />
@@ -225,6 +287,28 @@ export default async function EntityDetailPage({
                     Authority history has not been recomputed for this entity yet.
                   </p>
                 )}
+                {latestSnapshot?.weights_at_compute ? (
+                  <div className="space-y-2">
+                    <h5 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+                      Weights at compute
+                    </h5>
+                    <div className="flex flex-wrap gap-2 text-sm text-muted">
+                      {Object.entries(latestSnapshot.weights_at_compute).map(([key, value]) => (
+                        <span className="inline-flex items-center rounded-full border border-border/12 bg-card px-3 py-1 text-sm text-foreground" key={key}>
+                          {formatWeightLabel(key)} {formatPercentScore(value)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedProject.user_role === "admin" ? (
+                  <AuthorityWeightControls
+                    projectConfig={projectConfig}
+                    projectId={selectedProject.id}
+                    redirectTo={`/entities/${entity.id}?project=${selectedProject.id}`}
+                  />
+                ) : null}
               </div>
             </div>
 
@@ -239,6 +323,10 @@ export default async function EntityDetailPage({
                       </div>
                       <div className="flex flex-wrap gap-2 text-sm text-muted">
                         <span>M {formatPercentScore(snapshot.mention_component)}</span>
+                        <span>E {formatPercentScore(snapshot.engagement_component)}</span>
+                        <span>R {formatPercentScore(snapshot.recency_component)}</span>
+                        <span>SQ {formatPercentScore(snapshot.source_quality_component)}</span>
+                        <span>CN {formatPercentScore(snapshot.cross_newsletter_component)}</span>
                         <span>F {formatPercentScore(snapshot.feedback_component)}</span>
                         <span>D {formatPercentScore(snapshot.duplicate_component)}</span>
                         <span>Carry {formatPercentScore(snapshot.decayed_prior)}</span>
@@ -362,6 +450,64 @@ function buildAuthorityTrendPoints(
     })
 
   return points.join(" ")
+}
+
+function buildAuthorityComponentMix(snapshot: EntityAuthoritySnapshot) {
+  const components = [
+    {
+      label: "Mention frequency",
+      value: Math.max(0, snapshot.mention_component),
+      className: "bg-primary",
+    },
+    {
+      label: "Engagement",
+      value: Math.max(0, snapshot.engagement_component),
+      className: "bg-emerald-500",
+    },
+    {
+      label: "Recency",
+      value: Math.max(0, snapshot.recency_component),
+      className: "bg-cyan-500",
+    },
+    {
+      label: "Source quality",
+      value: Math.max(0, snapshot.source_quality_component),
+      className: "bg-amber-500",
+    },
+    {
+      label: "Cross-newsletter",
+      value: Math.max(0, snapshot.cross_newsletter_component),
+      className: "bg-fuchsia-500",
+    },
+    {
+      label: "Feedback",
+      value: Math.max(0, snapshot.feedback_component),
+      className: "bg-sky-500",
+    },
+    {
+      label: "Duplicate signal",
+      value: Math.max(0, snapshot.duplicate_component),
+      className: "bg-rose-500",
+    },
+  ]
+  const total = components.reduce((sum, component) => sum + component.value, 0)
+  let offset = 0
+
+  return components.map((component) => {
+    const share = total > 0 ? component.value / total : 1 / components.length
+    const mappedComponent = {
+      ...component,
+      share,
+      offset,
+      width: share * 100,
+    }
+    offset += mappedComponent.width
+    return mappedComponent
+  })
+}
+
+function formatWeightLabel(label: string) {
+  return label.replaceAll("_", " ")
 }
 
 function AuthorityComponentCard({

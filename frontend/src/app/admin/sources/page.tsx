@@ -830,6 +830,87 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                 Verify LinkedIn credentials
               </button>
             </form>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+              <form
+                action={`/api/projects/${selectedProject.id}/linkedin-source-configs`}
+                className="space-y-4 rounded-2xl border border-border/10 bg-muted/45 p-4"
+                method="POST"
+              >
+                <input
+                  type="hidden"
+                  name="redirectTo"
+                  value={`/admin/sources?project=${selectedProject.id}`}
+                />
+                <div className="space-y-1">
+                  <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+                    Add LinkedIn source
+                  </p>
+                  <p className="m-0 text-sm leading-6 text-muted">
+                    Create a project-scoped LinkedIn source without hand-writing config JSON.
+                  </p>
+                </div>
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium text-foreground">Surface type</span>
+                  <select
+                    className="w-full rounded-2xl border border-border/12 bg-card px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                    defaultValue="organization"
+                    name="surface"
+                  >
+                    <option value="organization">Organization page</option>
+                    <option value="person">Person feed</option>
+                    <option value="newsletter">Newsletter feed</option>
+                  </select>
+                </label>
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium text-foreground">URN</span>
+                  <input
+                    className="w-full rounded-2xl border border-border/12 bg-card px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                    name="urn"
+                    placeholder="urn:li:organization:1337"
+                    required
+                  />
+                </label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-foreground">Max posts per fetch</span>
+                    <input
+                      className="w-full rounded-2xl border border-border/12 bg-card px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      defaultValue="50"
+                      min="1"
+                      name="max_posts_per_fetch"
+                      type="number"
+                    />
+                  </label>
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium text-foreground">Include reshares</span>
+                    <select
+                      className="w-full rounded-2xl border border-border/12 bg-card px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      defaultValue="false"
+                      name="include_reshares"
+                    >
+                      <option value="false">No</option>
+                      <option value="true">Yes</option>
+                    </select>
+                  </label>
+                </div>
+                <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50" type="submit">
+                  Add LinkedIn source
+                </button>
+              </form>
+
+              <section className="space-y-2 rounded-2xl border border-border/10 bg-muted/45 p-4">
+                <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+                  Quick config shapes
+                </p>
+                <p className="m-0 text-sm leading-6 text-muted">
+                  Organization and newsletter sources use <span className="font-mono text-foreground">max_posts_per_fetch</span>. Person sources use <span className="font-mono text-foreground">include_reshares</span>.
+                </p>
+                <p className="m-0 text-sm leading-6 text-muted">
+                  The generic source editor below still works for advanced payloads, but most projects should be able to onboard LinkedIn surfaces from this form alone.
+                </p>
+              </section>
+            </div>
           </article>
 
           <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">

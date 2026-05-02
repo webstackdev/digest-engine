@@ -284,6 +284,43 @@ describe("SourcesPage", () => {
   beforeEach(() => {
     const defaultProject = createProject()
 
+    getProjectsMock.mockReset()
+    getProjectSourceConfigsMock.mockReset()
+    getProjectIngestionRunsMock.mockReset()
+    getProjectIntakeAllowlistMock.mockReset()
+    getProjectNewsletterIntakesMock.mockReset()
+    getProjectBlueskyCredentialsMock.mockReset()
+    getProjectLinkedInCredentialsMock.mockReset()
+    getProjectMastodonCredentialsMock.mockReset()
+    selectProjectMock.mockReset()
+
+    getProjectsMock.mockResolvedValue([defaultProject])
+    getProjectSourceConfigsMock.mockResolvedValue([createSourceConfig()])
+    getProjectIngestionRunsMock.mockResolvedValue([createIngestionRun()])
+    getProjectIntakeAllowlistMock.mockResolvedValue([createAllowlistEntry()])
+    getProjectNewsletterIntakesMock.mockResolvedValue([createNewsletterIntake()])
+    getProjectBlueskyCredentialsMock.mockResolvedValue([createBlueskyCredentials()])
+    getProjectLinkedInCredentialsMock.mockResolvedValue([
+      createLinkedInCredentials({ expires_at: "2026-05-30T10:00:00Z" }),
+    ])
+    getProjectMastodonCredentialsMock.mockResolvedValue([createMastodonCredentials()])
+    selectProjectMock.mockImplementation((projects: Project[]) => projects[0] ?? null)
+  })
+
+  it("renders the LinkedIn quick-add form alongside the OAuth panel", async () => {
+    await renderSourcesPage({ project: "1" })
+
+    expect(screen.getByText("OAuth authorization")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Add LinkedIn source" })).toBeInTheDocument()
+    expect(screen.getByText("Surface type")).toBeInTheDocument()
+    expect(screen.getByText("Quick config shapes")).toBeInTheDocument()
+  })
+})
+
+describe("SourcesPage", () => {
+  beforeEach(() => {
+    const defaultProject = createProject()
+
     getProjectBlueskyCredentialsMock.mockReset()
     getProjectsMock.mockReset()
     getProjectSourceConfigsMock.mockReset()

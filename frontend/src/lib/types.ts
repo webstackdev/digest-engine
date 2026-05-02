@@ -16,6 +16,28 @@ export type Project = {
   created_at: string
 }
 
+export type ProjectConfig = {
+  id: number
+  project: number
+  draft_schedule_cron: string
+  authority_weight_mention: number
+  authority_weight_engagement: number
+  authority_weight_recency: number
+  authority_weight_source_quality: number
+  authority_weight_cross_newsletter: number
+  authority_weight_feedback: number
+  authority_weight_duplicate: number
+  upvote_authority_weight: number
+  downvote_authority_weight: number
+  authority_decay_rate: number
+}
+
+export type ProjectConfigAuthorityRecomputeResponse = {
+  status: "queued" | "completed"
+  project_id: number
+  config_id: number
+}
+
 export type UserProfile = {
   id: number
   username: string
@@ -168,6 +190,129 @@ export type NewsletterIntake = {
   error_message: string
 }
 
+export type NewsletterDraftStatus =
+  | "generating"
+  | "ready"
+  | "edited"
+  | "published"
+  | "discarded"
+
+export type NewsletterDraftGenerationMetadata = {
+  source_theme_ids: number[]
+  source_idea_ids: number[]
+  trigger_source?: string
+  models?: Record<string, string>
+  coherence_suggestions?: string[]
+  error?: string
+  last_regenerated_section_id?: number
+  last_regenerated_at?: string
+}
+
+export type NewsletterDraftItemContent = {
+  id: number
+  url: string
+  title: string
+  source_plugin: string
+  published_date: string
+}
+
+export type NewsletterDraftItem = {
+  id: number
+  section: number
+  content: number
+  content_detail: NewsletterDraftItemContent
+  summary_used: string
+  why_it_matters: string
+  order: number
+}
+
+export type NewsletterDraftThemeSuggestion = {
+  id: number
+  title: string
+  pitch: string
+  why_it_matters: string
+}
+
+export type NewsletterDraftSection = {
+  id: number
+  draft: number
+  theme_suggestion: number | null
+  theme_suggestion_detail: NewsletterDraftThemeSuggestion | null
+  title: string
+  lede: string
+  order: number
+  items: NewsletterDraftItem[]
+}
+
+export type NewsletterDraftOriginalPieceIdea = {
+  id: number
+  angle_title: string
+  summary: string
+  suggested_outline: string
+}
+
+export type NewsletterDraftOriginalPiece = {
+  id: number
+  draft: number
+  idea: number
+  idea_detail: NewsletterDraftOriginalPieceIdea
+  title: string
+  pitch: string
+  suggested_outline: string
+  order: number
+}
+
+export type NewsletterDraft = {
+  id: number
+  project: number
+  title: string
+  intro: string
+  outro: string
+  target_publish_date: string | null
+  status: NewsletterDraftStatus
+  generated_at: string
+  last_edited_at: string | null
+  generation_metadata: NewsletterDraftGenerationMetadata
+  sections: NewsletterDraftSection[]
+  original_pieces: NewsletterDraftOriginalPiece[]
+  rendered_markdown: string
+  rendered_html: string
+}
+
+export type NewsletterDraftGenerationResult = {
+  project_id: number
+  draft_id: number | null
+  status: NewsletterDraftStatus | "skipped"
+  reason?: string
+  sections_created: number
+  original_pieces_created: number
+}
+
+export type NewsletterDraftGenerationQueuedResponse = {
+  status: "queued"
+  project_id: number
+}
+
+export type NewsletterDraftGenerationCompletedResponse = {
+  status: "completed"
+  project_id: number
+  result: NewsletterDraftGenerationResult
+}
+
+export type NewsletterDraftGenerationResponse =
+  | NewsletterDraftGenerationQueuedResponse
+  | NewsletterDraftGenerationCompletedResponse
+
+export type NewsletterDraftSectionRegenerationQueuedResponse = {
+  status: "queued"
+  draft_id: number
+  section_id: number
+}
+
+export type NewsletterDraftSectionRegenerationResponse =
+  | NewsletterDraft
+  | NewsletterDraftSectionRegenerationQueuedResponse
+
 export type Entity = {
   id: number
   project: number
@@ -192,9 +337,14 @@ export type EntityAuthoritySnapshot = {
   project: number
   computed_at: string
   mention_component: number
+  engagement_component: number
+  recency_component: number
+  source_quality_component: number
+  cross_newsletter_component: number
   feedback_component: number
   duplicate_component: number
   decayed_prior: number
+  weights_at_compute: Record<string, number>
   final_score: number
 }
 
@@ -238,6 +388,12 @@ export type EntityCandidate = {
   first_seen_in: number | null
   first_seen_title: string
   occurrence_count: number
+  cluster_key: string
+  auto_promotion_blocked_reason: string
+  evidence_count: number
+  source_plugin_count: number
+  source_plugins: string[]
+  identity_surfaces: string[]
   status: "pending" | "accepted" | "rejected" | "merged"
   merged_into: number | null
   merged_into_name: string

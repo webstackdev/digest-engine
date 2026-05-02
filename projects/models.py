@@ -372,6 +372,7 @@ class ProjectConfig(models.Model):
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name="config"
     )
+    draft_schedule_cron = models.CharField(max_length=64, blank=True, default="")
     authority_weight_mention = models.FloatField(default=0.20)
     authority_weight_engagement = models.FloatField(default=0.15)
     authority_weight_recency = models.FloatField(default=0.15)

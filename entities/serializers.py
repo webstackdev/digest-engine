@@ -120,6 +120,10 @@ class EntityCandidateSerializer(
         source="first_seen_in.title", read_only=True
     )
     merged_into_name = serializers.CharField(source="merged_into.name", read_only=True)
+    evidence_count = serializers.SerializerMethodField()
+    source_plugin_count = serializers.SerializerMethodField()
+    source_plugins = serializers.SerializerMethodField()
+    identity_surfaces = serializers.SerializerMethodField()
 
     class Meta:
         model = EntityCandidate
@@ -133,6 +137,10 @@ class EntityCandidateSerializer(
             "occurrence_count",
             "cluster_key",
             "auto_promotion_blocked_reason",
+            "evidence_count",
+            "source_plugin_count",
+            "source_plugins",
+            "identity_surfaces",
             "status",
             "merged_into",
             "merged_into_name",
@@ -140,6 +148,46 @@ class EntityCandidateSerializer(
             "updated_at",
         ]
         read_only_fields = fields
+
+    def _candidate_evidence(self, obj):
+        """Return prefetched evidence rows when available."""
+
+        evidence = getattr(obj, "prefetched_evidence", None)
+        if evidence is None:
+            evidence = obj.evidence.all()
+        return evidence
+
+    def get_evidence_count(self, obj) -> int:
+        """Return the number of evidence rows attached to the candidate."""
+
+        return len(self._candidate_evidence(obj))
+
+    def get_source_plugin_count(self, obj) -> int:
+        """Return the number of unique source plugins backing the candidate."""
+
+        return len(self.get_source_plugins(obj))
+
+    def get_source_plugins(self, obj) -> list[str]:
+        """Return the unique source plugins seen in candidate evidence."""
+
+        return sorted(
+            {
+                evidence.source_plugin
+                for evidence in self._candidate_evidence(obj)
+                if evidence.source_plugin
+            }
+        )
+
+    def get_identity_surfaces(self, obj) -> list[str]:
+        """Return the unique identity surfaces hinted by candidate evidence."""
+
+        return sorted(
+            {
+                evidence.identity_surface
+                for evidence in self._candidate_evidence(obj)
+                if evidence.identity_surface
+            }
+        )
 
 
 class EntityCandidateMergeSerializer(

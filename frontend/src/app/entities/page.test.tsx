@@ -109,6 +109,12 @@ function createEntityCandidate(
     first_seen_in: 21,
     first_seen_title: "River Labs launches hosted platform",
     occurrence_count: 2,
+    cluster_key: "cluster-1",
+    auto_promotion_blocked_reason: "needs_more_occurrences",
+    evidence_count: 2,
+    source_plugin_count: 2,
+    source_plugins: ["rss", "linkedin"],
+    identity_surfaces: ["linkedin"],
     status: "pending",
     merged_into: null,
     merged_into_name: "",
@@ -256,6 +262,9 @@ describe("EntitiesPage", () => {
     expect(
       screen.getByText("First seen in River Labs launches hosted platform"),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Open clustered queue" }),
+    ).toHaveAttribute("href", "/entities/candidates?project=3")
 
     const badges = screen.getAllByTestId("status-badge")
     expect(badges[0]).toHaveAttribute("data-tone", "warning")

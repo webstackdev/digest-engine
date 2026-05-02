@@ -52,6 +52,10 @@ def test_celery_app_schedules_source_quality_before_authority_recompute():
         == "core.tasks.run_all_source_quality_recomputations"
     )
     assert (
+        beat_schedule["run-all-scheduled-newsletter-drafts-every-minute"]["task"]
+        == "core.tasks.run_all_scheduled_newsletter_drafts"
+    )
+    assert (
         beat_schedule["run-all-authority-recomputations-nightly"]["task"]
         == "core.tasks.run_all_authority_recomputations"
     )

@@ -2,6 +2,7 @@
 
 import logging
 
+from celery.schedules import crontab
 from rest_framework import serializers
 
 from core.permissions import get_user_role
@@ -98,11 +99,26 @@ class ProjectConfigSerializer(
 ):
     """Serialize per-project authority and scoring settings."""
 
+    def validate_draft_schedule_cron(self, value: str) -> str:
+        """Normalize and validate the optional draft-generation cron string."""
+
+        normalized = " ".join(value.split())
+        if not normalized:
+            return ""
+        try:
+            crontab.from_string(normalized)
+        except Exception as exc:
+            raise serializers.ValidationError(
+                "Enter a valid 5-part cron expression."
+            ) from exc
+        return normalized
+
     class Meta:
         model = ProjectConfig
         fields = [
             "id",
             "project",
+            "draft_schedule_cron",
             "authority_weight_mention",
             "authority_weight_engagement",
             "authority_weight_recency",

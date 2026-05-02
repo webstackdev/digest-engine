@@ -290,11 +290,11 @@ class EntityCandidateEvidence(models.Model):
         indexes = [
             models.Index(
                 fields=["candidate", "source_plugin"],
-                name="core_entitycand_candidate_source_idx",
+                name="core_entcand_candsrc_idx",
             ),
             models.Index(
                 fields=["project", "created_at"],
-                name="core_entitycand_project_created_idx",
+                name="core_entcand_projtime_idx",
             ),
         ]
 

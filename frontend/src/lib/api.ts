@@ -17,11 +17,19 @@ import type {
   LinkedInOAuthAuthorization,
   MastodonCredentials,
   MembershipInvitation,
+  NewsletterDraft,
+  NewsletterDraftGenerationResponse,
+  NewsletterDraftItem,
+  NewsletterDraftOriginalPiece,
+  NewsletterDraftSection,
+  NewsletterDraftSectionRegenerationResponse,
   NewsletterIntake,
   OriginalContentIdea,
   OriginalContentIdeaGenerationResponse,
   Project,
   ProjectBlueskyVerification,
+  ProjectConfig,
+  ProjectConfigAuthorityRecomputeResponse,
   ProjectLinkedInVerification,
   ProjectMastodonVerification,
   ProjectMembership,
@@ -783,6 +791,89 @@ export async function getProjectEntities(projectId: number): Promise<Entity[]> {
 }
 
 /**
+ * Fetch project configuration rows for the selected project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Project configuration rows visible for the project.
+ */
+export async function getProjectConfigs(
+  projectId: number,
+): Promise<ProjectConfig[]> {
+  return apiFetch<ProjectConfig[]>(`/api/v1/projects/${projectId}/project-configs/`)
+}
+
+/**
+ * Fetch the current project configuration, or `null` when none exists yet.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns The first configuration row for the project, if any.
+ */
+export async function getProjectConfig(
+  projectId: number,
+): Promise<ProjectConfig | null> {
+  const configs = await getProjectConfigs(projectId)
+  return configs[0] ?? null
+}
+
+/**
+ * Create a project configuration row.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param payload - Configuration fields accepted by the backend serializer.
+ * @returns The created project configuration row.
+ */
+export async function createProjectConfig(
+  projectId: number,
+  payload: Omit<ProjectConfig, "id" | "project">,
+): Promise<ProjectConfig> {
+  return apiFetch<ProjectConfig>(`/api/v1/projects/${projectId}/project-configs/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Partially update one project configuration row.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param configId - Numeric project-config identifier.
+ * @param payload - Partial configuration fields accepted by the backend serializer.
+ * @returns The updated project configuration row.
+ */
+export async function updateProjectConfig(
+  projectId: number,
+  configId: number,
+  payload: Partial<Omit<ProjectConfig, "id" | "project">>,
+): Promise<ProjectConfig> {
+  return apiFetch<ProjectConfig>(
+    `/api/v1/projects/${projectId}/project-configs/${configId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Trigger source-quality and authority recomputation for one project config.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param configId - Numeric project-config identifier.
+ * @returns A queued or completed recompute response.
+ */
+export async function recomputeProjectConfigAuthority(
+  projectId: number,
+  configId: number,
+): Promise<ProjectConfigAuthorityRecomputeResponse> {
+  return apiFetch<ProjectConfigAuthorityRecomputeResponse>(
+    `/api/v1/projects/${projectId}/project-configs/${configId}/recompute_authority/`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+/**
  * Fetch a single tracked entity for a project.
  *
  * @param projectId - Numeric project identifier from the Django API.
@@ -839,6 +930,26 @@ export async function getProjectEntityAuthorityHistory(
 ): Promise<EntityAuthoritySnapshot[]> {
   return apiFetch<EntityAuthoritySnapshot[]>(
     `/api/v1/projects/${projectId}/entities/${entityId}/authority_history/?limit=${limit}`,
+  )
+}
+
+/**
+ * Fetch the latest persisted authority component breakdown for one tracked entity.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param entityId - Numeric entity identifier inside the project.
+ * @returns The current authority snapshot for the requested entity.
+ * @example
+ * ```ts
+ * const components = await getProjectEntityAuthorityComponents(4, 9)
+ * ```
+ */
+export async function getProjectEntityAuthorityComponents(
+  projectId: number,
+  entityId: number,
+): Promise<EntityAuthoritySnapshot> {
+  return apiFetch<EntityAuthoritySnapshot>(
+    `/api/v1/projects/${projectId}/entities/${entityId}/authority_components/`,
   )
 }
 
@@ -1212,6 +1323,240 @@ export async function markProjectOriginalContentIdeaWritten(
     `/api/v1/projects/${projectId}/ideas/${ideaId}/mark_written/`,
     {
       method: "POST",
+    },
+  )
+}
+
+/**
+ * Fetch newsletter drafts for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Draft rows visible to the current editor.
+ */
+export async function getProjectNewsletterDrafts(
+  projectId: number,
+): Promise<NewsletterDraft[]> {
+  return apiFetch<NewsletterDraft[]>(`/api/v1/projects/${projectId}/drafts/`)
+}
+
+/**
+ * Fetch one newsletter draft detail payload for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param draftId - Numeric draft identifier.
+ * @returns The requested draft tree payload.
+ */
+export async function getProjectNewsletterDraft(
+  projectId: number,
+  draftId: number,
+): Promise<NewsletterDraft> {
+  return apiFetch<NewsletterDraft>(`/api/v1/projects/${projectId}/drafts/${draftId}/`)
+}
+
+/**
+ * Trigger newsletter draft generation for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Either a queued or completed generation response.
+ */
+export async function generateProjectNewsletterDraft(
+  projectId: number,
+): Promise<NewsletterDraftGenerationResponse> {
+  return apiFetch<NewsletterDraftGenerationResponse>(
+    `/api/v1/projects/${projectId}/drafts/generate/`,
+    {
+      method: "POST",
+    },
+  )
+}
+
+/**
+ * Narrow a newsletter draft generation response to the completed branch.
+ *
+ * @param response - Draft generation response returned by the backend.
+ * @returns `true` when the response includes an immediate generation result.
+ */
+export function isCompletedNewsletterDraftGeneration(
+  response: NewsletterDraftGenerationResponse,
+): response is Extract<
+  NewsletterDraftGenerationResponse,
+  { status: "completed" }
+> {
+  return response.status === "completed"
+}
+
+/**
+ * Partially update one newsletter draft.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param draftId - Numeric draft identifier.
+ * @param payload - Partial editable draft fields.
+ * @returns The updated draft payload.
+ */
+export async function updateProjectNewsletterDraft(
+  projectId: number,
+  draftId: number,
+  payload: {
+    title?: string
+    intro?: string
+    outro?: string
+    target_publish_date?: string | null
+  },
+): Promise<NewsletterDraft> {
+  return apiFetch<NewsletterDraft>(`/api/v1/projects/${projectId}/drafts/${draftId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Regenerate one draft section without rebuilding the whole draft.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param draftId - Numeric draft identifier.
+ * @param sectionId - Numeric draft-section identifier.
+ * @returns Either the updated draft or a queued regeneration response.
+ */
+export async function regenerateProjectNewsletterDraftSection(
+  projectId: number,
+  draftId: number,
+  sectionId: number,
+): Promise<NewsletterDraftSectionRegenerationResponse> {
+  return apiFetch<NewsletterDraftSectionRegenerationResponse>(
+    `/api/v1/projects/${projectId}/drafts/${draftId}/regenerate_section/`,
+    {
+      method: "POST",
+      body: JSON.stringify({ section_id: sectionId }),
+    },
+  )
+}
+
+/**
+ * Partially update one newsletter draft section.
+ *
+ * @param sectionId - Numeric draft-section identifier.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param payload - Partial editable section fields.
+ * @returns The updated section payload.
+ */
+export async function updateProjectNewsletterDraftSection(
+  sectionId: number,
+  projectId: number,
+  payload: {
+    title?: string
+    lede?: string
+    order?: number
+  },
+): Promise<NewsletterDraftSection> {
+  return apiFetch<NewsletterDraftSection>(
+    `/api/v1/projects/${projectId}/draft-sections/${sectionId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Remove one newsletter draft section.
+ *
+ * @param sectionId - Numeric draft-section identifier.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns `undefined` when the section is deleted successfully.
+ */
+export async function deleteProjectNewsletterDraftSection(
+  sectionId: number,
+  projectId: number,
+) {
+  return apiFetch(`/api/v1/projects/${projectId}/draft-sections/${sectionId}/`, {
+    method: "DELETE",
+  })
+}
+
+/**
+ * Partially update one newsletter draft item.
+ *
+ * @param itemId - Numeric draft-item identifier.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param payload - Partial editable item fields.
+ * @returns The updated item payload.
+ */
+export async function updateProjectNewsletterDraftItem(
+  itemId: number,
+  projectId: number,
+  payload: {
+    summary_used?: string
+    why_it_matters?: string
+    order?: number
+  },
+): Promise<NewsletterDraftItem> {
+  return apiFetch<NewsletterDraftItem>(
+    `/api/v1/projects/${projectId}/draft-items/${itemId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Remove one newsletter draft item.
+ *
+ * @param itemId - Numeric draft-item identifier.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns `undefined` when the item is deleted successfully.
+ */
+export async function deleteProjectNewsletterDraftItem(
+  itemId: number,
+  projectId: number,
+) {
+  return apiFetch(`/api/v1/projects/${projectId}/draft-items/${itemId}/`, {
+    method: "DELETE",
+  })
+}
+
+/**
+ * Partially update one newsletter draft original piece.
+ *
+ * @param pieceId - Numeric draft original-piece identifier.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @param payload - Partial editable original-piece fields.
+ * @returns The updated original-piece payload.
+ */
+export async function updateProjectNewsletterDraftOriginalPiece(
+  pieceId: number,
+  projectId: number,
+  payload: {
+    title?: string
+    pitch?: string
+    suggested_outline?: string
+    order?: number
+  },
+): Promise<NewsletterDraftOriginalPiece> {
+  return apiFetch<NewsletterDraftOriginalPiece>(
+    `/api/v1/projects/${projectId}/draft-original-pieces/${pieceId}/`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  )
+}
+
+/**
+ * Remove one newsletter draft original piece.
+ *
+ * @param pieceId - Numeric draft original-piece identifier.
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns `undefined` when the original piece is deleted successfully.
+ */
+export async function deleteProjectNewsletterDraftOriginalPiece(
+  pieceId: number,
+  projectId: number,
+) {
+  return apiFetch(
+    `/api/v1/projects/${projectId}/draft-original-pieces/${pieceId}/`,
+    {
+      method: "DELETE",
     },
   )
 }

@@ -27,6 +27,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.run_all_source_quality_recomputations",
         "schedule": crontab(hour=1, minute=45),
     },
+    "run-all-scheduled-newsletter-drafts-every-minute": {
+        "task": "core.tasks.run_all_scheduled_newsletter_drafts",
+        "schedule": 60,
+    },
     "run-all-authority-recomputations-nightly": {
         "task": "core.tasks.run_all_authority_recomputations",
         "schedule": crontab(hour=2, minute=0),

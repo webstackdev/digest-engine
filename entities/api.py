@@ -180,7 +180,7 @@ class EntityCandidateViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
     serializer_class = EntityCandidateSerializer
     queryset = EntityCandidate.objects.select_related(
         "project", "first_seen_in", "merged_into"
-    )
+    ).prefetch_related("evidence")
 
     def get_permissions(self):
         """Allow all members to read candidates and contributors to resolve them."""

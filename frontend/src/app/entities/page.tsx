@@ -142,6 +142,15 @@ export default async function EntitiesPage({
               <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
                 Pending entity candidates
               </h2>
+              <p className="m-0 text-sm leading-6 text-muted">
+                Need cluster-level review instead of one-off actions? Open the grouped queue.
+              </p>
+              <Link
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50"
+                href={`/entities/candidates?project=${selectedProject.id}`}
+              >
+                Open clustered queue
+              </Link>
             </div>
             {entityCandidates.length === 0 ? (
               <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
