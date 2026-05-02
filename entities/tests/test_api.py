@@ -12,6 +12,7 @@ from entities.models import (
     Entity,
     EntityAuthoritySnapshot,
     EntityCandidate,
+    EntityCandidateEvidence,
     EntityCandidateStatus,
     EntityIdentityClaim,
     EntityMention,
@@ -333,6 +334,15 @@ class EntityApiTests(APITestCase):
             cluster_key="owner-candidate-abcd1234",
             auto_promotion_blocked_reason="needs_more_occurrences",
         )
+        EntityCandidateEvidence.objects.create(
+            candidate=owner_candidate,
+            project=self.owner_project,
+            content=self.owner_content,
+            source_plugin="linkedin",
+            context_excerpt="Owner Candidate was cited in the article.",
+            identity_surface="linkedin",
+            claim_url="https://www.linkedin.com/company/owner-candidate",
+        )
         EntityCandidate.objects.create(
             project=self.other_project,
             name="Other Candidate",
@@ -355,6 +365,10 @@ class EntityApiTests(APITestCase):
             response.json()[0]["auto_promotion_blocked_reason"],
             owner_candidate.auto_promotion_blocked_reason,
         )
+        self.assertEqual(response.json()[0]["evidence_count"], 1)
+        self.assertEqual(response.json()[0]["source_plugin_count"], 1)
+        self.assertEqual(response.json()[0]["source_plugins"], ["linkedin"])
+        self.assertEqual(response.json()[0]["identity_surfaces"], ["linkedin"])
 
     def test_entity_candidate_accept_action_returns_updated_candidate(self):
         with patch("entities.extraction.queue_entity_identity_enrichment"):

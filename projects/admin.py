@@ -463,6 +463,7 @@ class ProjectConfigAdmin(admin.ModelAdmin):
     actions = ["recompute_selected_authority_models"]
     list_display = (
         "project",
+        "draft_schedule_cron",
         "authority_weight_mention",
         "authority_weight_engagement",
         "authority_weight_recency",
@@ -478,6 +479,7 @@ class ProjectConfigAdmin(admin.ModelAdmin):
     list_filter = ("recompute_topic_centroid_on_feedback_save",)
     fields = (
         "project",
+        "draft_schedule_cron",
         "authority_weight_mention",
         "authority_weight_engagement",
         "authority_weight_recency",

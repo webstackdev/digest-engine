@@ -148,7 +148,10 @@ class ProjectApiTests(APITestCase):
         )
 
     def test_project_config_detail_exposes_multi_signal_authority_weights(self):
-        config = ProjectConfig.objects.create(project=self.owner_project)
+        config = ProjectConfig.objects.create(
+            project=self.owner_project,
+            draft_schedule_cron="0 9 * * *",
+        )
 
         response = self.client.get(
             reverse(
@@ -161,6 +164,7 @@ class ProjectApiTests(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["draft_schedule_cron"], "0 9 * * *")
         self.assertEqual(response.json()["authority_weight_mention"], 0.2)
         self.assertEqual(response.json()["authority_weight_engagement"], 0.15)
         self.assertEqual(response.json()["authority_weight_cross_newsletter"], 0.2)
@@ -177,6 +181,7 @@ class ProjectApiTests(APITestCase):
                 },
             ),
             {
+                "draft_schedule_cron": "15 7 * * 1",
                 "authority_weight_engagement": 0.25,
                 "authority_weight_source_quality": 0.3,
             },
@@ -185,8 +190,62 @@ class ProjectApiTests(APITestCase):
 
         config.refresh_from_db()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(config.draft_schedule_cron, "15 7 * * 1")
         self.assertEqual(config.authority_weight_engagement, 0.25)
         self.assertEqual(config.authority_weight_source_quality, 0.3)
+
+    def test_project_config_patch_rejects_invalid_draft_schedule_cron(self):
+        config = ProjectConfig.objects.create(project=self.owner_project)
+
+        response = self.client.patch(
+            reverse(
+                "v1:project-config-detail",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(config),
+                },
+            ),
+            {"draft_schedule_cron": "not a cron"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assert_standardized_validation_error(
+            response.json(),
+            "draft_schedule_cron",
+        )
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    @patch("core.tasks.recompute_authority_scores")
+    @patch("core.tasks.recompute_source_quality")
+    def test_project_config_recompute_authority_runs_tasks_immediately(
+        self,
+        recompute_source_quality_mock,
+        recompute_authority_scores_mock,
+    ):
+        config = ProjectConfig.objects.create(project=self.owner_project)
+
+        response = self.client.post(
+            reverse(
+                "v1:project-config-recompute-authority",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(config),
+                },
+            ),
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["status"], "completed")
+        self.assertEqual(response.json()["project_id"], _require_pk(self.owner_project))
+        self.assertEqual(response.json()["config_id"], _require_pk(config))
+        recompute_source_quality_mock.assert_called_once_with(
+            _require_pk(self.owner_project)
+        )
+        recompute_authority_scores_mock.assert_called_once_with(
+            _require_pk(self.owner_project)
+        )
 
     def test_bluesky_credentials_list_create_and_update_hide_stored_password(self):
         list_response = self.client.get(
