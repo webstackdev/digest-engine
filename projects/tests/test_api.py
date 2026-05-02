@@ -1,5 +1,6 @@
 from typing import Any, cast
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
@@ -8,7 +9,10 @@ from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from projects.linkedin_oauth import build_linkedin_oauth_state
+from projects.linkedin_oauth import (
+    build_linkedin_authorize_url,
+    build_linkedin_oauth_state,
+)
 from projects.model_support import SourcePluginName
 from projects.models import (
     BlueskyCredentials,
@@ -442,6 +446,26 @@ class ProjectApiTests(APITestCase):
                     "https://www.linkedin.com/oauth/v2/authorization?state=signed-state"
                 )
             },
+        )
+
+    @override_settings(
+        LINKEDIN_CLIENT_ID="linkedin-client-id",
+        LINKEDIN_CLIENT_SECRET="linkedin-client-secret",
+        LINKEDIN_OAUTH_SCOPES="openid email w_member_social",
+    )
+    def test_build_linkedin_authorize_url_uses_configured_scopes(self):
+        authorize_url = build_linkedin_authorize_url(
+            self.owner_project,
+            "/admin/sources?project=1",
+        )
+
+        parsed_url = urlparse(authorize_url)
+        query = parse_qs(parsed_url.query)
+
+        self.assertEqual(parsed_url.netloc, "www.linkedin.com")
+        self.assertEqual(
+            query["scope"],
+            ["openid email w_member_social"],
         )
 
     @patch("core.api.logger.exception")
