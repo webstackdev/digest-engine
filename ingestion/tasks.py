@@ -1,6 +1,7 @@
 """Celery tasks and helpers for source ingestion."""
 
 import logging
+from datetime import timedelta
 
 from celery import shared_task
 from django.conf import settings
@@ -11,7 +12,7 @@ from content.deduplication import canonicalize_url
 from content.models import Content
 from ingestion.models import IngestionRun, RunStatus
 from ingestion.plugins import get_plugin_for_source_config
-from projects.models import SourceConfig
+from projects.models import LinkedInCredentials, SourceConfig
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,7 @@ def _ingest_source_config(source_config: SourceConfig) -> tuple[int, int]:
             title=item.title[:512],
             author=item.author[:255],
             source_plugin=item.source_plugin,
+            content_type=getattr(item, "content_type", ""),
             published_date=item.published_date,
             content_text=item.content_text,
             source_metadata=source_metadata,
@@ -112,8 +114,10 @@ def _content_exists_for_item(source_config: SourceConfig, item) -> bool:
     """Check whether a fetched item already exists for the project."""
 
     source_metadata = getattr(item, "source_metadata", None) or {}
-    native_item_uri = source_metadata.get("post_uri") or source_metadata.get(
-        "status_uri"
+    native_item_uri = (
+        source_metadata.get("post_uri")
+        or source_metadata.get("status_uri")
+        or source_metadata.get("post_urn")
     )
     if native_item_uri:
         return (
@@ -123,6 +127,7 @@ def _content_exists_for_item(source_config: SourceConfig, item) -> bool:
             )
             .filter(
                 Q(source_metadata__post_uri=native_item_uri)
+                | Q(source_metadata__post_urn=native_item_uri)
                 | Q(source_metadata__status_uri=native_item_uri)
             )
             .exists()
@@ -159,3 +164,27 @@ def _schedule_content_processing(content: Content) -> None:
         process_content(content.id)
     else:
         process_content.delay(content.id)
+
+
+@shared_task(name="core.tasks.refresh_linkedin_tokens")
+def refresh_linkedin_tokens():
+    """Refresh LinkedIn tokens that are missing expiry metadata or expiring soon."""
+
+    from ingestion.plugins.linkedin import LinkedInSourcePlugin
+
+    refresh_threshold = timezone.now() + timedelta(hours=24)
+    credentials_queryset = LinkedInCredentials.objects.filter(is_active=True).filter(
+        Q(expires_at__isnull=True) | Q(expires_at__lte=refresh_threshold)
+    )
+    refreshed_count = 0
+    for credentials in credentials_queryset:
+        try:
+            LinkedInSourcePlugin.refresh_credentials(credentials)
+        except Exception:
+            logger.exception(
+                "LinkedIn token refresh failed",
+                extra={"linkedin_credentials_id": credentials.id},
+            )
+            continue
+        refreshed_count += 1
+    return refreshed_count

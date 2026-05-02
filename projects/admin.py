@@ -14,6 +14,7 @@ from unfold.admin import ModelAdmin
 from ingestion.plugins import get_plugin_for_source_config, validate_plugin_config
 from projects.models import (
     BlueskyCredentials,
+    LinkedInCredentials,
     MastodonCredentials,
     Project,
     ProjectConfig,
@@ -107,6 +108,57 @@ class MastodonCredentialsAdminForm(forms.ModelForm):
         credential_input = self.cleaned_data.get("credential_input", "")
         if credential_input:
             instance.set_stored_credential(credential_input)
+        if commit:
+            instance.save()
+        return instance
+
+
+class LinkedInCredentialsAdminForm(forms.ModelForm):
+    """Admin form that accepts plaintext LinkedIn OAuth tokens."""
+
+    access_token_input = forms.CharField(
+        required=False,
+        strip=False,
+        widget=forms.PasswordInput(render_value=False),
+        help_text="Leave blank to keep the existing stored access token.",
+        label="LinkedIn access token",
+    )
+    refresh_token_input = forms.CharField(
+        required=False,
+        strip=False,
+        widget=forms.PasswordInput(render_value=False),
+        help_text="Leave blank to keep the existing stored refresh token.",
+        label="LinkedIn refresh token",
+    )
+
+    class Meta:
+        model = LinkedInCredentials
+        fields = ["project", "member_urn", "expires_at", "is_active"]
+
+    def clean(self):
+        """Require both OAuth tokens when creating the record for the first time."""
+
+        cleaned_data = super().clean() or {}
+        access_token_input = cleaned_data.get("access_token_input", "")
+        refresh_token_input = cleaned_data.get("refresh_token_input", "")
+        if not self.instance.has_access_token() and not access_token_input:
+            self.add_error("access_token_input", "A LinkedIn access token is required.")
+        if not self.instance.has_refresh_token() and not refresh_token_input:
+            self.add_error(
+                "refresh_token_input", "A LinkedIn refresh token is required."
+            )
+        return cleaned_data
+
+    def save(self, commit=True):
+        """Encrypt new token values before saving the model instance."""
+
+        instance = super().save(commit=False)
+        access_token_input = self.cleaned_data.get("access_token_input", "")
+        refresh_token_input = self.cleaned_data.get("refresh_token_input", "")
+        if access_token_input:
+            instance.set_access_token(access_token_input)
+        if refresh_token_input:
+            instance.set_refresh_token(refresh_token_input)
         if commit:
             instance.save()
         return instance
@@ -287,6 +339,102 @@ class MastodonCredentialsAdmin(ModelAdmin):
         for credentials in queryset.select_related("project"):
             try:
                 MastodonSourcePlugin.verify_credentials(credentials)
+            except Exception as exc:
+                failed_credentials.append(f"{credentials}: {exc}")
+            else:
+                verified_credentials.append(str(credentials))
+
+        if verified_credentials:
+            self.message_user(
+                request,
+                f"Credential verification passed for {len(verified_credentials)} account(s).",
+                messages.SUCCESS,
+            )
+
+        if failed_credentials:
+            self.message_user(
+                request,
+                "Credential verification failed for: " + "; ".join(failed_credentials),
+                messages.ERROR,
+            )
+
+
+@admin.register(LinkedInCredentials)
+class LinkedInCredentialsAdmin(ModelAdmin):
+    """Admin view for project-scoped LinkedIn OAuth settings."""
+
+    form = LinkedInCredentialsAdminForm
+    actions = ["verify_selected_credentials"]
+    list_display = (
+        "project",
+        "member_urn",
+        "display_token_expiry",
+        "has_stored_credential",
+        "is_active",
+        "last_verified_at",
+    )
+    list_filter = ("is_active", ("project", admin.RelatedOnlyFieldListFilter))
+    search_fields = ("project__name", "member_urn")
+    autocomplete_fields = ("project",)
+    readonly_fields = (
+        "has_stored_credential",
+        "last_verified_at",
+        "last_error",
+        "created_at",
+        "updated_at",
+    )
+    fieldsets = (
+        (
+            "Account",
+            {
+                "fields": (
+                    "project",
+                    "member_urn",
+                    "expires_at",
+                    "access_token_input",
+                    "refresh_token_input",
+                    "is_active",
+                )
+            },
+        ),
+        (
+            "Verification",
+            {
+                "fields": (
+                    "has_stored_credential",
+                    "last_verified_at",
+                    "last_error",
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+    )
+
+    @admin.display(description="Expires")
+    def display_token_expiry(self, obj):
+        """Show when the current LinkedIn access token expires."""
+
+        return obj.expires_at or "Unknown"
+
+    @admin.display(boolean=True, description="Stored Credential")
+    def has_stored_credential(self, obj):
+        """Return whether both LinkedIn OAuth tokens have been configured."""
+
+        return obj.has_stored_credential()
+
+    @admin.action(description="Verify Selected Credentials")
+    def verify_selected_credentials(self, request, queryset):
+        """Authenticate the selected LinkedIn tokens and report the outcome."""
+
+        from ingestion.plugins.linkedin import LinkedInSourcePlugin
+
+        verified_credentials = []
+        failed_credentials = []
+
+        for credentials in queryset.select_related("project"):
+            try:
+                LinkedInSourcePlugin.verify_credentials(credentials)
             except Exception as exc:
                 failed_credentials.append(f"{credentials}: {exc}")
             else:

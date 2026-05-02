@@ -5,6 +5,7 @@ import {
   getProjectBlueskyCredentials,
   getProjectIngestionRuns,
   getProjectIntakeAllowlist,
+  getProjectLinkedInCredentials,
   getProjectMastodonCredentials,
   getProjectNewsletterIntakes,
   getProjects,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/api"
 import type {
   BlueskyCredentials,
+  LinkedInCredentials,
   MastodonCredentials,
   NewsletterIntake,
   Project,
@@ -77,6 +79,38 @@ export function deriveMastodonVerificationState(
 ): BlueskyVerificationState {
   if (!credentials) {
     return { label: "not configured", tone: "neutral" }
+  }
+
+  if (credentials.last_error) {
+    return { label: "verification failed", tone: "negative" }
+  }
+
+  if (credentials.last_verified_at) {
+    return { label: "verified", tone: "positive" }
+  }
+
+  return { label: "needs verification", tone: "warning" }
+}
+
+/**
+ * Derive the current LinkedIn verification badge state for stored credentials.
+ *
+ * @param credentials - Current stored LinkedIn credentials, if any.
+ * @returns A badge label and semantic tone describing the stored credential state.
+ */
+export function deriveLinkedInVerificationState(
+  credentials: LinkedInCredentials | null,
+): BlueskyVerificationState {
+  if (!credentials) {
+    return { label: "not configured", tone: "neutral" }
+  }
+
+  if (!credentials.is_active) {
+    return { label: "disabled", tone: "neutral" }
+  }
+
+  if (credentials.expires_at && new Date(credentials.expires_at).getTime() <= Date.now()) {
+    return { label: "expired", tone: "negative" }
   }
 
   if (credentials.last_error) {
@@ -200,6 +234,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
     intakeAllowlist,
     newsletterIntakes,
     blueskyCredentials,
+    linkedinCredentials,
     mastodonCredentials,
   ] = await Promise.all([
     getProjectSourceConfigs(selectedProject.id),
@@ -207,6 +242,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
     getProjectIntakeAllowlist(selectedProject.id),
     getProjectNewsletterIntakes(selectedProject.id),
     getProjectBlueskyCredentials(selectedProject.id),
+    getProjectLinkedInCredentials(selectedProject.id),
     getProjectMastodonCredentials(selectedProject.id),
   ])
   const latestRunByPlugin = buildLatestRunByPlugin(ingestionRuns)
@@ -234,8 +270,13 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
     null
   const currentBlueskyCredentials: BlueskyCredentials | null =
     blueskyCredentials[0] ?? null
+  const currentLinkedInCredentials: LinkedInCredentials | null =
+    linkedinCredentials[0] ?? null
   const currentMastodonCredentials: MastodonCredentials | null =
     mastodonCredentials[0] ?? null
+  const linkedinVerificationState = deriveLinkedInVerificationState(
+    currentLinkedInCredentials,
+  )
   const mastodonVerificationState = deriveMastodonVerificationState(
     currentMastodonCredentials,
   )
@@ -246,7 +287,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
   return (
     <AppShell
       title="Source configuration"
-      description="Add, tune, and disable RSS, Reddit, Bluesky, and Mastodon ingestion while keeping newsletter intake controls in the same editor dashboard."
+      description="Add, tune, and disable RSS, Reddit, Bluesky, Mastodon, and LinkedIn ingestion while keeping newsletter intake controls in the same editor dashboard."
       projects={projects}
       selectedProjectId={selectedProject.id}
     >
@@ -703,6 +744,97 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
           <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
+                <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">LinkedIn</p>
+                <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
+                  OAuth authorization
+                </h2>
+                <p className="m-0 text-sm leading-6 text-muted">
+                  Connect the project&apos;s LinkedIn app authorization, monitor token
+                  expiry, and re-authorize without leaving the editor dashboard.
+                </p>
+              </div>
+              <StatusBadge tone={linkedinVerificationState.tone}>
+                {linkedinVerificationState.label}
+              </StatusBadge>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="space-y-2 rounded-2xl border border-border/10 bg-muted/45 p-4">
+                <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+                  Stored authorization
+                </p>
+                <p className="m-0 text-sm leading-6 text-foreground">
+                  {currentLinkedInCredentials
+                    ? currentLinkedInCredentials.member_urn || "Member available after verification"
+                    : "No LinkedIn authorization is configured for this project yet."}
+                </p>
+                <p className="m-0 text-sm leading-6 text-muted">
+                  {currentLinkedInCredentials?.last_verified_at
+                    ? `Last verified ${formatDate(currentLinkedInCredentials.last_verified_at)}`
+                    : "Connect LinkedIn, then verify the stored tokens before enabling a LinkedIn source config."}
+                </p>
+                {currentLinkedInCredentials?.expires_at ? (
+                  <p className="m-0 text-sm leading-6 text-muted">
+                    {`Token expires ${formatDate(currentLinkedInCredentials.expires_at)}`}
+                  </p>
+                ) : null}
+                {currentLinkedInCredentials?.last_error ? (
+                  <p className="m-0 text-sm leading-6 text-destructive">
+                    {currentLinkedInCredentials.last_error}
+                  </p>
+                ) : null}
+              </div>
+              <div className="space-y-4 rounded-2xl border border-border/10 bg-muted/45 p-4">
+                <div className="space-y-2">
+                  <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+                    OAuth flow
+                  </p>
+                  <p className="m-0 text-sm leading-6 text-muted">
+                    Use the project-scoped OAuth callback to mint or replace encrypted
+                    LinkedIn access and refresh tokens in one step.
+                  </p>
+                </div>
+                <form
+                  action={`/api/projects/${selectedProject.id}/linkedin-oauth/start`}
+                  method="POST"
+                >
+                  <input
+                    type="hidden"
+                    name="redirectTo"
+                    value={`/admin/sources?project=${selectedProject.id}`}
+                  />
+                  <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50" type="submit">
+                    {currentLinkedInCredentials ? "Reauthorize LinkedIn" : "Connect LinkedIn"}
+                  </button>
+                </form>
+                <p className="m-0 text-sm leading-6 text-muted">
+                  Use <span className="font-mono text-foreground">{"{\"organization_urn\": \"urn:li:organization:1337\"}"}</span> for a company feed, <span className="font-mono text-foreground">{"{\"person_urn\": \"urn:li:person:abc123\"}"}</span> for a member feed, or <span className="font-mono text-foreground">{"{\"newsletter_urn\": \"urn:li:newsletter:42\"}"}</span> for a newsletter surface.
+                </p>
+              </div>
+            </div>
+
+            <form
+              action={`/api/projects/${selectedProject.id}/verify-linkedin-credentials`}
+              method="POST"
+            >
+              <input
+                type="hidden"
+                name="redirectTo"
+                value={`/admin/sources?project=${selectedProject.id}`}
+              />
+              <button
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!currentLinkedInCredentials}
+                type="submit"
+              >
+                Verify LinkedIn credentials
+              </button>
+            </form>
+          </article>
+
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
                 <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Mastodon</p>
                 <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
                   Credential verification
@@ -852,6 +984,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
                   <option value="rss">RSS</option>
                   <option value="reddit">Reddit</option>
                   <option value="bluesky">Bluesky</option>
+                  <option value="linkedin">LinkedIn</option>
                   <option value="mastodon">Mastodon</option>
                 </select>
               </label>
@@ -869,7 +1002,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
               </label>
               <p className="m-0 text-sm leading-6 text-muted">
                 Bluesky configs accept either an actor handle or a feed URI. Mastodon
-                configs accept an instance URL plus one of <span className="font-mono text-foreground">hashtag</span>, <span className="font-mono text-foreground">account_acct</span>, or <span className="font-mono text-foreground">list_id</span>. RSS and Reddit continue to use the existing backend JSON shapes.
+                configs accept an instance URL plus one of <span className="font-mono text-foreground">hashtag</span>, <span className="font-mono text-foreground">account_acct</span>, or <span className="font-mono text-foreground">list_id</span>. LinkedIn configs accept <span className="font-mono text-foreground">organization_urn</span>, <span className="font-mono text-foreground">person_urn</span>, or <span className="font-mono text-foreground">newsletter_urn</span>. RSS and Reddit continue to use the existing backend JSON shapes.
               </p>
               <label className="grid gap-2">
                 <span className="text-sm font-medium text-foreground">Active</span>

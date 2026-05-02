@@ -81,6 +81,14 @@ export type ProjectMastodonVerification = {
   last_error: string
 }
 
+export type ProjectLinkedInVerification = {
+  status: "verified"
+  member_urn: string
+  expires_at: string | null
+  last_verified_at: string | null
+  last_error: string
+}
+
 export type BlueskyCredentials = {
   id: number
   project: number
@@ -105,6 +113,23 @@ export type MastodonCredentials = {
   last_error: string
   created_at: string
   updated_at: string
+}
+
+export type LinkedInCredentials = {
+  id: number
+  project: number
+  member_urn: string
+  expires_at: string | null
+  is_active: boolean
+  has_stored_credential: boolean
+  last_verified_at: string | null
+  last_error: string
+  created_at: string
+  updated_at: string
+}
+
+export type LinkedInOAuthAuthorization = {
+  authorize_url: string
 }
 
 export type IntakeAllowlistEntry = {

@@ -14,6 +14,8 @@ from django.utils import timezone
 from projects.admin import (
     BlueskyCredentialsAdmin,
     BlueskyCredentialsAdminForm,
+    LinkedInCredentialsAdmin,
+    LinkedInCredentialsAdminForm,
     MastodonCredentialsAdmin,
     MastodonCredentialsAdminForm,
     ProjectConfigAdmin,
@@ -22,6 +24,7 @@ from projects.admin import (
 from projects.model_support import SourcePluginName
 from projects.models import (
     BlueskyCredentials,
+    LinkedInCredentials,
     MastodonCredentials,
     Project,
     ProjectConfig,
@@ -315,6 +318,82 @@ def test_verify_selected_mastodon_credentials_reports_failures(
     message_user_mock.assert_called_once_with(
         ANY,
         "Credential verification failed for: Mastodon credentials for Admin Project: bad token",
+        messages.ERROR,
+    )
+
+
+def test_linkedin_credentials_admin_form_encrypts_oauth_tokens(source_admin_context):
+    form = LinkedInCredentialsAdminForm(
+        data={
+            "project": _require_pk(source_admin_context.project),
+            "member_urn": "urn:li:person:abc123",
+            "expires_at": "2026-04-27 13:00:00+00:00",
+            "access_token_input": "access-token",
+            "refresh_token_input": "refresh-token",
+            "is_active": True,
+        }
+    )
+
+    assert form.is_valid(), form.errors
+    credentials = form.save()
+
+    assert credentials.member_urn == "urn:li:person:abc123"
+    assert credentials.get_access_token() == "access-token"
+    assert credentials.get_refresh_token() == "refresh-token"
+
+
+def test_verify_selected_linkedin_credentials_reports_success(
+    source_admin_context, mocker
+):
+    credentials = LinkedInCredentials.objects.create(
+        project=source_admin_context.project,
+        member_urn="urn:li:person:abc123",
+        access_token_encrypted="ciphertext",
+        refresh_token_encrypted="ciphertext",
+    )
+    verify_mock = mocker.patch(
+        "ingestion.plugins.linkedin.LinkedInSourcePlugin.verify_credentials"
+    )
+    admin_instance = LinkedInCredentialsAdmin(LinkedInCredentials, AdminSite())
+    message_user_mock = _message_user_mock(admin_instance, mocker)
+
+    admin_instance.verify_selected_credentials(
+        request=_request(),
+        queryset=LinkedInCredentials.objects.filter(pk=credentials.pk),
+    )
+
+    verify_mock.assert_called_once_with(credentials)
+    message_user_mock.assert_called_once_with(
+        ANY,
+        "Credential verification passed for 1 account(s).",
+        messages.SUCCESS,
+    )
+
+
+def test_verify_selected_linkedin_credentials_reports_failures(
+    source_admin_context, mocker
+):
+    credentials = LinkedInCredentials.objects.create(
+        project=source_admin_context.project,
+        member_urn="urn:li:person:abc123",
+        access_token_encrypted="ciphertext",
+        refresh_token_encrypted="ciphertext",
+    )
+    mocker.patch(
+        "ingestion.plugins.linkedin.LinkedInSourcePlugin.verify_credentials",
+        side_effect=RuntimeError("bad token"),
+    )
+    admin_instance = LinkedInCredentialsAdmin(LinkedInCredentials, AdminSite())
+    message_user_mock = _message_user_mock(admin_instance, mocker)
+
+    admin_instance.verify_selected_credentials(
+        request=_request(),
+        queryset=LinkedInCredentials.objects.filter(pk=credentials.pk),
+    )
+
+    message_user_mock.assert_called_once_with(
+        ANY,
+        "Credential verification failed for: LinkedIn credentials for Admin Project: bad token",
         messages.ERROR,
     )
 

@@ -18,6 +18,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.run_all_ingestions",
         "schedule": 60 * 60 * 6,
     },
+    "refresh-linkedin-tokens-hourly": {
+        "task": "core.tasks.refresh_linkedin_tokens",
+        "schedule": 60 * 60,
+    },
     "run-all-authority-recomputations-nightly": {
         "task": "core.tasks.run_all_authority_recomputations",
         "schedule": crontab(hour=2, minute=0),

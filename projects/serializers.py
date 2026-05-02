@@ -9,6 +9,7 @@ from core.serializer_mixins import ProjectScopedSerializerMixin
 from ingestion.plugins import validate_plugin_config
 from projects.models import (
     BlueskyCredentials,
+    LinkedInCredentials,
     MastodonCredentials,
     Project,
     ProjectConfig,
@@ -246,6 +247,108 @@ class MastodonCredentialsSerializer(
         if access_token:
             instance.set_access_token(access_token)
             instance.save(update_fields=["access_token_encrypted", "updated_at"])
+        return instance
+
+
+class LinkedInCredentialsSerializer(
+    ProjectScopedSerializerMixin, serializers.ModelSerializer
+):
+    """Serialize project-scoped LinkedIn credentials without exposing tokens."""
+
+    access_token = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=False,
+    )
+    refresh_token = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=False,
+    )
+    has_stored_credential = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LinkedInCredentials
+        fields = [
+            "id",
+            "project",
+            "member_urn",
+            "expires_at",
+            "is_active",
+            "has_stored_credential",
+            "access_token",
+            "refresh_token",
+            "last_verified_at",
+            "last_error",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "project",
+            "has_stored_credential",
+            "last_verified_at",
+            "last_error",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_has_stored_credential(self, obj: LinkedInCredentials) -> bool:
+        """Return whether the project has both encrypted LinkedIn tokens stored."""
+
+        return obj.has_stored_credential()
+
+    def validate(self, attrs):
+        """Require both OAuth tokens when creating a LinkedIn credential record."""
+
+        attrs = super().validate(attrs)
+        access_token = attrs.get("access_token", "")
+        refresh_token = attrs.get("refresh_token", "")
+        if self.instance is None:
+            if not access_token:
+                raise serializers.ValidationError(
+                    {"access_token": "A LinkedIn access token is required."}
+                )
+            if not refresh_token:
+                raise serializers.ValidationError(
+                    {"refresh_token": "A LinkedIn refresh token is required."}
+                )
+        return attrs
+
+    def create(self, validated_data):
+        """Encrypt submitted LinkedIn OAuth tokens before saving the record."""
+
+        access_token = validated_data.pop("access_token", "")
+        refresh_token = validated_data.pop("refresh_token", "")
+        instance = super().create(validated_data)
+        update_fields = ["updated_at"]
+        if access_token:
+            instance.set_access_token(access_token)
+            update_fields.append("access_token_encrypted")
+        if refresh_token:
+            instance.set_refresh_token(refresh_token)
+            update_fields.append("refresh_token_encrypted")
+        if len(update_fields) > 1:
+            instance.save(update_fields=update_fields)
+        return instance
+
+    def update(self, instance, validated_data):
+        """Keep stored LinkedIn tokens unless replacements are submitted."""
+
+        access_token = validated_data.pop("access_token", "")
+        refresh_token = validated_data.pop("refresh_token", "")
+        instance = super().update(instance, validated_data)
+        update_fields = ["updated_at"]
+        if access_token:
+            instance.set_access_token(access_token)
+            update_fields.append("access_token_encrypted")
+        if refresh_token:
+            instance.set_refresh_token(refresh_token)
+            update_fields.append("refresh_token_encrypted")
+        if len(update_fields) > 1:
+            instance.save(update_fields=update_fields)
         return instance
 
 
