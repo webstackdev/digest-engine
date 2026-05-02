@@ -19,6 +19,7 @@ from projects.models import (
     LinkedInCredentials,
     MastodonCredentials,
     Project,
+    ProjectConfig,
     ProjectMembership,
     ProjectRole,
 )
@@ -145,6 +146,47 @@ class ProjectApiTests(APITestCase):
         self.assertEqual(
             response.json()["intake_token"], self.owner_project.intake_token
         )
+
+    def test_project_config_detail_exposes_multi_signal_authority_weights(self):
+        config = ProjectConfig.objects.create(project=self.owner_project)
+
+        response = self.client.get(
+            reverse(
+                "v1:project-config-detail",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(config),
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["authority_weight_mention"], 0.2)
+        self.assertEqual(response.json()["authority_weight_engagement"], 0.15)
+        self.assertEqual(response.json()["authority_weight_cross_newsletter"], 0.2)
+
+    def test_project_config_patch_updates_multi_signal_authority_weights(self):
+        config = ProjectConfig.objects.create(project=self.owner_project)
+
+        response = self.client.patch(
+            reverse(
+                "v1:project-config-detail",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(config),
+                },
+            ),
+            {
+                "authority_weight_engagement": 0.25,
+                "authority_weight_source_quality": 0.3,
+            },
+            format="json",
+        )
+
+        config.refresh_from_db()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(config.authority_weight_engagement, 0.25)
+        self.assertEqual(config.authority_weight_source_quality, 0.3)
 
     def test_bluesky_credentials_list_create_and_update_hide_stored_password(self):
         list_response = self.client.get(

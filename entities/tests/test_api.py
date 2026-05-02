@@ -242,18 +242,28 @@ class EntityApiTests(APITestCase):
             entity=self.owner_entity,
             project=self.owner_project,
             mention_component=0.6,
+            engagement_component=0.35,
+            recency_component=0.4,
+            source_quality_component=0.45,
+            cross_newsletter_component=0.25,
             feedback_component=0.5,
             duplicate_component=0.5,
             decayed_prior=0.5,
+            weights_at_compute={"mention": 0.2},
             final_score=0.53,
         )
         second_snapshot = EntityAuthoritySnapshot.objects.create(
             entity=self.owner_entity,
             project=self.owner_project,
             mention_component=0.8,
+            engagement_component=0.65,
+            recency_component=0.7,
+            source_quality_component=0.6,
+            cross_newsletter_component=0.55,
             feedback_component=0.7,
             duplicate_component=0.6,
             decayed_prior=0.53,
+            weights_at_compute={"mention": 0.2},
             final_score=0.66,
         )
 
@@ -272,6 +282,37 @@ class EntityApiTests(APITestCase):
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], _require_pk(second_snapshot))
         self.assertNotEqual(response.json()[0]["id"], _require_pk(first_snapshot))
+        self.assertEqual(response.json()[0]["engagement_component"], 0.65)
+
+    def test_entity_authority_components_action_returns_latest_snapshot(self):
+        EntityAuthoritySnapshot.objects.create(
+            entity=self.owner_entity,
+            project=self.owner_project,
+            mention_component=0.7,
+            engagement_component=0.5,
+            recency_component=0.6,
+            source_quality_component=0.55,
+            cross_newsletter_component=0.4,
+            feedback_component=0.65,
+            duplicate_component=0.3,
+            decayed_prior=0.45,
+            weights_at_compute={"engagement": 0.15},
+            final_score=0.62,
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-entity-authority-components",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_entity),
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["source_quality_component"], 0.55)
+        self.assertEqual(response.json()["weights_at_compute"]["engagement"], 0.15)
 
     def test_nested_entity_list_rejects_other_users_project(self):
         response = self.client.get(

@@ -103,6 +103,13 @@ class ProjectConfigSerializer(
         fields = [
             "id",
             "project",
+            "authority_weight_mention",
+            "authority_weight_engagement",
+            "authority_weight_recency",
+            "authority_weight_source_quality",
+            "authority_weight_cross_newsletter",
+            "authority_weight_feedback",
+            "authority_weight_duplicate",
             "upvote_authority_weight",
             "downvote_authority_weight",
             "authority_decay_rate",

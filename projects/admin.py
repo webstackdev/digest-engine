@@ -461,6 +461,13 @@ class ProjectConfigAdmin(admin.ModelAdmin):
 
     list_display = (
         "project",
+        "authority_weight_mention",
+        "authority_weight_engagement",
+        "authority_weight_recency",
+        "authority_weight_source_quality",
+        "authority_weight_cross_newsletter",
+        "authority_weight_feedback",
+        "authority_weight_duplicate",
         "upvote_authority_weight",
         "downvote_authority_weight",
         "authority_decay_rate",
@@ -469,6 +476,13 @@ class ProjectConfigAdmin(admin.ModelAdmin):
     list_filter = ("recompute_topic_centroid_on_feedback_save",)
     fields = (
         "project",
+        "authority_weight_mention",
+        "authority_weight_engagement",
+        "authority_weight_recency",
+        "authority_weight_source_quality",
+        "authority_weight_cross_newsletter",
+        "authority_weight_feedback",
+        "authority_weight_duplicate",
         "upvote_authority_weight",
         "downvote_authority_weight",
         "authority_decay_rate",

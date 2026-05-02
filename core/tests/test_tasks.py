@@ -108,22 +108,40 @@ def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
         project=project,
         entity=primary_entity,
         url="https://example.com/authority-primary",
+        canonical_url="https://example.com/authority-primary",
         title="Authority Primary",
         author="Reporter",
-        source_plugin=SourcePluginName.RSS,
+        source_plugin="linkedin",
         published_date="2026-04-28T12:00:00Z",
         content_text="Primary authority content.",
         duplicate_signal_count=3,
+        source_metadata={"like_count": 9, "comment_count": 3, "share_count": 2},
     )
     secondary_content = Content.objects.create(
         project=project,
         entity=secondary_entity,
         url="https://example.com/authority-secondary",
+        canonical_url="https://example.com/authority-secondary",
         title="Authority Secondary",
         author="Reporter",
         source_plugin=SourcePluginName.RSS,
         published_date="2026-04-28T13:00:00Z",
         content_text="Secondary authority content.",
+    )
+    corroborating_project = Project.objects.create(
+        name="Corroborating Project",
+        topic_description="Newsletter coverage",
+    )
+    Content.objects.create(
+        project=corroborating_project,
+        url="https://example.com/newsletter-primary",
+        canonical_url=primary_content.canonical_url,
+        title="Authority Primary Mention",
+        author="newsletter@example.com",
+        source_plugin="newsletter",
+        published_date="2026-04-28T14:00:00Z",
+        content_text="Authority primary newsletter mention.",
+        source_metadata={"sender_email": "newsletter@example.com"},
     )
     EntityMention.objects.create(
         project=project,
@@ -163,11 +181,21 @@ def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
     assert secondary_snapshot.final_score == pytest.approx(
         secondary_entity.authority_score
     )
+    assert (
+        primary_snapshot.engagement_component > secondary_snapshot.engagement_component
+    )
+    assert primary_snapshot.recency_component > 0.8
+    assert primary_snapshot.source_quality_component > 0.0
+    assert (
+        primary_snapshot.cross_newsletter_component
+        > secondary_snapshot.cross_newsletter_component
+    )
     assert primary_snapshot.feedback_component > 0.5
     assert primary_snapshot.duplicate_component > secondary_snapshot.duplicate_component
     assert primary_snapshot.decayed_prior == pytest.approx(
         config.authority_decay_rate * 0.5
     )
+    assert primary_snapshot.weights_at_compute["engagement"] == pytest.approx(0.15)
 
 
 def test_queue_content_skill_enqueues_relevance_task(source_plugin_context, mocker):

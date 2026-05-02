@@ -77,9 +77,14 @@ class EntityAuthoritySnapshotSerializer(serializers.ModelSerializer):
             "project",
             "computed_at",
             "mention_component",
+            "engagement_component",
+            "recency_component",
+            "source_quality_component",
+            "cross_newsletter_component",
             "feedback_component",
             "duplicate_component",
             "decayed_prior",
+            "weights_at_compute",
             "final_score",
         ]
         read_only_fields = fields

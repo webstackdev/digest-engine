@@ -4,6 +4,7 @@ from django.db.models import Count, Prefetch
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound
 from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 
@@ -95,6 +96,30 @@ class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
         entity = self.get_object()
         mentions = entity.mentions.select_related("content").order_by("-created_at")
         serializer = EntityMentionSummarySerializer(mentions, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="Get current authority components",
+        description=(
+            "Return the latest persisted authority-score component breakdown for one "
+            "tracked entity inside the selected project."
+        ),
+        request=None,
+        responses={
+            200: EntityAuthoritySnapshotSerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Entity Catalog"],
+    )
+    @action(detail=True, methods=["get"], url_path="authority_components")
+    def authority_components(self, request, *args, **kwargs):
+        """Return the latest authority snapshot for the selected entity."""
+
+        entity = self.get_object()
+        snapshot = entity.authority_snapshots.order_by("-computed_at").first()
+        if snapshot is None:
+            raise NotFound("No authority snapshots exist for this entity yet.")
+        serializer = EntityAuthoritySnapshotSerializer(snapshot)
         return Response(serializer.data)
 
     @extend_schema(
