@@ -10,6 +10,7 @@ from django.views.generic.base import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from core.auth_views import GitHubLoginView, GoogleLoginView
+from trends.metrics import trend_task_run_metrics_view
 
 
 def root_redirect_view(request):
@@ -19,6 +20,8 @@ def root_redirect_view(request):
 
 
 urlpatterns = [
+    path("metrics", trend_task_run_metrics_view, name="metrics"),
+    path("metrics/", trend_task_run_metrics_view),
     path("", include("core.urls")),
     path("", root_redirect_view),
     path("admin/doc/", include("django.contrib.admindocs.urls")),

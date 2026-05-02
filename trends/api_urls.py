@@ -8,6 +8,7 @@ from trends.api import (
     ThemeSuggestionViewSet,
     TopicCentroidSnapshotViewSet,
     TopicClusterViewSet,
+    TrendTaskRunViewSet,
 )
 
 
@@ -38,4 +39,9 @@ def register_project_routes(project_router: NestedSimpleRouter) -> None:
         r"source-diversity-snapshots",
         SourceDiversitySnapshotViewSet,
         basename="project-source-diversity-snapshot",
+    )
+    project_router.register(
+        r"trend-task-runs",
+        TrendTaskRunViewSet,
+        basename="project-trend-task-run",
     )

@@ -26,8 +26,10 @@ from trends.models import (
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
+    TrendTaskRun,
     TopicVelocitySnapshot,
 )
+from trends.observability import TRACKED_TREND_TASKS
 from trends.serializers import (
     OriginalContentIdeaDismissSerializer,
     OriginalContentIdeaSerializer,
@@ -39,6 +41,8 @@ from trends.serializers import (
     TopicClusterSerializer,
     TopicCentroidObservabilitySummarySerializer,
     TopicCentroidSnapshotSerializer,
+    TrendTaskRunObservabilitySummarySerializer,
+    TrendTaskRunSerializer,
     TopicVelocitySnapshotSerializer,
 )
 from trends.tasks import accept_theme_suggestion, dismiss_theme_suggestion
@@ -582,6 +586,67 @@ class SourceDiversitySnapshotViewSet(
                 "project": _require_pk(self.get_project()),
                 "snapshot_count": queryset.count(),
                 "latest_snapshot": queryset.order_by("-computed_at").first(),
+            },
+            context=self.get_serializer_context(),
+        )
+        return Response(serializer.data)
+
+
+@document_project_owned_viewset(
+    resource_plural="trend task runs",
+    resource_singular="trend task run",
+    create_description="Trend task runs are pipeline-managed execution records and are exposed read-only for observability.",
+    tag="Observability",
+    action_overrides=build_crud_action_overrides(
+        TrendTaskRunSerializer,
+        resource_plural="trend task runs for the selected project",
+        resource_singular="trend task run",
+    ),
+)
+class TrendTaskRunViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelViewSet):
+    """Inspect persisted trend pipeline task executions for a project."""
+
+    serializer_class = TrendTaskRunSerializer
+    queryset = TrendTaskRun.objects.select_related("project")
+
+    def get_permissions(self):
+        """Restrict trend task observability to project contributors."""
+
+        return [IsProjectContributor()]
+
+    @extend_schema(
+        summary="Get trend task run summary",
+        description=(
+            "Return the latest persisted run for each tracked trend pipeline task, "
+            "along with project-level run counts and failure counts."
+        ),
+        request=None,
+        responses={
+            200: TrendTaskRunObservabilitySummarySerializer,
+            403: AUTHENTICATION_REQUIRED_RESPONSE,
+        },
+        tags=["Observability"],
+    )
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request, *args, **kwargs):
+        """Return the latest project-scoped run for each tracked trend task."""
+
+        queryset = self.get_queryset().order_by("task_name", "-started_at")
+        latest_by_task: dict[str, TrendTaskRun] = {}
+        for task_run in queryset:
+            latest_by_task.setdefault(task_run.task_name, task_run)
+
+        latest_runs = [
+            latest_by_task[task_name]
+            for task_name in TRACKED_TREND_TASKS
+            if task_name in latest_by_task
+        ]
+        serializer = TrendTaskRunObservabilitySummarySerializer(
+            {
+                "project": _require_pk(self.get_project()),
+                "run_count": queryset.count(),
+                "failed_run_count": queryset.filter(status="failed").count(),
+                "latest_runs": latest_runs,
             },
             context=self.get_serializer_context(),
         )

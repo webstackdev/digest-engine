@@ -8,7 +8,7 @@ from django.db.models import Avg, Max
 from django.urls import reverse
 from django.utils import timezone
 
-from trends.models import SourceDiversitySnapshot, TopicCentroidSnapshot
+from trends.models import SourceDiversitySnapshot, TopicCentroidSnapshot, TrendTaskRun
 
 
 def _project_pk(snapshot: TopicCentroidSnapshot) -> int:
@@ -285,6 +285,49 @@ class TopicCentroidSnapshotAdmin(admin.ModelAdmin):
             _build_topic_centroid_project_drilldowns(queryset, changelist_url)
         )
         return super().changelist_view(request, extra_context=extra_context)
+
+
+@admin.register(TrendTaskRun)
+class TrendTaskRunAdmin(admin.ModelAdmin):
+    """Admin view for persisted trend pipeline task executions."""
+
+    list_display = (
+        "project",
+        "task_name",
+        "status",
+        "latency_ms",
+        "started_at",
+        "finished_at",
+    )
+    list_filter = (
+        "task_name",
+        "status",
+        ("project", admin.RelatedOnlyFieldListFilter),
+        "started_at",
+    )
+    search_fields = ("project__name", "task_name", "error_message")
+    autocomplete_fields = ("project",)
+    readonly_fields = (
+        "project",
+        "task_name",
+        "task_run_id",
+        "status",
+        "started_at",
+        "finished_at",
+        "latency_ms",
+        "error_message",
+        "summary",
+    )
+
+    def has_add_permission(self, request):
+        """Hide manual creation because task runs are pipeline-managed."""
+
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        """Expose task runs as read-only admin rows."""
+
+        return False
 
 
 @admin.register(SourceDiversitySnapshot)

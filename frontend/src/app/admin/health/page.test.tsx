@@ -10,6 +10,8 @@ import type {
   SourceDiversitySnapshot,
   TopicCentroidObservabilitySummary,
   TopicCentroidSnapshot,
+  TrendTaskRun,
+  TrendTaskRunObservabilitySummary,
 } from "@/lib/types"
 
 const {
@@ -18,8 +20,10 @@ const {
   getProjectSourceDiversitySnapshotsMock,
   getProjectSourceDiversitySummaryMock,
   getProjectSourceConfigsMock,
+  getProjectTrendTaskRunsMock,
   getProjectTopicCentroidSnapshotsMock,
   getProjectTopicCentroidSummaryMock,
+  getProjectTrendTaskRunSummaryMock,
   selectProjectMock,
 } = vi.hoisted(() => ({
   getProjectIngestionRunsMock: vi.fn(),
@@ -27,8 +31,10 @@ const {
   getProjectSourceDiversitySnapshotsMock: vi.fn(),
   getProjectSourceDiversitySummaryMock: vi.fn(),
   getProjectSourceConfigsMock: vi.fn(),
+  getProjectTrendTaskRunsMock: vi.fn(),
   getProjectTopicCentroidSnapshotsMock: vi.fn(),
   getProjectTopicCentroidSummaryMock: vi.fn(),
+  getProjectTrendTaskRunSummaryMock: vi.fn(),
   selectProjectMock: vi.fn(),
 }))
 
@@ -70,8 +76,10 @@ vi.mock("@/lib/api", () => ({
   getProjectSourceDiversitySnapshots: getProjectSourceDiversitySnapshotsMock,
   getProjectSourceDiversitySummary: getProjectSourceDiversitySummaryMock,
   getProjectSourceConfigs: getProjectSourceConfigsMock,
+  getProjectTrendTaskRuns: getProjectTrendTaskRunsMock,
   getProjectTopicCentroidSnapshots: getProjectTopicCentroidSnapshotsMock,
   getProjectTopicCentroidSummary: getProjectTopicCentroidSummaryMock,
+  getProjectTrendTaskRunSummary: getProjectTrendTaskRunSummaryMock,
 }))
 
 vi.mock("@/lib/view-helpers", async () => {
@@ -200,6 +208,42 @@ function createSourceDiversitySummary(
   }
 }
 
+function createTrendTaskRun(
+  overrides: Partial<TrendTaskRun> = {},
+): TrendTaskRun {
+  return {
+    id: 41,
+    project: 1,
+    task_name: "recompute_topic_centroid",
+    task_run_id: "95ae5b14-5d7d-498e-9adc-1dbaab4dd4b8",
+    status: "completed",
+    started_at: "2026-04-28T08:00:00Z",
+    finished_at: "2026-04-28T08:00:01Z",
+    latency_ms: 523,
+    error_message: "",
+    summary: {
+      project_id: 1,
+      feedback_count: 12,
+      upvote_count: 10,
+      downvote_count: 2,
+      centroid_active: true,
+    },
+    ...overrides,
+  }
+}
+
+function createTrendTaskRunSummary(
+  overrides: Partial<TrendTaskRunObservabilitySummary> = {},
+): TrendTaskRunObservabilitySummary {
+  return {
+    project: 1,
+    run_count: 0,
+    failed_run_count: 0,
+    latest_runs: [],
+    ...overrides,
+  }
+}
+
 async function loadHealthPageModule() {
   return import("./page")
 }
@@ -288,8 +332,10 @@ describe("HealthPage", () => {
     getProjectIngestionRunsMock.mockReset()
     getProjectSourceDiversitySnapshotsMock.mockReset()
     getProjectSourceDiversitySummaryMock.mockReset()
+    getProjectTrendTaskRunsMock.mockReset()
     getProjectTopicCentroidSnapshotsMock.mockReset()
     getProjectTopicCentroidSummaryMock.mockReset()
+    getProjectTrendTaskRunSummaryMock.mockReset()
     selectProjectMock.mockReset()
 
     getProjectsMock.mockResolvedValue([defaultProject])
@@ -299,9 +345,13 @@ describe("HealthPage", () => {
     getProjectSourceDiversitySummaryMock.mockResolvedValue(
       createSourceDiversitySummary(),
     )
+    getProjectTrendTaskRunsMock.mockResolvedValue([])
     getProjectTopicCentroidSnapshotsMock.mockResolvedValue([])
     getProjectTopicCentroidSummaryMock.mockResolvedValue(
       createTopicCentroidSummary(),
+    )
+    getProjectTrendTaskRunSummaryMock.mockResolvedValue(
+      createTrendTaskRunSummary(),
     )
     selectProjectMock.mockImplementation((projects: Project[]) => {
       return projects[0] ?? null
@@ -325,8 +375,10 @@ describe("HealthPage", () => {
     expect(getProjectIngestionRunsMock).not.toHaveBeenCalled()
     expect(getProjectSourceDiversitySnapshotsMock).not.toHaveBeenCalled()
     expect(getProjectSourceDiversitySummaryMock).not.toHaveBeenCalled()
+    expect(getProjectTrendTaskRunsMock).not.toHaveBeenCalled()
     expect(getProjectTopicCentroidSnapshotsMock).not.toHaveBeenCalled()
     expect(getProjectTopicCentroidSummaryMock).not.toHaveBeenCalled()
+    expect(getProjectTrendTaskRunSummaryMock).not.toHaveBeenCalled()
   })
 
   it("renders an empty source-configurations row when the project has no sources", async () => {
@@ -341,12 +393,20 @@ describe("HealthPage", () => {
     expect(
       screen.getByText("No source configurations exist for this project yet."),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText("No trend pipeline runs have been persisted for this project yet."),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("No trend task run history exists for this project yet."),
+    ).toBeInTheDocument()
     expect(getProjectSourceConfigsMock).toHaveBeenCalledWith(1)
     expect(getProjectIngestionRunsMock).toHaveBeenCalledWith(1)
     expect(getProjectSourceDiversitySnapshotsMock).toHaveBeenCalledWith(1)
     expect(getProjectSourceDiversitySummaryMock).toHaveBeenCalledWith(1)
+    expect(getProjectTrendTaskRunsMock).toHaveBeenCalledWith(1)
     expect(getProjectTopicCentroidSnapshotsMock).toHaveBeenCalledWith(1)
     expect(getProjectTopicCentroidSummaryMock).toHaveBeenCalledWith(1)
+    expect(getProjectTrendTaskRunSummaryMock).toHaveBeenCalledWith(1)
   })
 
   it("shows a no-runs message for sources without ingestion history", async () => {
@@ -518,5 +578,66 @@ describe("HealthPage", () => {
     expect(screen.getAllByText("74%").length).toBeGreaterThan(0)
     expect(screen.getByText("View raw breakdown JSON")).toBeInTheDocument()
     expect(screen.getByLabelText("Source diversity trend")).toBeInTheDocument()
+  })
+
+  it("renders the latest trend pipeline task runs", async () => {
+    getProjectTrendTaskRunsMock.mockResolvedValue([
+      createTrendTaskRun({
+        id: 43,
+        task_name: "generate_theme_suggestions",
+        started_at: "2026-04-28T08:20:00Z",
+        finished_at: "2026-04-28T08:20:01Z",
+        latency_ms: 1480,
+        status: "failed",
+        error_message: "OpenRouter timeout",
+        summary: { project_id: 1, created: 0, updated: 0, skipped: 2 },
+      }),
+      createTrendTaskRun({
+        id: 41,
+        started_at: "2026-04-28T08:00:00Z",
+        finished_at: "2026-04-28T08:00:01Z",
+      }),
+    ])
+    getProjectTrendTaskRunSummaryMock.mockResolvedValue(
+      createTrendTaskRunSummary({
+        run_count: 8,
+        failed_run_count: 1,
+        latest_runs: [
+          createTrendTaskRun(),
+          createTrendTaskRun({
+            id: 42,
+            task_name: "generate_theme_suggestions",
+            status: "failed",
+            latency_ms: 1480,
+            error_message: "OpenRouter timeout",
+            summary: { project_id: 1, created: 0, updated: 0, skipped: 2 },
+          }),
+        ],
+      }),
+    )
+
+    await renderHealthPage()
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Trend pipeline runs" }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText("Topic centroid").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Theme suggestions").length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText("feedback 12 • upvotes 10 • downvotes 2").length,
+    ).toBeGreaterThan(0)
+    expect(screen.getAllByText("OpenRouter timeout").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("1.5s").length).toBeGreaterThan(0)
+    expect(screen.getByText("8")).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Open trend task run history" }),
+    ).toHaveAttribute(
+      "href",
+      "/admin/health?project=1#trend-task-run-history",
+    )
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Trend task run history" }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Showing 2 of 8 runs")).toBeInTheDocument()
   })
 })

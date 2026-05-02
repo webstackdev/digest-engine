@@ -431,6 +431,26 @@ export type SourceDiversityObservabilitySummary = {
   latest_snapshot: SourceDiversitySnapshot | null
 }
 
+export type TrendTaskRun = {
+  id: number
+  project: number
+  task_name: string
+  task_run_id: string
+  status: "started" | "completed" | "skipped" | "failed"
+  started_at: string
+  finished_at: string | null
+  latency_ms: number | null
+  error_message: string
+  summary: Record<string, unknown>
+}
+
+export type TrendTaskRunObservabilitySummary = {
+  project: number
+  run_count: number
+  failed_run_count: number
+  latest_runs: TrendTaskRun[]
+}
+
 export type SkillResult = {
   id: number
   content: number

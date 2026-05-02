@@ -302,3 +302,51 @@ class SourceDiversitySnapshot(models.Model):
 
     def __str__(self) -> str:
         return f"Source diversity snapshot for {self.project.name}"
+
+
+class TrendTaskRunStatus(models.TextChoices):
+    """Execution states recorded for persisted trend task runs."""
+
+    STARTED = "started", "Started"
+    COMPLETED = "completed", "Completed"
+    SKIPPED = "skipped", "Skipped"
+    FAILED = "failed", "Failed"
+
+
+class TrendTaskRun(models.Model):
+    """Persist one execution record for a project-scoped trend pipeline task."""
+
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="trend_task_runs",
+    )
+    task_name = models.CharField(max_length=64)
+    task_run_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    status = models.CharField(
+        max_length=16,
+        choices=TrendTaskRunStatus.choices,
+        default=TrendTaskRunStatus.STARTED,
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    error_message = models.TextField(blank=True)
+    summary = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-started_at", "id"]
+        db_table = "core_trendtaskrun"
+        indexes = [
+            models.Index(
+                fields=["project", "task_name", "-started_at"],
+                name="core_trendt_project_113a79_idx",
+            ),
+            models.Index(
+                fields=["project", "status", "-started_at"],
+                name="core_trendt_project_f23cfe_idx",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.task_name} for {self.project.name} ({self.status})"

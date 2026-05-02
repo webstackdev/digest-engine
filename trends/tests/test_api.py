@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
@@ -19,6 +20,8 @@ from trends.models import (
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
+    TrendTaskRun,
+    TrendTaskRunStatus,
     TopicVelocitySnapshot,
 )
 
@@ -664,4 +667,146 @@ class TrendsApiTests(APITestCase):
         self.assertEqual(
             summary_response.json()["latest_snapshot"]["id"],
             _require_pk(owner_snapshot),
+        )
+
+    def test_trend_task_run_summary_returns_latest_run_per_tracked_task(self):
+        older_centroid_run = TrendTaskRun.objects.create(
+            project=self.owner_project,
+            task_name="recompute_topic_centroid",
+            status=TrendTaskRunStatus.COMPLETED,
+            latency_ms=140,
+            summary={
+                "project_id": _require_pk(self.owner_project),
+                "centroid_active": True,
+            },
+        )
+        latest_centroid_run = TrendTaskRun.objects.create(
+            project=self.owner_project,
+            task_name="recompute_topic_centroid",
+            status=TrendTaskRunStatus.FAILED,
+            latency_ms=210,
+            error_message="embedding outage",
+        )
+        TrendTaskRun.objects.filter(pk=older_centroid_run.pk).update(
+            started_at="2026-04-20T00:00:00Z",
+        )
+        TrendTaskRun.objects.filter(pk=latest_centroid_run.pk).update(
+            started_at="2026-04-21T00:00:00Z",
+        )
+        source_diversity_run = TrendTaskRun.objects.create(
+            project=self.owner_project,
+            task_name="recompute_source_diversity",
+            status=TrendTaskRunStatus.SKIPPED,
+            latency_ms=18,
+            summary={"project_id": _require_pk(self.owner_project), "content_count": 0},
+        )
+        TrendTaskRun.objects.create(
+            project=self.other_project,
+            task_name="recompute_source_diversity",
+            status=TrendTaskRunStatus.COMPLETED,
+            latency_ms=12,
+            summary={"project_id": _require_pk(self.other_project), "content_count": 4},
+        )
+
+        response = self.client.get(
+            reverse(
+                "v1:project-trend-task-run-summary",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["project"], _require_pk(self.owner_project))
+        self.assertEqual(response.json()["run_count"], 3)
+        self.assertEqual(response.json()["failed_run_count"], 1)
+        self.assertEqual(len(response.json()["latest_runs"]), 2)
+        self.assertEqual(
+            response.json()["latest_runs"][0]["id"],
+            _require_pk(latest_centroid_run),
+        )
+        self.assertEqual(
+            response.json()["latest_runs"][0]["status"],
+            TrendTaskRunStatus.FAILED,
+        )
+        self.assertEqual(
+            response.json()["latest_runs"][1]["id"],
+            _require_pk(source_diversity_run),
+        )
+
+    def test_metrics_endpoint_requires_bearer_metrics_token(self):
+        TrendTaskRun.objects.create(
+            project=self.owner_project,
+            task_name="recompute_topic_centroid",
+            status=TrendTaskRunStatus.COMPLETED,
+            latency_ms=120,
+            summary={"project_id": _require_pk(self.owner_project)},
+        )
+
+        with self.settings(METRICS_TOKEN="metrics-secret"):
+            unauthorized_response = self.client.get(reverse("metrics"))
+            authorized_response = self.client.get(
+                reverse("metrics"),
+                HTTP_AUTHORIZATION="Bearer metrics-secret",
+            )
+
+        self.assertEqual(unauthorized_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(authorized_response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            authorized_response["Content-Type"].startswith("text/plain; version=0.0.4")
+        )
+        self.assertIn(
+            'newsletter_trend_task_run_total{project_id="1",task_name="recompute_topic_centroid",status="completed"} 1',
+            authorized_response.content.decode("utf-8"),
+        )
+
+    def test_metrics_endpoint_emits_latest_run_status_and_timestamps(self):
+        older_run = TrendTaskRun.objects.create(
+            project=self.owner_project,
+            task_name="recompute_topic_centroid",
+            status=TrendTaskRunStatus.COMPLETED,
+            latency_ms=100,
+            summary={"project_id": _require_pk(self.owner_project)},
+        )
+        latest_run = TrendTaskRun.objects.create(
+            project=self.owner_project,
+            task_name="recompute_topic_centroid",
+            status=TrendTaskRunStatus.FAILED,
+            latency_ms=250,
+            error_message="boom",
+            summary={"project_id": _require_pk(self.owner_project)},
+        )
+        older_started_at = datetime(2026, 4, 20, 8, 0, tzinfo=timezone.utc)
+        latest_started_at = datetime(2026, 4, 21, 8, 0, tzinfo=timezone.utc)
+        latest_finished_at = datetime(2026, 4, 21, 8, 0, 1, tzinfo=timezone.utc)
+        TrendTaskRun.objects.filter(pk=older_run.pk).update(started_at=older_started_at)
+        TrendTaskRun.objects.filter(pk=latest_run.pk).update(
+            started_at=latest_started_at,
+            finished_at=latest_finished_at,
+        )
+
+        with self.settings(METRICS_TOKEN="metrics-secret"):
+            response = self.client.get(
+                reverse("metrics"),
+                HTTP_AUTHORIZATION="Bearer metrics-secret",
+            )
+
+        response_body = response.content.decode("utf-8")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(
+            'newsletter_trend_task_run_latest_status{project_id="1",task_name="recompute_topic_centroid",status="failed"} 1',
+            response_body,
+        )
+        self.assertIn(
+            'newsletter_trend_task_run_latest_latency_ms{project_id="1",task_name="recompute_topic_centroid"} 250',
+            response_body,
+        )
+        self.assertIn(
+            "newsletter_trend_task_run_latest_started_timestamp_seconds"
+            f'{{project_id="1",task_name="recompute_topic_centroid"}} {latest_started_at.timestamp():.6f}',
+            response_body,
+        )
+        self.assertIn(
+            "newsletter_trend_task_run_latest_finished_timestamp_seconds"
+            f'{{project_id="1",task_name="recompute_topic_centroid"}} {latest_finished_at.timestamp():.6f}',
+            response_body,
         )

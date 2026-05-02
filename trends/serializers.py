@@ -13,6 +13,7 @@ from trends.models import (
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
+    TrendTaskRun,
     TopicVelocitySnapshot,
 )
 
@@ -315,3 +316,32 @@ class SourceDiversityObservabilitySummarySerializer(serializers.Serializer):
     project = serializers.IntegerField()
     snapshot_count = serializers.IntegerField()
     latest_snapshot = SourceDiversitySnapshotSerializer(allow_null=True)
+
+
+class TrendTaskRunSerializer(serializers.ModelSerializer):
+    """Serialize one persisted trend pipeline task execution."""
+
+    class Meta:
+        model = TrendTaskRun
+        fields = [
+            "id",
+            "project",
+            "task_name",
+            "task_run_id",
+            "status",
+            "started_at",
+            "finished_at",
+            "latency_ms",
+            "error_message",
+            "summary",
+        ]
+        read_only_fields = fields
+
+
+class TrendTaskRunObservabilitySummarySerializer(serializers.Serializer):
+    """Serialize the latest trend task runs plus project-level rollup counts."""
+
+    project = serializers.IntegerField()
+    run_count = serializers.IntegerField()
+    failed_run_count = serializers.IntegerField()
+    latest_runs = TrendTaskRunSerializer(many=True)

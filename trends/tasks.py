@@ -26,6 +26,7 @@ from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_c
 from content.models import Content, FeedbackType, UserFeedback
 from entities.models import Entity, EntityMention, EntityMentionRole
 from projects.models import Project, SourceConfig
+from trends.observability import observe_trend_task_run
 
 from .models import (
     ContentClusterMembership,
@@ -109,6 +110,7 @@ def run_all_topic_centroid_recomputations() -> int:
 
 
 @shared_task(name="core.tasks.recompute_topic_centroid")
+@observe_trend_task_run("recompute_topic_centroid")
 def recompute_topic_centroid(project_id: int):
     """Rebuild the project's feedback centroid from recent editorial signals."""
 
@@ -274,6 +276,10 @@ def run_all_topic_cluster_recomputations() -> int:
 
 
 @shared_task(name="core.tasks.recompute_topic_clusters")
+@observe_trend_task_run(
+    "recompute_topic_clusters",
+    skipped_if=lambda summary: summary["contents_considered"] == 0,
+)
 def recompute_topic_clusters(project_id: int) -> dict[str, int]:
     """Rebuild recent topic clusters for one project from active content."""
 
@@ -311,6 +317,10 @@ def recompute_topic_clusters(project_id: int) -> dict[str, int]:
 
 
 @shared_task(name="core.tasks.recompute_topic_velocity")
+@observe_trend_task_run(
+    "recompute_topic_velocity",
+    skipped_if=lambda summary: summary["clusters_evaluated"] == 0,
+)
 def recompute_topic_velocity(project_id: int) -> dict[str, int]:
     """Persist one fresh velocity snapshot for each active project cluster."""
 
@@ -388,6 +398,10 @@ def recompute_topic_velocity(project_id: int) -> dict[str, int]:
 
 
 @shared_task(name="core.tasks.recompute_source_diversity")
+@observe_trend_task_run(
+    "recompute_source_diversity",
+    skipped_if=lambda summary: summary["content_count"] == 0,
+)
 def recompute_source_diversity(project_id: int) -> dict[str, object]:
     """Persist one fresh source-diversity snapshot for a project's recent content."""
 
@@ -526,6 +540,10 @@ def recompute_source_diversity(project_id: int) -> dict[str, object]:
 
 
 @shared_task(name="core.tasks.generate_theme_suggestions")
+@observe_trend_task_run(
+    "generate_theme_suggestions",
+    skipped_if=lambda summary: summary["created"] == 0 and summary["updated"] == 0,
+)
 def generate_theme_suggestions(project_id: int) -> dict[str, int]:
     """Generate pending editor-facing theme suggestions for one project."""
 
@@ -620,6 +638,10 @@ def run_all_original_content_idea_generations() -> int:
 
 
 @shared_task(name="core.tasks.generate_original_content_ideas")
+@observe_trend_task_run(
+    "generate_original_content_ideas",
+    skipped_if=lambda summary: summary["created"] == 0,
+)
 def generate_original_content_ideas(project_id: int) -> dict[str, int]:
     """Generate weekly original-content ideas grounded in project trend gaps."""
 
