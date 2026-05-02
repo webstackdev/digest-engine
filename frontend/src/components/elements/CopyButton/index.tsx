@@ -1,21 +1,24 @@
 "use client"
 
+import { CopyIcon } from "lucide-react"
 import { useState } from "react"
 
+import { Button } from "@/components/ui/button"
+
 type CopyButtonProps = {
+  /** The string value to copy. */
   value: string
+  /** Default button label before a successful copy action. */
   label: string
+  /** Optional label shown after a successful copy action. */
+  copiedLabel?: string
 }
 
 /**
  * Copy a string value to the clipboard and briefly acknowledge success.
  *
- * @param props - Component props.
- * @param props.value - The string value to copy.
- * @param props.label - Default button label before a successful copy action.
- * @returns A client button that copies the provided value when clicked.
  */
-export function CopyButton({ value, label }: CopyButtonProps) {
+export function CopyButton({ value, label, copiedLabel = "Copied" }: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
   async function handleClick() {
@@ -31,12 +34,13 @@ export function CopyButton({ value, label }: CopyButtonProps) {
   }
 
   return (
-    <button
-      className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50"
+    <Button
       onClick={handleClick}
       type="button"
+      variant="outline"
     >
-      {copied ? "Copied" : label}
-    </button>
+      {!copied ? <CopyIcon aria-hidden="true" /> : null}
+      {copied ? copiedLabel : label}
+    </Button>
   )
 }

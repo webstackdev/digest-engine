@@ -11,20 +11,25 @@ export const DEFAULT_THEME_DISMISSAL_REASONS = [
 ] as const
 
 type ThemeSuggestionCardProps = {
+  /** Theme suggestion record shown by the card. */
   theme: ThemeSuggestion
+  /** Owning project id used to build action and detail links. */
   projectId: number
+  /** Current page URL used for mutation redirects. */
   currentPageHref: string
+  /** Optional cluster summary used for extra context. */
   cluster?: TopicCluster | null
+  /** Optional cluster detail used for supporting content preview. */
   clusterDetail?: TopicClusterDetail | null
+  /** Whether the card should render in its highlighted state. */
   isHighlighted?: boolean
+  /** Optional dismissal reasons offered in the pending-state form. */
   dismissalReasons?: readonly string[]
 }
 
 /**
  * Render a theme suggestion card with queue actions and supporting context.
  *
- * @param props - Theme suggestion card props.
- * @returns A styled theme suggestion card.
  */
 export function ThemeSuggestionCard({
   theme,

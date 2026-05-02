@@ -25,6 +25,7 @@ import {
 } from "@/lib/view-helpers"
 
 type HomePageProps = {
+  /** Search params promise containing the optional dashboard filters and flash messages. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -63,10 +64,6 @@ function buildContentClusterLookup(clusterDetails: TopicClusterDetail[]) {
  * review queue, entity, source, and feedback data, and then delegates filter and summary
  * derivation to `buildDashboardView`. When the current API user has no visible projects,
  * the page returns a guarded empty state instead of issuing any project-scoped requests.
- *
- * @param props - Async server component props from the App Router.
- * @param props.searchParams - Search params promise containing the optional dashboard filters and flash messages.
- * @returns The rendered project dashboard or the no-project empty state.
  */
 export default async function HomePage({ searchParams }: HomePageProps) {
   const resolvedSearchParams = await searchParams

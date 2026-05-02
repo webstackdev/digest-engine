@@ -6,17 +6,14 @@ import { authOptions } from "@/lib/auth"
 import { getErrorMessage, getSuccessMessage } from "@/lib/view-helpers"
 
 type InvitePageProps = {
+  /** Route params promise containing the invitation token. */
   params: Promise<{ token: string }>
+  /** Search params promise containing optional flash-message values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 /**
  * Render the invitation acceptance page for one token.
- *
- * @param props - Async server component props.
- * @param props.params - Route params containing the invitation token.
- * @param props.searchParams - Search params promise containing optional flash-message values.
- * @returns The invitation acceptance page.
  */
 export default async function InvitePage({ params, searchParams }: InvitePageProps) {
   const [{ token }, resolvedSearchParams] = await Promise.all([params, searchParams])

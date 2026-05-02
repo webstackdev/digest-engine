@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
+import { compactDocsParameters } from "@/lib/storybook-docs"
+
 import { ThemeToggle } from "."
 
 const meta = {
@@ -8,6 +10,7 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     layout: "centered",
+    docs: compactDocsParameters,
   },
 } satisfies Meta<typeof ThemeToggle>
 

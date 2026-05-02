@@ -22,6 +22,7 @@ import type {
 import { formatDate, healthTone, selectProject } from "@/lib/view-helpers"
 
 type HealthPageProps = {
+  /** Search params promise containing the optional `project` selector. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -174,10 +175,6 @@ export function buildSourceDiversityTrendPoints(
  * configurations and their most recent ingestion runs, and then maps those records to
  * a compact health table. When the API user has no available project, the page renders
  * a safe empty state instead of attempting project-scoped API calls.
- *
- * @param props - Async server component props from the App Router.
- * @param props.searchParams - Search params promise containing the optional `project` selector.
- * @returns The rendered admin health page for the selected project or the empty project state.
  */
 export default async function HealthPage({ searchParams }: HealthPageProps) {
   const resolvedSearchParams = await searchParams

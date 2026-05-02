@@ -5,20 +5,20 @@ import { useState } from "react"
 import type { UserProfile } from "@/lib/types"
 
 type ProfileFormProps = {
+  /** Whether the profile save request is currently in flight. */
   isSaving: boolean
+  /** Callback that persists profile updates. */
   onSave: (payload: {
     display_name: string
     bio: string
     timezone: string
   }) => Promise<void>
+  /** Current profile values used to seed the form. */
   profile: UserProfile
 }
 
 /**
  * Render editable profile fields for the current user.
- *
- * @param props - Form props.
- * @returns The editable profile form.
  */
 export function ProfileForm({
   isSaving,

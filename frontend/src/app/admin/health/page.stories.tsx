@@ -11,6 +11,7 @@ import {
   createSourceDiversitySummary,
   createTopicCentroidSummary,
 } from "@/lib/storybook-fixtures"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 
 type HealthPreviewProps = {
   alerting?: boolean
@@ -21,6 +22,9 @@ const meta = {
   title: "Pages/AdminHealth",
   component: HealthPagePreview,
   tags: ["autodocs"],
+  parameters: {
+    docs: compactDocsParameters,
+  },
   args: {},
 } satisfies Meta<typeof HealthPagePreview>
 

@@ -6,6 +6,7 @@ import {
   createOriginalContentIdea,
   createProject,
 } from "@/lib/storybook-fixtures"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 
 type IdeasPreviewProps = {
   ideas?: ReturnType<typeof createOriginalContentIdea>[]
@@ -15,6 +16,9 @@ const meta = {
   title: "Pages/Ideas",
   component: IdeasPagePreview,
   tags: ["autodocs"],
+  parameters: {
+    docs: compactDocsParameters,
+  },
   args: {},
 } satisfies Meta<typeof IdeasPagePreview>
 

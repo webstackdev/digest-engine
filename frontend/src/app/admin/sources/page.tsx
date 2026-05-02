@@ -91,6 +91,7 @@ export function deriveMastodonVerificationState(
 }
 
 type SourcesPageProps = {
+  /** Search params promise containing the optional `project`, `message`, and `error` values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -172,10 +173,6 @@ export function filterNewsletterIntakes(
  * returned from the source-config routes, and renders both the create form and the editable list
  * of existing source configurations. When no project is available, it renders a guarded empty
  * state instead of issuing project-scoped API requests.
- *
- * @param props - Async server component props from the App Router.
- * @param props.searchParams - Search params promise containing the optional `project`, `message`, and `error` values.
- * @returns The rendered source configuration admin page or the no-project empty state.
  */
 export default async function SourcesPage({ searchParams }: SourcesPageProps) {
   const resolvedSearchParams = await searchParams

@@ -4,6 +4,7 @@ import {
   createSourceDiversitySnapshot,
   createSourceDiversitySummary,
 } from "@/lib/storybook-fixtures"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 
 import { SourceDiversityPanel } from "."
 
@@ -18,6 +19,9 @@ const meta = {
   title: "Pages/AdminHealth/Components/SourceDiversityPanel",
   component: SourceDiversityPanel,
   tags: ["autodocs"],
+  parameters: {
+    docs: compactDocsParameters,
+  },
   args: {
     summary: healthySummary,
     visibleSnapshots: healthySnapshots,

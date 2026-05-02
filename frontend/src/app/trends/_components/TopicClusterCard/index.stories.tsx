@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { createTopicClusterDetail } from "@/lib/storybook-fixtures"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 
 import { TopicClusterCard } from "."
 
@@ -8,6 +9,9 @@ const meta = {
   title: "Pages/Trends/Components/TopicClusterCard",
   component: TopicClusterCard,
   tags: ["autodocs"],
+  parameters: {
+    docs: compactDocsParameters,
+  },
   args: {
     cluster: createTopicClusterDetail(),
     href: "/trends?project=1&cluster=5",

@@ -5,16 +5,17 @@ import type { TopicCluster, TopicClusterDetail } from "@/lib/types"
 import { formatDate, formatPercentScore, formatScore } from "@/lib/view-helpers"
 
 type TopicClusterCardProps = {
+  /** Cluster summary or detail record shown in the card. */
   cluster: TopicCluster | TopicClusterDetail
+  /** Destination link for the card. */
   href: string
+  /** Whether the card should render in its highlighted state. */
   isSelected?: boolean
 }
 
 /**
  * Render a compact trend cluster card used by the trends page and Storybook previews.
  *
- * @param props - Topic cluster card props.
- * @returns A linked card summarizing one topic cluster.
  */
 export function TopicClusterCard({
   cluster,

@@ -9,6 +9,7 @@ import { getProjectOriginalContentIdeas, getProjects } from "@/lib/api"
 import { getErrorMessage, getSuccessMessage, selectProject } from "@/lib/view-helpers"
 
 type IdeasPageProps = {
+  /** Search params promise containing the optional `project` and `status` selectors. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -22,10 +23,6 @@ function buildIdeasPageHref(projectId: number, statusFilter: string) {
 
 /**
  * Render the original-content ideas queue for the selected project.
- *
- * @param props - Async server component props from the App Router.
- * @param props.searchParams - Search params promise containing the optional `project` and `status` selectors.
- * @returns The rendered ideas page or the no-project empty state.
  */
 export default async function IdeasPage({ searchParams }: IdeasPageProps) {
   const resolvedSearchParams = await searchParams

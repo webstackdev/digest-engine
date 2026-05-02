@@ -8,6 +8,7 @@ import { FormEvent, useState } from "react"
 import SocialAuthButtons from "@/app/login/_components/SocialAuthButtons"
 
 type LoginFormProps = {
+  /** Fallback destination used when sign-in succeeds without a redirect URL. */
   callbackUrl: string
 }
 
@@ -19,15 +20,6 @@ type LoginFormProps = {
  * auth flow, and navigates to either the returned redirect URL or the provided
  * callback URL on success. While a request is in flight, the submit button switches
  * to a loading label and prevents duplicate submissions.
- *
- * @param props - Component props.
- * @param props.callbackUrl - Fallback destination used when sign-in succeeds without
- * an explicit redirect URL.
- * @returns The login form card with social sign-in options and password auth fields.
- * @example
- * ```tsx
- * <LoginForm callbackUrl="/content/4?project=2" />
- * ```
  */
 export default function LoginForm({ callbackUrl }: LoginFormProps) {
   const router = useRouter()

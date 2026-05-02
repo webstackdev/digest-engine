@@ -6,10 +6,15 @@ import type {
 import { formatPercentScore } from "@/lib/view-helpers"
 
 type SourceDiversityPanelProps = {
+  /** Aggregate source-diversity summary for the selected project. */
   summary: SourceDiversityObservabilitySummary
+  /** Snapshot rows currently visualized in the trend area. */
   visibleSnapshots: SourceDiversitySnapshot[]
+  /** SVG polyline points for the top-plugin-share trend. */
   trendPoints: string
+  /** Semantic tone for the summary badge. */
   statusTone: "positive" | "warning" | "negative" | "neutral"
+  /** Visible summary label for the status badge. */
   statusLabel: string
 }
 
@@ -36,9 +41,6 @@ function renderShareBar(share: number) {
 
 /**
  * Render the source-diversity observability panel shared by the health page and stories.
- *
- * @param props - Source diversity panel props.
- * @returns The rendered source-diversity panel.
  */
 export function SourceDiversityPanel({
   summary,

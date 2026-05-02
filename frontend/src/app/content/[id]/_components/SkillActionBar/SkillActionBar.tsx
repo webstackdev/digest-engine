@@ -12,9 +12,13 @@ type AsyncSkillName = Extract<
 >
 
 type SkillActionBarProps = {
+  /** Numeric project identifier used by the API routes. */
   projectId: number
+  /** Numeric content identifier receiving the skill run. */
   contentId: number
+  /** Whether summarization is allowed for the current content. */
   canSummarize: boolean
+  /** Skills already pending when the page first loads. */
   initialPendingSkills: AsyncSkillName[]
 }
 
@@ -44,22 +48,6 @@ function getSkillLabel(skillName: AsyncSkillName, isBusy: boolean) {
  * render the latest `SkillResult` records. Summarization is disabled when the caller
  * knows the content cannot be summarized, while pending or running skills lock their
  * matching action button and show progress-oriented labels.
- *
- * @param props - Component props.
- * @param props.projectId - Numeric project identifier used by the API routes.
- * @param props.contentId - Numeric content identifier receiving the skill run.
- * @param props.canSummarize - Whether summarization is allowed for the current content.
- * @param props.initialPendingSkills - Skills already pending when the page first loads.
- * @returns Action buttons plus inline status or error messages for queued skill runs.
- * @example
- * ```tsx
- * <SkillActionBar
- *   projectId={4}
- *   contentId={9}
- *   canSummarize
- *   initialPendingSkills={[]}
- * />
- * ```
  */
 export function SkillActionBar({
   projectId,

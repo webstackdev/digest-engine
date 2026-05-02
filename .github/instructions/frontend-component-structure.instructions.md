@@ -1,6 +1,6 @@
 ---
 name: "Frontend Component Structure Guidelines"
-description: "Use when creating, moving, or refactoring React components, Storybook stories, or frontend tests in frontend/src/. Covers the preferred ui/layout/features/app _components directory structure and colocating each shared component in its own folder."
+description: "Use when creating, moving, or refactoring React components, Storybook stories, or frontend tests in frontend/src/. Covers the preferred elements/layout/ui/providers/app _components directory structure and colocated naming conventions."
 applyTo:
   - "frontend/src/**/*.ts"
   - "frontend/src/**/*.tsx"
@@ -9,23 +9,39 @@ applyTo:
 # Frontend Component Structure Guidelines
 
 - Avoid growing a flat `frontend/src/components/` directory.
-- Put low-level, generic building blocks in `frontend/src/components/ui/`.
+- Put app-owned presentational or interactive components that combine shadcn primitives with project-specific functionality in `frontend/src/components/elements/`.
 - Put shared structural components in `frontend/src/components/layout/`.
-- Put domain-specific reusable components in `frontend/src/components/features/`.
+- Keep `frontend/src/components/ui/` for shadcn components installed directly by `npx shadcn@latest add <component>`.
+- Put provider-style wrappers and context composition in `frontend/src/providers/`.
 - Put route-local components in `frontend/src/app/**/_components/` when they are only used by a single route.
 - Put route page tests beside the page or route-local component they cover within the same `frontend/src/app/**` directory.
-- When a component lives under `frontend/src/components/`, give it its own folder instead of a single loose file.
-- For component folders under `frontend/src/components/` and `frontend/src/app/**/_components/`, let the folder name carry the component name and use `index.tsx`, `index.test.tsx`, and `index.stories.tsx` for colocated files.
-- Do not add barrel `index.ts` files inside component folders unless a task explicitly needs a separate module boundary.
+- For app-owned folders under `frontend/src/components/elements/`, `frontend/src/components/layout/`, `frontend/src/providers/`, and `frontend/src/app/**/_components/`, let the folder name carry the component or provider name and use `index.tsx`, `index.test.tsx`, and `index.stories.tsx` for colocated files.
+- Do not add barrel `index.ts` files inside those component or provider folders unless a task explicitly needs a separate module boundary.
+- Preserve shadcn's generated file naming and structure inside `frontend/src/components/ui/`; do not wrap those generated components in extra folders just to match the app-owned component pattern.
+- For new Storybook stories that use `tags: ["autodocs"]`, set `parameters.docs` to the shared compact docs helper in `frontend/src/lib/storybook-docs.tsx` so the Docs tab omits the default `Stories` block and uses the reduced primary canvas height.
 
 ## Preferred Shapes
 
 Shared reusable component:
 
 ```text
-frontend/src/components/ui/Button/
+frontend/src/components/elements/StatusBadge/
   index.tsx
   index.stories.tsx
+  index.test.tsx
+```
+
+Shadcn-installed primitive:
+
+```text
+frontend/src/components/ui/button.tsx
+```
+
+Shared provider:
+
+```text
+frontend/src/providers/ThemeProvider/
+  index.tsx
   index.test.tsx
 ```
 
@@ -48,9 +64,10 @@ frontend/src/app/admin/sources/
 
 ## Placement Heuristics
 
-- If the component has no business logic and could be reused across domains, place it under `components/ui/`.
+- If the component is a shadcn primitive created by the CLI, keep it under `components/ui/` with the generated naming.
+- If the component is app-owned and composes shadcn primitives with project-specific behavior or presentation, place it under `components/elements/`.
 - If the component primarily arranges shared navigation or page chrome, place it under `components/layout/`.
-- If the component is tied to a business area but reused across multiple routes, place it under `components/features/<feature-name>/`.
+- If the module primarily provides context or wraps app trees with provider logic, place it under `providers/`.
 - If the component is only consumed by one route segment, keep it under that route's `_components/` folder instead of promoting it to `components/`.
 - Prefer folder-level naming over duplicate file naming. For example, prefer `OriginalContentIdeaCard/index.tsx` over `OriginalContentIdeaCard/OriginalContentIdeaCard.tsx`.
 - When extracting from a large page, prefer moving the smallest reusable visual leaves first, then larger feature sections, while keeping the page as the orchestration layer.
@@ -60,4 +77,5 @@ frontend/src/app/admin/sources/
 
 - Preserve the existing backend contract and keep frontend payloads in `snake_case`.
 - Follow the repo's colocated story convention for Storybook.
+- Reuse `frontend/src/lib/storybook-docs.tsx` for compact Docs tabs in new stories instead of re-declaring the same docs page JSX in each file.
 - Do not move files only to satisfy the structure guideline unless the current task already touches that area.

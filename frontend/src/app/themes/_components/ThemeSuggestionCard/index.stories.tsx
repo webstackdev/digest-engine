@@ -5,6 +5,7 @@ import {
   createTopicCluster,
   createTopicClusterDetail,
 } from "@/lib/storybook-fixtures"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 
 import { ThemeSuggestionCard } from "."
 
@@ -15,6 +16,9 @@ const meta = {
   title: "Pages/Themes/Components/ThemeSuggestionCard",
   component: ThemeSuggestionCard,
   tags: ["autodocs"],
+  parameters: {
+    docs: compactDocsParameters,
+  },
   args: {
     theme: createThemeSuggestion(),
     projectId: 1,

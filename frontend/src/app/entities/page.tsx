@@ -15,6 +15,7 @@ import {
 } from "@/lib/view-helpers"
 
 type EntitiesPageProps = {
+  /** Search params promise containing the optional `project`, `error`, and `message` values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -25,10 +26,6 @@ type EntitiesPageProps = {
  * list, and renders both the create form and update/delete controls for existing entities.
  * When no project is available for the configured API user, it returns a guarded empty
  * state instead of issuing any project-scoped entity requests.
- *
- * @param props - Async server component props from the App Router.
- * @param props.searchParams - Search params promise containing the optional `project`, `error`, and `message` values.
- * @returns The rendered entity management page or the no-project empty state.
  */
 export default async function EntitiesPage({
   searchParams,

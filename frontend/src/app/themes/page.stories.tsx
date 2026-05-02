@@ -8,6 +8,7 @@ import {
   createTopicCluster,
   createTopicClusterDetail,
 } from "@/lib/storybook-fixtures"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 
 type ThemesPreviewProps = {
   themes?: ReturnType<typeof createThemeSuggestion>[]
@@ -17,6 +18,9 @@ const meta = {
   title: "Pages/Themes",
   component: ThemesPagePreview,
   tags: ["autodocs"],
+  parameters: {
+    docs: compactDocsParameters,
+  },
   args: {},
 } satisfies Meta<typeof ThemesPagePreview>
 

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { expect, userEvent, within } from "storybook/test"
 
 import { PROFILE_QUERY_KEY } from "@/lib/profile"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 import type { UserProfile } from "@/lib/types"
 
 import { UserMenu } from "."
@@ -26,6 +27,7 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",
+    docs: compactDocsParameters,
   },
   args: {
     profile: baseProfile,

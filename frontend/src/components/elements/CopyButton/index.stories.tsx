@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 import type { ComponentProps } from "react"
 
+import { compactDocsParameters } from "@/lib/storybook-docs"
+
 import { CopyButton } from "."
 
 const meta = {
@@ -9,6 +11,7 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     layout: "centered",
+    docs: compactDocsParameters,
   },
   args: {
     label: "Copy invite link",

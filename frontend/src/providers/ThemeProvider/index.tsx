@@ -7,6 +7,7 @@ import {
 import type { ReactNode } from "react"
 
 type AppThemeProviderProps = Omit<ThemeProviderProps, "children"> & {
+  /** React subtree that should receive theme context. */
   children: ReactNode
 }
 
@@ -16,8 +17,6 @@ type AppThemeProviderProps = Omit<ThemeProviderProps, "children"> & {
  * This thin wrapper keeps the server layout from importing the client-only
  * provider directly while preserving the upstream `next-themes` prop contract.
  *
- * @param props - Theme provider props forwarded to `next-themes`.
- * @returns The wrapped theme provider.
  */
 export function ThemeProvider(props: AppThemeProviderProps) {
   return <NextThemesProvider {...props} />

@@ -3,8 +3,11 @@
 import type { UserProfile } from "@/lib/types"
 
 type AvatarPreviewProps = {
+  /** Current user profile used to render the avatar or initials. */
   profile: UserProfile
+  /** Whether an avatar removal request is currently in flight. */
   isRemoving: boolean
+  /** Callback that removes the current avatar. */
   onRemove: () => void
 }
 
@@ -27,9 +30,6 @@ function buildInitials(name: string) {
 
 /**
  * Render the current profile avatar, including the remove action.
- *
- * @param props - Avatar preview props.
- * @returns The avatar preview card.
  */
 export function AvatarPreview({
   profile,

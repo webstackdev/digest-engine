@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { createProject } from "@/lib/storybook-fixtures"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 
 import { AppShell } from "."
 
@@ -18,6 +19,9 @@ const meta = {
   title: "Layout/AppShell",
   component: AppShell,
   tags: ["autodocs"],
+  parameters: {
+    docs: compactDocsParameters,
+  },
   args: {
     title: "Trend analysis",
     description: "Cluster velocity, member content, and editorial context for the topics accelerating inside this project.",

@@ -20,7 +20,9 @@ import {
 } from "@/lib/view-helpers"
 
 type ContentDetailPageProps = {
+  /** Route params promise containing the content id. */
   params: Promise<{ id: string }>
+  /** Search params promise containing the optional `project`, `error`, and `message` values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -55,11 +57,6 @@ export function deriveInitialPendingSkills(
  * and user feedback so editors can inspect raw article text and workflow state in one place.
  * When no project is available for the configured API user, the page returns a guarded empty
  * state instead of issuing project-scoped API calls.
- *
- * @param props - Async server component props from the App Router.
- * @param props.params - Route params promise containing the content id.
- * @param props.searchParams - Search params promise containing the optional `project`, `error`, and `message` values.
- * @returns The rendered content detail page or the no-project empty state.
  */
 export default async function ContentDetailPage({
   params,

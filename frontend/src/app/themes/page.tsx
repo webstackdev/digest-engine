@@ -19,6 +19,7 @@ import {
 } from "@/lib/view-helpers"
 
 type ThemesPageProps = {
+  /** Search params promise containing the optional `project`, `status`, and `theme` selectors. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -51,10 +52,6 @@ function filterThemes(themes: ThemeSuggestion[], statusFilter: string) {
 
 /**
  * Render the editor-facing theme queue for the selected project.
- *
- * @param props - Async server component props from the App Router.
- * @param props.searchParams - Search params promise containing the optional `project`, `status`, and `theme` selectors.
- * @returns The rendered themes page or the no-project empty state.
  */
 export default async function ThemesPage({ searchParams }: ThemesPageProps) {
   const resolvedSearchParams = await searchParams

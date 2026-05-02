@@ -8,6 +8,7 @@ import {
   createProject,
   createTopicClusterDetail,
 } from "@/lib/storybook-fixtures"
+import { compactDocsParameters } from "@/lib/storybook-docs"
 import type { TopicClusterDetail, TopicVelocitySnapshot } from "@/lib/types"
 import { formatPercentScore } from "@/lib/view-helpers"
 
@@ -15,6 +16,9 @@ const meta = {
   title: "Pages/Trends",
   component: TrendsPagePreview,
   tags: ["autodocs"],
+  parameters: {
+    docs: compactDocsParameters,
+  },
   args: {},
 } satisfies Meta<typeof TrendsPagePreview>
 

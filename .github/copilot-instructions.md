@@ -36,9 +36,13 @@ You are working in Newsletter Maker, a Django + DRF + Celery + Qdrant backend wi
 - The frontend uses Next.js App Router.
 - Shared backend-facing types belong in `frontend/src/lib/types.ts`.
 - Shared backend-facing data access belongs in `frontend/src/lib/api.ts` unless there is a clear reason to add a route handler under `frontend/src/app/api/`.
-- Keep reusable UI in `frontend/src/components/` and page assembly in `frontend/src/app/`.
-- For component folders under `frontend/src/components/` or `frontend/src/app/**/_components/`, let the folder carry the component name and use `index.tsx`, `index.test.tsx`, and `index.stories.tsx` inside that folder instead of repeating the component name in each file.
-- Do not add barrel `index.ts` files inside component folders unless the task explicitly requires one.
+- Keep reusable components in `frontend/src/components/`, provider-style wrappers in `frontend/src/providers/`, and page assembly in `frontend/src/app/`.
+- Use `frontend/src/components/elements/` for app-owned components that combine shadcn primitives with project-specific functionality.
+- Use `frontend/src/components/layout/` for shared navigation, page chrome, and structural layout components.
+- Use `frontend/src/components/ui/` only for shadcn components installed by `npx shadcn@latest add <component>`; do not move custom app components into that folder.
+- Use `frontend/src/providers/` for provider-style wrappers and context composition such as theme or query providers.
+- For component folders under `frontend/src/components/elements/`, `frontend/src/components/layout/`, `frontend/src/providers/`, or `frontend/src/app/**/_components/`, let the folder carry the component name and use `index.tsx`, `index.test.tsx`, and `index.stories.tsx` inside that folder instead of repeating the component name in each file.
+- Do not add barrel `index.ts` files inside those component or provider folders unless the task explicitly requires one.
 - Frontend tests should live beside the files they cover in `frontend/src/app/` and `frontend/src/components/` rather than in separate `__tests__/` folders.
 - When adding or changing a frontend route, page, or component, add or update direct colocated Vitest coverage in the same change. If a file is a pure framework re-export or adapter and a dedicated test is intentionally skipped, call that out explicitly.
 - Preserve existing backend payload shapes in TypeScript types and UI code unless the backend contract is intentionally changing.
@@ -49,6 +53,7 @@ You are working in Newsletter Maker, a Django + DRF + Celery + Qdrant backend wi
 - Add or improve module docstrings plus public classes, public functions, and non-obvious helpers.
 - Do not add noisy boilerplate to trivial `__str__` methods, simple properties, or obvious one-line helpers unless the surrounding file genuinely benefits.
 - TypeScript and React code should use JSDoc for exported utilities, hooks, route handlers, and non-trivial components when behavior is not obvious from the type signature alone.
+- For React components, providers, and App Router pages, keep the component JSDoc to a short summary paragraph and document prop fields on the props type or interface. Avoid `@param` and `@returns` tags on React components because Storybook Autodocs flattens them poorly.
 - If architecture or workflow behavior changes, update the most relevant docs in `docs/`, especially `docs/DEVELOPER_GUIDE.md`, `docs/IMPLEMENTATION_OVERVIEW.md`, `docs/MODELS.md`, `docs/RELEVANCE_SCORING.md`, or `docs/LOGGING.md`.
 
 ## Prompt Skill Conventions

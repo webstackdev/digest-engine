@@ -4,7 +4,9 @@ import { useState } from "react"
 import { useDropzone } from "react-dropzone"
 
 type AvatarDropzoneProps = {
+  /** Whether an avatar upload request is currently in flight. */
   isUploading: boolean
+  /** Callback that uploads a selected avatar image. */
   onUpload: (file: File) => Promise<void>
 }
 
@@ -12,9 +14,6 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024
 
 /**
  * Render the drag-and-drop avatar upload surface.
- *
- * @param props - Dropzone props.
- * @returns The avatar upload card.
  */
 export function AvatarDropzone({
   isUploading,

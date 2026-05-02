@@ -18,7 +18,9 @@ import {
 } from "@/lib/view-helpers"
 
 type EntityDetailPageProps = {
+  /** Route params promise containing the entity id. */
   params: Promise<{ id: string }>
+  /** Search params promise containing the optional `project`, `error`, and `message` values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -27,11 +29,6 @@ type EntityDetailPageProps = {
  *
  * The page joins the entity record with its extracted mention history so editors can
  * inspect how the pipeline is linking content to the entity over time.
- *
- * @param props - Async server component props from the App Router.
- * @param props.params - Route params promise containing the entity id.
- * @param props.searchParams - Search params promise containing the optional `project`, `error`, and `message` values.
- * @returns The rendered entity detail page or the no-project empty state.
  */
 export default async function EntityDetailPage({
   params,

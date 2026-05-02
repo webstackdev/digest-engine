@@ -14,10 +14,11 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "storybook": "storybook dev -p 6006",
+    "storybook": "storybook dev -p 6006 --no-open",
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@base-ui/react": "^1.4.1",
     "@eslint/js": "9.39.4",
     "@tailwindcss/postcss": "^4.2.4",
     "@tanstack/react-query": "^5.100.7",
@@ -36,7 +37,6 @@
     "next-themes": "^0.4.6",
     "postcss": "^8.5.13",
     "prettier": "^3.8.3",
-    "radix-ui": "^1.4.3",
     "react": "19.2.5",
     "react-dom": "19.2.5",
     "react-dropzone": "^15.0.0",

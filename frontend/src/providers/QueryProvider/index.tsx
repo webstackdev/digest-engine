@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import { useState } from "react"
 
 type QueryProviderProps = {
+  /** React subtree that needs access to the shared QueryClient. */
   children: ReactNode
 }
 
@@ -15,16 +16,6 @@ type QueryProviderProps = {
  * and the project's default query behavior. Window-focus refetching is disabled to
  * avoid unexpected reloads while editors work through dashboard and admin flows, and
  * failed queries retry once before surfacing an error.
- *
- * @param props - Provider props.
- * @param props.children - React subtree that needs access to the shared QueryClient.
- * @returns A React Query provider wrapping the given children.
- * @example
- * ```tsx
- * <QueryProvider>
- *   <AppShell />
- * </QueryProvider>
- * ```
  */
 export function QueryProvider({ children }: QueryProviderProps) {
   const [queryClient] = useState(

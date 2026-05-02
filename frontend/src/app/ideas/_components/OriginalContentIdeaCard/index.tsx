@@ -11,17 +11,19 @@ export const DEFAULT_IDEA_DISMISSAL_REASONS = [
 ] as const
 
 type OriginalContentIdeaCardProps = {
+  /** Original-content idea record shown by the card. */
   idea: OriginalContentIdea
+  /** Owning project id used to build action and detail links. */
   projectId: number
+  /** Current page URL used for mutation redirects. */
   currentPageHref: string
+  /** Optional dismissal reasons offered in the pending-state form. */
   dismissalReasons?: readonly string[]
 }
 
 /**
  * Render an original-content idea card with supporting context and workflow actions.
  *
- * @param props - Original content idea card props.
- * @returns A styled original-content idea card.
  */
 export function OriginalContentIdeaCard({
   idea,

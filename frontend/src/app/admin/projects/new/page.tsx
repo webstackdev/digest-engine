@@ -7,15 +7,12 @@ import {
 } from "@/lib/view-helpers"
 
 type NewProjectPageProps = {
+  /** Search params promise containing optional flash-message values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 /**
  * Render the self-service project creation page.
- *
- * @param props - Async server component props from the App Router.
- * @param props.searchParams - Search params promise containing optional flash-message values.
- * @returns The project creation workspace.
  */
 export default async function NewProjectPage({ searchParams }: NewProjectPageProps) {
   const resolvedSearchParams = await searchParams

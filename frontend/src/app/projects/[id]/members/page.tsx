@@ -14,17 +14,14 @@ import {
 } from "@/lib/view-helpers"
 
 type MembersPageProps = {
+  /** Route params promise containing the project id. */
   params: Promise<{ id: string }>
+  /** Search params promise containing optional flash-message values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 /**
  * Render the project membership-management page for one selected project.
- *
- * @param props - Async server component props.
- * @param props.params - Route params containing the project id.
- * @param props.searchParams - Search params promise containing optional flash-message values.
- * @returns The members management page or an access guard state.
  */
 export default async function MembersPage({ params, searchParams }: MembersPageProps) {
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])
@@ -187,7 +184,11 @@ export default async function MembersPage({ params, searchParams }: MembersPageP
                       <a className="text-sm font-medium text-primary hover:text-primary" href={invitation.invite_url}>
                         {invitation.invite_url}
                       </a>
-                      <CopyButton label="Copy invite link" value={invitation.invite_url} />
+                      <CopyButton
+                        copiedLabel="Invite link copied"
+                        label="Copy invite link"
+                        value={invitation.invite_url}
+                      />
                     </div>
                   </div>
                   {invitation.revoked_at || invitation.accepted_at ? null : (

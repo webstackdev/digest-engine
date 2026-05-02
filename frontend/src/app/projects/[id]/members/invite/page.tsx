@@ -5,17 +5,14 @@ import { getProjects } from "@/lib/api"
 import { getErrorMessage, getSuccessMessage } from "@/lib/view-helpers"
 
 type InviteMemberPageProps = {
+  /** Route params promise containing the project id. */
   params: Promise<{ id: string }>
+  /** Search params promise containing optional flash-message values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
 /**
  * Render the invitation composer for one project roster.
- *
- * @param props - Async server component props.
- * @param props.params - Route params containing the project id.
- * @param props.searchParams - Search params promise containing optional flash-message values.
- * @returns The invite composer or an access guard state.
  */
 export default async function InviteMemberPage({ params, searchParams }: InviteMemberPageProps) {
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams])

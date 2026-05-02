@@ -21,6 +21,7 @@ import {
 } from "@/lib/view-helpers"
 
 type TrendsPageProps = {
+  /** Search params promise containing the optional `project`, `source`, `days`, and `cluster` selectors. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -65,10 +66,6 @@ function buildTrendHref(projectId: number, filters: { source: string; days: numb
 
 /**
  * Render the trends workspace for the selected project.
- *
- * @param props - Async server component props from the App Router.
- * @param props.searchParams - Search params promise containing the optional `project`, `source`, `days`, and `cluster` selectors.
- * @returns The rendered trends page or the no-project empty state.
  */
 export default async function TrendsPage({ searchParams }: TrendsPageProps) {
   const resolvedSearchParams = await searchParams
