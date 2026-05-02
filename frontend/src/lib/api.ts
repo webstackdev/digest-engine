@@ -34,6 +34,8 @@ import type {
   TopicCluster,
   TopicClusterDetail,
   TopicVelocitySnapshot,
+  TrendTaskRun,
+  TrendTaskRunObservabilitySummary,
   UserFeedback,
   UserProfile,
 } from "@/lib/types"
@@ -1221,6 +1223,34 @@ export async function getProjectTopicCentroidSnapshots(
 ): Promise<TopicCentroidSnapshot[]> {
   return apiFetch<TopicCentroidSnapshot[]>(
     `/api/v1/projects/${projectId}/topic-centroid-snapshots/`,
+  )
+}
+
+/**
+ * Fetch the latest persisted trend pipeline run for each tracked task.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Run counts plus the latest project-scoped execution rows.
+ */
+export async function getProjectTrendTaskRunSummary(
+  projectId: number,
+): Promise<TrendTaskRunObservabilitySummary> {
+  return apiFetch<TrendTaskRunObservabilitySummary>(
+    `/api/v1/projects/${projectId}/trend-task-runs/summary/`,
+  )
+}
+
+/**
+ * Fetch persisted trend pipeline task runs for a project.
+ *
+ * @param projectId - Numeric project identifier from the Django API.
+ * @returns Persisted project-scoped trend task runs ordered by newest first.
+ */
+export async function getProjectTrendTaskRuns(
+  projectId: number,
+): Promise<TrendTaskRun[]> {
+  return apiFetch<TrendTaskRun[]>(
+    `/api/v1/projects/${projectId}/trend-task-runs/`,
   )
 }
 

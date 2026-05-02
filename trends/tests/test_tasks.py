@@ -17,6 +17,8 @@ from trends.models import (
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
+    TrendTaskRun,
+    TrendTaskRunStatus,
     TopicVelocitySnapshot,
 )
 from trends.tasks import (
@@ -392,6 +394,70 @@ def test_recompute_source_diversity_persists_entropy_breakdown_and_alerts(
             "message": "Three authors account for most of your content.",
         },
     ]
+
+
+def test_recompute_source_diversity_records_skipped_trend_task_run_for_empty_window(
+    source_plugin_context,
+):
+    project = source_plugin_context.project
+
+    result = recompute_source_diversity(_require_pk(project))
+
+    task_run = TrendTaskRun.objects.get(
+        project=project,
+        task_name="recompute_source_diversity",
+    )
+    assert result["content_count"] == 0
+    assert task_run.status == TrendTaskRunStatus.SKIPPED
+    assert task_run.finished_at is not None
+    assert task_run.latency_ms is not None
+    assert task_run.summary == {
+        "project_id": _require_pk(project),
+        "snapshot_id": _require_pk(
+            SourceDiversitySnapshot.objects.get(project=project)
+        ),
+        "content_count": 0,
+        "alert_count": 0,
+    }
+
+
+def test_recompute_topic_centroid_records_failed_trend_task_run(
+    source_plugin_context, mocker
+):
+    project = source_plugin_context.project
+    mocker.patch("content.signals.queue_topic_centroid_recompute")
+    mocker.patch("trends.tasks.delete_topic_centroid")
+    mocker.patch("trends.tasks.embed_text", side_effect=RuntimeError("embed failed"))
+
+    for index in range(TOPIC_CENTROID_MIN_UPVOTES):
+        content = Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url=f"https://example.com/failing-centroid-{index}",
+            title=f"Failing centroid {index}",
+            author="Author",
+            source_plugin=SourcePluginName.RSS,
+            published_date="2026-04-20T12:00:00Z",
+            content_text="Manual content body",
+        )
+        UserFeedback.objects.create(
+            project=project,
+            content=content,
+            user=source_plugin_context.user,
+            feedback_type=FeedbackType.UPVOTE,
+        )
+
+    with pytest.raises(RuntimeError, match="embed failed"):
+        recompute_topic_centroid(_require_pk(project))
+
+    task_run = TrendTaskRun.objects.get(
+        project=project,
+        task_name="recompute_topic_centroid",
+    )
+    assert task_run.status == TrendTaskRunStatus.FAILED
+    assert task_run.error_message == "embed failed"
+    assert task_run.finished_at is not None
+    assert task_run.summary == {}
 
 
 def test_generate_original_content_ideas_creates_grounded_pending_idea(

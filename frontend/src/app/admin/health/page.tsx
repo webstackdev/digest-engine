@@ -11,6 +11,8 @@ import {
   getProjectSourceDiversitySummary,
   getProjectTopicCentroidSnapshots,
   getProjectTopicCentroidSummary,
+  getProjectTrendTaskRuns,
+  getProjectTrendTaskRunSummary,
 } from "@/lib/api"
 import type {
   HealthStatus,
@@ -18,8 +20,34 @@ import type {
   SourceDiversitySnapshot,
   TopicCentroidObservabilitySummary,
   TopicCentroidSnapshot,
+  TrendTaskRun,
+  TrendTaskRunObservabilitySummary,
 } from "@/lib/types"
 import { formatDate, healthTone, selectProject } from "@/lib/view-helpers"
+
+const TREND_TASK_LABELS: Record<string, string> = {
+  recompute_topic_centroid: "Topic centroid",
+  recompute_topic_clusters: "Topic clusters",
+  recompute_topic_velocity: "Topic velocity",
+  recompute_source_diversity: "Source diversity",
+  generate_theme_suggestions: "Theme suggestions",
+  generate_original_content_ideas: "Original content ideas",
+}
+
+const TREND_TASK_DETAIL_LABELS: Record<string, string> = {
+  feedback_count: "feedback",
+  upvote_count: "upvotes",
+  downvote_count: "downvotes",
+  contents_considered: "content",
+  clusters_updated: "clusters updated",
+  clusters_evaluated: "clusters evaluated",
+  snapshots_created: "snapshots",
+  content_count: "content",
+  alert_count: "alerts",
+  created: "created",
+  updated: "updated",
+  skipped: "skipped",
+}
 
 type HealthPageProps = {
   /** Search params promise containing the optional `project` selector. */
@@ -98,6 +126,27 @@ export function deriveSourceDiversityStatus(
 }
 
 /**
+ * Map trend task run summaries onto the shared health badge states.
+ *
+ * @param summary - Project-level trend pipeline run payload.
+ * @returns The badge state for the trend pipeline section.
+ */
+export function deriveTrendTaskRunStatus(
+  summary: TrendTaskRunObservabilitySummary,
+): HealthStatus {
+  if (summary.latest_runs.length === 0) {
+    return "idle"
+  }
+  if (summary.latest_runs.some((taskRun) => taskRun.status === "failed")) {
+    return "failing"
+  }
+  if (summary.latest_runs.some((taskRun) => taskRun.status === "started")) {
+    return "degraded"
+  }
+  return "healthy"
+}
+
+/**
  * Format a centroid drift value as a one-decimal percentage.
  *
  * @param value - Normalized cosine-distance drift or `null` when unavailable.
@@ -108,6 +157,47 @@ export function formatDriftPercent(value: number | null) {
     return "n/a"
   }
   return `${(value * 100).toFixed(1)}%`
+}
+
+function formatLatency(value: number | null) {
+  if (value === null) {
+    return "n/a"
+  }
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}s`
+  }
+  return `${value}ms`
+}
+
+function trendTaskRunTone(status: TrendTaskRun["status"]) {
+  if (status === "failed") {
+    return "negative"
+  }
+  if (status === "started") {
+    return "warning"
+  }
+  if (status === "skipped") {
+    return "neutral"
+  }
+  return "positive"
+}
+
+function formatTrendTaskName(taskName: string) {
+  return TREND_TASK_LABELS[taskName] ?? taskName.replaceAll("_", " ")
+}
+
+function buildTrendTaskRunSummaryText(taskRun: TrendTaskRun) {
+  const detailParts = Object.entries(taskRun.summary)
+    .filter(([key, value]) => key !== "project_id" && key !== "snapshot_id" && value !== null)
+    .filter(([, value]) => ["string", "number", "boolean"].includes(typeof value))
+    .slice(0, 3)
+    .map(([key, value]) => `${TREND_TASK_DETAIL_LABELS[key] ?? key.replaceAll("_", " ")} ${String(value)}`)
+
+  if (detailParts.length === 0) {
+    return "No task summary recorded yet."
+  }
+
+  return detailParts.join(" • ")
 }
 
 /**
@@ -203,6 +293,8 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
     centroidSnapshots,
     sourceDiversitySummary,
     sourceDiversitySnapshots,
+    trendTaskRuns,
+    trendTaskRunSummary,
   ] = await Promise.all([
     getProjectSourceConfigs(selectedProject.id),
     getProjectIngestionRuns(selectedProject.id),
@@ -210,6 +302,8 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
     getProjectTopicCentroidSnapshots(selectedProject.id),
     getProjectSourceDiversitySummary(selectedProject.id),
     getProjectSourceDiversitySnapshots(selectedProject.id),
+    getProjectTrendTaskRuns(selectedProject.id),
+    getProjectTrendTaskRunSummary(selectedProject.id),
   ])
   const sortedCentroidSnapshots = centroidSnapshots
     .slice()
@@ -231,6 +325,13 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
   const sourceDiversityTrendPoints = buildSourceDiversityTrendPoints(
     visibleSourceDiversitySnapshots,
   )
+  const sortedTrendTaskRuns = trendTaskRuns
+    .slice()
+    .sort(
+      (left, right) =>
+        new Date(right.started_at).getTime() - new Date(left.started_at).getTime(),
+    )
+  const visibleTrendTaskRuns = sortedTrendTaskRuns.slice(0, 12)
 
   const latestRunByPlugin = new Map<string, (typeof ingestionRuns)[number]>()
   for (const ingestionRun of ingestionRuns) {
@@ -346,6 +447,185 @@ export default async function HealthPage({ searchParams }: HealthPageProps) {
         ) : (
           <div className="mt-4 rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
             No centroid snapshots exist for this project yet.
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Trend pipeline runs
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              The latest persisted run for each tracked trend task, including task outcome, runtime, and any recorded failure message.
+            </p>
+          </div>
+          <StatusBadge tone={healthTone(deriveTrendTaskRunStatus(trendTaskRunSummary))}>
+            {deriveTrendTaskRunStatus(trendTaskRunSummary)}
+          </StatusBadge>
+        </div>
+
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="rounded-panel bg-muted/60 px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Persisted runs
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-foreground">
+              {trendTaskRunSummary.run_count}
+            </p>
+          </div>
+          <div className="rounded-panel bg-muted/60 px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Latest task rows
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-foreground">
+              {trendTaskRunSummary.latest_runs.length}
+            </p>
+          </div>
+          <div className="rounded-panel bg-muted/60 px-4 py-4">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+              Failed runs
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-foreground">
+              {trendTaskRunSummary.failed_run_count}
+            </p>
+          </div>
+        </div>
+
+        {trendTaskRunSummary.latest_runs.length === 0 ? (
+          <div className="mt-4 rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
+            No trend pipeline runs have been persisted for this project yet.
+          </div>
+        ) : (
+          <>
+            {visibleTrendTaskRuns.length > 0 ? (
+              <Link
+                aria-label="Open trend task run history"
+                className="mt-4 block rounded-panel bg-muted/60 px-4 py-4 transition hover:bg-muted"
+                href={`/admin/health?project=${selectedProject.id}#trend-task-run-history`}
+              >
+                <div className="flex items-center justify-between gap-3 text-sm text-muted">
+                  <span>Recent task history</span>
+                  <span>Last {visibleTrendTaskRuns.length} persisted runs</span>
+                </div>
+              </Link>
+            ) : null}
+
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-border/12 text-sm text-muted">
+                    <th className="px-3 py-4 font-medium">Task</th>
+                    <th className="px-3 py-4 font-medium">Status</th>
+                    <th className="px-3 py-4 font-medium">Started</th>
+                    <th className="px-3 py-4 font-medium">Duration</th>
+                    <th className="px-3 py-4 font-medium">Summary</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trendTaskRunSummary.latest_runs.map((taskRun) => (
+                    <tr
+                      key={taskRun.id}
+                      className="border-b border-border/12 align-top last:border-b-0"
+                    >
+                      <td className="px-3 py-4 text-sm font-medium text-foreground">
+                        {formatTrendTaskName(taskRun.task_name)}
+                      </td>
+                      <td className="px-3 py-4">
+                        <StatusBadge tone={trendTaskRunTone(taskRun.status)}>
+                          {taskRun.status}
+                        </StatusBadge>
+                      </td>
+                      <td className="px-3 py-4 text-sm text-foreground">
+                        {formatDate(taskRun.started_at)}
+                      </td>
+                      <td className="px-3 py-4 text-sm text-foreground">
+                        {formatLatency(taskRun.latency_ms)}
+                      </td>
+                      <td className="px-3 py-4 text-sm leading-6 text-muted">
+                        <p>{buildTrendTaskRunSummaryText(taskRun)}</p>
+                        {taskRun.error_message ? (
+                          <p className="mt-1 text-destructive">{taskRun.error_message}</p>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </section>
+
+      <section
+        className="rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl"
+        id="trend-task-run-history"
+      >
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Trend task run history
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-muted">
+              Recent persisted executions across the trend pipeline, including run duration, summary output, and the latest recorded failures.
+            </p>
+          </div>
+          <span className="text-sm text-muted">
+            Showing {visibleTrendTaskRuns.length} of {trendTaskRunSummary.run_count} runs
+          </span>
+        </div>
+
+        {visibleTrendTaskRuns.length === 0 ? (
+          <div className="mt-4 rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
+            No trend task run history exists for this project yet.
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-border/12 text-sm text-muted">
+                  <th className="px-3 py-4 font-medium">Started</th>
+                  <th className="px-3 py-4 font-medium">Task</th>
+                  <th className="px-3 py-4 font-medium">Status</th>
+                  <th className="px-3 py-4 font-medium">Finished</th>
+                  <th className="px-3 py-4 font-medium">Duration</th>
+                  <th className="px-3 py-4 font-medium">Summary</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleTrendTaskRuns.map((taskRun) => (
+                  <tr
+                    key={taskRun.id}
+                    className="border-b border-border/12 align-top last:border-b-0"
+                  >
+                    <td className="px-3 py-4 text-sm text-foreground">
+                      {formatDate(taskRun.started_at)}
+                    </td>
+                    <td className="px-3 py-4 text-sm font-medium text-foreground">
+                      {formatTrendTaskName(taskRun.task_name)}
+                    </td>
+                    <td className="px-3 py-4">
+                      <StatusBadge tone={trendTaskRunTone(taskRun.status)}>
+                        {taskRun.status}
+                      </StatusBadge>
+                    </td>
+                    <td className="px-3 py-4 text-sm text-foreground">
+                      {formatDate(taskRun.finished_at)}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-foreground">
+                      {formatLatency(taskRun.latency_ms)}
+                    </td>
+                    <td className="px-3 py-4 text-sm leading-6 text-muted">
+                      <p>{buildTrendTaskRunSummaryText(taskRun)}</p>
+                      {taskRun.error_message ? (
+                        <p className="mt-1 text-destructive">{taskRun.error_message}</p>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
