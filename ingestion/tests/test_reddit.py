@@ -63,6 +63,9 @@ def test_reddit_fetch_new_content_deduplicates_and_filters_by_since(
         title="  Duplicate title  ",
         selftext="",
         author="redditor",
+        num_comments=7,
+        score=12,
+        upvote_ratio=0.91,
         created_utc=now.timestamp(),
     )
     duplicate_submission = SimpleNamespace(
@@ -72,6 +75,9 @@ def test_reddit_fetch_new_content_deduplicates_and_filters_by_since(
         title="Duplicate title",
         selftext="Ignored duplicate",
         author="redditor",
+        num_comments=7,
+        score=12,
+        upvote_ratio=0.91,
         created_utc=now.timestamp(),
     )
     subreddit = SimpleNamespace(
@@ -89,6 +95,14 @@ def test_reddit_fetch_new_content_deduplicates_and_filters_by_since(
     assert items[0].author == "redditor"
     assert items[0].content_text == "Duplicate title"
     assert items[0].source_plugin == SourcePluginName.REDDIT
+    assert items[0].source_metadata == {
+        "comment_count": 7,
+        "permalink": "/r/python/comments/dup-1/test",
+        "score": 12,
+        "submission_id": duplicate_id,
+        "subreddit": "python",
+        "upvote_ratio": 0.91,
+    }
 
 
 def test_reddit_health_check_returns_true(reddit_context, mocker):

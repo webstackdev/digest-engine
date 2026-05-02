@@ -103,6 +103,10 @@ def test_entity_admin_latest_snapshot_summary_renders_components(source_admin_co
         entity=entity,
         project=source_admin_context.project,
         mention_component=0.7,
+        engagement_component=0.65,
+        recency_component=0.6,
+        source_quality_component=0.55,
+        cross_newsletter_component=0.45,
         feedback_component=0.55,
         duplicate_component=0.4,
         decayed_prior=0.5,
@@ -113,6 +117,10 @@ def test_entity_admin_latest_snapshot_summary_renders_components(source_admin_co
     rendered = admin_instance.latest_snapshot_summary(entity)
 
     assert "M 70.0%" in rendered
+    assert "E 65.0%" in rendered
+    assert "R 60.0%" in rendered
+    assert "S 55.0%" in rendered
+    assert "X 45.0%" in rendered
     assert "F 55.0%" in rendered
     assert "D 40.0%" in rendered
     assert "Carry 50.0%" in rendered
@@ -131,6 +139,10 @@ def test_entity_authority_snapshot_admin_helpers_render_expected_values(
         entity=entity,
         project=source_admin_context.project,
         mention_component=0.8,
+        engagement_component=0.7,
+        recency_component=0.6,
+        source_quality_component=0.5,
+        cross_newsletter_component=0.45,
         feedback_component=0.6,
         duplicate_component=0.4,
         decayed_prior=0.5,
@@ -144,6 +156,10 @@ def test_entity_authority_snapshot_admin_helpers_render_expected_values(
     assert "81.0%" in rendered_score
     assert "green" in rendered_score
     assert "M 80.0%" in rendered_components
+    assert "E 70.0%" in rendered_components
+    assert "R 60.0%" in rendered_components
+    assert "S 50.0%" in rendered_components
+    assert "X 45.0%" in rendered_components
     assert "F 60.0%" in rendered_components
 
 

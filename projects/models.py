@@ -372,6 +372,13 @@ class ProjectConfig(models.Model):
     project = models.OneToOneField(
         Project, on_delete=models.CASCADE, related_name="config"
     )
+    authority_weight_mention = models.FloatField(default=0.20)
+    authority_weight_engagement = models.FloatField(default=0.15)
+    authority_weight_recency = models.FloatField(default=0.15)
+    authority_weight_source_quality = models.FloatField(default=0.15)
+    authority_weight_cross_newsletter = models.FloatField(default=0.20)
+    authority_weight_feedback = models.FloatField(default=0.10)
+    authority_weight_duplicate = models.FloatField(default=0.05)
     upvote_authority_weight = models.FloatField(default=0.1)
     downvote_authority_weight = models.FloatField(default=-0.05)
     authority_decay_rate = models.FloatField(default=0.95)

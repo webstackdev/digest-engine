@@ -78,6 +78,16 @@ class EntityAdmin(admin.ModelAdmin):
         if latest_snapshot is None:
             return "-"
         mention_value = f"{_score_to_percent(latest_snapshot.mention_component):.1f}%"
+        engagement_value = (
+            f"{_score_to_percent(latest_snapshot.engagement_component):.1f}%"
+        )
+        recency_value = f"{_score_to_percent(latest_snapshot.recency_component):.1f}%"
+        source_quality_value = (
+            f"{_score_to_percent(latest_snapshot.source_quality_component):.1f}%"
+        )
+        cross_newsletter_value = (
+            f"{_score_to_percent(latest_snapshot.cross_newsletter_component):.1f}%"
+        )
         feedback_value = f"{_score_to_percent(latest_snapshot.feedback_component):.1f}%"
         duplicate_value = (
             f"{_score_to_percent(latest_snapshot.duplicate_component):.1f}%"
@@ -85,14 +95,23 @@ class EntityAdmin(admin.ModelAdmin):
         decayed_value = f"{_score_to_percent(latest_snapshot.decayed_prior):.1f}%"
         return format_html(
             (
-                '<span title="Mention {}, Feedback {}, Duplicate {}, Carry {}">'
-                "M {} | F {} | D {} | Carry {}</span>"
+                '<span title="Mention {}, Engagement {}, Recency {}, Source {}, '
+                'Cross-newsletter {}, Feedback {}, Duplicate {}, Carry {}">'
+                "M {} | E {} | R {} | S {} | X {} | F {} | D {} | Carry {}</span>"
             ),
             mention_value,
+            engagement_value,
+            recency_value,
+            source_quality_value,
+            cross_newsletter_value,
             feedback_value,
             duplicate_value,
             decayed_value,
             mention_value,
+            engagement_value,
+            recency_value,
+            source_quality_value,
+            cross_newsletter_value,
             feedback_value,
             duplicate_value,
             decayed_value,
@@ -130,12 +149,22 @@ class EntityAuthoritySnapshotAdmin(admin.ModelAdmin):
         """Render the stored authority components in a compact summary."""
 
         mention_value = f"{_score_to_percent(obj.mention_component):.1f}%"
+        engagement_value = f"{_score_to_percent(obj.engagement_component):.1f}%"
+        recency_value = f"{_score_to_percent(obj.recency_component):.1f}%"
+        source_quality_value = f"{_score_to_percent(obj.source_quality_component):.1f}%"
+        cross_newsletter_value = (
+            f"{_score_to_percent(obj.cross_newsletter_component):.1f}%"
+        )
         feedback_value = f"{_score_to_percent(obj.feedback_component):.1f}%"
         duplicate_value = f"{_score_to_percent(obj.duplicate_component):.1f}%"
         decayed_value = f"{_score_to_percent(obj.decayed_prior):.1f}%"
         return format_html(
-            "M {} | F {} | D {} | Carry {}",
+            "M {} | E {} | R {} | S {} | X {} | F {} | D {} | Carry {}",
             mention_value,
+            engagement_value,
+            recency_value,
+            source_quality_value,
+            cross_newsletter_value,
             feedback_value,
             duplicate_value,
             decayed_value,

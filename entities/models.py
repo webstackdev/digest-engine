@@ -121,9 +121,14 @@ class EntityAuthoritySnapshot(models.Model):
     )
     computed_at = models.DateTimeField(auto_now_add=True)
     mention_component = models.FloatField()
+    engagement_component = models.FloatField(default=0.0)
+    recency_component = models.FloatField(default=0.0)
+    source_quality_component = models.FloatField(default=0.0)
+    cross_newsletter_component = models.FloatField(default=0.0)
     feedback_component = models.FloatField()
     duplicate_component = models.FloatField()
     decayed_prior = models.FloatField()
+    weights_at_compute = models.JSONField(default=dict, blank=True)
     final_score = models.FloatField()
 
     class Meta:

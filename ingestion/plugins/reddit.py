@@ -52,6 +52,14 @@ class RedditSourcePlugin(SourcePlugin):
                     published_date=published_date,
                     content_text=(submission.selftext or submission.title).strip(),
                     source_plugin=SourcePluginName.REDDIT,
+                    source_metadata={
+                        "comment_count": getattr(submission, "num_comments", 0) or 0,
+                        "permalink": getattr(submission, "permalink", "") or "",
+                        "score": getattr(submission, "score", 0) or 0,
+                        "submission_id": submission.id,
+                        "subreddit": self.source_config.config["subreddit"],
+                        "upvote_ratio": getattr(submission, "upvote_ratio", 0.0) or 0.0,
+                    },
                 )
             )
         return items
