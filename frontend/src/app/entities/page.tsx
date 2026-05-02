@@ -1,7 +1,7 @@
 import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell"
-import { StatusBadge } from "@/components/status-badge"
+import { StatusBadge } from "@/components/elements/StatusBadge"
+import { AppShell } from "@/components/layout/AppShell"
 import {
   getProjectEntities,
   getProjectEntityCandidates,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/view-helpers"
 
 type EntitiesPageProps = {
+  /** Search params promise containing the optional `project`, `error`, and `message` values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -25,10 +26,6 @@ type EntitiesPageProps = {
  * list, and renders both the create form and update/delete controls for existing entities.
  * When no project is available for the configured API user, it returns a guarded empty
  * state instead of issuing any project-scoped entity requests.
- *
- * @param props - Async server component props from the App Router.
- * @param props.searchParams - Search params promise containing the optional `project`, `error`, and `message` values.
- * @returns The rendered entity management page or the no-project empty state.
  */
 export default async function EntitiesPage({
   searchParams,
@@ -45,7 +42,7 @@ export default async function EntitiesPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -65,15 +62,15 @@ export default async function EntitiesPage({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
+        <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
+        <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.65fr)]">
         <div className="space-y-4">
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Create entity</p>
             <form className="space-y-4" action="/api/entities" method="POST">
               <input type="hidden" name="projectId" value={selectedProject.id} />
@@ -84,13 +81,13 @@ export default async function EntitiesPage({
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-ink">Name</span>
-                  <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="name" required />
+                  <span className="text-sm font-medium text-foreground">Name</span>
+                  <input className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="name" required />
                 </label>
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-ink">Type</span>
+                  <span className="text-sm font-medium text-foreground">Type</span>
                   <select
-                    className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                    className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                     name="type"
                     defaultValue="vendor"
                   >
@@ -101,53 +98,53 @@ export default async function EntitiesPage({
                 </label>
               </div>
               <label className="grid gap-2">
-                <span className="text-sm font-medium text-ink">Description</span>
+                <span className="text-sm font-medium text-foreground">Description</span>
                 <textarea
-                  className="min-h-30 w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                  className="min-h-30 w-full resize-y rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                   name="description"
                 />
               </label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-ink">Website URL</span>
-                  <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="website_url" type="url" />
+                  <span className="text-sm font-medium text-foreground">Website URL</span>
+                  <input className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="website_url" type="url" />
                 </label>
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-ink">GitHub URL</span>
-                  <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="github_url" type="url" />
+                  <span className="text-sm font-medium text-foreground">GitHub URL</span>
+                  <input className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="github_url" type="url" />
                 </label>
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-ink">LinkedIn URL</span>
-                  <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="linkedin_url" type="url" />
+                  <span className="text-sm font-medium text-foreground">LinkedIn URL</span>
+                  <input className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="linkedin_url" type="url" />
                 </label>
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-ink">Bluesky handle</span>
-                  <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="bluesky_handle" />
+                  <span className="text-sm font-medium text-foreground">Bluesky handle</span>
+                  <input className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="bluesky_handle" />
                 </label>
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-ink">Mastodon handle</span>
-                  <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="mastodon_handle" />
+                  <span className="text-sm font-medium text-foreground">Mastodon handle</span>
+                  <input className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="mastodon_handle" />
                 </label>
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-ink">Twitter handle</span>
-                  <input className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="twitter_handle" />
+                  <span className="text-sm font-medium text-foreground">Twitter handle</span>
+                  <input className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15" name="twitter_handle" />
                 </label>
               </div>
-              <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
+              <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                 Create entity
               </button>
             </form>
           </article>
 
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <div className="space-y-1">
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Candidate queue</p>
-              <h2 className="m-0 font-display text-title-sm font-bold text-ink">
+              <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
                 Pending entity candidates
               </h2>
             </div>
             {entityCandidates.length === 0 ? (
-              <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+              <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
                 No pending entity candidates right now.
               </div>
             ) : (
@@ -155,11 +152,11 @@ export default async function EntitiesPage({
                 {entityCandidates.map((candidate) => (
                   <article
                     key={candidate.id}
-                    className="space-y-3 rounded-2xl border border-ink/10 bg-surface-strong/50 p-4"
+                    className="space-y-3 rounded-2xl border border-border/10 bg-muted/50 p-4"
                   >
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div>
-                        <h3 className="m-0 font-display text-lg font-bold text-ink">
+                        <h3 className="m-0 font-display text-lg font-bold text-foreground">
                           {candidate.name}
                         </h3>
                         <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
@@ -181,7 +178,7 @@ export default async function EntitiesPage({
                           value={`/entities?project=${selectedProject.id}`}
                         />
                         <input type="hidden" name="intent" value="accept" />
-                        <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105" type="submit">
+                        <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105" type="submit">
                           Accept
                         </button>
                       </form>
@@ -193,7 +190,7 @@ export default async function EntitiesPage({
                           value={`/entities?project=${selectedProject.id}`}
                         />
                         <input type="hidden" name="intent" value="reject" />
-                        <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-danger/25 bg-danger/12 px-4 py-3 text-sm font-medium text-danger-ink transition hover:bg-danger/16" type="submit">
+                        <button className="inline-flex min-h-11 items-center justify-center rounded-full border border-destructive/25 bg-destructive/12 px-4 py-3 text-sm font-medium text-destructive transition hover:bg-destructive/16" type="submit">
                           Reject
                         </button>
                       </form>
@@ -211,9 +208,9 @@ export default async function EntitiesPage({
                       />
                       <input type="hidden" name="intent" value="merge" />
                       <label className="grid gap-2">
-                        <span className="text-sm font-medium text-ink">Merge into existing entity</span>
+                        <span className="text-sm font-medium text-foreground">Merge into existing entity</span>
                         <select
-                          className="w-full rounded-2xl border border-ink/12 bg-surface/80 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                          className="w-full rounded-2xl border border-border/12 bg-card/80 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                           name="mergedInto"
                           defaultValue=""
                         >
@@ -225,7 +222,7 @@ export default async function EntitiesPage({
                           ))}
                         </select>
                       </label>
-                      <button className="inline-flex min-h-11 items-center justify-center self-end rounded-full border border-ink/12 bg-surface px-4 py-3 text-sm font-medium text-ink transition hover:border-primary/30 hover:bg-surface-strong/80" type="submit">
+                      <button className="inline-flex min-h-11 items-center justify-center self-end rounded-full border border-border/12 bg-card px-4 py-3 text-sm font-medium text-foreground transition hover:border-primary/30 hover:bg-muted/80" type="submit">
                         Merge
                       </button>
                     </form>
@@ -238,12 +235,12 @@ export default async function EntitiesPage({
 
         <div className="space-y-4">
           {entities.length === 0 ? (
-            <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+            <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
               No entities exist for this project yet.
             </div>
           ) : null}
           {entities.map((entity) => (
-            <article key={entity.id} className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+            <article key={entity.id} className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="font-display text-title-md font-bold">
@@ -264,7 +261,7 @@ export default async function EntitiesPage({
                 </div>
                 <StatusBadge tone="neutral">{entity.type}</StatusBadge>
               </div>
-              <section className="space-y-3 rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+              <section className="space-y-3 rounded-2xl border border-border/10 bg-muted/45 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                     Recent mentions
@@ -280,7 +277,7 @@ export default async function EntitiesPage({
                 ) : (
                   <ul className="m-0 grid list-none gap-3 p-0">
                     {entity.latest_mentions.map((mention) => (
-                      <li key={mention.id} className="rounded-2xl border border-ink/10 bg-surface/80 p-3">
+                      <li key={mention.id} className="rounded-2xl border border-border/10 bg-card/80 p-3">
                         <div className="flex flex-wrap gap-2 text-sm text-muted">
                           <span>{mention.content_title}</span>
                           <span>{mention.role}</span>
@@ -288,7 +285,7 @@ export default async function EntitiesPage({
                           <span>{Math.round(mention.confidence * 100)}% confidence</span>
                         </div>
                         {mention.span ? (
-                          <p className="mb-0 mt-2 text-sm leading-6 text-ink">
+                          <p className="mb-0 mt-2 text-sm leading-6 text-foreground">
                             Matched span: {mention.span}
                           </p>
                         ) : null}
@@ -315,18 +312,18 @@ export default async function EntitiesPage({
                 <input type="hidden" name="intent" value="update" />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-ink">Name</span>
+                    <span className="text-sm font-medium text-foreground">Name</span>
                     <input
-                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="name"
                       defaultValue={entity.name}
                       required
                     />
                   </label>
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-ink">Type</span>
+                    <span className="text-sm font-medium text-foreground">Type</span>
                     <select
-                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="type"
                       defaultValue={entity.type}
                     >
@@ -337,68 +334,68 @@ export default async function EntitiesPage({
                   </label>
                 </div>
                 <label className="grid gap-2">
-                  <span className="text-sm font-medium text-ink">Description</span>
+                  <span className="text-sm font-medium text-foreground">Description</span>
                   <textarea
-                    className="min-h-30 w-full resize-y rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                    className="min-h-30 w-full resize-y rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                     name="description"
                     defaultValue={entity.description}
                   />
                 </label>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-ink">Website URL</span>
+                    <span className="text-sm font-medium text-foreground">Website URL</span>
                     <input
-                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="website_url"
                       type="url"
                       defaultValue={entity.website_url}
                     />
                   </label>
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-ink">GitHub URL</span>
+                    <span className="text-sm font-medium text-foreground">GitHub URL</span>
                     <input
-                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="github_url"
                       type="url"
                       defaultValue={entity.github_url}
                     />
                   </label>
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-ink">LinkedIn URL</span>
+                    <span className="text-sm font-medium text-foreground">LinkedIn URL</span>
                     <input
-                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="linkedin_url"
                       type="url"
                       defaultValue={entity.linkedin_url}
                     />
                   </label>
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-ink">Bluesky handle</span>
+                    <span className="text-sm font-medium text-foreground">Bluesky handle</span>
                     <input
-                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="bluesky_handle"
                       defaultValue={entity.bluesky_handle}
                     />
                   </label>
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-ink">Mastodon handle</span>
+                    <span className="text-sm font-medium text-foreground">Mastodon handle</span>
                     <input
-                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="mastodon_handle"
                       defaultValue={entity.mastodon_handle}
                     />
                   </label>
                   <label className="grid gap-2">
-                    <span className="text-sm font-medium text-ink">Twitter handle</span>
+                    <span className="text-sm font-medium text-foreground">Twitter handle</span>
                     <input
-                      className="w-full rounded-2xl border border-ink/12 bg-surface-strong/70 px-4 py-3 text-ink outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
+                      className="w-full rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
                       name="twitter_handle"
                       defaultValue={entity.twitter_handle}
                     />
                   </label>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
+                  <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50" type="submit">
                     Save changes
                   </button>
                 </div>
@@ -415,7 +412,7 @@ export default async function EntitiesPage({
                   value={`/entities?project=${selectedProject.id}`}
                 />
                 <input type="hidden" name="intent" value="delete" />
-                <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-danger to-danger-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105" type="submit">
+                <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-destructive to-destructive px-4 py-3 text-sm font-medium text-destructive-foreground transition hover:brightness-105" type="submit">
                   Delete entity
                 </button>
               </form>

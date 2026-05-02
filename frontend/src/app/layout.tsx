@@ -1,19 +1,21 @@
 import "./globals.css"
 
 import type { Metadata } from "next"
-import { Fraunces, Space_Grotesk } from "next/font/google"
+import { Geist, Geist_Mono } from "next/font/google"
 import type { ReactNode } from "react"
 
-import { QueryProvider } from "@/components/query-provider"
+import { cn } from "@/lib/utils";
+import { QueryProvider } from "@/providers/QueryProvider"
+import { ThemeProvider } from "@/providers/ThemeProvider"
 
-const display = Fraunces({
-  variable: "--font-display-source",
-  subsets: ["latin"],
+const geistSans = Geist({
+  variable: '--font-geist-sans',
+  subsets: ['latin'],
 })
 
-const body = Space_Grotesk({
-  variable: "--font-body-source",
-  subsets: ["latin"],
+const geistMono = Geist_Mono({
+  variable: '--font-geist-mono', // This creates the CSS variable
+  subsets: ['latin'],
 })
 
 export const metadata: Metadata = {
@@ -25,13 +27,20 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
-  children,
-}: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${display.variable} ${body.variable} min-h-screen font-body text-ink antialiased`}>
-        <QueryProvider>{children}</QueryProvider>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        suppressHydrationWarning
+        className={cn(
+          geistSans.variable,
+          geistMono.variable,
+          "min-h-screen font-sans antialiased bg-background text-foreground"
+        )}
+      >
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <QueryProvider>{children}</QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

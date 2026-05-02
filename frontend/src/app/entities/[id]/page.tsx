@@ -1,7 +1,7 @@
 import Link from "next/link"
 
-import { AppShell } from "@/components/app-shell"
-import { StatusBadge } from "@/components/status-badge"
+import { StatusBadge } from "@/components/elements/StatusBadge"
+import { AppShell } from "@/components/layout/AppShell"
 import {
   getProjectEntities,
   getProjectEntity,
@@ -18,7 +18,9 @@ import {
 } from "@/lib/view-helpers"
 
 type EntityDetailPageProps = {
+  /** Route params promise containing the entity id. */
   params: Promise<{ id: string }>
+  /** Search params promise containing the optional `project`, `error`, and `message` values. */
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
 
@@ -27,11 +29,6 @@ type EntityDetailPageProps = {
  *
  * The page joins the entity record with its extracted mention history so editors can
  * inspect how the pipeline is linking content to the entity over time.
- *
- * @param props - Async server component props from the App Router.
- * @param props.params - Route params promise containing the entity id.
- * @param props.searchParams - Search params promise containing the optional `project`, `error`, and `message` values.
- * @returns The rendered entity detail page or the no-project empty state.
  */
 export default async function EntityDetailPage({
   params,
@@ -49,7 +46,7 @@ export default async function EntityDetailPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -77,19 +74,19 @@ export default async function EntityDetailPage({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <div className="rounded-panel bg-danger/14 px-4 py-4 text-sm leading-6 text-danger-ink">{errorMessage}</div>
+        <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">{errorMessage}</div>
       ) : null}
       {successMessage ? (
-        <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
+        <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.9fr)]">
         <div className="space-y-4">
-          <article className="space-y-5 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-5 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="space-y-3">
                 <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Tracked entity</p>
-                <h2 className="m-0 font-display text-title-lg font-bold text-ink">
+                <h2 className="m-0 font-display text-title-lg font-bold text-foreground">
                   {entity.name}
                 </h2>
                 <div className="flex flex-wrap gap-2 text-sm text-muted">
@@ -102,36 +99,36 @@ export default async function EntityDetailPage({
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3 rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+              <div className="space-y-3 rounded-2xl border border-border/10 bg-muted/45 p-4">
                 <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Description
                 </h3>
-                <p className="m-0 text-sm leading-7 text-ink">
+                <p className="m-0 text-sm leading-7 text-foreground">
                   {entity.description || "No description is set for this entity yet."}
                 </p>
               </div>
-              <div className="space-y-3 rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+              <div className="space-y-3 rounded-2xl border border-border/10 bg-muted/45 p-4">
                 <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Identity links
                 </h3>
                 <ul className="m-0 grid list-none gap-2 p-0 text-sm text-muted">
                   {entity.website_url ? (
                     <li>
-                      <a className="text-ink transition hover:text-primary" href={entity.website_url} target="_blank">
+                      <a className="text-foreground transition hover:text-primary" href={entity.website_url} target="_blank">
                         Website
                       </a>
                     </li>
                   ) : null}
                   {entity.github_url ? (
                     <li>
-                      <a className="text-ink transition hover:text-primary" href={entity.github_url} target="_blank">
+                      <a className="text-foreground transition hover:text-primary" href={entity.github_url} target="_blank">
                         GitHub
                       </a>
                     </li>
                   ) : null}
                   {entity.linkedin_url ? (
                     <li>
-                      <a className="text-ink transition hover:text-primary" href={entity.linkedin_url} target="_blank">
+                      <a className="text-foreground transition hover:text-primary" href={entity.linkedin_url} target="_blank">
                         LinkedIn
                       </a>
                     </li>
@@ -152,11 +149,11 @@ export default async function EntityDetailPage({
             </div>
           </article>
 
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Authority view</p>
-                <h3 className="m-0 font-display text-title-sm font-bold text-ink">
+                <h3 className="m-0 font-display text-title-sm font-bold text-foreground">
                   Current score and history
                 </h3>
               </div>
@@ -166,10 +163,10 @@ export default async function EntityDetailPage({
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
-              <div className="space-y-4 rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+              <div className="space-y-4 rounded-2xl border border-border/10 bg-muted/45 p-4">
                 <div className="space-y-1">
                   <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">Authority score</p>
-                  <p className="m-0 font-display text-4xl font-bold text-ink">
+                  <p className="m-0 font-display text-4xl font-bold text-foreground">
                     {formatPercentScore(entity.authority_score)}
                   </p>
                   <p className="m-0 text-sm leading-6 text-muted">
@@ -205,7 +202,7 @@ export default async function EntityDetailPage({
                 )}
               </div>
 
-              <div className="space-y-4 rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+              <div className="space-y-4 rounded-2xl border border-border/10 bg-muted/45 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                     Latest components
@@ -234,7 +231,7 @@ export default async function EntityDetailPage({
             {authorityHistory.length > 0 ? (
               <ul className="m-0 grid list-none gap-3 p-0">
                 {authorityHistory.slice(0, 5).map((snapshot) => (
-                  <li key={snapshot.id} className="rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+                  <li key={snapshot.id} className="rounded-2xl border border-border/10 bg-muted/45 p-4">
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div className="flex flex-wrap gap-2 text-sm text-muted">
                         <span>{formatDate(snapshot.computed_at)}</span>
@@ -253,28 +250,28 @@ export default async function EntityDetailPage({
             ) : null}
           </article>
 
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Mention history</p>
-                <h3 className="m-0 font-display text-title-sm font-bold text-ink">
+                <h3 className="m-0 font-display text-title-sm font-bold text-foreground">
                   Extracted mentions linked to this entity
                 </h3>
               </div>
               <span className="text-sm text-muted">{mentions.length} total mention{mentions.length === 1 ? "" : "s"}</span>
             </div>
             {mentions.length === 0 ? (
-              <div className="rounded-panel bg-ink/6 px-4 py-4 text-sm leading-6 text-muted">
+              <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
                 No extracted mentions exist for this entity yet.
               </div>
             ) : (
               <ul className="m-0 grid list-none gap-3 p-0">
                 {mentions.map((mention) => (
-                  <li key={mention.id} className="rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+                  <li key={mention.id} className="rounded-2xl border border-border/10 bg-muted/45 p-4">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                       <div className="space-y-2">
                         <Link
-                          className="font-medium text-ink transition hover:text-primary"
+                          className="font-medium text-foreground transition hover:text-primary"
                           href={`/content/${mention.content_id}?project=${selectedProject.id}`}
                         >
                           {mention.content_title}
@@ -287,7 +284,7 @@ export default async function EntityDetailPage({
                         </div>
                       </div>
                       {mention.span ? (
-                        <span className="inline-flex items-center rounded-full border border-ink/12 bg-surface px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted">
+                        <span className="inline-flex items-center rounded-full border border-border/12 bg-card px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-muted">
                           {mention.span}
                         </span>
                       ) : null}
@@ -300,11 +297,11 @@ export default async function EntityDetailPage({
         </div>
 
         <div className="space-y-4">
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Navigation</p>
             <div className="flex flex-wrap gap-2">
               <Link
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary-strong px-4 py-3 text-sm font-medium text-white transition hover:brightness-105"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105"
                 href={`/entities?project=${selectedProject.id}`}
               >
                 Back to entities
@@ -312,10 +309,10 @@ export default async function EntityDetailPage({
             </div>
           </article>
 
-          <article className="space-y-4 rounded-3xl border border-ink/12 bg-surface/85 p-5 shadow-panel backdrop-blur-xl">
+          <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
             <div>
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Related entities</p>
-              <h3 className="m-0 font-display text-title-sm font-bold text-ink">
+              <h3 className="m-0 font-display text-title-sm font-bold text-foreground">
                 Same-project entities
               </h3>
             </div>
@@ -326,9 +323,9 @@ export default async function EntityDetailPage({
             ) : (
               <ul className="m-0 grid list-none gap-3 p-0">
                 {siblingEntities.slice(0, 6).map((siblingEntity) => (
-                  <li key={siblingEntity.id} className="rounded-2xl border border-ink/10 bg-surface-strong/45 p-4">
+                  <li key={siblingEntity.id} className="rounded-2xl border border-border/10 bg-muted/45 p-4">
                     <Link
-                      className="font-medium text-ink transition hover:text-primary"
+                      className="font-medium text-foreground transition hover:text-primary"
                       href={`/entities/${siblingEntity.id}?project=${selectedProject.id}`}
                     >
                       {siblingEntity.name}
@@ -375,9 +372,9 @@ function AuthorityComponentCard({
   value: number
 }) {
   return (
-    <div className="rounded-2xl border border-ink/10 bg-surface/80 p-4">
+    <div className="rounded-2xl border border-border/10 bg-card/80 p-4">
       <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">{label}</p>
-      <p className="mt-2 mb-0 text-2xl font-bold text-ink">{formatPercentScore(value)}</p>
+      <p className="mt-2 mb-0 text-2xl font-bold text-foreground">{formatPercentScore(value)}</p>
     </div>
   )
 }

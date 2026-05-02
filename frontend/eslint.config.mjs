@@ -1,7 +1,9 @@
+// For more info, see https://github.com/storybookjs/eslint-plugin-storybook#configuration-flat-config-format
 import js from "@eslint/js"
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals"
 import eslintConfigPrettier from "eslint-config-prettier/flat"
 import simpleImportSortPlugin from "eslint-plugin-simple-import-sort"
+import storybook from "eslint-plugin-storybook"
 import tseslint from "typescript-eslint"
 
 export default tseslint.config(
@@ -10,6 +12,7 @@ export default tseslint.config(
       ".next/**",
       "coverage/**",
       "node_modules/**",
+      "storybook-static/**",
       "next-env.d.ts",
       "tsconfig.tsbuildinfo",
     ],
@@ -35,4 +38,11 @@ export default tseslint.config(
     },
   },
   eslintConfigPrettier,
+  storybook.configs["flat/recommended"],
+  {
+    files: [".storybook/main.ts"],
+    rules: {
+      "storybook/no-uninstalled-addons": "off",
+    },
+  },
 )
