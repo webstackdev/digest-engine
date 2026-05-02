@@ -35,6 +35,14 @@ CELERY_BEAT_SCHEDULE = {
         "task": "core.tasks.run_all_topic_cluster_recomputations",
         "schedule": crontab(hour=4, minute=0),
     },
+    "run-all-entity-candidate-clustering-nightly": {
+        "task": "entities.tasks.run_all_entity_candidate_clustering",
+        "schedule": crontab(hour=4, minute=30),
+    },
+    "run-all-entity-candidate-auto-promotions-nightly": {
+        "task": "entities.tasks.run_all_entity_candidate_auto_promotions",
+        "schedule": crontab(hour=4, minute=45),
+    },
 }
 
 __all__ = [

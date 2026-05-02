@@ -13,16 +13,16 @@ from core.api import (
     build_crud_action_overrides,
     document_project_owned_viewset,
 )
-from entities.extraction import (
-    accept_entity_candidate,
-    merge_entity_candidate,
-    reject_entity_candidate,
-)
 from core.permissions import (
     IsProjectAdmin,
     IsProjectContributor,
     IsProjectMember,
     IsProjectMemberWritable,
+)
+from entities.extraction import (
+    accept_entity_candidate,
+    merge_entity_candidate,
+    reject_entity_candidate,
 )
 from entities.models import Entity, EntityCandidate, EntityMention
 from entities.serializers import (
@@ -55,6 +55,7 @@ class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     queryset = (
         Entity.objects.select_related("project")
         .annotate(mention_count=Count("mentions", distinct=True))
+        .prefetch_related("identity_claims")
         .prefetch_related(
             Prefetch(
                 "mentions",
@@ -180,7 +181,7 @@ class EntityCandidateViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
         """Accept an entity candidate and return its updated representation."""
 
         candidate = self.get_object()
-        accept_entity_candidate(candidate)
+        accept_entity_candidate(candidate, schedule_enrichment=True)
         candidate.refresh_from_db()
         serializer = self.get_serializer(candidate)
         return Response(serializer.data)
@@ -226,7 +227,11 @@ class EntityCandidateViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
             context=self.get_serializer_context(),
         )
         serializer.is_valid(raise_exception=True)
-        merge_entity_candidate(candidate, serializer.validated_data["merged_into"])
+        merge_entity_candidate(
+            candidate,
+            serializer.validated_data["merged_into"],
+            schedule_enrichment=True,
+        )
         candidate.refresh_from_db()
         response_serializer = self.get_serializer(candidate)
         return Response(response_serializer.data)

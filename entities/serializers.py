@@ -7,13 +7,31 @@ from entities.models import (
     Entity,
     EntityAuthoritySnapshot,
     EntityCandidate,
+    EntityIdentityClaim,
     EntityMention,
 )
+
+
+class EntityIdentityClaimSerializer(serializers.ModelSerializer):
+    """Serialize one verified external identity claim for a tracked entity."""
+
+    class Meta:
+        model = EntityIdentityClaim
+        fields = [
+            "id",
+            "surface",
+            "claim_url",
+            "verified",
+            "verified_at",
+            "verification_method",
+        ]
+        read_only_fields = fields
 
 
 class EntitySerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer):
     """Serialize tracked entities for a project."""
 
+    identity_claims = EntityIdentityClaimSerializer(many=True, read_only=True)
     mention_count = serializers.IntegerField(read_only=True)
     latest_mentions = serializers.SerializerMethodField()
 
@@ -32,6 +50,7 @@ class EntitySerializer(ProjectScopedSerializerMixin, serializers.ModelSerializer
             "bluesky_handle",
             "mastodon_handle",
             "twitter_handle",
+            "identity_claims",
             "mention_count",
             "latest_mentions",
             "created_at",
@@ -107,6 +126,8 @@ class EntityCandidateSerializer(
             "first_seen_in",
             "first_seen_title",
             "occurrence_count",
+            "cluster_key",
+            "auto_promotion_blocked_reason",
             "status",
             "merged_into",
             "merged_into_name",

@@ -174,7 +174,9 @@ class EntityCandidateAdmin(admin.ModelAdmin):
         "project",
         "suggested_type",
         "occurrence_count",
+        "cluster_key",
         "status",
+        "auto_promotion_blocked_reason",
         "merged_into",
         "first_seen_in",
         "created_at",
@@ -196,7 +198,7 @@ class EntityCandidateAdmin(admin.ModelAdmin):
         for candidate in queryset.select_related("project"):
             if candidate.status == EntityCandidateStatus.ACCEPTED:
                 continue
-            accept_entity_candidate(candidate)
+            accept_entity_candidate(candidate, schedule_enrichment=True)
             accepted_count += 1
         self.message_user(
             request,
@@ -238,7 +240,11 @@ class EntityCandidateAdmin(admin.ModelAdmin):
             if matching_entities.count() != 1:
                 unresolved_names.append(candidate.name)
                 continue
-            merge_entity_candidate(candidate, matching_entities.get())
+            merge_entity_candidate(
+                candidate,
+                matching_entities.get(),
+                schedule_enrichment=True,
+            )
             merged_count += 1
 
         if merged_count:
