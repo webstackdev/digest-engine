@@ -39,6 +39,11 @@ jobs:
           deploy/helm/newsletter-maker/values-minikube.yaml >
           /tmp/newsletter-maker-chart.yaml
 
+      - name: Render staging overlay
+        run: helm template newsletter-maker-staging deploy/helm/newsletter-maker -f
+          deploy/helm/newsletter-maker/values-staging.yaml >
+          /tmp/newsletter-maker-staging-chart.yaml
+
   build-frontend:
     name: Build frontend
     runs-on: ubuntu-latest

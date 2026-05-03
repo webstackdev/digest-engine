@@ -166,6 +166,25 @@ class ContentApiTests(APITestCase):
         created_content = Content.objects.get(title="New Content")
         self.assertEqual(created_content.project, self.owner_project)
 
+    def test_content_detail_includes_summary_text(self):
+        self.owner_content.summary_text = "A concise summary ready for editors."
+        self.owner_content.save(update_fields=["summary_text"])
+
+        response = self.client.get(
+            reverse(
+                "v1:project-content-detail",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "pk": _require_pk(self.owner_content),
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json()["summary_text"], "A concise summary ready for editors."
+        )
+
     @patch("core.tasks.run_relevance_scoring_skill.delay")
     def test_content_skill_action_queues_relevance_scoring(
         self, run_relevance_scoring_delay_mock

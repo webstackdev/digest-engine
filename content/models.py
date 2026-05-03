@@ -44,6 +44,7 @@ class Content(models.Model):
     published_date = models.DateTimeField()
     ingested_at = models.DateTimeField(auto_now_add=True)
     content_text = models.TextField()
+    summary_text = models.TextField(blank=True, default="")
     relevance_score = models.FloatField(null=True, blank=True)
     authority_adjusted_score = models.FloatField(null=True, blank=True)
     embedding_id = models.CharField(max_length=64, blank=True)

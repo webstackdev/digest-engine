@@ -261,7 +261,7 @@ function createDashboardView(overrides: Record<string, unknown> = {}) {
 }
 
 async function loadHomePageModule() {
-  return import("../page")
+  return import("./page")
 }
 
 async function renderHomePage(

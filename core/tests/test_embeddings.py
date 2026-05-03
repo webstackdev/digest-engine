@@ -405,6 +405,7 @@ def test_seed_demo_creates_reference_corpus_and_embeds_demo_content(mocker, caps
         ).count()
         == 115
     )
+    assert Content.objects.filter(project=project, summary_text__gt="").count() == 115
     assert ReviewQueue.objects.filter(project=project).exists()
     assert UserFeedback.objects.filter(project=project).count() == 45
     assert IngestionRun.objects.filter(project=project).count() == 6

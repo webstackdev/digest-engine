@@ -38,6 +38,7 @@ env:
   ollamaUrl: http://ollama:11434
 
 secrets:
+  existingSecretName: ""
   secretKey: change-me
   blueskyCredentialsEncryptionKey: ""
   metricsToken: ""
@@ -160,3 +161,10 @@ keda:
 
 networkPolicy:
   enabled: false
+
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  scrapeTimeout: 10s
+  path: /metrics
+  labels: {}

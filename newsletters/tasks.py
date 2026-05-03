@@ -17,7 +17,7 @@ from newsletters.composition import (
 from newsletters.composition import (
     regenerate_newsletter_draft_section as compose_newsletter_draft_section,
 )
-from newsletters.extraction import extract_newsletter_items
+from newsletters.extraction import extract_newsletter_payload
 from newsletters.models import (
     IntakeAllowlist,
     NewsletterDraft,
@@ -66,11 +66,12 @@ def process_newsletter_intake(intake_id: int):
         intake.save(update_fields=["status", "error_message"])
         return {"status": intake.status, "items_ingested": 0}
 
-    extracted_items = extract_newsletter_items(
+    extraction = extract_newsletter_payload(
         subject=intake.subject,
         raw_html=intake.raw_html,
         raw_text=intake.raw_text,
     )
+    extracted_items = extraction.items
     ingested_count = 0
     for item in extracted_items:
         canonical_url = canonicalize_url(item.url)
@@ -104,7 +105,8 @@ def process_newsletter_intake(intake_id: int):
     intake.status = NewsletterIntakeStatus.EXTRACTED
     intake.error_message = ""
     intake.extraction_result = {
-        "method": "heuristic",
+        **extraction.metadata,
+        "items_ingested": ingested_count,
         "items": [
             {
                 "url": item.url,

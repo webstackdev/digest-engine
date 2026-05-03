@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: newsletter-maker-staging
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/webstackdev/newsletter-maker.git
+    targetRevision: main
+    path: deploy/helm/newsletter-maker
+    helm:
+      valueFiles:
+        - values-staging.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: newsletter-maker-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
