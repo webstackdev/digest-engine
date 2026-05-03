@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
+import { Card, CardContent } from "@/components/ui/card"
 import { compactDocsParameters } from "@/lib/storybook-docs"
 import { createProject } from "@/lib/storybook-fixtures"
 
@@ -29,16 +30,20 @@ const meta = {
     selectedProjectId: 1,
     children: (
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
-          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Visible clusters</p>
-          <p className="mt-1 text-3xl font-bold">4</p>
-          <p className="text-sm leading-6 text-muted">Representative dashboard chrome for Storybook review.</p>
-        </div>
-        <div className="rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
-          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Recent activity</p>
-          <p className="mt-1 text-3xl font-bold">12</p>
-          <p className="text-sm leading-6 text-muted">Use this story to check navigation, project switching, and header behavior.</p>
-        </div>
+        <Card className="rounded-3xl border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+          <CardContent className="p-5">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Visible clusters</p>
+            <p className="mt-1 text-3xl font-bold">4</p>
+            <p className="text-sm leading-6 text-muted">Representative dashboard chrome for Storybook review.</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+          <CardContent className="p-5">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Recent activity</p>
+            <p className="mt-1 text-3xl font-bold">12</p>
+            <p className="text-sm leading-6 text-muted">Use this story to check navigation, project switching, and header behavior.</p>
+          </CardContent>
+        </Card>
       </div>
     ),
   },

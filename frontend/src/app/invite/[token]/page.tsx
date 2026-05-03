@@ -1,6 +1,6 @@
-import Link from "next/link"
 import { getServerSession } from "next-auth"
 
+import { InvitePageContent } from "@/app/invite/[token]/_components/InvitePageContent"
 import { getMembershipInvitation } from "@/lib/api"
 import { authOptions } from "@/lib/auth"
 import { getErrorMessage, getSuccessMessage } from "@/lib/view-helpers"
@@ -30,83 +30,14 @@ export default async function InvitePage({ params, searchParams }: InvitePagePro
     invitationError = error instanceof Error ? error.message : "Unable to load invitation."
   }
 
-  const callbackUrl = `/invite/${token}`
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="w-full max-w-2xl space-y-6 rounded-3xl border border-border/12 bg-card/90 p-8 shadow-panel backdrop-blur-xl">
-        <div>
-          <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-muted">
-            Newsletter Maker
-          </p>
-          <h1 className="mt-2 font-display text-display-page font-bold text-foreground">
-            Project invitation
-          </h1>
-        </div>
-
-        {errorMessage ? (
-          <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">{errorMessage}</div>
-        ) : null}
-        {successMessage ? (
-          <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">{successMessage}</div>
-        ) : null}
-        {invitationError ? (
-          <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">{invitationError}</div>
-        ) : null}
-
-        {invitation ? (
-          <article className="space-y-4 rounded-3xl border border-border/12 bg-muted/45 p-5">
-            <div>
-              <p className="m-0 text-sm text-muted">Project</p>
-              <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
-                {invitation.project_name}
-              </h2>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <p className="m-0 text-sm text-muted">Invited email</p>
-                <p className="m-0 text-sm font-medium text-foreground">{invitation.email}</p>
-              </div>
-              <div>
-                <p className="m-0 text-sm text-muted">Role</p>
-                <p className="m-0 text-sm font-medium text-foreground">{invitation.role}</p>
-              </div>
-            </div>
-
-            {invitation.status === "revoked" ? (
-              <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">
-                This invitation has been revoked.
-              </div>
-            ) : invitation.status === "accepted" ? (
-              <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
-                This invitation has already been accepted.
-              </div>
-            ) : session?.user ? (
-              <form action={`/api/invitations/${token}/accept`} method="POST">
-                <input type="hidden" name="redirectTo" value={callbackUrl} />
-                <button
-                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105"
-                  type="submit"
-                >
-                  Accept invitation
-                </button>
-              </form>
-            ) : (
-              <div className="space-y-3">
-                <p className="m-0 text-sm leading-6 text-muted">
-                  Sign in as {invitation.email} to accept this invitation.
-                </p>
-                <Link
-                  className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105"
-                  href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-                >
-                  Sign in to continue
-                </Link>
-              </div>
-            )}
-          </article>
-        ) : null}
-      </div>
-    </div>
+    <InvitePageContent
+      errorMessage={errorMessage}
+      invitation={invitation}
+      invitationError={invitationError}
+      isAuthenticated={Boolean(session?.user)}
+      successMessage={successMessage}
+      token={token}
+    />
   )
 }

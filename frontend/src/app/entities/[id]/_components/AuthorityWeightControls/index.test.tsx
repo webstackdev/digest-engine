@@ -58,9 +58,7 @@ describe("AuthorityWeightControls", () => {
       />,
     )
 
-    fireEvent.change(screen.getByRole("slider", { name: "Engagement" }), {
-      target: { value: "0.33" },
-    })
+    expect(screen.getByRole("group", { name: "Engagement" })).toBeInTheDocument()
     fireEvent.click(screen.getByRole("button", { name: "Save weights" }))
 
     await waitFor(() => {

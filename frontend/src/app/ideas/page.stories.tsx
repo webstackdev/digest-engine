@@ -1,7 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
+import { IdeasQueueOverview } from "@/app/ideas/_components/IdeasQueueOverview"
+import { IdeasToolbarCard } from "@/app/ideas/_components/IdeasToolbarCard"
 import { OriginalContentIdeaCard } from "@/app/ideas/_components/OriginalContentIdeaCard"
 import { AppShell } from "@/components/layout/AppShell"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { compactDocsParameters } from "@/lib/storybook-docs"
 import {
   createOriginalContentIdea,
@@ -55,6 +58,10 @@ const populatedIdeas = [
 
 function IdeasPagePreview({ ideas = populatedIdeas }: IdeasPreviewProps) {
   const projects = [createProject()]
+  const pendingCount = ideas.filter((idea) => idea.status === "pending").length
+  const acceptedCount = ideas.filter((idea) => idea.status === "accepted").length
+  const writtenCount = ideas.filter((idea) => idea.status === "written").length
+  const dismissedCount = ideas.filter((idea) => idea.status === "dismissed").length
 
   return (
     <AppShell
@@ -63,21 +70,24 @@ function IdeasPagePreview({ ideas = populatedIdeas }: IdeasPreviewProps) {
       projects={projects}
       selectedProjectId={1}
     >
-      <section className="mb-4 flex flex-col gap-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <p className="m-0 text-sm font-medium text-foreground">Status</p>
-          <p className="mt-2 text-sm leading-6 text-muted">Preview the queue with representative pending, accepted, written, and dismissed states.</p>
-        </div>
-        <button className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105" type="button">
-          Generate now
-        </button>
-      </section>
+      <IdeasQueueOverview
+        acceptedCount={acceptedCount}
+        dismissedCount={dismissedCount}
+        pendingCount={pendingCount}
+        writtenCount={writtenCount}
+      />
+
+      <IdeasToolbarCard
+        currentPageHref="/ideas?project=1"
+        projectId={1}
+        statusFilter="all"
+      />
 
       <section className="space-y-4">
         {ideas.length === 0 ? (
-          <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
-            No original-content ideas matched the current filter.
-          </div>
+          <Alert className="rounded-panel border-border/10 bg-muted/60">
+            <AlertDescription>No original-content ideas matched the current filter.</AlertDescription>
+          </Alert>
         ) : null}
         {ideas.map((idea) => (
           <OriginalContentIdeaCard

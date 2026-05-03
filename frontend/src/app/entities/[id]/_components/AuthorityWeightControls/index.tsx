@@ -3,6 +3,12 @@
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
 import type { ProjectConfig } from "@/lib/types"
 
 type AuthorityWeightControlsProps = {
@@ -49,6 +55,9 @@ const DEFAULT_CONFIG_VALUES = {
   downvote_authority_weight: -0.05,
   authority_decay_rate: 0.9,
 } satisfies Omit<ProjectConfig, "id" | "project">
+
+const inputClassName =
+  "h-11 rounded-2xl border-border/12 bg-muted/70 px-4"
 
 /**
  * Render admin-only sliders for project authority weights.
@@ -121,119 +130,125 @@ export function AuthorityWeightControls({
   }
 
   return (
-    <article className="space-y-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Admin controls</p>
-          <h4 className="m-0 font-display text-title-sm font-bold text-foreground">
-            Authority weights
-          </h4>
+    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <CardHeader>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Admin controls</p>
+            <CardTitle className="font-display text-title-sm font-bold text-foreground">
+              Authority weights
+            </CardTitle>
+          </div>
+          <span className="text-sm text-muted">
+            Configured total {Math.round(totalWeight * 100)}%
+          </span>
         </div>
-        <span className="text-sm text-muted">Configured total {Math.round(totalWeight * 100)}%</span>
-      </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="m-0 text-sm leading-6 text-muted">
+          These sliders are normalized to 100% at recompute time, so you can emphasize one signal without manually balancing every field.
+        </p>
 
-      <p className="m-0 text-sm leading-6 text-muted">
-        These sliders are normalized to 100% at recompute time, so you can emphasize one signal without manually balancing every field.
-      </p>
-
-      <div className="space-y-4">
-        {WEIGHT_FIELDS.map((field) => (
-          <label className="grid gap-2" htmlFor={field.key} key={field.key}>
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium text-foreground">{field.label}</span>
-              <span className="text-muted">{Math.round(weights[field.key] * 100)}%</span>
+        <div className="space-y-4">
+          {WEIGHT_FIELDS.map((field) => (
+            <div className="grid gap-2" key={field.key}>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <Label htmlFor={field.key}>{field.label}</Label>
+                <span className="text-muted">{Math.round(weights[field.key] * 100)}%</span>
+              </div>
+              <Slider
+                aria-label={field.label}
+                id={field.key}
+                max={1}
+                min={0}
+                onValueChange={(value) => {
+                  const nextValue = Array.isArray(value) ? (value[0] ?? 0) : value
+                  setWeights((current) => ({
+                    ...current,
+                    [field.key]: Number.isFinite(nextValue) ? nextValue : 0,
+                  }))
+                }}
+                step={0.01}
+                value={[weights[field.key]]}
+              />
             </div>
-            <input
-              aria-label={field.label}
-              className="w-full accent-primary"
-              id={field.key}
-              max="1"
-              min="0"
+          ))}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2 text-sm">
+            <Label htmlFor="authority_decay_rate">Authority decay rate</Label>
+            <Input
+              className={inputClassName}
+              id="authority_decay_rate"
               onChange={(event) => {
                 const nextValue = Number.parseFloat(event.target.value)
                 setWeights((current) => ({
                   ...current,
-                  [field.key]: Number.isFinite(nextValue) ? nextValue : 0,
+                  authority_decay_rate: Number.isFinite(nextValue) ? nextValue : 0,
                 }))
               }}
               step="0.01"
-              type="range"
-              value={weights[field.key]}
+              type="number"
+              value={weights.authority_decay_rate}
             />
-          </label>
-        ))}
-      </div>
+          </div>
+          <div className="grid gap-2 text-sm">
+            <Label htmlFor="draft_schedule_cron">Draft schedule cron</Label>
+            <Input
+              className={inputClassName}
+              id="draft_schedule_cron"
+              onChange={(event) => {
+                setWeights((current) => ({
+                  ...current,
+                  draft_schedule_cron: event.target.value,
+                }))
+              }}
+              placeholder="0 9 * * *"
+              value={weights.draft_schedule_cron}
+            />
+          </div>
+        </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="grid gap-2 text-sm" htmlFor="authority_decay_rate">
-          <span className="font-medium text-foreground">Authority decay rate</span>
-          <input
-            className="rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
-            id="authority_decay_rate"
-            onChange={(event) => {
-              const nextValue = Number.parseFloat(event.target.value)
-              setWeights((current) => ({
-                ...current,
-                authority_decay_rate: Number.isFinite(nextValue) ? nextValue : 0,
-              }))
+        <div className="flex flex-wrap gap-3">
+          <Button
+            className="min-h-11 rounded-full px-4 py-3"
+            disabled={pendingAction !== null}
+            onClick={() => {
+              void submit("save")
             }}
-            step="0.01"
-            type="number"
-            value={weights.authority_decay_rate}
-          />
-        </label>
-        <label className="grid gap-2 text-sm" htmlFor="draft_schedule_cron">
-          <span className="font-medium text-foreground">Draft schedule cron</span>
-          <input
-            className="rounded-2xl border border-border/12 bg-muted/70 px-4 py-3 text-foreground outline-none transition focus:border-primary/40 focus:ring-2 focus:ring-primary/15"
-            id="draft_schedule_cron"
-            onChange={(event) => {
-              setWeights((current) => ({
-                ...current,
-                draft_schedule_cron: event.target.value,
-              }))
+            size="lg"
+            type="button"
+            variant="outline"
+          >
+            {pendingAction === "save" ? "Saving..." : "Save weights"}
+          </Button>
+          <Button
+            className="min-h-11 rounded-full px-4 py-3"
+            disabled={pendingAction !== null}
+            onClick={() => {
+              void submit("save_and_recompute")
             }}
-            placeholder="0 9 * * *"
-            value={weights.draft_schedule_cron}
-          />
-        </label>
-      </div>
+            size="lg"
+            type="button"
+          >
+            {pendingAction === "save_and_recompute"
+              ? "Saving and recomputing..."
+              : "Save and recompute"}
+          </Button>
+        </div>
 
-      <div className="flex flex-wrap gap-3">
-        <button
-          className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={pendingAction !== null}
-          onClick={() => {
-            void submit("save")
-          }}
-          type="button"
-        >
-          {pendingAction === "save" ? "Saving..." : "Save weights"}
-        </button>
-        <button
-          className="inline-flex min-h-11 items-center justify-center rounded-full bg-linear-to-br from-primary to-primary px-4 py-3 text-sm font-medium text-primary-foreground transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={pendingAction !== null}
-          onClick={() => {
-            void submit("save_and_recompute")
-          }}
-          type="button"
-        >
-          {pendingAction === "save_and_recompute"
-            ? "Saving and recomputing..."
-            : "Save and recompute"}
-        </button>
-      </div>
-
-      {statusMessage ? (
-        <p className="rounded-panel bg-muted/60 px-4 py-3 text-sm leading-6 text-muted" role="status">
-          {statusMessage}
-        </p>
-      ) : null}
-      {errorMessage ? (
-        <p className="rounded-panel bg-destructive/14 px-4 py-3 text-sm leading-6 text-destructive" role="alert">
-          {errorMessage}
-        </p>
-      ) : null}
-    </article>
+        {statusMessage ? (
+          <Alert className="rounded-panel border-border/12 bg-muted/60" role="status">
+            <AlertDescription>{statusMessage}</AlertDescription>
+          </Alert>
+        ) : null}
+        {errorMessage ? (
+          <Alert className="rounded-panel border-destructive/20 bg-destructive/14" variant="destructive">
+            <AlertDescription className="text-destructive">{errorMessage}</AlertDescription>
+          </Alert>
+        ) : null}
+      </CardContent>
+    </Card>
   )
 }

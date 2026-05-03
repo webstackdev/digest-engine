@@ -5,7 +5,7 @@ import { compactDocsParameters } from "@/lib/storybook-docs"
 import { StatusBadge } from "."
 
 const meta = {
-  title: "UI/StatusBadge",
+  title: "Elements/StatusBadge",
   component: StatusBadge,
   tags: ["autodocs"],
   parameters: {

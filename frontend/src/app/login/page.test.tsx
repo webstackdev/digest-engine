@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from "vitest"
 
 const { loginFormMock } = vi.hoisted(() => ({
   loginFormMock: vi.fn(({ callbackUrl }: { callbackUrl: string }) => (
-    <div data-testid="login-form" data-callback-url={callbackUrl} />
+    <div data-testid="login-page-content" data-callback-url={callbackUrl} />
   )),
 }))
 
-vi.mock("@/app/login/_components/LoginForm", () => ({
+vi.mock("@/app/login/_components/LoginPageContent", () => ({
   default: loginFormMock,
 }))
 
@@ -58,14 +58,14 @@ describe("resolveCallbackUrl", () => {
 })
 
 describe("LoginPage", () => {
-  it("passes the normalized callback URL to LoginForm", async () => {
+  it("passes the normalized callback URL to LoginPageContent", async () => {
     await renderLoginPage({ callbackUrl: "/content/9?project=3" })
 
     expect(loginFormMock).toHaveBeenCalledWith(
       { callbackUrl: "/content/9?project=3" },
       undefined,
     )
-    expect(screen.getByTestId("login-form")).toHaveAttribute(
+    expect(screen.getByTestId("login-page-content")).toHaveAttribute(
       "data-callback-url",
       "/content/9?project=3",
     )
@@ -74,7 +74,7 @@ describe("LoginPage", () => {
   it("uses the default callback URL when none is provided", async () => {
     await renderLoginPage({})
 
-    expect(screen.getByTestId("login-form")).toHaveAttribute(
+    expect(screen.getByTestId("login-page-content")).toHaveAttribute(
       "data-callback-url",
       "/",
     )

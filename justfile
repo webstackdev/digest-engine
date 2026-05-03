@@ -126,6 +126,16 @@ frontend-test:
     @{{frontend_env}}
     @{{frontend_cd}} npm run test:run
 
+# Run Storybook browser tests for frontend components
+frontend-storybook-test:
+    @{{frontend_env}}
+    @{{frontend_cd}} npm run test:storybook
+
+# Run the complete frontend test suite including Storybook browser tests
+frontend-test-all:
+    @{{frontend_env}}
+    @{{frontend_cd}} npm run test:all
+
 # Run the backend test suite
 backend-test:
     @python3 -m pytest

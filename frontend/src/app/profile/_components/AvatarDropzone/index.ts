@@ -1,1 +1,0 @@
-export { AvatarDropzone } from "./AvatarDropzone"
