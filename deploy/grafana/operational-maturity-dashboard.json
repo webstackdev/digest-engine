@@ -1,0 +1,158 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "sum by (plugin_name, status) (newsletter_ingestion_run_total{project_id=\"$project_id\"})",
+          "legendFormat": "{{plugin_name}} {{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Ingestion Runs By Status",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "id": 2,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "newsletter_ingestion_run_latest_completed_age_seconds{project_id=\"$project_id\"}",
+          "legendFormat": "{{plugin_name}} freshness",
+          "refId": "A"
+        }
+      ],
+      "title": "Ingestion Freshness",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+      "id": 3,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "newsletter_pipeline_content_total{project_id=\"$project_id\"}",
+          "legendFormat": "{{pipeline_state}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Pipeline State Counts",
+      "type": "barchart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+      "id": 4,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "newsletter_pipeline_review_queue_depth{project_id=\"$project_id\"}",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Review Queue Depth",
+      "type": "barchart"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+      "id": 5,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "newsletter_trend_task_run_latest_latency_ms{project_id=\"$project_id\"}",
+          "legendFormat": "{{task_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Trend Task Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "id": 6,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "newsletter_skill_result_failure_ratio{project_id=\"$project_id\"}",
+          "legendFormat": "{{skill_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Skill Failure Ratio",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "ms"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "id": 7,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "newsletter_skill_result_average_latency_ms{project_id=\"$project_id\"}",
+          "legendFormat": "{{skill_name}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Skill Average Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+      "id": 8,
+      "options": {"legend": {"displayMode": "list", "placement": "bottom"}},
+      "targets": [
+        {
+          "expr": "newsletter_entity_authority_score_bucket{project_id=\"$project_id\"}",
+          "legendFormat": "le={{le}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Authority Score Distribution",
+      "type": "heatmap"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["newsletter-maker", "operational-maturity"],
+  "templating": {
+    "list": [
+      {
+        "current": {"selected": true, "text": "1", "value": "1"},
+        "hide": 0,
+        "label": "Project ID",
+        "name": "project_id",
+        "options": [],
+        "query": "label_values(newsletter_pipeline_content_total, project_id)",
+        "refresh": 2,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-24h", "to": "now"},
+  "title": "Newsletter Maker Operational Maturity",
+  "timezone": "browser",
+  "version": 1
+}

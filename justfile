@@ -234,6 +234,11 @@ shell:
     @{{backend_env}}
     @python3 manage.py shell
 
+# Run the staged disaster recovery rehearsal workflow against the configured cluster
+disaster-recovery-rehearsal:
+    @{{backend_env}}
+    @bash scripts/disaster_recovery_rehearsal.sh
+
 # -----------------------------------------------------------------------------
 # Helm And Kubernetes
 # -----------------------------------------------------------------------------

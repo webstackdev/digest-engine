@@ -9,6 +9,8 @@ from rest_framework.test import APIClient, APITestCase
 
 from content.models import Content
 from entities.models import Entity
+from ingestion.models import IngestionRun, RunStatus
+from pipeline.models import ReviewQueue, ReviewReason, SkillResult, SkillStatus
 from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectConfig, ProjectMembership, ProjectRole
 from trends.models import (
@@ -808,5 +810,88 @@ class TrendsApiTests(APITestCase):
         self.assertIn(
             "newsletter_trend_task_run_latest_finished_timestamp_seconds"
             f'{{project_id="1",task_name="recompute_topic_centroid"}} {latest_finished_at.timestamp():.6f}',
+            response_body,
+        )
+
+    def test_metrics_endpoint_emits_ingestion_pipeline_and_authority_metrics(self):
+        self.owner_content.pipeline_state = "awaiting_review"
+        self.owner_content.save(update_fields=["pipeline_state"])
+        other_owner_content = Content.objects.create(
+            project=self.owner_project,
+            url="https://example.com/owner-completed",
+            title="Completed Owner Content",
+            author="Owner Author",
+            entity=self.owner_entity,
+            source_plugin="rss",
+            published_date="2026-04-22T00:00:00Z",
+            content_text="Completed content text",
+            pipeline_state="completed",
+        )
+        Entity.objects.create(
+            project=self.owner_project,
+            name="High Authority Entity",
+            type="organization",
+            authority_score=0.9,
+        )
+        IngestionRun.objects.create(
+            project=self.owner_project,
+            plugin_name=SourcePluginName.RSS,
+            status=RunStatus.SUCCESS,
+            items_fetched=6,
+            items_ingested=4,
+            completed_at=datetime(2026, 4, 22, 6, 0, tzinfo=timezone.utc),
+        )
+        SkillResult.objects.create(
+            content=other_owner_content,
+            project=self.owner_project,
+            skill_name="relevance_scoring",
+            status=SkillStatus.FAILED,
+            error_message="temporary failure",
+            latency_ms=320,
+        )
+        ReviewQueue.objects.create(
+            project=self.owner_project,
+            content=self.owner_content,
+            reason=ReviewReason.BORDERLINE_RELEVANCE,
+            confidence=0.56,
+            resolved=False,
+        )
+
+        with self.settings(METRICS_TOKEN="metrics-secret"):
+            response = self.client.get(
+                reverse("metrics"),
+                HTTP_AUTHORIZATION="Bearer metrics-secret",
+            )
+
+        project_id = _require_pk(self.owner_project)
+        response_body = response.content.decode("utf-8")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(
+            'newsletter_ingestion_run_total{project_id="%s",plugin_name="rss",status="success"} 1'
+            % project_id,
+            response_body,
+        )
+        self.assertIn(
+            'newsletter_pipeline_content_total{project_id="%s",pipeline_state="awaiting_review"} 1'
+            % project_id,
+            response_body,
+        )
+        self.assertIn(
+            'newsletter_pipeline_review_queue_depth{project_id="%s",reason="borderline_relevance"} 1'
+            % project_id,
+            response_body,
+        )
+        self.assertIn(
+            'newsletter_skill_result_failure_ratio{project_id="%s",skill_name="relevance_scoring"} 1.000000'
+            % project_id,
+            response_body,
+        )
+        self.assertIn(
+            'newsletter_entity_authority_score_count{project_id="%s"} 2' % project_id,
+            response_body,
+        )
+        self.assertIn(
+            'newsletter_entity_authority_score_bucket{project_id="%s",le="1.0"} 2'
+            % project_id,
             response_body,
         )

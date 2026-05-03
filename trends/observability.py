@@ -8,6 +8,7 @@ from typing import Any, TypeVar, cast
 import structlog
 from django.utils import timezone
 
+from newsletter_maker.telemetry import trace_span
 from trends.models import TrendTaskRun, TrendTaskRunStatus
 
 TrendTaskSummary = dict[str, Any]
@@ -34,7 +35,9 @@ def observe_trend_task_run(
 
     def decorator(func: TrendTaskCallable) -> TrendTaskCallable:
         @wraps(func)
-        def wrapper(project_id: int, *args: object, **kwargs: object) -> TrendTaskSummary:
+        def wrapper(
+            project_id: int, *args: object, **kwargs: object
+        ) -> TrendTaskSummary:
             task_run = TrendTaskRun.objects.create(
                 project_id=project_id,
                 task_name=task_name,
@@ -49,7 +52,15 @@ def observe_trend_task_run(
             )
 
             try:
-                result = func(project_id, *args, **kwargs)
+                with trace_span(
+                    f"trends.{task_name}",
+                    attributes={
+                        "project.id": project_id,
+                        "trend.task_name": task_name,
+                        "trend.task_run_id": str(task_run.task_run_id),
+                    },
+                ):
+                    result = func(project_id, *args, **kwargs)
             except Exception as exc:
                 latency_ms = max(0, round((perf_counter() - started) * 1000))
                 finished_at = timezone.now()
