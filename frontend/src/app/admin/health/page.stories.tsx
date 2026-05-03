@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite"
 
 import { SourceDiversityPanel } from "@/app/admin/health/_components/SourceDiversityPanel"
-import { StatusBadge } from "@/components/elements/StatusBadge"
+import { SourceHealthPanel } from "@/app/admin/health/_components/SourceHealthPanel"
+import { TopicCentroidPanel } from "@/app/admin/health/_components/TopicCentroidPanel"
+import { TrendTaskRunsPanel } from "@/app/admin/health/_components/TrendTaskRunsPanel"
 import { AppShell } from "@/components/layout/AppShell"
 import { compactDocsParameters } from "@/lib/storybook-docs"
 import {
@@ -10,6 +12,7 @@ import {
   createSourceConfig,
   createSourceDiversitySnapshot,
   createSourceDiversitySummary,
+  createTopicCentroidSnapshot,
   createTopicCentroidSummary,
 } from "@/lib/storybook-fixtures"
 
@@ -48,8 +51,15 @@ export const NoSnapshots: Story = {
 
 function HealthPagePreview({ alerting = false, noSnapshots = false }: HealthPreviewProps) {
   const projects = [createProject()]
+  const centroidSnapshots = noSnapshots
+    ? []
+    : [
+        createTopicCentroidSnapshot({ id: 1, computed_at: "2026-04-25T08:00:00Z", drift_from_previous: 0.08 }),
+        createTopicCentroidSnapshot({ id: 2, computed_at: "2026-04-26T08:00:00Z", drift_from_previous: 0.12 }),
+        createTopicCentroidSnapshot({ id: 3, computed_at: "2026-04-27T08:00:00Z", drift_from_previous: 0.18 }),
+      ]
   const centroidSummary = createTopicCentroidSummary({
-    latest_snapshot: noSnapshots ? null : createTopicCentroidSummary().latest_snapshot,
+    latest_snapshot: noSnapshots ? null : centroidSnapshots[2],
     snapshot_count: noSnapshots ? 0 : 4,
     active_snapshot_count: noSnapshots ? 0 : 4,
     avg_drift_from_previous: noSnapshots ? null : 0.12,
@@ -82,6 +92,47 @@ function HealthPagePreview({ alerting = false, noSnapshots = false }: HealthPrev
     createIngestionRun(),
     createIngestionRun({ id: 23, plugin_name: "reddit", status: alerting ? "failed" : "success", error_message: alerting ? "Rate limit" : "" }),
   ]
+  const trendRuns = [
+    {
+      id: 41,
+      project: 1,
+      task_name: "recompute_topic_centroid",
+      task_run_id: "run-41",
+      status: "completed" as const,
+      started_at: "2026-04-28T08:00:00Z",
+      finished_at: "2026-04-28T08:00:01Z",
+      latency_ms: 523,
+      error_message: "",
+      summary: {
+        project_id: 1,
+        feedback_count: 12,
+        upvote_count: 10,
+        downvote_count: 2,
+      },
+    },
+    {
+      id: 42,
+      project: 1,
+      task_name: "generate_theme_suggestions",
+      task_run_id: "run-42",
+      status: alerting ? ("failed" as const) : ("completed" as const),
+      started_at: "2026-04-28T08:10:00Z",
+      finished_at: "2026-04-28T08:10:01Z",
+      latency_ms: alerting ? 1480 : 910,
+      error_message: alerting ? "OpenRouter timeout" : "",
+      summary: { project_id: 1, created: 1, updated: 0, skipped: 2 },
+    },
+  ]
+  const sourceRows = sourceConfigs.map((sourceConfig, index) => ({
+    sourceConfig,
+    latestRun: runs[index] ?? null,
+    status:
+      index === 1 && alerting
+        ? ("failing" as const)
+        : noSnapshots && index === 1
+          ? ("degraded" as const)
+          : ("healthy" as const),
+  }))
 
   return (
     <AppShell
@@ -90,25 +141,27 @@ function HealthPagePreview({ alerting = false, noSnapshots = false }: HealthPrev
       projects={projects}
       selectedProjectId={1}
     >
-      <section className="mb-4 rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">Topic centroid observability</h2>
-            <p className="mt-1 text-sm leading-6 text-muted">Representative centroid summary for the health page composition story.</p>
-          </div>
-          <StatusBadge tone={noSnapshots ? "neutral" : "positive"}>{noSnapshots ? "idle" : "active"}</StatusBadge>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-panel bg-muted/60 px-4 py-4">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Centroid state</p>
-            <p className="mt-2 text-2xl font-semibold text-foreground">{centroidSummary.latest_snapshot ? "Active" : "Not computed"}</p>
-          </div>
-          <div className="rounded-panel bg-muted/60 px-4 py-4">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Avg drift vs previous</p>
-            <p className="mt-2 text-2xl font-semibold text-foreground">{centroidSummary.avg_drift_from_previous ?? "n/a"}</p>
-          </div>
-        </div>
-      </section>
+      <TopicCentroidPanel
+        historyHref="/admin/health?project=1#centroid-snapshot-history"
+        statusLabel={noSnapshots ? "idle" : "active"}
+        statusTone={noSnapshots ? "neutral" : "positive"}
+        summary={centroidSummary}
+        trendPoints="0,66 110,58 220,49"
+        visibleSnapshots={centroidSnapshots}
+      />
+
+      <TrendTaskRunsPanel
+        historyHref="/admin/health?project=1#trend-task-run-history"
+        statusLabel={alerting ? "failing" : noSnapshots ? "idle" : "healthy"}
+        statusTone={alerting ? "negative" : noSnapshots ? "neutral" : "positive"}
+        summary={{
+          project: 1,
+          run_count: noSnapshots ? 0 : 8,
+          failed_run_count: alerting ? 1 : 0,
+          latest_runs: noSnapshots ? [] : trendRuns,
+        }}
+        visibleRuns={noSnapshots ? [] : trendRuns}
+      />
 
       <SourceDiversityPanel
         statusLabel={sourceDiversitySummary.latest_snapshot ? "tracked" : "idle"}
@@ -118,32 +171,11 @@ function HealthPagePreview({ alerting = false, noSnapshots = false }: HealthPrev
         visibleSnapshots={noSnapshots ? [] : [createSourceDiversitySnapshot({ id: 1 }), createSourceDiversitySnapshot({ id: 2, top_plugin_share: 0.7 })]}
       />
 
-      <section className="mt-4 overflow-hidden rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-border/12 text-sm text-muted">
-                <th className="px-3 py-4 font-medium">Source</th>
-                <th className="px-3 py-4 font-medium">Status</th>
-                <th className="px-3 py-4 font-medium">Latest run</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sourceConfigs.map((sourceConfig, index) => (
-                <tr className="border-b border-border/12 align-top last:border-b-0" key={sourceConfig.id}>
-                  <td className="px-3 py-4 text-sm text-foreground">{sourceConfig.plugin_name}</td>
-                  <td className="px-3 py-4">
-                    <StatusBadge tone={index === 1 && alerting ? "negative" : "positive"}>
-                      {index === 1 && alerting ? "failing" : "healthy"}
-                    </StatusBadge>
-                  </td>
-                  <td className="px-3 py-4 text-sm text-foreground">{runs[index]?.status ?? "No runs yet"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <SourceHealthPanel
+        rows={noSnapshots ? [] : sourceRows}
+        statusLabel={alerting ? "mixed" : "sources"}
+        statusTone={alerting ? "warning" : "neutral"}
+      />
     </AppShell>
   )
 }

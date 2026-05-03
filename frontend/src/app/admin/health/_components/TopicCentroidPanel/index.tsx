@@ -1,0 +1,231 @@
+import Link from "next/link"
+import type { ComponentProps } from "react"
+
+import { StatusBadge } from "@/components/elements/StatusBadge"
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+} from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import type {
+  TopicCentroidObservabilitySummary,
+  TopicCentroidSnapshot,
+} from "@/lib/types"
+import { formatDate } from "@/lib/view-helpers"
+
+function formatDriftPercent(value: number | null) {
+  if (value === null) {
+    return "n/a"
+  }
+  return `${(value * 100).toFixed(1)}%`
+}
+
+type TopicCentroidPanelProps = {
+  /** Aggregate centroid summary for the selected project. */
+  summary: TopicCentroidObservabilitySummary
+  /** Recent centroid snapshots shown in the summary sparkline and history table. */
+  visibleSnapshots: TopicCentroidSnapshot[]
+  /** SVG polyline points for the drift trend line. */
+  trendPoints: string
+  /** Semantic tone for the summary badge. */
+  statusTone: ComponentProps<typeof StatusBadge>["tone"]
+  /** Visible label for the centroid status badge. */
+  statusLabel: string
+  /** Deep link to the snapshot history section. */
+  historyHref: string
+}
+
+/** Render centroid observability summary and history for the admin health page. */
+export function TopicCentroidPanel({
+  summary,
+  visibleSnapshots,
+  trendPoints,
+  statusTone,
+  statusLabel,
+  historyHref,
+}: TopicCentroidPanelProps) {
+  return (
+    <>
+      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+        <CardHeader>
+          <h2 className="font-heading text-base leading-snug font-medium">
+            Topic centroid observability
+          </h2>
+          <CardDescription>
+            The latest centroid state for this project, plus average drift across persisted snapshot history.
+          </CardDescription>
+          <CardAction>
+            <StatusBadge tone={statusTone}>{statusLabel}</StatusBadge>
+          </CardAction>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+              <CardContent>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  Centroid state
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {summary.latest_snapshot
+                    ? summary.latest_snapshot.centroid_active
+                      ? "Active"
+                      : "Inactive"
+                    : "Not computed"}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+              <CardContent>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  Avg drift vs previous
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {formatDriftPercent(summary.avg_drift_from_previous)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+              <CardContent>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  Avg drift vs 7d
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {formatDriftPercent(summary.avg_drift_from_week_ago)}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+              <CardContent>
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  Latest snapshot
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {formatDate(summary.latest_snapshot?.computed_at ?? null)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {visibleSnapshots.length > 1 ? (
+            <Link
+              aria-label="Open centroid snapshot history"
+              className="block rounded-panel bg-muted/60 px-4 py-4 transition hover:bg-muted"
+              href={historyHref}
+            >
+              <div className="flex items-center justify-between gap-3 text-sm text-muted">
+                <span>Recent drift trend</span>
+                <span>Last {visibleSnapshots.length} snapshots</span>
+              </div>
+              <svg
+                aria-label="Centroid drift trend"
+                className="mt-3 h-20 w-full overflow-visible text-foreground"
+                role="img"
+                viewBox="0 0 220 72"
+              >
+                <polyline
+                  fill="none"
+                  points={trendPoints}
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="3"
+                />
+              </svg>
+            </Link>
+          ) : null}
+
+          {summary.latest_snapshot ? (
+            <div className="flex flex-wrap gap-3 text-sm text-foreground">
+              <span>{summary.snapshot_count} snapshots</span>
+              <span>{summary.active_snapshot_count} active snapshots</span>
+              <span>Feedback {summary.latest_snapshot.feedback_count}</span>
+              <span>Upvotes {summary.latest_snapshot.upvote_count}</span>
+              <span>Downvotes {summary.latest_snapshot.downvote_count}</span>
+            </div>
+          ) : (
+            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+              <CardContent className="text-sm leading-6 text-muted">
+                No centroid snapshots exist for this project yet.
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card
+        className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl"
+        id="centroid-snapshot-history"
+      >
+        <CardHeader>
+          <h2 className="font-heading text-base leading-snug font-medium">
+            Centroid snapshot history
+          </h2>
+          <CardDescription>
+            Recent centroid recomputations for this project, including feedback volume and drift between snapshots.
+          </CardDescription>
+          <CardAction>
+            <span className="text-sm text-muted">
+              Showing {visibleSnapshots.length} of {summary.snapshot_count} snapshots
+            </span>
+          </CardAction>
+        </CardHeader>
+
+        <CardContent>
+          {visibleSnapshots.length === 0 ? (
+            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+              <CardContent className="text-sm leading-6 text-muted">
+                No centroid snapshot history exists for this project yet.
+              </CardContent>
+            </Card>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border/12 text-sm text-muted hover:bg-transparent">
+                  <TableHead className="px-3 py-4">Computed</TableHead>
+                  <TableHead className="px-3 py-4">State</TableHead>
+                  <TableHead className="px-3 py-4">Feedback</TableHead>
+                  <TableHead className="px-3 py-4">Drift vs previous</TableHead>
+                  <TableHead className="px-3 py-4">Drift vs 7d</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleSnapshots.map((snapshot) => (
+                  <TableRow key={snapshot.id} className="border-border/12 align-top">
+                    <TableCell className="px-3 py-4 text-sm text-foreground">
+                      {formatDate(snapshot.computed_at)}
+                    </TableCell>
+                    <TableCell className="px-3 py-4">
+                      <StatusBadge tone={snapshot.centroid_active ? "positive" : "warning"}>
+                        {snapshot.centroid_active ? "active" : "inactive"}
+                      </StatusBadge>
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-sm text-foreground">
+                      {snapshot.feedback_count} total
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-sm text-foreground">
+                      {formatDriftPercent(snapshot.drift_from_previous)}
+                    </TableCell>
+                    <TableCell className="px-3 py-4 text-sm text-foreground">
+                      {formatDriftPercent(snapshot.drift_from_week_ago)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </>
+  )
+}

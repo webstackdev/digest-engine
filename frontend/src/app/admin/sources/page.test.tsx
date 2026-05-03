@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -637,6 +637,8 @@ describe("SourcesPage", () => {
 
   it("includes LinkedIn and Mastodon in the source creation options", async () => {
     await renderSourcesPage({ project: "1" })
+
+    fireEvent.click(screen.getByLabelText("Plugin"))
 
     expect(
       screen.getByRole("option", { name: "LinkedIn" }),

@@ -4,6 +4,8 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import type { ContentSkillName, SkillResult } from "@/lib/types"
 
 type AsyncSkillName = Extract<
@@ -155,37 +157,45 @@ export function SkillActionBar({
 
   return (
     <>
-      <button
-        className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
-        type="button"
+      <Button
         disabled={!canSummarize || isBusy("summarization")}
         onClick={() => {
           setStatusMessage(null)
           queueSkillMutation.mutate("summarization")
         }}
+        size="lg"
+        type="button"
+        variant="outline"
       >
         {getSkillLabel("summarization", isBusy("summarization"))}
-      </button>
-      <button
-        className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-transparent px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
-        type="button"
+      </Button>
+      <Button
         disabled={isBusy("relevance_scoring")}
         onClick={() => {
           setStatusMessage(null)
           queueSkillMutation.mutate("relevance_scoring")
         }}
+        size="lg"
+        type="button"
+        variant="outline"
       >
         {getSkillLabel("relevance_scoring", isBusy("relevance_scoring"))}
-      </button>
+      </Button>
       {statusMessage ? (
-        <p className="basis-full rounded-panel bg-muted/60 px-4 py-3 text-sm leading-6 text-muted" role="status">
-          {statusMessage}
-        </p>
+        <Alert className="basis-full rounded-panel border-border/12 bg-muted/60" role="status">
+          <AlertDescription>{statusMessage}</AlertDescription>
+        </Alert>
       ) : null}
       {errorMessage ? (
-        <p className="basis-full rounded-panel bg-destructive/14 px-4 py-3 text-sm leading-6 text-destructive" role="alert">
-          {errorMessage}
-        </p>
+        <Alert
+          className="basis-full rounded-panel border-destructive/20 bg-destructive/14"
+          role="alert"
+          variant="destructive"
+        >
+          <AlertDescription className="text-destructive">
+            {errorMessage}
+          </AlertDescription>
+        </Alert>
       ) : null}
     </>
   )
