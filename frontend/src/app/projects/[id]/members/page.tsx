@@ -2,6 +2,7 @@ import { MembersPageContent } from "@/app/projects/[id]/members/_components/Memb
 import { AppShell } from "@/components/layout/AppShell"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
+  getCurrentUserProfile,
   getProjectInvitations,
   getProjectMemberships,
   getProjects,
@@ -56,12 +57,14 @@ export default async function MembersPage({ params, searchParams }: MembersPageP
     )
   }
 
-  const [memberships, invitations] = await Promise.all([
+  const [currentUser, memberships, invitations] = await Promise.all([
+    getCurrentUserProfile(),
     getProjectMemberships(selectedProject.id),
     getProjectInvitations(selectedProject.id),
   ])
   return (
     <MembersPageContent
+      currentUserId={currentUser.id}
       errorMessage={errorMessage}
       invitations={invitations}
       memberships={memberships}

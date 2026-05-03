@@ -45,6 +45,9 @@ NEWSLETTER_API_BASE_URL = os.getenv("NEWSLETTER_API_BASE_URL", "http://127.0.0.1
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://127.0.0.1:3000")
 METRICS_TOKEN = os.getenv("METRICS_TOKEN", "")
 OTEL_ENABLED = env_bool("OTEL_ENABLED", default=False)
+MESSAGING_ENABLED = env_bool("MESSAGING_ENABLED", default=False)
+CHANNEL_LAYER_URL = os.getenv("CHANNEL_LAYER_URL", "")
+CHANNEL_LAYER_PREFIX = os.getenv("CHANNEL_LAYER_PREFIX", "newsletter-maker")
 OTEL_SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "newsletter-maker")
 OTEL_SERVICE_NAMESPACE = os.getenv("OTEL_SERVICE_NAMESPACE", "newsletter-maker")
 OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
@@ -106,6 +109,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",  # Required for allauth
+    "channels",
     # 4. Third-Party Authentication & API Tools
     "rest_framework",
     "rest_framework.authtoken",
@@ -130,6 +134,8 @@ INSTALLED_APPS = [
     "newsletters",
     "pipeline",
     "trends",
+    "notifications",
+    "messaging",
     "core",
 ]
 
@@ -145,6 +151,7 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "newsletter_maker.urls"
+ASGI_APPLICATION = "newsletter_maker.asgi.application"
 
 TEMPLATES = [
     {
@@ -162,6 +169,23 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "newsletter_maker.wsgi.application"
+
+if CHANNEL_LAYER_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [CHANNEL_LAYER_URL],
+                "prefix": f"{CHANNEL_LAYER_PREFIX}:channels",
+            },
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }
 
 DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
 
@@ -255,6 +279,8 @@ __all__ = [
     "NEWSLETTER_API_BASE_URL",
     "FRONTEND_BASE_URL",
     "BLUESKY_CREDENTIALS_ENCRYPTION_KEY",
+    "CHANNEL_LAYER_PREFIX",
+    "CHANNEL_LAYER_URL",
     "LINKEDIN_CREDENTIALS_ENCRYPTION_KEY",
     "LINKEDIN_CLIENT_ID",
     "LINKEDIN_CLIENT_SECRET",
@@ -273,6 +299,7 @@ __all__ = [
     "MIDDLEWARE",
     "ROOT_URLCONF",
     "TEMPLATES",
+    "ASGI_APPLICATION",
     "WSGI_APPLICATION",
     "DATABASES",
     "AUTH_PASSWORD_VALIDATORS",
@@ -297,8 +324,10 @@ __all__ = [
     "AWS_S3_FILE_OVERWRITE",
     "MEDIA_URL",
     "MEDIA_ROOT",
+    "MESSAGING_ENABLED",
     "REST_FRAMEWORK",
     "DRF_STANDARDIZED_ERRORS",
+    "CHANNEL_LAYERS",
     "SECURE_PROXY_SSL_HEADER",
     "USE_X_FORWARDED_HOST",
     "DEFAULT_AUTO_FIELD",

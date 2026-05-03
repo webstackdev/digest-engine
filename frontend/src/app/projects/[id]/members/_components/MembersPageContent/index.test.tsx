@@ -23,6 +23,7 @@ describe("MembersPageContent", () => {
   it("renders flash messages and the section entry points", () => {
     render(
       <MembersPageContent
+        currentUserId={99}
         errorMessage="Unable to update member."
         invitations={[createMembershipInvitation()]}
         memberships={[createProjectMembership()]}

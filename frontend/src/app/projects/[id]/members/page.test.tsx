@@ -5,11 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Project } from "@/lib/types"
 
 const {
+  getCurrentUserProfileMock,
   getProjectInvitationsMock,
   getProjectMembershipsMock,
   getProjectsMock,
   membersPageContentMock,
 } = vi.hoisted(() => ({
+  getCurrentUserProfileMock: vi.fn(),
   getProjectInvitationsMock: vi.fn(),
   getProjectMembershipsMock: vi.fn(),
   getProjectsMock: vi.fn(),
@@ -41,6 +43,7 @@ vi.mock("@/app/projects/[id]/members/_components/MembersPageContent", () => ({
 }))
 
 vi.mock("@/lib/api", () => ({
+  getCurrentUserProfile: getCurrentUserProfileMock,
   getProjectInvitations: getProjectInvitationsMock,
   getProjectMemberships: getProjectMembershipsMock,
   getProjects: getProjectsMock,
@@ -73,11 +76,13 @@ async function renderMembersPage(
 
 describe("MembersPage", () => {
   beforeEach(() => {
+    getCurrentUserProfileMock.mockReset()
     getProjectsMock.mockReset()
     getProjectMembershipsMock.mockReset()
     getProjectInvitationsMock.mockReset()
     membersPageContentMock.mockClear()
 
+    getCurrentUserProfileMock.mockResolvedValue({ id: 99 })
     getProjectsMock.mockResolvedValue([createProject()])
     getProjectMembershipsMock.mockResolvedValue([])
     getProjectInvitationsMock.mockResolvedValue([])
@@ -116,6 +121,7 @@ describe("MembersPage", () => {
     const props = (membersPageContentMock.mock.calls[0] as unknown[] | undefined)?.[0]
 
     expect(props).toEqual({
+      currentUserId: 99,
       projects: [project],
       selectedProject: project,
       memberships,

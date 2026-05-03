@@ -16,6 +16,7 @@ const meta = {
     docs: compactDocsParameters,
   },
   args: {
+    currentUserId: 99,
     projects: [createProject()],
     selectedProject: createProject(),
     memberships: [

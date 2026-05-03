@@ -13,6 +13,7 @@ const meta = {
     docs: compactDocsParameters,
   },
   args: {
+    currentUserId: 99,
     projectId: 1,
     redirectTarget: "/projects/1/members?project=1",
     memberships: [

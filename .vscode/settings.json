@@ -5,6 +5,7 @@
     "botocore",
     "bsky",
     "buildx",
+    "cbor",
     "cbranch",
     "cfgv",
     "cstat",
@@ -48,7 +49,9 @@
     "ormsgpack",
     "PRAW",
     "psycopg",
+    "pyasn",
     "pylint",
+    "pyopenssl",
     "PYTHONDONTWRITEBYTECODE",
     "PYTHONUNBUFFERED",
     "pytokens",
@@ -66,6 +69,8 @@
     "solomonstre",
     "svix",
     "topicv",
+    "txaio",
+    "ujson",
     "Unparseable",
     "unstub",
     "upserted",
@@ -76,6 +81,7 @@
     "vfarcic",
     "Viktor",
     "xrpc",
-    "xxhash"
+    "xxhash",
+    "zope"
   ]
 }

@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import pytest
+from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from content.models import Content
@@ -8,15 +9,21 @@ from newsletters.composition import (
     generate_newsletter_draft,
     regenerate_newsletter_draft_section,
 )
-from newsletters.tasks import run_all_scheduled_newsletter_drafts
 from newsletters.models import (
     NewsletterDraft,
     NewsletterDraftItem,
-    NewsletterDraftOriginalPiece,
     NewsletterDraftSection,
     NewsletterDraftStatus,
 )
-from projects.models import Project, ProjectConfig
+from newsletters.tasks import (
+    generate_newsletter_draft as run_generate_newsletter_draft,
+)
+from newsletters.tasks import (
+    regenerate_newsletter_draft_section as run_regenerate_newsletter_draft_section,
+)
+from newsletters.tasks import run_all_scheduled_newsletter_drafts
+from notifications.models import Notification, NotificationLevel
+from projects.models import Project, ProjectConfig, ProjectMembership, ProjectRole
 from trends.models import (
     ContentClusterMembership,
     OriginalContentIdea,
@@ -50,6 +57,17 @@ def _make_content(
         relevance_score=score,
         authority_adjusted_score=score,
     )
+
+
+def _make_project_admin(project: Project, *, username: str):
+    user_model = get_user_model()
+    user = user_model.objects.create_user(username=username, password="testpass123")
+    ProjectMembership.objects.create(
+        user=user,
+        project=project,
+        role=ProjectRole.ADMIN,
+    )
+    return user
 
 
 def test_generate_newsletter_draft_builds_tree_and_renderings(settings):
@@ -242,6 +260,152 @@ def test_regenerate_newsletter_draft_section_replaces_items_and_marks_draft_edit
     assert not NewsletterDraftItem.objects.filter(pk=_require_pk(old_item)).exists()
     assert section.items.count() == 1
     assert section.items.first().summary_used != "Old summary"
+
+
+def test_task_generate_newsletter_draft_notifies_project_admins_on_success(
+    settings, mocker
+):
+    settings.MESSAGING_ENABLED = True
+    project = Project.objects.create(
+        name="Task Project",
+        topic_description="Platform engineering",
+    )
+    _make_project_admin(project, username="admin-one")
+    _make_project_admin(project, username="admin-two")
+    compose_mock = mocker.patch(
+        "newsletters.tasks.compose_newsletter_draft",
+        return_value={
+            "project_id": _require_pk(project),
+            "draft_id": 42,
+            "status": NewsletterDraftStatus.READY,
+            "sections_created": 2,
+            "original_pieces_created": 1,
+        },
+    )
+
+    result = run_generate_newsletter_draft(
+        _require_pk(project), trigger_source="manual"
+    )
+
+    compose_mock.assert_called_once_with(_require_pk(project), trigger_source="manual")
+    assert result["draft_id"] == 42
+    notifications = list(Notification.objects.order_by("user__username"))
+    assert len(notifications) == 2
+    assert all(
+        notification.level == NotificationLevel.SUCCESS
+        for notification in notifications
+    )
+    assert {notification.link_path for notification in notifications} == {"/drafts/42"}
+    assert notifications[0].metadata["draft_id"] == 42
+
+
+def test_task_generate_newsletter_draft_notifies_project_admins_on_failure(
+    settings, mocker
+):
+    settings.MESSAGING_ENABLED = True
+    project = Project.objects.create(
+        name="Task Failure Project",
+        topic_description="Platform engineering",
+    )
+    _make_project_admin(project, username="admin-one")
+    mocker.patch(
+        "newsletters.tasks.compose_newsletter_draft",
+        side_effect=RuntimeError("LLM provider unavailable"),
+    )
+
+    with pytest.raises(RuntimeError, match="LLM provider unavailable"):
+        run_generate_newsletter_draft(_require_pk(project), trigger_source="scheduled")
+
+    notification = Notification.objects.get()
+    assert notification.level == NotificationLevel.ERROR
+    assert notification.body == "Newsletter draft generation failed."
+    assert notification.link_path == "/drafts"
+    assert notification.metadata["project_id"] == _require_pk(project)
+    assert notification.metadata["trigger_source"] == "scheduled"
+    assert notification.metadata["error"] == "LLM provider unavailable"
+
+
+def test_task_regenerate_newsletter_draft_section_notifies_project_admins_on_success(
+    settings, mocker
+):
+    settings.MESSAGING_ENABLED = True
+    project = Project.objects.create(
+        name="Section Task Project",
+        topic_description="Platform engineering",
+    )
+    _make_project_admin(project, username="admin-one")
+    draft = NewsletterDraft.objects.create(
+        project=project,
+        title="Draft",
+        intro="Intro",
+        outro="Outro",
+        status=NewsletterDraftStatus.READY,
+        generation_metadata={"source_theme_ids": [], "source_idea_ids": []},
+    )
+    section = NewsletterDraftSection.objects.create(
+        draft=draft,
+        title="Old title",
+        lede="Old lede",
+        order=0,
+    )
+    compose_mock = mocker.patch(
+        "newsletters.tasks.compose_newsletter_draft_section",
+        return_value={
+            "project_id": _require_pk(project),
+            "draft_id": _require_pk(draft),
+            "section_id": _require_pk(section),
+            "status": "completed",
+        },
+    )
+
+    result = run_regenerate_newsletter_draft_section(_require_pk(section))
+
+    compose_mock.assert_called_once_with(_require_pk(section))
+    assert result["status"] == "completed"
+    notification = Notification.objects.get()
+    assert notification.level == NotificationLevel.SUCCESS
+    assert notification.body == "Newsletter draft section refreshed."
+    assert notification.link_path == f"/drafts/{_require_pk(draft)}"
+    assert notification.metadata["section_id"] == _require_pk(section)
+
+
+def test_task_regenerate_newsletter_draft_section_notifies_project_admins_on_failure(
+    settings, mocker
+):
+    settings.MESSAGING_ENABLED = True
+    project = Project.objects.create(
+        name="Section Failure Project",
+        topic_description="Platform engineering",
+    )
+    _make_project_admin(project, username="admin-one")
+    draft = NewsletterDraft.objects.create(
+        project=project,
+        title="Draft",
+        intro="Intro",
+        outro="Outro",
+        status=NewsletterDraftStatus.READY,
+        generation_metadata={"source_theme_ids": [], "source_idea_ids": []},
+    )
+    section = NewsletterDraftSection.objects.create(
+        draft=draft,
+        title="Old title",
+        lede="Old lede",
+        order=0,
+    )
+    mocker.patch(
+        "newsletters.tasks.compose_newsletter_draft_section",
+        side_effect=RuntimeError("section composition failed"),
+    )
+
+    with pytest.raises(RuntimeError, match="section composition failed"):
+        run_regenerate_newsletter_draft_section(_require_pk(section))
+
+    notification = Notification.objects.get()
+    assert notification.level == NotificationLevel.ERROR
+    assert notification.body == "Newsletter draft section regeneration failed."
+    assert notification.link_path == f"/drafts/{_require_pk(draft)}"
+    assert notification.metadata["section_id"] == _require_pk(section)
+    assert notification.metadata["error"] == "section composition failed"
 
 
 def test_run_all_scheduled_newsletter_drafts_executes_due_projects_inline(

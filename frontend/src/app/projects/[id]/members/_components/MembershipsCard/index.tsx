@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -14,6 +16,7 @@ import { formatDate } from "@/lib/view-helpers"
 import { roleOptions } from "../shared"
 
 type MembershipsCardProps = {
+  currentUserId: number
   memberships: ProjectMembership[]
   projectId: number
   redirectTarget: string
@@ -21,6 +24,7 @@ type MembershipsCardProps = {
 
 /** Render the current project roster and role-management actions. */
 export function MembershipsCard({
+  currentUserId,
   memberships,
   projectId,
   redirectTarget,
@@ -78,13 +82,23 @@ export function MembershipsCard({
                   Update role
                 </Button>
               </form>
-              <form action={`/api/projects/${projectId}/members/${membership.id}`} method="POST">
-                <input name="redirectTo" type="hidden" value={redirectTarget} />
-                <input name="intent" type="hidden" value="remove" />
-                <Button className="min-h-11 rounded-full px-4 py-3" size="lg" type="submit" variant="destructive">
-                  Remove
-                </Button>
-              </form>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                {membership.user !== currentUserId ? (
+                  <Link
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-card px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted"
+                    href={`/messages?project=${projectId}&recipient=${membership.user}`}
+                  >
+                    Message
+                  </Link>
+                ) : null}
+                <form action={`/api/projects/${projectId}/members/${membership.id}`} method="POST">
+                  <input name="redirectTo" type="hidden" value={redirectTarget} />
+                  <input name="intent" type="hidden" value="remove" />
+                  <Button className="min-h-11 rounded-full px-4 py-3" size="lg" type="submit" variant="destructive">
+                    Remove
+                  </Button>
+                </form>
+              </div>
             </article>
           ))}
         </div>

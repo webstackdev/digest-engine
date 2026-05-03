@@ -12,6 +12,7 @@ const meta = {
     docs: compactDocsParameters,
   },
   args: {
+    messagesHref: "/messages?project=1",
     title: "Trend analysis",
     description:
       "Cluster velocity, member content, and editorial context for the topics accelerating inside this project.",
