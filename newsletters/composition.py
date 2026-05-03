@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from content.models import Content
 from core.llm import openrouter_chat_json
+from pipeline.resilience import execute_with_resilience
 from newsletters.models import (
     NewsletterDraft,
     NewsletterDraftItem,
@@ -333,14 +334,18 @@ def _compose_section(
     fallback_payload = _fallback_section_payload(theme, supporting_contents)
     if settings.OPENROUTER_API_KEY and supporting_contents:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_SUMMARIZATION_MODEL,
-                system_prompt=_newsletter_prompt_resource("section_composer"),
-                user_prompt=_build_section_prompt(
-                    theme=theme,
-                    supporting_contents=supporting_contents,
-                    fallback_payload=fallback_payload,
+            response = execute_with_resilience(
+                NEWSLETTER_COMPOSITION_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_SUMMARIZATION_MODEL,
+                    system_prompt=_newsletter_prompt_resource("section_composer"),
+                    user_prompt=_build_section_prompt(
+                        theme=theme,
+                        supporting_contents=supporting_contents,
+                        fallback_payload=fallback_payload,
+                    ),
                 ),
+                use_circuit_breaker=True,
             )
             content_by_id = {
                 _require_pk(content): content for content in supporting_contents
@@ -440,16 +445,20 @@ def _compose_intro_outro(
     )
     if settings.OPENROUTER_API_KEY:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_SUMMARIZATION_MODEL,
-                system_prompt=_newsletter_prompt_resource("intro_outro_composer"),
-                user_prompt=_build_intro_outro_prompt(
-                    project=project,
-                    section_payloads=section_payloads,
-                    original_piece_payloads=original_piece_payloads,
-                    style_examples=style_examples,
-                    fallback_payload=fallback_payload,
+            response = execute_with_resilience(
+                NEWSLETTER_COMPOSITION_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_SUMMARIZATION_MODEL,
+                    system_prompt=_newsletter_prompt_resource("intro_outro_composer"),
+                    user_prompt=_build_intro_outro_prompt(
+                        project=project,
+                        section_payloads=section_payloads,
+                        original_piece_payloads=original_piece_payloads,
+                        style_examples=style_examples,
+                        fallback_payload=fallback_payload,
+                    ),
                 ),
+                use_circuit_breaker=True,
             )
             return {
                 "title": str(
@@ -481,13 +490,17 @@ def _coherence_suggestions(
     if not settings.OPENROUTER_API_KEY:
         return []
     try:
-        response = openrouter_chat_json(
-            model=settings.AI_RELEVANCE_MODEL,
-            system_prompt=_newsletter_prompt_resource("coherence_pass"),
-            user_prompt=_build_coherence_prompt(
-                draft=draft,
-                style_examples=style_examples,
+        response = execute_with_resilience(
+            NEWSLETTER_COMPOSITION_SKILL_NAME,
+            lambda: openrouter_chat_json(
+                model=settings.AI_RELEVANCE_MODEL,
+                system_prompt=_newsletter_prompt_resource("coherence_pass"),
+                user_prompt=_build_coherence_prompt(
+                    draft=draft,
+                    style_examples=style_examples,
+                ),
             ),
+            use_circuit_breaker=True,
         )
         suggestions = response.payload.get("suggestions", [])
         if isinstance(suggestions, list):

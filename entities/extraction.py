@@ -15,6 +15,11 @@ from django.utils import timezone
 from content.models import Content
 from core.embeddings import search_similar_entities_for_content
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
+from pipeline.resilience import (
+    RetryBudget,
+    ResilientSkillError,
+    execute_with_resilience,
+)
 from entities.models import (
     Entity,
     EntityCandidate,
@@ -92,13 +97,21 @@ def _project_pk(content: Content) -> int:
     return _require_pk(content.project)
 
 
-def run_entity_extraction(content: Content) -> dict[str, Any]:
+def run_entity_extraction(
+    content: Content,
+    *,
+    retry_budget: RetryBudget | None = None,
+) -> dict[str, Any]:
     """Extract tracked-entity mentions and surface unknown candidates."""
 
     tracked_entities = list(
         Entity.objects.filter(project_id=_project_pk(content)).order_by("name")
     )
-    extraction = _run_entity_extraction_with_fallback(content, tracked_entities)
+    extraction = _run_entity_extraction_with_fallback(
+        content,
+        tracked_entities,
+        retry_budget=retry_budget,
+    )
     normalized_mentions, unresolved_names = _normalize_mentions(
         extraction.get("mentions", []), tracked_entities
     )
@@ -158,6 +171,9 @@ def run_entity_extraction(content: Content) -> dict[str, Any]:
         ),
         "model_used": extraction.get("model_used", "heuristic"),
         "latency_ms": int(extraction.get("latency_ms", 0) or 0),
+        "degraded": bool(extraction.get("degraded", False)),
+        "failure_reason": extraction.get("failure_reason", ""),
+        "failure_detail": extraction.get("failure_detail", ""),
     }
 
 
@@ -375,7 +391,10 @@ def backfill_entity_mentions(
 
 
 def _run_entity_extraction_with_fallback(
-    content: Content, tracked_entities: list[Entity]
+    content: Content,
+    tracked_entities: list[Entity],
+    *,
+    retry_budget: RetryBudget | None = None,
 ) -> dict[str, Any]:
     """Run the LLM extraction step when configured, else use heuristics."""
 
@@ -384,26 +403,35 @@ def _run_entity_extraction_with_fallback(
 
     candidate_entities = _retrieve_candidate_entities(content, tracked_entities)
     try:
-        response = openrouter_chat_json(
-            model=settings.AI_CLASSIFICATION_MODEL,
-            system_prompt=get_skill_definition(
-                ENTITY_EXTRACTION_SKILL_NAME
-            ).instructions_markdown,
-            user_prompt=build_skill_user_prompt(
-                ENTITY_EXTRACTION_SKILL_NAME,
-                {
-                    "title": content.title,
-                    "content_text": content.content_text[:5000],
-                    "project_id": _project_pk(content),
-                    "tracked_entities": [
-                        _serialize_tracked_entity(entity)
-                        for entity in candidate_entities
-                    ],
-                },
+        response = execute_with_resilience(
+            ENTITY_EXTRACTION_SKILL_NAME,
+            lambda: openrouter_chat_json(
+                model=settings.AI_CLASSIFICATION_MODEL,
+                system_prompt=get_skill_definition(
+                    ENTITY_EXTRACTION_SKILL_NAME
+                ).instructions_markdown,
+                user_prompt=build_skill_user_prompt(
+                    ENTITY_EXTRACTION_SKILL_NAME,
+                    {
+                        "title": content.title,
+                        "content_text": content.content_text[:5000],
+                        "project_id": _project_pk(content),
+                        "tracked_entities": [
+                            _serialize_tracked_entity(entity)
+                            for entity in candidate_entities
+                        ],
+                    },
+                ),
             ),
+            retry_budget=retry_budget,
+            use_circuit_breaker=True,
         )
-    except Exception:
-        return _heuristic_entity_extraction(content, tracked_entities)
+    except ResilientSkillError as exc:
+        fallback = _heuristic_entity_extraction(content, tracked_entities)
+        fallback["degraded"] = True
+        fallback["failure_reason"] = exc.reason
+        fallback["failure_detail"] = exc.detail
+        return fallback
 
     payload = response.payload
     return {

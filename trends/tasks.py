@@ -25,6 +25,7 @@ from core.embeddings import (
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
 from content.models import Content, FeedbackType, UserFeedback
 from entities.models import Entity, EntityMention, EntityMentionRole
+from pipeline.resilience import execute_with_resilience
 from projects.models import Project, SourceConfig
 from trends.observability import observe_trend_task_run
 
@@ -1605,19 +1606,23 @@ def _detect_original_content_gap(
 
     if settings.OPENROUTER_API_KEY:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_RELEVANCE_MODEL,
-                system_prompt=_original_content_prompt_resource("gap_detect"),
-                user_prompt=_build_original_content_step_prompt(
-                    project=project,
-                    cluster_context=cluster_context,
-                    supporting_memberships=supporting_memberships,
-                    recent_accepted_themes=recent_accepted_themes,
-                    recent_dismissed_themes=recent_dismissed_themes,
-                    extra_payload={
-                        "heuristic_gap": fallback_gap,
-                    },
+            response = execute_with_resilience(
+                ORIGINAL_CONTENT_IDEATION_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_RELEVANCE_MODEL,
+                    system_prompt=_original_content_prompt_resource("gap_detect"),
+                    user_prompt=_build_original_content_step_prompt(
+                        project=project,
+                        cluster_context=cluster_context,
+                        supporting_memberships=supporting_memberships,
+                        recent_accepted_themes=recent_accepted_themes,
+                        recent_dismissed_themes=recent_dismissed_themes,
+                        extra_payload={
+                            "heuristic_gap": fallback_gap,
+                        },
+                    ),
                 ),
+                use_circuit_breaker=True,
             )
             payload = response.payload
             return {
@@ -1696,19 +1701,23 @@ def _synthesize_theme_payload(
 
     if settings.OPENROUTER_API_KEY:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_SUMMARIZATION_MODEL,
-                system_prompt=get_skill_definition(
-                    THEME_DETECTION_SKILL_NAME
-                ).instructions_markdown,
-                user_prompt=build_skill_user_prompt(
-                    THEME_DETECTION_SKILL_NAME,
-                    {
-                        "project_topic": cluster.project.topic_description,
-                        "cluster_context": cluster_context,
-                        "recent_accepted_themes": [],
-                    },
+            response = execute_with_resilience(
+                THEME_DETECTION_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_SUMMARIZATION_MODEL,
+                    system_prompt=get_skill_definition(
+                        THEME_DETECTION_SKILL_NAME
+                    ).instructions_markdown,
+                    user_prompt=build_skill_user_prompt(
+                        THEME_DETECTION_SKILL_NAME,
+                        {
+                            "project_topic": cluster.project.topic_description,
+                            "cluster_context": cluster_context,
+                            "recent_accepted_themes": [],
+                        },
+                    ),
                 ),
+                use_circuit_breaker=True,
             )
             payload = response.payload
             return {
@@ -1752,20 +1761,24 @@ def _synthesize_original_content_payload(
     )
     if settings.OPENROUTER_API_KEY:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_SUMMARIZATION_MODEL,
-                system_prompt=_original_content_prompt_resource("generate"),
-                user_prompt=_build_original_content_step_prompt(
-                    project=project,
-                    cluster_context=cluster_context,
-                    supporting_memberships=supporting_memberships,
-                    recent_accepted_themes=recent_accepted_themes,
-                    recent_dismissed_themes=recent_dismissed_themes,
-                    extra_payload={
-                        "gap_analysis": gap_analysis,
-                        "fallback_payload": fallback_payload,
-                    },
+            response = execute_with_resilience(
+                ORIGINAL_CONTENT_IDEATION_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_SUMMARIZATION_MODEL,
+                    system_prompt=_original_content_prompt_resource("generate"),
+                    user_prompt=_build_original_content_step_prompt(
+                        project=project,
+                        cluster_context=cluster_context,
+                        supporting_memberships=supporting_memberships,
+                        recent_accepted_themes=recent_accepted_themes,
+                        recent_dismissed_themes=recent_dismissed_themes,
+                        extra_payload={
+                            "gap_analysis": gap_analysis,
+                            "fallback_payload": fallback_payload,
+                        },
+                    ),
                 ),
+                use_circuit_breaker=True,
             )
             payload = response.payload
             return (
@@ -1820,19 +1833,23 @@ def _score_original_content_idea(
     )
     if settings.OPENROUTER_API_KEY:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_RELEVANCE_MODEL,
-                system_prompt=_original_content_prompt_resource("critique"),
-                user_prompt=(
-                    f"project_topic_description:\n{project.topic_description}\n\n"
-                    f"cluster_label:\n{cluster.label}\n\n"
-                    f"idea_payload:\n{idea_payload}\n\n"
-                    f"gap_analysis:\n{gap_analysis}\n\n"
-                    f"recent_content_titles:\n{[content.title for content in recent_project_content[:20]]}\n\n"
-                    f"recent_themes:\n{[{'title': theme.title, 'pitch': theme.pitch} for theme in recent_themes[:10]]}\n\n"
-                    f"recent_ideas:\n{[{'angle_title': idea.angle_title, 'summary': idea.summary} for idea in recent_ideas[:10]]}\n\n"
-                    "Return only a JSON object with fields self_critique_score and critique_summary."
+            response = execute_with_resilience(
+                ORIGINAL_CONTENT_IDEATION_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_RELEVANCE_MODEL,
+                    system_prompt=_original_content_prompt_resource("critique"),
+                    user_prompt=(
+                        f"project_topic_description:\n{project.topic_description}\n\n"
+                        f"cluster_label:\n{cluster.label}\n\n"
+                        f"idea_payload:\n{idea_payload}\n\n"
+                        f"gap_analysis:\n{gap_analysis}\n\n"
+                        f"recent_content_titles:\n{[content.title for content in recent_project_content[:20]]}\n\n"
+                        f"recent_themes:\n{[{'title': theme.title, 'pitch': theme.pitch} for theme in recent_themes[:10]]}\n\n"
+                        f"recent_ideas:\n{[{'angle_title': idea.angle_title, 'summary': idea.summary} for idea in recent_ideas[:10]]}\n\n"
+                        "Return only a JSON object with fields self_critique_score and critique_summary."
+                    ),
                 ),
+                use_circuit_breaker=True,
             )
             return max(
                 0.0,
@@ -1861,18 +1878,22 @@ def _score_theme_novelty(
     )
     if settings.OPENROUTER_API_KEY:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_RELEVANCE_MODEL,
-                system_prompt=(
-                    "Score the novelty of a proposed newsletter theme against recent accepted themes. "
-                    "Return JSON with fields novelty_score and explanation. novelty_score must be between 0 and 1, where 1 is highly novel."
+            response = execute_with_resilience(
+                THEME_DETECTION_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_RELEVANCE_MODEL,
+                    system_prompt=(
+                        "Score the novelty of a proposed newsletter theme against recent accepted themes. "
+                        "Return JSON with fields novelty_score and explanation. novelty_score must be between 0 and 1, where 1 is highly novel."
+                    ),
+                    user_prompt=(
+                        f"project_topic:\n{project.topic_description}\n\n"
+                        f"candidate_theme:\n{theme_payload}\n\n"
+                        f"recent_accepted_themes:\n{[{'title': theme.title, 'pitch': theme.pitch, 'why_it_matters': theme.why_it_matters} for theme in recent_accepted_themes[:10]]}\n\n"
+                        "Return only a JSON object with fields novelty_score and explanation."
+                    ),
                 ),
-                user_prompt=(
-                    f"project_topic:\n{project.topic_description}\n\n"
-                    f"candidate_theme:\n{theme_payload}\n\n"
-                    f"recent_accepted_themes:\n{[{'title': theme.title, 'pitch': theme.pitch, 'why_it_matters': theme.why_it_matters} for theme in recent_accepted_themes[:10]]}\n\n"
-                    "Return only a JSON object with fields novelty_score and explanation."
-                ),
+                use_circuit_breaker=True,
             )
             payload = response.payload
             novelty_score = float(payload.get("novelty_score", heuristic_score))

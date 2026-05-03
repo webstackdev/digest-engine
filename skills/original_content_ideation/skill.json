@@ -1,0 +1,5 @@
+{
+  "name": "original_content_ideation",
+  "max_retries": 2,
+  "backoff_seconds": [5, 30]
+}
