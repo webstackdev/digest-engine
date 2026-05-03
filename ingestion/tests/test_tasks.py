@@ -13,8 +13,15 @@ from ingestion.tasks import (
     run_all_ingestions,
     run_ingestion,
 )
+from notifications.models import Notification, NotificationLevel
 from projects.model_support import SourcePluginName
-from projects.models import LinkedInCredentials, Project, SourceConfig
+from projects.models import (
+    LinkedInCredentials,
+    Project,
+    ProjectMembership,
+    ProjectRole,
+    SourceConfig,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -456,6 +463,37 @@ def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, m
     )
     assert ingestion_run.status == RunStatus.FAILED
     assert ingestion_run.error_message == "feed unavailable"
+
+
+def test_run_ingestion_notifies_project_admins_when_plugin_errors(
+    source_plugin_context, settings, mocker
+):
+    settings.MESSAGING_ENABLED = True
+    ProjectMembership.objects.create(
+        user=source_plugin_context.user,
+        project=source_plugin_context.project,
+        role=ProjectRole.ADMIN,
+    )
+    parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
+    source_config = SourceConfig.objects.create(
+        project=source_plugin_context.project,
+        plugin_name=SourcePluginName.RSS,
+        config={"feed_url": "https://example.com/feed.xml"},
+    )
+    parse_mock.side_effect = RuntimeError("feed unavailable")
+
+    with pytest.raises(RuntimeError, match="feed unavailable"):
+        run_ingestion(_require_pk(source_config))
+
+    notification = Notification.objects.get()
+    assert notification.level == NotificationLevel.ERROR
+    assert notification.body == "rss ingestion failed."
+    assert notification.metadata["project_id"] == _require_pk(
+        source_plugin_context.project
+    )
+    assert notification.metadata["source_config_id"] == _require_pk(source_config)
+    assert notification.metadata["plugin_name"] == SourcePluginName.RSS
+    assert notification.metadata["error"] == "feed unavailable"
 
 
 def test_ingest_source_config_truncates_fields_and_processes_inline(

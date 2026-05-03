@@ -11,6 +11,8 @@ env:
   allowedHosts: "localhost,127.0.0.1"
   csrfTrustedOrigins: "http://localhost,http://127.0.0.1"
   siteId: "1"
+  channelLayerUrl: ""
+  messagingEnabled: "true"
   newsletterApiBaseUrl: "http://newsletter-maker.local"
   emailBackend: anymail.backends.resend.EmailBackend
   defaultFromEmail: onboarding@resend.dev

@@ -1,12 +1,28 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AppShell } from "@/components/layout/AppShell"
 import type { Project } from "@/lib/types"
 
+const { getMessageThreadsMock } = vi.hoisted(() => ({
+  getMessageThreadsMock: vi.fn(),
+}))
+
+vi.mock("@/lib/api", () => ({
+  getMessageThreads: getMessageThreadsMock,
+}))
+
 vi.mock("@/components/layout/AppShell/_components/AppShellHeader", () => ({
-  AppShellHeader: ({ description, title }: { description: string; title: string }) => (
-    <div data-testid="app-shell-header">
+  AppShellHeader: ({
+    description,
+    messagesHref,
+    title,
+  }: {
+    description: string
+    messagesHref: string
+    title: string
+  }) => (
+    <div data-messages-href={messagesHref} data-testid="app-shell-header">
       <span>{title}</span>
       <span>{description}</span>
     </div>
@@ -16,21 +32,25 @@ vi.mock("@/components/layout/AppShell/_components/AppShellHeader", () => ({
 vi.mock("@/components/layout/AppShell/_components/AppShellSidebar", () => ({
   AppShellSidebar: ({
     canManageMembers,
+    initialMessageThreads,
     projectQuery,
     projects,
     selectedProjectId,
   }: {
     canManageMembers: boolean
+    initialMessageThreads: Array<{ id: number; has_unread: boolean }>
     projectQuery: string
     projects: Project[]
     selectedProjectId: number | null
   }) => (
     <div
       data-can-manage-members={canManageMembers ? "true" : "false"}
+      data-message-thread-count={initialMessageThreads.length}
       data-project-query={projectQuery}
       data-projects={projects.length}
       data-selected-project-id={selectedProjectId ?? "none"}
       data-testid="app-shell-sidebar"
+      data-unread-message-thread-count={initialMessageThreads.filter((thread) => thread.has_unread).length}
     />
   ),
 }))
@@ -55,16 +75,24 @@ const projects: Project[] = [
 ]
 
 describe("AppShell", () => {
-  it("renders the extracted shell regions and child content", () => {
+  beforeEach(() => {
+    getMessageThreadsMock.mockReset()
+    getMessageThreadsMock.mockResolvedValue([
+      { id: 1, has_unread: true },
+      { id: 2, has_unread: false },
+      { id: 3, has_unread: true },
+    ])
+  })
+
+  it("renders the extracted shell regions, child content, and message summary", async () => {
     render(
-      <AppShell
-        title="Dashboard"
-        description="A test description"
-        projects={projects}
-        selectedProjectId={1}
-      >
-        <div>Child content</div>
-      </AppShell>,
+      await AppShell({
+        title: "Dashboard",
+        description: "A test description",
+        projects,
+        selectedProjectId: 1,
+        children: <div>Child content</div>,
+      }),
     )
 
     expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
@@ -75,21 +103,34 @@ describe("AppShell", () => {
       "data-can-manage-members",
       "true",
     )
+    expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
+      "data-message-thread-count",
+      "3",
+    )
+    expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
+      "data-unread-message-thread-count",
+      "2",
+    )
     expect(screen.getByTestId("app-shell-header")).toHaveTextContent("Dashboard")
     expect(screen.getByTestId("app-shell-header")).toHaveTextContent("A test description")
+    expect(screen.getByTestId("app-shell-header")).toHaveAttribute(
+      "data-messages-href",
+      "/messages?project=1",
+    )
     expect(screen.getByText("Child content")).toBeInTheDocument()
   })
 
-  it("passes member access and empty project query state into the sidebar", () => {
+  it("falls back to an empty message summary when the fetch fails", async () => {
+    getMessageThreadsMock.mockRejectedValue(new Error("boom"))
+
     render(
-      <AppShell
-        title="Dashboard"
-        description="A test description"
-        projects={projects}
-        selectedProjectId={2}
-      >
-        <div>Child content</div>
-      </AppShell>,
+      await AppShell({
+        title: "Dashboard",
+        description: "A test description",
+        projects,
+        selectedProjectId: 2,
+        children: <div>Child content</div>,
+      }),
     )
 
     expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
@@ -99,6 +140,18 @@ describe("AppShell", () => {
     expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
       "data-can-manage-members",
       "false",
+    )
+    expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
+      "data-message-thread-count",
+      "0",
+    )
+    expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
+      "data-unread-message-thread-count",
+      "0",
+    )
+    expect(screen.getByTestId("app-shell-header")).toHaveAttribute(
+      "data-messages-href",
+      "/messages?project=2",
     )
   })
 })

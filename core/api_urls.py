@@ -11,8 +11,12 @@ from entities.api_urls import (
 from ingestion.api_urls import (
     register_project_routes as register_ingestion_project_routes,
 )
+from messaging.api_urls import register_root_routes as register_messaging_root_routes
 from newsletters.api_urls import (
     register_project_routes as register_newsletters_project_routes,
+)
+from notifications.api_urls import (
+    register_root_routes as register_notifications_root_routes,
 )
 from pipeline.api_urls import (
     register_project_routes as register_pipeline_project_routes,
@@ -30,6 +34,8 @@ app_name = "api"
 
 router = DefaultRouter()
 register_projects_root_routes(router)
+register_notifications_root_routes(router)
+register_messaging_root_routes(router)
 
 project_router = NestedSimpleRouter(router, r"projects", lookup="project")
 register_projects_project_routes(project_router)

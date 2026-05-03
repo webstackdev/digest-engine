@@ -10,7 +10,9 @@ data:
   CSRF_TRUSTED_ORIGINS: {{ .Values.env.csrfTrustedOrigins | quote }}
   SITE_ID: {{ .Values.env.siteId | quote }}
   REDIS_URL: {{ include "newsletter-maker.redisUrl" . | quote }}
+  CHANNEL_LAYER_URL: {{ default (include "newsletter-maker.redisUrl" .) .Values.env.channelLayerUrl | quote }}
   QDRANT_URL: {{ include "newsletter-maker.qdrantUrl" . | quote }}
+  MESSAGING_ENABLED: {{ .Values.env.messagingEnabled | quote }}
   NEWSLETTER_API_BASE_URL: {{ .Values.env.newsletterApiBaseUrl | quote }}
   EMAIL_BACKEND: {{ .Values.env.emailBackend | quote }}
   DEFAULT_FROM_EMAIL: {{ .Values.env.defaultFromEmail | quote }}

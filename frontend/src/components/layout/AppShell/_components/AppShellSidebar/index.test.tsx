@@ -1,9 +1,19 @@
+import { useQueryClient } from "@tanstack/react-query"
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import type { ReactNode } from "react"
+import { useEffect } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { fetchMessageThreads, MESSAGE_THREADS_QUERY_KEY } from "@/lib/messages"
 import type { Project } from "@/lib/types"
+import { QueryProvider } from "@/providers/QueryProvider"
 
 import { AppShellSidebar } from "."
+
+vi.mock("@/lib/messages", () => ({
+  MESSAGE_THREADS_QUERY_KEY: ["message-threads"],
+  fetchMessageThreads: vi.fn(),
+}))
 
 const projects: Project[] = [
   {
@@ -24,20 +34,68 @@ const projects: Project[] = [
   },
 ]
 
-describe("AppShellSidebar", () => {
-  it("adds the selected project query string to navigation links and marks the active project", () => {
-    render(
+function renderSidebar(
+  props: Partial<React.ComponentProps<typeof AppShellSidebar>> = {},
+) {
+  return render(
+    <QueryProvider>
       <AppShellSidebar
         canManageMembers={false}
+        initialMessageThreads={[]}
         projectQuery="?project=2"
         projects={projects}
         selectedProjectId={2}
-      />,
-    )
+        {...props}
+      />
+    </QueryProvider>,
+  )
+}
+
+function CacheUpdater({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    queryClient.setQueryData(MESSAGE_THREADS_QUERY_KEY, [
+      {
+        id: 1,
+        counterpart: null,
+        has_unread: true,
+        last_message_preview: "Draft ready",
+        last_message_at: "2026-05-03T10:00:00Z",
+        last_read_at: null,
+        created_at: "2026-05-01T10:00:00Z",
+      },
+      {
+        id: 2,
+        counterpart: null,
+        has_unread: false,
+        last_message_preview: "On it.",
+        last_message_at: "2026-05-03T10:01:00Z",
+        last_read_at: "2026-05-03T10:01:00Z",
+        created_at: "2026-05-01T10:00:00Z",
+      },
+    ])
+  }, [queryClient])
+
+  return <>{children}</>
+}
+
+describe("AppShellSidebar", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(fetchMessageThreads).mockResolvedValue([])
+  })
+
+  it("adds the selected project query string to navigation links and marks the active project", () => {
+    renderSidebar()
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
       "href",
       "/?project=2",
+    )
+    expect(screen.getByRole("link", { name: "Messages" })).toHaveAttribute(
+      "href",
+      "/messages?project=2",
     )
     expect(screen.getByRole("link", { name: "Trends" })).toHaveAttribute(
       "href",
@@ -79,18 +137,115 @@ describe("AppShellSidebar", () => {
   })
 
   it("shows the members link when the selected project role is admin", () => {
-    render(
-      <AppShellSidebar
-        canManageMembers
-        projectQuery="?project=1"
-        projects={projects}
-        selectedProjectId={1}
-      />,
-    )
+    renderSidebar({
+      canManageMembers: true,
+      projectQuery: "?project=1",
+      selectedProjectId: 1,
+    })
 
     expect(screen.getByRole("link", { name: "Members" })).toHaveAttribute(
       "href",
       "/projects/1/members?project=1",
     )
+  })
+
+  it("shows total and unread message badges on the messages link", () => {
+    vi.mocked(fetchMessageThreads).mockResolvedValue([
+      {
+        id: 1,
+        counterpart: null,
+        has_unread: true,
+        last_message_preview: "Can you review this draft?",
+        last_message_at: "2026-05-03T10:00:00Z",
+        last_read_at: null,
+        created_at: "2026-05-01T10:00:00Z",
+      },
+      {
+        id: 2,
+        counterpart: null,
+        has_unread: true,
+        last_message_preview: "Second thread",
+        last_message_at: "2026-05-03T10:03:00Z",
+        last_read_at: null,
+        created_at: "2026-05-01T10:00:00Z",
+      },
+      {
+        id: 3,
+        counterpart: null,
+        has_unread: false,
+        last_message_preview: "Third thread",
+        last_message_at: "2026-05-03T10:02:00Z",
+        last_read_at: "2026-05-03T10:02:00Z",
+        created_at: "2026-05-01T10:00:00Z",
+      },
+    ])
+
+    renderSidebar({
+      initialMessageThreads: [
+        {
+          id: 1,
+          counterpart: null,
+          has_unread: true,
+          last_message_preview: "Can you review this draft?",
+          last_message_at: "2026-05-03T10:00:00Z",
+          last_read_at: null,
+          created_at: "2026-05-01T10:00:00Z",
+        },
+        {
+          id: 2,
+          counterpart: null,
+          has_unread: true,
+          last_message_preview: "Second thread",
+          last_message_at: "2026-05-03T10:03:00Z",
+          last_read_at: null,
+          created_at: "2026-05-01T10:00:00Z",
+        },
+        {
+          id: 3,
+          counterpart: null,
+          has_unread: false,
+          last_message_preview: "Third thread",
+          last_message_at: "2026-05-03T10:02:00Z",
+          last_read_at: "2026-05-03T10:02:00Z",
+          created_at: "2026-05-01T10:00:00Z",
+        },
+      ],
+    })
+
+    expect(screen.getByRole("link", { name: /Messages/i })).toHaveAttribute(
+      "href",
+      "/messages?project=2",
+    )
+    expect(
+      screen.getByRole("link", { name: "Open latest unread message thread" }),
+    ).toHaveAttribute("href", "/messages?project=2&thread=2")
+    expect(screen.getAllByText("3")).toHaveLength(1)
+    expect(screen.getAllByText("2")).toHaveLength(1)
+  })
+
+  it("updates the message badges when the shared query cache changes", async () => {
+    vi.mocked(fetchMessageThreads).mockImplementation(
+      () => new Promise(() => {}),
+    )
+
+    render(
+      <QueryProvider>
+        <CacheUpdater>
+          <AppShellSidebar
+            canManageMembers={false}
+            initialMessageThreads={[]}
+            projectQuery="?project=2"
+            projects={projects}
+            selectedProjectId={2}
+          />
+        </CacheUpdater>
+      </QueryProvider>,
+    )
+
+    expect(await screen.findByText("2")).toBeInTheDocument()
+    expect(screen.getAllByText("1")).toHaveLength(1)
+    expect(
+      screen.getByRole("link", { name: "Open latest unread message thread" }),
+    ).toHaveAttribute("href", "/messages?project=2&thread=1")
   })
 })

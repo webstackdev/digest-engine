@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import logging
 from contextlib import contextmanager
-from typing import Any, Iterator, Mapping
+from typing import TYPE_CHECKING, Any, Iterator, Mapping
 
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from opentelemetry.trace import TracerProvider as ApiTracerProvider
 
 _PROVIDER_CONFIGURED = False
 _DJANGO_INSTRUMENTED = False
@@ -85,8 +88,8 @@ def configure_telemetry(
                 "service.namespace": settings.OTEL_SERVICE_NAMESPACE,
             }
         )
-        tracer_provider = TracerProvider(resource=resource)
-        tracer_provider.add_span_processor(
+        sdk_tracer_provider = TracerProvider(resource=resource)
+        sdk_tracer_provider.add_span_processor(
             BatchSpanProcessor(
                 OTLPSpanExporter(
                     endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT,
@@ -95,10 +98,10 @@ def configure_telemetry(
                 )
             )
         )
-        trace.set_tracer_provider(tracer_provider)
+        trace.set_tracer_provider(sdk_tracer_provider)
         _PROVIDER_CONFIGURED = True
 
-    tracer_provider = trace.get_tracer_provider()
+    tracer_provider: ApiTracerProvider = trace.get_tracer_provider()
 
     if instrument_django and not _DJANGO_INSTRUMENTED:
         DjangoInstrumentor().instrument(tracer_provider=tracer_provider)

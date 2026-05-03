@@ -2,6 +2,8 @@ import importlib
 import os
 import sys
 
+from channels.routing import ProtocolTypeRouter
+
 from newsletter_maker.celery import app
 
 
@@ -22,7 +24,10 @@ def test_asgi_module_sets_default_settings_and_builds_application(mocker):
         "DJANGO_SETTINGS_MODULE", "newsletter_maker.settings"
     )
     get_app_mock.assert_called_once_with()
-    assert module.application == "asgi-app"
+    assert module.django_asgi_application == "asgi-app"
+    assert isinstance(module.application, ProtocolTypeRouter)
+    assert module.application.application_mapping["http"] == "asgi-app"
+    assert "websocket" in module.application.application_mapping
 
 
 def test_wsgi_module_sets_default_settings_and_builds_application(mocker):

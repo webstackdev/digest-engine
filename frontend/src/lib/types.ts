@@ -51,6 +51,58 @@ export type UserProfile = {
   last_name: string
 }
 
+export type NotificationLevel = "info" | "success" | "error"
+
+export type Notification = {
+  id: number
+  project: number | null
+  level: NotificationLevel
+  body: string
+  link_path: string
+  metadata: Record<string, unknown>
+  created_at: string
+  read_at: string | null
+  is_read: boolean
+}
+
+export type NotificationReadAllResponse = {
+  updated_count: number
+}
+
+export type MessageThreadCounterpart = {
+  id: number
+  username: string
+  display_name: string
+  avatar_url: string | null
+  avatar_thumbnail_url: string | null
+}
+
+export type MessageThread = {
+  id: number
+  counterpart: MessageThreadCounterpart | null
+  has_unread: boolean
+  last_message_preview: string
+  last_message_at: string | null
+  last_read_at: string | null
+  created_at: string
+}
+
+export type DirectMessage = {
+  id: number
+  thread: number
+  sender: number
+  sender_username: string
+  sender_display_name: string
+  body: string
+  created_at: string
+  edited_at: string | null
+}
+
+export type MessageThreadReadResponse = {
+  thread_id: number
+  last_read_at: string | null
+}
+
 export type ProjectMembership = {
   id: number
   project: number

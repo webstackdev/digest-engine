@@ -12,6 +12,8 @@ from content.deduplication import canonicalize_url
 from content.models import Content
 from ingestion.models import IngestionRun, RunStatus
 from ingestion.plugins import get_plugin_for_source_config
+from notifications.emit import notify_project_admins
+from notifications.models import NotificationLevel
 from projects.models import LinkedInCredentials, SourceConfig
 
 logger = logging.getLogger(__name__)
@@ -47,6 +49,17 @@ def run_ingestion(source_config_id: int):
         ingestion_run.completed_at = timezone.now()
         ingestion_run.error_message = str(exc)
         ingestion_run.save(update_fields=["status", "completed_at", "error_message"])
+        notify_project_admins(
+            source_config.project,
+            level=NotificationLevel.ERROR,
+            body=f"{source_config.plugin_name} ingestion failed.",
+            metadata={
+                "project_id": _require_pk(source_config.project),
+                "source_config_id": source_config_id,
+                "plugin_name": source_config.plugin_name,
+                "error": str(exc),
+            },
+        )
         logger.exception(
             "Source ingestion failed", extra={"source_config_id": source_config_id}
         )

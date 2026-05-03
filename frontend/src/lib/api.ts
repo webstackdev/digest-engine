@@ -8,6 +8,7 @@ import type {
   BlueskyCredentials,
   Content,
   ContentSkillName,
+  DirectMessage,
   Entity,
   EntityAuthoritySnapshot,
   EntityCandidate,
@@ -17,6 +18,8 @@ import type {
   LinkedInOAuthAuthorization,
   MastodonCredentials,
   MembershipInvitation,
+  MessageThread,
+  MessageThreadReadResponse,
   NewsletterDraft,
   NewsletterDraftGenerationResponse,
   NewsletterDraftItem,
@@ -24,6 +27,8 @@ import type {
   NewsletterDraftSection,
   NewsletterDraftSectionRegenerationResponse,
   NewsletterIntake,
+  Notification,
+  NotificationReadAllResponse,
   OriginalContentIdea,
   OriginalContentIdeaGenerationResponse,
   Project,
@@ -477,6 +482,119 @@ export async function uploadCurrentUserAvatar(
 export async function deleteCurrentUserAvatar(): Promise<UserProfile> {
   return apiFetch<UserProfile>("/api/v1/profile/avatar/", {
     method: "DELETE",
+  })
+}
+
+/**
+ * Fetch the current user's persistent notifications.
+ *
+ * @param options - Optional unread-only filter.
+ * @returns Notifications ordered newest first by the backend.
+ */
+export async function getNotifications(options: {
+  unread?: boolean
+} = {}): Promise<Notification[]> {
+  const searchParams = new URLSearchParams()
+  if (options.unread) {
+    searchParams.set("unread", "true")
+  }
+  const query = searchParams.toString()
+
+  return apiFetch<Notification[]>(
+    `/api/v1/notifications/${query ? `?${query}` : ""}`,
+  )
+}
+
+/**
+ * Mark one notification as read for the current user.
+ *
+ * @param notificationId - Numeric notification identifier.
+ * @returns The updated notification payload.
+ */
+export async function readNotification(
+  notificationId: number,
+): Promise<Notification> {
+  return apiFetch<Notification>(`/api/v1/notifications/${notificationId}/read/`, {
+    method: "POST",
+  })
+}
+
+/**
+ * Mark every unread notification as read for the current user.
+ *
+ * @returns The count of updated notification rows.
+ */
+export async function readAllNotifications(): Promise<NotificationReadAllResponse> {
+  return apiFetch<NotificationReadAllResponse>("/api/v1/notifications/read-all/", {
+    method: "POST",
+  })
+}
+
+/**
+ * Fetch the current user's direct-message threads.
+ *
+ * @returns Thread summaries ordered newest first.
+ */
+export async function getMessageThreads(): Promise<MessageThread[]> {
+  return apiFetch<MessageThread[]>("/api/v1/messaging/threads/")
+}
+
+/**
+ * Open or find a direct-message thread with another visible user.
+ *
+ * @param payload - Recipient id and optional opening message.
+ * @returns The created or existing thread summary.
+ */
+export async function createMessageThread(payload: {
+  recipient_user_id: number
+  opening_message?: string
+}): Promise<MessageThread> {
+  return apiFetch<MessageThread>("/api/v1/messaging/threads/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Fetch all messages for one direct-message thread.
+ *
+ * @param threadId - Numeric thread identifier.
+ * @returns Messages ordered oldest to newest.
+ */
+export async function getThreadMessages(
+  threadId: number,
+): Promise<DirectMessage[]> {
+  return apiFetch<DirectMessage[]>(`/api/v1/messaging/threads/${threadId}/messages/`)
+}
+
+/**
+ * Send a new message into one direct-message thread.
+ *
+ * @param threadId - Numeric thread identifier.
+ * @param payload - Outbound message body.
+ * @returns The created message payload.
+ */
+export async function createThreadMessage(
+  threadId: number,
+  payload: { body: string },
+): Promise<DirectMessage> {
+  return apiFetch<DirectMessage>(`/api/v1/messaging/threads/${threadId}/messages/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  })
+}
+
+/**
+ * Advance the current user's read cursor for one thread.
+ *
+ * @param threadId - Numeric thread identifier.
+ * @returns The updated read timestamp.
+ */
+export async function markThreadRead(
+  threadId: number,
+): Promise<MessageThreadReadResponse> {
+  return apiFetch<MessageThreadReadResponse>(`/api/v1/messaging/threads/${threadId}/read/`, {
+    method: "POST",
   })
 }
 

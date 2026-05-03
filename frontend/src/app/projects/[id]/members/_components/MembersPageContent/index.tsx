@@ -11,6 +11,7 @@ import { InvitationsCard } from "../InvitationsCard"
 import { MembershipsCard } from "../MembershipsCard"
 
 type MembersPageContentProps = {
+  currentUserId: number
   projects: Project[]
   selectedProject: Project
   memberships: ProjectMembership[]
@@ -21,6 +22,7 @@ type MembersPageContentProps = {
 
 /** Render the members management shell for one project. */
 export function MembersPageContent({
+  currentUserId,
   projects,
   selectedProject,
   memberships,
@@ -67,6 +69,7 @@ export function MembersPageContent({
         </Card>
 
         <MembershipsCard
+          currentUserId={currentUserId}
           memberships={memberships}
           projectId={selectedProject.id}
           redirectTarget={redirectTarget}

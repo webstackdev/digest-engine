@@ -21,10 +21,14 @@ from newsletters.extraction import extract_newsletter_payload
 from newsletters.models import (
     IntakeAllowlist,
     NewsletterDraft,
+    NewsletterDraftSection,
+    NewsletterDraftStatus,
     NewsletterIntake,
     NewsletterIntakeStatus,
 )
-from projects.models import ProjectConfig
+from notifications.emit import notify_project_admins
+from notifications.models import NotificationLevel
+from projects.models import Project, ProjectConfig
 
 
 class DelayedTask(Protocol):
@@ -144,7 +148,40 @@ def generate_newsletter_draft(
 ) -> dict[str, object]:
     """Compose one newsletter draft from accepted trend inputs."""
 
-    return compose_newsletter_draft(project_id, trigger_source=trigger_source)
+    project = Project.objects.get(pk=project_id)
+    try:
+        result = compose_newsletter_draft(project_id, trigger_source=trigger_source)
+    except Exception as exc:
+        notify_project_admins(
+            project,
+            level=NotificationLevel.ERROR,
+            body="Newsletter draft generation failed.",
+            link_path="/drafts",
+            metadata={
+                "project_id": project_id,
+                "trigger_source": trigger_source,
+                "error": str(exc),
+            },
+        )
+        raise
+
+    draft_id = result.get("draft_id")
+    if result.get("status") == NewsletterDraftStatus.READY and isinstance(
+        draft_id, int
+    ):
+        notify_project_admins(
+            project,
+            level=NotificationLevel.SUCCESS,
+            body="Newsletter draft is ready.",
+            link_path=f"/drafts/{draft_id}",
+            metadata={
+                "project_id": project_id,
+                "draft_id": draft_id,
+                "trigger_source": trigger_source,
+                "status": str(result.get("status", "")),
+            },
+        )
+    return result
 
 
 @shared_task(name="core.tasks.run_all_scheduled_newsletter_drafts")
@@ -191,7 +228,42 @@ def run_all_scheduled_newsletter_drafts() -> dict[str, int]:
 def regenerate_newsletter_draft_section(section_id: int) -> dict[str, object]:
     """Recompose one newsletter draft section in isolation."""
 
-    return compose_newsletter_draft_section(section_id)
+    section = NewsletterDraftSection.objects.select_related("draft__project").get(
+        pk=section_id
+    )
+    project = section.draft.project
+    draft_id = _require_pk(section.draft)
+    try:
+        result = compose_newsletter_draft_section(section_id)
+    except Exception as exc:
+        notify_project_admins(
+            project,
+            level=NotificationLevel.ERROR,
+            body="Newsletter draft section regeneration failed.",
+            link_path=f"/drafts/{draft_id}",
+            metadata={
+                "project_id": _require_pk(project),
+                "draft_id": draft_id,
+                "section_id": section_id,
+                "error": str(exc),
+            },
+        )
+        raise
+
+    if result.get("status") == "completed":
+        notify_project_admins(
+            project,
+            level=NotificationLevel.SUCCESS,
+            body="Newsletter draft section refreshed.",
+            link_path=f"/drafts/{draft_id}",
+            metadata={
+                "project_id": _require_pk(project),
+                "draft_id": draft_id,
+                "section_id": section_id,
+                "status": str(result.get("status", "")),
+            },
+        )
+    return result
 
 
 def _project_has_scheduled_draft_today(project_id: int, *, now) -> bool:

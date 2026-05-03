@@ -7,6 +7,7 @@ env:
   debug: "false"
   allowedHosts: "staging.newsletter-maker.example.com"
   csrfTrustedOrigins: "https://staging.newsletter-maker.example.com"
+  messagingEnabled: "true"
   newsletterApiBaseUrl: "https://staging.newsletter-maker.example.com"
   logLevel: INFO
 
