@@ -21,6 +21,7 @@ from core.pipeline import (
     execute_ad_hoc_skill,
     execute_background_skill_result,
     get_skill_definition,
+    retry_review_queue_item,
     route_by_relevance,
     run_content_classification,
     run_deduplication,
@@ -29,7 +30,7 @@ from core.pipeline import (
     run_summarization,
 )
 from core.tasks import process_content
-from content.models import Content
+from content.models import Content, ContentPipelineState
 from entities.models import (
     Entity,
     EntityCandidate,
@@ -1113,6 +1114,45 @@ def test_run_ad_hoc_relevance_updates_existing_review_item(pipeline_context, moc
         ).count()
         == 1
     )
+
+
+def test_retry_review_queue_item_keeps_borderline_item_pending(
+    pipeline_context, mocker
+):
+    review_item = ReviewQueue.objects.create(
+        project=pipeline_context.project,
+        content=pipeline_context.content,
+        reason=ReviewReason.BORDERLINE_RELEVANCE,
+        confidence=0.52,
+        failed_node="score_relevance",
+        resolved=False,
+    )
+    mocker.patch(
+        "core.pipeline._run_ad_hoc_relevance",
+        return_value=(
+            {
+                "relevance_score": 0.58,
+                "explanation": "Still borderline after retry.",
+                "used_llm": False,
+                "model_used": "embedding:test",
+                "latency_ms": 0,
+            },
+            0.58,
+        ),
+    )
+    summarize_mock = mocker.patch("core.pipeline._run_ad_hoc_summarization")
+
+    result = retry_review_queue_item(review_item)
+
+    review_item.refresh_from_db()
+    pipeline_context.content.refresh_from_db()
+    assert result["status"] == "review"
+    assert review_item.resolved is False
+    assert review_item.resolution == ""
+    assert (
+        pipeline_context.content.pipeline_state == ContentPipelineState.AWAITING_REVIEW
+    )
+    summarize_mock.assert_not_called()
 
 
 def test_execute_with_retries_retries_until_success(settings):

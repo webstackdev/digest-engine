@@ -3,9 +3,9 @@
 from collections import Counter
 import math
 from datetime import datetime, timedelta
-from functools import lru_cache
+from functools import lru_cache, wraps
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Callable, Protocol, TypeVar, cast
 
 from celery import shared_task
 from django.contrib.auth import get_user_model
@@ -28,6 +28,7 @@ from entities.models import Entity, EntityMention, EntityMentionRole
 from pipeline.resilience import execute_with_resilience
 from projects.models import Project, SourceConfig
 from trends.observability import observe_trend_task_run
+from newsletter_maker.telemetry import trace_span
 
 from .models import (
     ContentClusterMembership,
@@ -69,6 +70,8 @@ ORIGINAL_CONTENT_IDEA_MIN_SCORE = 0.6
 ORIGINAL_CONTENT_IDEA_CENTROID_SIMILARITY_MIN = 0.65
 ORIGINAL_CONTENT_IDEA_CENTROID_SIMILARITY_MAX = 0.8
 
+TrendHelperCallable = TypeVar("TrendHelperCallable", bound=Callable[..., object])
+
 
 class DelayedTask(Protocol):
     """Protocol for Celery tasks that can run eagerly or via ``delay``."""
@@ -95,6 +98,42 @@ def _require_pk(instance: Model) -> int:
             f"{instance.__class__.__name__} must be saved before task dispatch"
         )
     return int(pk)
+
+
+def _trace_trend_step(
+    step_name: str,
+) -> Callable[[TrendHelperCallable], TrendHelperCallable]:
+    """Wrap a trend helper or task with a stable tracing span name."""
+
+    def decorator(func: TrendHelperCallable) -> TrendHelperCallable:
+        @wraps(func)
+        def wrapper(*args: object, **kwargs: object) -> object:
+            project = kwargs.get("project")
+            cluster = kwargs.get("cluster")
+            attributes: dict[str, object] = {
+                "trend.step": step_name,
+                "project.id": kwargs.get("project_id"),
+                "content.id": kwargs.get("content_id"),
+            }
+            project_pk = getattr(project, "pk", None)
+            if project_pk is not None:
+                attributes["project.id"] = int(project_pk)
+            cluster_pk = getattr(cluster, "pk", None)
+            if cluster_pk is not None:
+                attributes["cluster.id"] = int(cluster_pk)
+            if (
+                attributes.get("content.id") is None
+                and step_name == "assign_content_to_topic_cluster"
+                and args
+                and isinstance(args[0], int)
+            ):
+                attributes["content.id"] = args[0]
+            with trace_span(f"trends.{step_name}", attributes=attributes):
+                return func(*args, **kwargs)
+
+        return cast(TrendHelperCallable, wrapper)
+
+    return decorator
 
 
 @shared_task(name="core.tasks.run_all_topic_centroid_recomputations")
@@ -792,6 +831,7 @@ def generate_original_content_ideas(project_id: int) -> dict[str, int]:
     }
 
 
+@_trace_trend_step("assign_content_to_topic_cluster")
 @shared_task(name="core.tasks.assign_content_to_topic_cluster")
 def assign_content_to_topic_cluster(content_id: int) -> dict[str, object]:
     """Assign one content item to the nearest active cluster when it fits."""
@@ -1540,6 +1580,7 @@ def _clusters_with_latest_velocity(project_id: int):
     )
 
 
+@_trace_trend_step("detect_original_content_gap")
 def _detect_original_content_gap(
     *,
     project: Project,
@@ -1692,6 +1733,7 @@ def _build_theme_cluster_context(cluster: TopicCluster) -> dict[str, Any]:
     }
 
 
+@_trace_trend_step("synthesize_theme_payload")
 def _synthesize_theme_payload(
     *,
     cluster: TopicCluster,
@@ -1740,6 +1782,7 @@ def _synthesize_theme_payload(
     }
 
 
+@_trace_trend_step("synthesize_original_content_payload")
 def _synthesize_original_content_payload(
     *,
     project: Project,
@@ -1810,6 +1853,7 @@ def _synthesize_original_content_payload(
     return fallback_payload, "heuristic-original-content-ideation"
 
 
+@_trace_trend_step("score_original_content_idea")
 def _score_original_content_idea(
     *,
     project: Project,
@@ -1863,6 +1907,7 @@ def _score_original_content_idea(
     return heuristic_score
 
 
+@_trace_trend_step("score_theme_novelty")
 def _score_theme_novelty(
     *,
     project: Project,

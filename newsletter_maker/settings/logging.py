@@ -5,11 +5,22 @@ import structlog
 
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+
+def _add_trace_context(_, __, event_dict):
+    """Attach active trace identifiers to structured logs when available."""
+
+    from newsletter_maker.telemetry import current_trace_context
+
+    event_dict.update(current_trace_context())
+    return event_dict
+
+
 # Structlog: application logs are rendered as JSON so log aggregation systems
 # can parse fields like level, timestamp, and exception data reliably.
 structlog.configure(
     processors=[
         structlog.contextvars.merge_contextvars,
+        _add_trace_context,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
@@ -32,6 +43,7 @@ LOGGING = {
             "processor": structlog.processors.JSONRenderer(),
             "foreign_pre_chain": [
                 structlog.contextvars.merge_contextvars,
+                _add_trace_context,
                 structlog.processors.add_log_level,
                 structlog.processors.TimeStamper(fmt="iso", utc=True),
             ],

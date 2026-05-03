@@ -51,6 +51,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "entities.tasks.run_all_entity_candidate_auto_promotions",
         "schedule": crontab(hour=4, minute=45),
     },
+    "run-all-retention-policies-nightly": {
+        "task": "core.tasks.run_all_retention_policies",
+        "schedule": crontab(hour=5, minute=15),
+    },
 }
 
 __all__ = [

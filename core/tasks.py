@@ -33,6 +33,12 @@ from entities.models import (
 from pipeline.models import ReviewQueue
 from pipeline.resilience import opened_circuit_breakers, probe_circuit_breaker
 from projects.models import Project, ProjectConfig
+from trends.models import (
+    SourceDiversitySnapshot,
+    TopicCentroidSnapshot,
+    TopicVelocitySnapshot,
+    TrendTaskRun,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +50,13 @@ AUTHORITY_ROLE_SIGNALS = (
 )
 
 __all__ = [
+    "apply_retention_policies",
     "circuit_breaker_health_check",
     "recompute_source_quality",
     "recompute_authority_scores",
     "run_all_source_quality_recomputations",
     "run_all_authority_recomputations",
+    "run_all_retention_policies",
     "run_relevance_scoring_skill",
     "run_summarization_skill",
     "queue_content_skill",
@@ -84,6 +92,12 @@ def _require_pk(instance: Model) -> int:
     return int(pk)
 
 
+def _retention_cutoff(days: int):
+    """Return the timestamp cutoff for a retention window in days."""
+
+    return timezone.now() - timedelta(days=days)
+
+
 @shared_task(name="core.tasks.run_all_authority_recomputations")
 def run_all_authority_recomputations():
     """Queue authority recomputation for every project.
@@ -112,6 +126,19 @@ def run_all_source_quality_recomputations() -> int:
             recompute_source_quality(project_id)
         else:
             _enqueue_task(recompute_source_quality, project_id)
+    return len(project_ids)
+
+
+@shared_task(name="core.tasks.run_all_retention_policies")
+def run_all_retention_policies() -> int:
+    """Queue retention-policy cleanup for every project."""
+
+    project_ids = list(Project.objects.values_list("id", flat=True))
+    for project_id in project_ids:
+        if settings.CELERY_TASK_ALWAYS_EAGER:
+            apply_retention_policies(project_id)
+        else:
+            _enqueue_task(apply_retention_policies, project_id)
     return len(project_ids)
 
 
@@ -150,6 +177,58 @@ def retry_pipeline_review_item(review_item_id: int) -> dict[str, object]:
         pk=review_item_id
     )
     return retry_review_queue_item_from_pipeline(review_item)
+
+
+@shared_task(name="core.tasks.apply_retention_policies")
+def apply_retention_policies(project_id: int) -> dict[str, object]:
+    """Delete old observability records for one project."""
+
+    project = Project.objects.get(pk=project_id)
+    snapshot_cutoff = _retention_cutoff(settings.OBSERVABILITY_SNAPSHOT_RETENTION_DAYS)
+    trend_run_cutoff = _retention_cutoff(
+        settings.OBSERVABILITY_TREND_TASK_RUN_RETENTION_DAYS
+    )
+    review_cutoff = _retention_cutoff(
+        settings.OBSERVABILITY_REVIEW_QUEUE_RETENTION_DAYS
+    )
+
+    deleted = {
+        "topic_centroid_snapshots": TopicCentroidSnapshot.objects.filter(
+            project=project,
+            computed_at__lt=snapshot_cutoff,
+        ).delete()[0],
+        "topic_velocity_snapshots": TopicVelocitySnapshot.objects.filter(
+            project=project,
+            computed_at__lt=snapshot_cutoff,
+        ).delete()[0],
+        "source_diversity_snapshots": SourceDiversitySnapshot.objects.filter(
+            project=project,
+            computed_at__lt=snapshot_cutoff,
+        ).delete()[0],
+        "entity_authority_snapshots": EntityAuthoritySnapshot.objects.filter(
+            project=project,
+            computed_at__lt=snapshot_cutoff,
+        ).delete()[0],
+        "trend_task_runs": TrendTaskRun.objects.filter(project=project)
+        .filter(
+            Q(finished_at__lt=trend_run_cutoff)
+            | Q(finished_at__isnull=True, started_at__lt=trend_run_cutoff)
+        )
+        .delete()[0],
+        "resolved_review_items": ReviewQueue.objects.filter(
+            project=project,
+            resolved=True,
+            resolved_at__lt=review_cutoff,
+        ).delete()[0],
+    }
+
+    return {
+        "project_id": project_id,
+        "deleted": deleted,
+        "snapshot_cutoff": snapshot_cutoff.isoformat(),
+        "trend_run_cutoff": trend_run_cutoff.isoformat(),
+        "review_cutoff": review_cutoff.isoformat(),
+    }
 
 
 @shared_task(name="core.tasks.recompute_source_quality")

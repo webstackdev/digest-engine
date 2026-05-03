@@ -11,6 +11,10 @@ import os
 
 from django.core.asgi import get_asgi_application
 
+from newsletter_maker.telemetry import configure_telemetry
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "newsletter_maker.settings")
+
+configure_telemetry(instrument_django=True)
 
 application = get_asgi_application()

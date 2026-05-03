@@ -10,8 +10,8 @@ from __future__ import annotations
 import logging
 import re
 from datetime import timedelta
-from functools import lru_cache
-from typing import Any, Literal, TypedDict, cast
+from functools import lru_cache, wraps
+from typing import Any, Callable, Literal, TypedDict, cast
 
 from django.conf import settings
 from django.db.models import F, Model
@@ -30,6 +30,7 @@ from core.embeddings import (
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
 from entities.extraction import run_entity_extraction
 from entities.models import EntityMention
+from newsletter_maker.telemetry import trace_span
 from pipeline.models import (
     ReviewQueue,
     ReviewReason,
@@ -98,6 +99,9 @@ class PipelineState(TypedDict, total=False):
     status: str
 
 
+PipelineNodeCallable = Callable[[PipelineState], PipelineState]
+
+
 def _require_pk(instance: Model) -> int:
     """Return a saved model primary key for typed pipeline operations."""
 
@@ -120,6 +124,30 @@ def _content_id_from_state(state: PipelineState) -> int:
     if content_id is None:
         raise ValueError("Pipeline state is missing content_id.")
     return content_id
+
+
+def _trace_pipeline_step(
+    step_name: str,
+) -> Callable[[PipelineNodeCallable], PipelineNodeCallable]:
+    """Wrap a LangGraph node with a stable telemetry span name."""
+
+    def decorator(func: PipelineNodeCallable) -> PipelineNodeCallable:
+        @wraps(func)
+        def wrapper(state: PipelineState) -> PipelineState:
+            with trace_span(
+                f"pipeline.{step_name}",
+                attributes={
+                    "pipeline.step": step_name,
+                    "content.id": state.get("content_id"),
+                    "project.id": state.get("project_id"),
+                    "pipeline.status": state.get("status"),
+                },
+            ):
+                return func(state)
+
+        return cast(PipelineNodeCallable, wrapper)
+
+    return decorator
 
 
 @lru_cache(maxsize=1)
@@ -199,18 +227,26 @@ def process_content_pipeline(content_id: int) -> PipelineState:
     """
 
     content = Content.objects.select_related("project").get(pk=content_id)
-    content.pipeline_state = ContentPipelineState.PROCESSING
-    content.save(update_fields=["pipeline_state"])
-    retry_budget = build_retry_budget(PIPELINE_RETRY_SKILLS)
-    initial_state: PipelineState = {
-        "content_id": _require_pk(content),
-        "project_id": _project_pk(content),
-        "retry_budget_remaining": retry_budget.remaining_retries,
-        "status": "processing",
-    }
-    return cast(PipelineState, get_ingestion_graph().invoke(initial_state))
+    with trace_span(
+        "pipeline.process_content",
+        attributes={
+            "content.id": _require_pk(content),
+            "project.id": _project_pk(content),
+        },
+    ):
+        content.pipeline_state = ContentPipelineState.PROCESSING
+        content.save(update_fields=["pipeline_state"])
+        retry_budget = build_retry_budget(PIPELINE_RETRY_SKILLS)
+        initial_state: PipelineState = {
+            "content_id": _require_pk(content),
+            "project_id": _project_pk(content),
+            "retry_budget_remaining": retry_budget.remaining_retries,
+            "status": "processing",
+        }
+        return cast(PipelineState, get_ingestion_graph().invoke(initial_state))
 
 
+@_trace_pipeline_step("deduplicate")
 def deduplicate_node(state: PipelineState) -> PipelineState:
     """Detect duplicates before downstream skills consume the content."""
 
@@ -263,6 +299,7 @@ def deduplicate_node(state: PipelineState) -> PipelineState:
     }
 
 
+@_trace_pipeline_step("classify")
 def classify_node(state: PipelineState) -> PipelineState:
     """Classify the content item and persist the resulting skill output."""
 
@@ -312,6 +349,7 @@ def classify_node(state: PipelineState) -> PipelineState:
     }
 
 
+@_trace_pipeline_step("extract_entities")
 def extract_entities_node(state: PipelineState) -> PipelineState:
     """Extract tracked-entity mentions before relevance scoring."""
 
@@ -348,6 +386,7 @@ def extract_entities_node(state: PipelineState) -> PipelineState:
     }
 
 
+@_trace_pipeline_step("score_relevance")
 def relevance_node(state: PipelineState) -> PipelineState:
     """Score content relevance, persist the score, and keep the item active."""
 
@@ -392,6 +431,7 @@ def relevance_node(state: PipelineState) -> PipelineState:
     }
 
 
+@_trace_pipeline_step("summarize")
 def summarize_node(state: PipelineState) -> PipelineState:
     """Generate and store a newsletter-ready summary for relevant content."""
 
@@ -430,6 +470,7 @@ def summarize_node(state: PipelineState) -> PipelineState:
     }
 
 
+@_trace_pipeline_step("archive")
 def archive_node(state: PipelineState) -> PipelineState:
     """Mark a low-value content item inactive so it drops out of active flows."""
 
@@ -440,6 +481,7 @@ def archive_node(state: PipelineState) -> PipelineState:
     return {"status": "archived"}
 
 
+@_trace_pipeline_step("queue_review")
 def queue_review_node(state: PipelineState) -> PipelineState:
     """Create or refresh a manual review item for borderline relevance."""
 
@@ -1582,6 +1624,9 @@ def retry_review_queue_item(review_item: ReviewQueue) -> dict[str, object]:
                 else ContentPipelineState.COMPLETED
             )
             content.save(update_fields=["pipeline_state"])
+        else:
+            content.pipeline_state = ContentPipelineState.AWAITING_REVIEW
+            content.save(update_fields=["pipeline_state"])
     else:
         summary = _run_ad_hoc_summarization(content)
         result = {
@@ -1595,7 +1640,7 @@ def retry_review_queue_item(review_item: ReviewQueue) -> dict[str, object]:
         )
         content.save(update_fields=["pipeline_state"])
 
-    if result.get("status") != "awaiting_review":
+    if result.get("status") in {"completed", "archived"}:
         review_item.resolved = True
         review_item.resolution = ReviewResolution.RETRIED
         review_item.resolved_at = timezone.now()

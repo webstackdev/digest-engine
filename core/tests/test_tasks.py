@@ -1,14 +1,18 @@
+from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
 from django.db.models import Model
+from django.utils import timezone
 
 from content.models import Content, FeedbackType, UserFeedback
 from core.pipeline import RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME
 from core.tasks import (
+    apply_retention_policies,
     queue_content_skill,
     recompute_authority_scores,
     run_all_authority_recomputations,
+    run_all_retention_policies,
     run_all_source_quality_recomputations,
     run_relevance_scoring_skill,
     run_summarization_skill,
@@ -19,9 +23,17 @@ from entities.models import (
     EntityMention,
     EntityMentionRole,
 )
-from pipeline.models import SkillStatus
+from pipeline.models import ReviewQueue, ReviewReason, ReviewResolution, SkillStatus
 from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectConfig
+from trends.models import (
+    SourceDiversitySnapshot,
+    TopicCentroidSnapshot,
+    TopicCluster,
+    TopicVelocitySnapshot,
+    TrendTaskRun,
+    TrendTaskRunStatus,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -122,6 +134,203 @@ def test_run_all_source_quality_recomputations_executes_inline_when_eager(
     recompute_mock.assert_any_call(_require_pk(other_project))
     assert recompute_mock.call_count == 2
     delay_mock.assert_not_called()
+
+
+def test_run_all_retention_policies_enqueues_all_projects(
+    source_plugin_context, mocker
+):
+    delay_mock = mocker.patch("core.tasks.apply_retention_policies.delay")
+    other_project = Project.objects.create(
+        name="Retention Project",
+        topic_description="Ops",
+    )
+
+    enqueued_count = run_all_retention_policies()
+
+    assert enqueued_count == 2
+    delay_mock.assert_any_call(source_plugin_context.project.id)
+    delay_mock.assert_any_call(_require_pk(other_project))
+    assert delay_mock.call_count == 2
+
+
+def test_apply_retention_policies_deletes_old_observability_records(
+    source_plugin_context,
+):
+    project = source_plugin_context.project
+    review_content = Content.objects.create(
+        project=project,
+        entity=source_plugin_context.entity,
+        url="https://example.com/retention-review",
+        canonical_url="https://example.com/retention-review",
+        title="Retention Review",
+        author="Editor",
+        source_plugin=SourcePluginName.RSS,
+        published_date="2026-04-28T12:00:00Z",
+        content_text="Needs review retention coverage.",
+    )
+    cluster = TopicCluster.objects.create(
+        project=project,
+        label="Ops cluster",
+        first_seen_at=timezone.now(),
+        last_seen_at=timezone.now(),
+        is_active=True,
+        member_count=1,
+    )
+    old_centroid = TopicCentroidSnapshot.objects.create(
+        project=project,
+        centroid_active=True,
+        centroid_vector=[1.0, 0.0],
+        feedback_count=5,
+        upvote_count=4,
+        downvote_count=1,
+    )
+    kept_centroid = TopicCentroidSnapshot.objects.create(
+        project=project,
+        centroid_active=True,
+        centroid_vector=[0.0, 1.0],
+        feedback_count=6,
+        upvote_count=5,
+        downvote_count=1,
+    )
+    old_velocity = TopicVelocitySnapshot.objects.create(
+        project=project,
+        cluster=cluster,
+        window_count=3,
+        trailing_mean=1.0,
+        trailing_stddev=0.3,
+        z_score=1.5,
+        velocity_score=0.8,
+    )
+    kept_velocity = TopicVelocitySnapshot.objects.create(
+        project=project,
+        cluster=cluster,
+        window_count=4,
+        trailing_mean=1.1,
+        trailing_stddev=0.2,
+        z_score=1.7,
+        velocity_score=0.9,
+    )
+    old_diversity = SourceDiversitySnapshot.objects.create(
+        project=project,
+        plugin_entropy=0.5,
+        source_entropy=0.6,
+        author_entropy=0.7,
+        cluster_entropy=0.4,
+        top_plugin_share=0.8,
+        top_source_share=0.75,
+    )
+    kept_diversity = SourceDiversitySnapshot.objects.create(
+        project=project,
+        plugin_entropy=0.8,
+        source_entropy=0.85,
+        author_entropy=0.82,
+        cluster_entropy=0.7,
+        top_plugin_share=0.35,
+        top_source_share=0.32,
+    )
+    old_authority_snapshot = EntityAuthoritySnapshot.objects.create(
+        entity=source_plugin_context.entity,
+        project=project,
+        mention_component=0.5,
+        engagement_component=0.4,
+        recency_component=0.3,
+        source_quality_component=0.2,
+        cross_newsletter_component=0.1,
+        feedback_component=0.6,
+        duplicate_component=0.2,
+        decayed_prior=0.5,
+        final_score=0.55,
+    )
+    kept_authority_snapshot = EntityAuthoritySnapshot.objects.create(
+        entity=source_plugin_context.entity,
+        project=project,
+        mention_component=0.7,
+        engagement_component=0.6,
+        recency_component=0.5,
+        source_quality_component=0.4,
+        cross_newsletter_component=0.2,
+        feedback_component=0.7,
+        duplicate_component=0.1,
+        decayed_prior=0.55,
+        final_score=0.68,
+    )
+    old_trend_run = TrendTaskRun.objects.create(
+        project=project,
+        task_name="recompute_topic_centroid",
+        status=TrendTaskRunStatus.COMPLETED,
+        latency_ms=100,
+        summary={"project_id": _require_pk(project)},
+    )
+    kept_trend_run = TrendTaskRun.objects.create(
+        project=project,
+        task_name="recompute_topic_velocity",
+        status=TrendTaskRunStatus.COMPLETED,
+        latency_ms=80,
+        summary={"project_id": _require_pk(project)},
+    )
+    old_review_item = ReviewQueue.objects.create(
+        project=project,
+        content=review_content,
+        reason=ReviewReason.BORDERLINE_RELEVANCE,
+        confidence=0.55,
+        resolved=True,
+        resolution=ReviewResolution.ARCHIVED,
+    )
+    kept_review_item = ReviewQueue.objects.create(
+        project=project,
+        content=Content.objects.create(
+            project=project,
+            entity=source_plugin_context.entity,
+            url="https://example.com/retention-review-keep",
+            canonical_url="https://example.com/retention-review-keep",
+            title="Retention Review Keep",
+            author="Editor",
+            source_plugin=SourcePluginName.RSS,
+            published_date="2026-04-29T12:00:00Z",
+            content_text="Recent review item.",
+        ),
+        reason=ReviewReason.RETRY_EXHAUSTED,
+        confidence=0.3,
+        resolved=True,
+        resolution=ReviewResolution.MANUALLY_RESOLVED,
+        resolved_at=timezone.now(),
+    )
+
+    old_timestamp = timezone.now() - timedelta(days=120)
+    TopicCentroidSnapshot.objects.filter(pk=old_centroid.pk).update(
+        computed_at=old_timestamp
+    )
+    TopicVelocitySnapshot.objects.filter(pk=old_velocity.pk).update(
+        computed_at=old_timestamp
+    )
+    SourceDiversitySnapshot.objects.filter(pk=old_diversity.pk).update(
+        computed_at=old_timestamp
+    )
+    EntityAuthoritySnapshot.objects.filter(pk=old_authority_snapshot.pk).update(
+        computed_at=old_timestamp
+    )
+    TrendTaskRun.objects.filter(pk=old_trend_run.pk).update(
+        started_at=old_timestamp,
+        finished_at=old_timestamp,
+    )
+    ReviewQueue.objects.filter(pk=old_review_item.pk).update(resolved_at=old_timestamp)
+
+    result = apply_retention_policies(_require_pk(project))
+
+    assert result["deleted"]["topic_centroid_snapshots"] == 1
+    assert result["deleted"]["topic_velocity_snapshots"] == 1
+    assert result["deleted"]["source_diversity_snapshots"] == 1
+    assert result["deleted"]["entity_authority_snapshots"] == 1
+    assert result["deleted"]["trend_task_runs"] == 1
+    assert result["deleted"]["resolved_review_items"] == 1
+    assert TopicCentroidSnapshot.objects.filter(pk=kept_centroid.pk).exists()
+    assert TopicVelocitySnapshot.objects.filter(pk=kept_velocity.pk).exists()
+    assert SourceDiversitySnapshot.objects.filter(pk=kept_diversity.pk).exists()
+    assert EntityAuthoritySnapshot.objects.filter(
+        pk=kept_authority_snapshot.pk
+    ).exists()
+    assert TrendTaskRun.objects.filter(pk=kept_trend_run.pk).exists()
+    assert ReviewQueue.objects.filter(pk=kept_review_item.pk).exists()
 
 
 def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
