@@ -1,12 +1,25 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UserMenu } from "@/components/layout/UserMenu"
 import { QueryProvider } from "@/providers/QueryProvider"
 
-const { fetchProfileMock, signOutMock } = vi.hoisted(() => ({
+const {
+  fetchProfileMock,
+  observedUserMenuContentProps,
+  observedUserMenuTriggerProps,
+  userMenuContentMock,
+  userMenuTriggerMock,
+} = vi.hoisted(() => ({
   fetchProfileMock: vi.fn(),
-  signOutMock: vi.fn(),
+  observedUserMenuContentProps: [] as Array<Record<string, unknown>>,
+  observedUserMenuTriggerProps: [] as Array<Record<string, unknown>>,
+  userMenuContentMock: vi.fn((props: Record<string, unknown>) => {
+    return <div data-testid="user-menu-content" data-props={JSON.stringify(props)} />
+  }),
+  userMenuTriggerMock: vi.fn((props: Record<string, unknown>) => {
+    return <button data-props={JSON.stringify(props)} type="button">Trigger</button>
+  }),
 }))
 
 vi.mock("@/lib/profile", () => ({
@@ -14,8 +27,18 @@ vi.mock("@/lib/profile", () => ({
   fetchProfile: fetchProfileMock,
 }))
 
-vi.mock("next-auth/react", () => ({
-  signOut: signOutMock,
+vi.mock("@/components/layout/UserMenu/_components/UserMenuContent", () => ({
+  UserMenuContent: (props: Record<string, unknown>) => {
+    observedUserMenuContentProps.push(props)
+    return userMenuContentMock(props)
+  },
+}))
+
+vi.mock("@/components/layout/UserMenu/_components/UserMenuTrigger", () => ({
+  UserMenuTrigger: (props: Record<string, unknown>) => {
+    observedUserMenuTriggerProps.push(props)
+    return userMenuTriggerMock(props)
+  },
 }))
 
 function renderMenu() {
@@ -26,13 +49,23 @@ function renderMenu() {
   )
 }
 
+type UserMenuContentProps = {
+  accountName: string
+  accountEmail: string
+  isAuthenticated: boolean
+  avatarUrl: string | null
+}
+
 describe("UserMenu", () => {
   beforeEach(() => {
     fetchProfileMock.mockReset()
-    signOutMock.mockReset()
+    observedUserMenuContentProps.length = 0
+    observedUserMenuTriggerProps.length = 0
+    userMenuContentMock.mockClear()
+    userMenuTriggerMock.mockClear()
   })
 
-  it("renders profile data from the shared profile query and toggles the dropdown", async () => {
+  it("passes fetched profile data into the extracted trigger and content", async () => {
     fetchProfileMock.mockResolvedValue({
       id: 7,
       username: "taylor",
@@ -49,45 +82,43 @@ describe("UserMenu", () => {
     renderMenu()
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Open user menu" })).toHaveTextContent("TS")
+      expect(
+        observedUserMenuTriggerProps.some(
+          (props) => props.accountName === "Taylor Swift" && props.avatarUrl === null,
+        ),
+      ).toBe(true)
     })
 
-    fireEvent.click(screen.getByRole("button", { name: "Open user menu" }))
+    const contentProps = observedUserMenuContentProps as UserMenuContentProps[]
 
-    expect(screen.getByRole("dialog", { name: "User menu" })).toBeInTheDocument()
-    expect(screen.getByText("Taylor Swift")).toBeInTheDocument()
-    expect(screen.getByText("taylor@example.com")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "View profile" })).toHaveAttribute(
-      "href",
-      "/profile",
-    )
-    expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument()
+    expect(
+      contentProps.some(
+        (props) =>
+          props.accountName === "Taylor Swift" &&
+          props.accountEmail === "taylor@example.com" &&
+          props.isAuthenticated === true,
+      ),
+    ).toBe(true)
+    expect(screen.getByTestId("user-menu-content")).toBeInTheDocument()
   })
 
-  it("logs out to the login page from the dropdown", async () => {
-    fetchProfileMock.mockResolvedValue({
-      id: 8,
-      username: "morgan",
-      email: "morgan@example.com",
-      display_name: "Morgan Lee",
-      avatar_url: null,
-      avatar_thumbnail_url: null,
-      bio: "Editor",
-      timezone: "UTC",
-      first_name: "Morgan",
-      last_name: "Lee",
-    })
+  it("falls back to the guest state when the profile query fails", async () => {
+    fetchProfileMock.mockRejectedValue(new Error("Unable to load profile."))
 
     renderMenu()
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Open user menu" })).toBeInTheDocument()
+      expect(fetchProfileMock).toHaveBeenCalled()
     })
 
-    fireEvent.click(screen.getByRole("button", { name: "Open user menu" }))
+    const lastContentProps = observedUserMenuContentProps.at(-1) as
+      | UserMenuContentProps
+      | undefined
 
-    fireEvent.click(screen.getByRole("button", { name: "Log out" }))
-
-    expect(signOutMock).toHaveBeenCalledWith({ callbackUrl: "/login" })
+    expect(lastContentProps).toMatchObject({
+      accountEmail: "",
+      accountName: "Guest user",
+      isAuthenticated: false,
+    })
   })
 })

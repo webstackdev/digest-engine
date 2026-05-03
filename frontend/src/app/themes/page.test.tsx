@@ -9,12 +9,14 @@ const {
   getProjectThemeSuggestionsMock,
   getProjectTopicClusterMock,
   getProjectTopicClustersMock,
+  themesPageContentMock,
   selectProjectMock,
 } = vi.hoisted(() => ({
   getProjectsMock: vi.fn(),
   getProjectThemeSuggestionsMock: vi.fn(),
   getProjectTopicClusterMock: vi.fn(),
   getProjectTopicClustersMock: vi.fn(),
+  themesPageContentMock: vi.fn(() => <div data-testid="themes-page-content" />),
   selectProjectMock: vi.fn(),
 }))
 
@@ -36,18 +38,8 @@ vi.mock("@/components/layout/AppShell", () => ({
   ),
 }))
 
-vi.mock("@/components/elements/StatusBadge", () => ({
-  StatusBadge: ({
-    children,
-    tone,
-  }: {
-    children: ReactNode
-    tone: string
-  }) => (
-    <span data-testid="status-badge" data-tone={tone}>
-      {children}
-    </span>
-  ),
+vi.mock("@/app/themes/_components/ThemesPageContent", () => ({
+  ThemesPageContent: themesPageContentMock,
 }))
 
 vi.mock("@/lib/api", () => ({
@@ -179,16 +171,47 @@ describe("ThemesPage", () => {
     getProjectThemeSuggestionsMock.mockResolvedValue([createThemeSuggestion()])
     getProjectTopicClustersMock.mockResolvedValue([createTopicCluster()])
     getProjectTopicClusterMock.mockResolvedValue(createTopicClusterDetail())
+    themesPageContentMock.mockClear()
     selectProjectMock.mockReturnValue(project)
   })
 
-  it("renders theme cards with actions and supporting content preview", async () => {
+  it("renders the missing-project guard when no project is available", async () => {
+    selectProjectMock.mockReturnValue(null)
+
     await renderThemesPage()
 
-    expect(screen.getByText("Theme queue")).toBeInTheDocument()
-    expect(screen.getByText("Owner the orchestration angle")).toBeInTheDocument()
-    expect(screen.getByText("Useful AI briefing")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument()
+    expect(screen.getByText("Create a project first in Django admin.")).toBeInTheDocument()
+    expect(getProjectThemeSuggestionsMock).not.toHaveBeenCalled()
+  })
+
+  it("loads the queue data into ThemesPageContent", async () => {
+    const project = createProject()
+    const theme = createThemeSuggestion()
+    const cluster = createTopicCluster()
+    const clusterDetail = createTopicClusterDetail()
+
+    getProjectsMock.mockResolvedValue([project])
+    getProjectThemeSuggestionsMock.mockResolvedValue([theme])
+    getProjectTopicClustersMock.mockResolvedValue([cluster])
+    getProjectTopicClusterMock.mockResolvedValue(clusterDetail)
+    selectProjectMock.mockReturnValue(project)
+
+    await renderThemesPage()
+
+    expect(themesPageContentMock).toHaveBeenCalled()
+    const props = (themesPageContentMock.mock.calls[0] as unknown[] | undefined)?.[0]
+
+    expect(props).toEqual({
+      projects: [project],
+      selectedProject: project,
+      themes: [theme],
+      clusters: [cluster],
+      clusterDetails: [clusterDetail],
+      selectedThemeId: 0,
+      statusFilter: "all",
+      errorMessage: "",
+      successMessage: "",
+    })
+    expect(screen.getByTestId("themes-page-content")).toBeInTheDocument()
   })
 })

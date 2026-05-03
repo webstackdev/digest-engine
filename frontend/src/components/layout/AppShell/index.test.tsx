@@ -4,8 +4,35 @@ import { describe, expect, it } from "vitest"
 import { AppShell } from "@/components/layout/AppShell"
 import type { Project } from "@/lib/types"
 
-vi.mock("@/components/layout/UserMenu", () => ({
-  UserMenu: () => <div>User menu</div>,
+vi.mock("@/components/layout/AppShell/_components/AppShellHeader", () => ({
+  AppShellHeader: ({ description, title }: { description: string; title: string }) => (
+    <div data-testid="app-shell-header">
+      <span>{title}</span>
+      <span>{description}</span>
+    </div>
+  ),
+}))
+
+vi.mock("@/components/layout/AppShell/_components/AppShellSidebar", () => ({
+  AppShellSidebar: ({
+    canManageMembers,
+    projectQuery,
+    projects,
+    selectedProjectId,
+  }: {
+    canManageMembers: boolean
+    projectQuery: string
+    projects: Project[]
+    selectedProjectId: number | null
+  }) => (
+    <div
+      data-can-manage-members={canManageMembers ? "true" : "false"}
+      data-project-query={projectQuery}
+      data-projects={projects.length}
+      data-selected-project-id={selectedProjectId ?? "none"}
+      data-testid="app-shell-sidebar"
+    />
+  ),
 }))
 
 const projects: Project[] = [
@@ -28,97 +55,7 @@ const projects: Project[] = [
 ]
 
 describe("AppShell", () => {
-  it("renders the page title, description, and child content", () => {
-    render(
-      <AppShell
-        title="Dashboard"
-        description="A test description"
-          projects={projects}
-          selectedProjectId={1}
-      >
-        <div>Child content</div>
-      </AppShell>,
-    )
-
-    expect(
-      screen.getByRole("heading", { name: "Editor cockpit" }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("heading", { name: "Dashboard" }),
-    ).toBeInTheDocument()
-    expect(screen.getByText("A test description")).toBeInTheDocument()
-    expect(screen.getByText("Child content")).toBeInTheDocument()
-  })
-
-  it("adds the selected project query string to navigation links", () => {
-    render(
-      <AppShell
-        title="Dashboard"
-        description="A test description"
-        projects={projects}
-        selectedProjectId={2}
-      >
-        <div>Child content</div>
-      </AppShell>,
-    )
-
-    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
-      "href",
-      "/?project=2",
-    )
-    expect(screen.getByRole("link", { name: "Trends" })).toHaveAttribute(
-      "href",
-      "/trends?project=2",
-    )
-    expect(screen.getByRole("link", { name: "Themes" })).toHaveAttribute(
-      "href",
-      "/themes?project=2",
-    )
-    expect(screen.getByRole("link", { name: "Ideas" })).toHaveAttribute(
-      "href",
-      "/ideas?project=2",
-    )
-    expect(screen.getByRole("link", { name: "Drafts" })).toHaveAttribute(
-      "href",
-      "/drafts?project=2",
-    )
-    expect(screen.getByRole("link", { name: "Entities" })).toHaveAttribute(
-      "href",
-      "/entities?project=2",
-    )
-    expect(
-      screen.getByRole("link", { name: "Ingestion health" }),
-    ).toHaveAttribute("href", "/admin/health?project=2")
-    expect(
-      screen.getByRole("link", { name: "Source configs" }),
-    ).toHaveAttribute("href", "/admin/sources?project=2")
-    expect(screen.getByRole("link", { name: "New project" })).toHaveAttribute(
-      "href",
-      "/admin/projects/new",
-    )
-    expect(screen.queryByRole("link", { name: "Members" })).not.toBeInTheDocument()
-  })
-
-  it("marks the active project in the switcher", () => {
-    render(
-      <AppShell
-        title="Dashboard"
-        description="A test description"
-        projects={projects}
-        selectedProjectId={2}
-      >
-        <div>Child content</div>
-      </AppShell>,
-    )
-
-    const activeProject = screen.getByRole("link", { name: /Platform Weekly/i })
-    const inactiveProject = screen.getByRole("link", { name: /AI Weekly/i })
-
-    expect(activeProject).toHaveAttribute("data-active", "true")
-    expect(inactiveProject).toHaveAttribute("data-active", "false")
-  })
-
-  it("shows the members link when the selected project role is admin", () => {
+  it("renders the extracted shell regions and child content", () => {
     render(
       <AppShell
         title="Dashboard"
@@ -130,9 +67,38 @@ describe("AppShell", () => {
       </AppShell>,
     )
 
-    expect(screen.getByRole("link", { name: "Members" })).toHaveAttribute(
-      "href",
-      "/projects/1/members?project=1",
+    expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
+      "data-project-query",
+      "?project=1",
+    )
+    expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
+      "data-can-manage-members",
+      "true",
+    )
+    expect(screen.getByTestId("app-shell-header")).toHaveTextContent("Dashboard")
+    expect(screen.getByTestId("app-shell-header")).toHaveTextContent("A test description")
+    expect(screen.getByText("Child content")).toBeInTheDocument()
+  })
+
+  it("passes member access and empty project query state into the sidebar", () => {
+    render(
+      <AppShell
+        title="Dashboard"
+        description="A test description"
+        projects={projects}
+        selectedProjectId={2}
+      >
+        <div>Child content</div>
+      </AppShell>,
+    )
+
+    expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
+      "data-project-query",
+      "?project=2",
+    )
+    expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
+      "data-can-manage-members",
+      "false",
     )
   })
 })

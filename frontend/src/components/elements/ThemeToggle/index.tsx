@@ -1,8 +1,12 @@
 "use client"
 
+import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useSyncExternalStore } from "react"
 
+import { Button } from "@/components/ui/button"
+
+/** Toggle the active theme between light and dark modes. */
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
   const mounted = useSyncExternalStore(
@@ -16,13 +20,16 @@ export function ThemeToggle() {
   const isDark = resolvedTheme === "dark"
 
   return (
-    <button
-      type="button"
+    <Button
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      className="min-h-11 rounded-full border-border/12 bg-card/85 px-3 py-2 text-sm text-foreground shadow-panel hover:bg-muted"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="inline-flex items-center rounded-full border border-border/12 bg-card/85 px-3 py-2 text-sm text-foreground shadow-panel transition hover:bg-muted"
+      size="lg"
+      type="button"
+      variant="outline"
     >
-      {isDark ? "Moon Dark" : "Sun Light"}
-    </button>
+      {isDark ? <Moon /> : <Sun />}
+      {isDark ? "Dark mode" : "Light mode"}
+    </Button>
   )
 }

@@ -1,4 +1,4 @@
-import LoginForm from "@/app/login/_components/LoginForm"
+import LoginPageContent from "@/app/login/_components/LoginPageContent"
 
 type LoginPageProps = {
   /** Search params promise containing the optional `callbackUrl` value. */
@@ -33,9 +33,5 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const resolvedSearchParams = await searchParams
   const callbackUrl = resolveCallbackUrl(resolvedSearchParams.callbackUrl)
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <LoginForm callbackUrl={callbackUrl} />
-    </div>
-  )
+  return <LoginPageContent callbackUrl={callbackUrl} />
 }

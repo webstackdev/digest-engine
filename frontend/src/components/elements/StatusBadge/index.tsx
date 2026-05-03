@@ -1,10 +1,35 @@
+import { cva } from "class-variance-authority"
 import type { ReactNode } from "react"
+
+import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
+
+export type StatusBadgeTone = "positive" | "warning" | "negative" | "neutral"
+
+const statusBadgeVariants = cva(
+  "inline-flex min-h-7 rounded-full border-transparent px-3 py-1 text-sm font-semibold",
+  {
+    variants: {
+      tone: {
+        positive: "bg-primary/15 text-primary",
+        warning: "bg-secondary text-secondary-foreground",
+        negative: "bg-destructive/15 text-destructive",
+        neutral: "bg-muted text-muted-foreground",
+      },
+    },
+    defaultVariants: {
+      tone: "neutral",
+    },
+  },
+)
 
 type StatusBadgeProps = {
   /** Semantic tone that maps to the badge color treatment. */
-  tone: "positive" | "warning" | "negative" | "neutral"
+  tone: StatusBadgeTone
   /** Visible badge label content. */
   children: ReactNode
+  /** Optional class overrides applied on top of the tone styles. */
+  className?: string
 }
 
 /**
@@ -14,20 +39,14 @@ type StatusBadgeProps = {
  * and admin screens. The `tone` prop selects one of the fixed theme mappings, while
  * the children provide the visible label text or inline content.
  */
-export function StatusBadge({ tone, children }: StatusBadgeProps) {
-  const toneClasses = {
-    positive: "bg-primary/15 text-primary",
-    warning: "bg-secondary text-secondary-foreground",
-    negative: "bg-destructive/15 text-destructive",
-    neutral: "bg-muted text-muted-foreground",
-  }
-
+export function StatusBadge({ tone, children, className }: StatusBadgeProps) {
   return (
-    <span
+    <Badge
       data-tone={tone}
-      className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${toneClasses[tone]}`}
+      variant="outline"
+      className={cn(statusBadgeVariants({ tone }), className)}
     >
       {children}
-    </span>
+    </Badge>
   )
 }

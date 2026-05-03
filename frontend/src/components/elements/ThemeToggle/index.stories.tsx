@@ -5,7 +5,7 @@ import { compactDocsParameters } from "@/lib/storybook-docs"
 import { ThemeToggle } from "."
 
 const meta = {
-  title: "UI/ThemeToggle",
+  title: "Elements/ThemeToggle",
   component: ThemeToggle,
   tags: ["autodocs"],
   parameters: {

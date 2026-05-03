@@ -45,7 +45,6 @@ export const OpenMenu: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole("button", { name: "Open user menu" }))
 
-    await expect(canvas.getByRole("dialog", { name: "User menu" })).toBeInTheDocument()
     await expect(canvas.getByText("Taylor Swift")).toBeInTheDocument()
   },
 }

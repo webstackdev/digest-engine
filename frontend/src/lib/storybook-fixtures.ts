@@ -1,8 +1,16 @@
 import type {
   Content,
+  Entity,
+  EntityAuthoritySnapshot,
+  EntityCandidate,
+  EntityMentionSummary,
   IngestionRun,
+  MembershipInvitation,
   OriginalContentIdea,
   Project,
+  ProjectConfig,
+  ProjectMembership,
+  PublicMembershipInvitation,
   SourceConfig,
   SourceDiversityObservabilitySummary,
   SourceDiversitySnapshot,
@@ -12,6 +20,7 @@ import type {
   TopicCluster,
   TopicClusterDetail,
   TopicVelocitySnapshot,
+  UserProfile,
 } from "@/lib/types"
 
 /**
@@ -28,6 +37,100 @@ export function createProject(overrides: Partial<Project> = {}): Project {
     content_retention_days: 30,
     user_role: "admin",
     created_at: "2026-04-01T00:00:00Z",
+    ...overrides,
+  }
+}
+
+/**
+ * Build a representative project membership fixture for Storybook stories.
+ *
+ * @param overrides - Partial membership fields to override.
+ * @returns A backend-shaped project membership payload.
+ */
+export function createProjectMembership(
+  overrides: Partial<ProjectMembership> = {},
+): ProjectMembership {
+  return {
+    id: 6,
+    project: 1,
+    user: 2,
+    username: "ada",
+    email: "ada@example.com",
+    display_name: "Ada Lovelace",
+    role: "admin",
+    invited_by: 1,
+    joined_at: "2026-04-28T12:00:00Z",
+    ...overrides,
+  }
+}
+
+/**
+ * Build a representative project invitation fixture for Storybook stories.
+ *
+ * @param overrides - Partial invitation fields to override.
+ * @returns A backend-shaped invitation payload.
+ */
+export function createMembershipInvitation(
+  overrides: Partial<MembershipInvitation> = {},
+): MembershipInvitation {
+  return {
+    id: 8,
+    project: 1,
+    email: "invitee@example.com",
+    role: "member",
+    token: "invite-token",
+    invited_by: 1,
+    invited_by_email: "owner@example.com",
+    invite_url: "http://localhost:3000/invite/invite-token",
+    created_at: "2026-04-28T13:00:00Z",
+    accepted_at: null,
+    revoked_at: null,
+    ...overrides,
+  }
+}
+
+/**
+ * Build a representative public invitation fixture for Storybook stories.
+ *
+ * @param overrides - Partial invitation fields to override.
+ * @returns A backend-shaped public invitation payload.
+ */
+export function createPublicMembershipInvitation(
+  overrides: Partial<PublicMembershipInvitation> = {},
+): PublicMembershipInvitation {
+  return {
+    token: "invite-token",
+    project_id: 9,
+    project_name: "Invited Project",
+    email: "invitee@example.com",
+    role: "member",
+    status: "pending",
+    accepted_at: null,
+    revoked_at: null,
+    ...overrides,
+  }
+}
+
+/**
+ * Build a representative user profile fixture for Storybook stories.
+ *
+ * @param overrides - Partial profile fields to override.
+ * @returns A backend-shaped user profile payload.
+ */
+export function createUserProfile(
+  overrides: Partial<UserProfile> = {},
+): UserProfile {
+  return {
+    id: 3,
+    username: "ada",
+    email: "ada@example.com",
+    display_name: "Ada Lovelace",
+    avatar_url: null,
+    avatar_thumbnail_url: null,
+    bio: "Writes about AI systems, orchestration, and editorial tooling.",
+    timezone: "UTC",
+    first_name: "Ada",
+    last_name: "Lovelace",
     ...overrides,
   }
 }
@@ -62,6 +165,161 @@ export function createContent(overrides: Partial<Content> = {}): Content {
     newsletter_promotion_at: null,
     newsletter_promotion_by: null,
     newsletter_promotion_theme: null,
+    ...overrides,
+  }
+}
+
+/**
+ * Build an entity fixture for Storybook stories.
+ *
+ * @param overrides - Partial entity fields to override.
+ * @returns A backend-shaped entity payload.
+ */
+export function createEntity(overrides: Partial<Entity> = {}): Entity {
+  return {
+    id: 7,
+    project: 1,
+    name: "OpenAI",
+    type: "vendor",
+    description: "LLM provider",
+    authority_score: 0.82,
+    website_url: "https://openai.com",
+    github_url: "https://github.com/openai",
+    linkedin_url: "https://linkedin.com/company/openai",
+    bluesky_handle: "openai.bsky.social",
+    mastodon_handle: "@openai@mastodon.social",
+    twitter_handle: "openai",
+    mention_count: 1,
+    latest_mentions: [
+      {
+        id: 30,
+        content_id: 20,
+        content_title: "OpenAI ships a new agent runtime",
+        role: "subject",
+        sentiment: "positive",
+        span: "OpenAI",
+        confidence: 0.94,
+        created_at: "2026-04-28T12:00:00Z",
+      },
+    ],
+    created_at: "2026-04-28T10:00:00Z",
+    ...overrides,
+  }
+}
+
+/**
+ * Build an entity-candidate fixture for Storybook stories.
+ *
+ * @param overrides - Partial candidate fields to override.
+ * @returns A backend-shaped entity candidate payload.
+ */
+export function createEntityCandidate(
+  overrides: Partial<EntityCandidate> = {},
+): EntityCandidate {
+  return {
+    id: 14,
+    project: 1,
+    name: "River Labs",
+    suggested_type: "vendor",
+    first_seen_in: 21,
+    first_seen_title: "River Labs launches hosted platform",
+    occurrence_count: 2,
+    cluster_key: "cluster-1",
+    auto_promotion_blocked_reason: "needs_more_occurrences",
+    evidence_count: 2,
+    source_plugin_count: 2,
+    source_plugins: ["rss", "linkedin"],
+    identity_surfaces: ["linkedin"],
+    status: "pending",
+    merged_into: null,
+    merged_into_name: "",
+    created_at: "2026-04-28T10:00:00Z",
+    updated_at: "2026-04-28T11:00:00Z",
+    ...overrides,
+  }
+}
+
+/**
+ * Build an entity mention summary fixture for Storybook stories.
+ *
+ * @param overrides - Partial mention fields to override.
+ * @returns A backend-shaped entity mention summary.
+ */
+export function createEntityMentionSummary(
+  overrides: Partial<EntityMentionSummary> = {},
+): EntityMentionSummary {
+  return {
+    id: 31,
+    content_id: 22,
+    content_title: "Anthropic ships a safety update",
+    role: "subject",
+    sentiment: "positive",
+    span: "Anthropic",
+    confidence: 0.94,
+    created_at: "2026-04-28T12:00:00Z",
+    ...overrides,
+  }
+}
+
+/**
+ * Build an entity authority snapshot fixture for Storybook stories.
+ *
+ * @param overrides - Partial snapshot fields to override.
+ * @returns A backend-shaped entity authority snapshot.
+ */
+export function createEntityAuthoritySnapshot(
+  overrides: Partial<EntityAuthoritySnapshot> = {},
+): EntityAuthoritySnapshot {
+  return {
+    id: 51,
+    entity: 7,
+    project: 1,
+    computed_at: "2026-04-28T14:00:00Z",
+    mention_component: 0.8,
+    engagement_component: 0.65,
+    recency_component: 0.7,
+    source_quality_component: 0.6,
+    cross_newsletter_component: 0.55,
+    feedback_component: 0.7,
+    duplicate_component: 0.5,
+    decayed_prior: 0.6,
+    weights_at_compute: {
+      mention: 0.2,
+      engagement: 0.15,
+      recency: 0.15,
+      source_quality: 0.15,
+      cross_newsletter: 0.2,
+      feedback: 0.1,
+      duplicate: 0.05,
+    },
+    final_score: 0.91,
+    ...overrides,
+  }
+}
+
+/**
+ * Build a project configuration fixture for Storybook stories.
+ *
+ * @param overrides - Partial project config fields to override.
+ * @returns A backend-shaped project config payload.
+ */
+export function createProjectConfig(
+  overrides: Partial<ProjectConfig> = {},
+): ProjectConfig {
+  return {
+    id: 5,
+    project: 1,
+    draft_schedule_cron: "",
+    authority_weight_mention: 0.2,
+    authority_weight_engagement: 0.15,
+    authority_weight_recency: 0.15,
+    authority_weight_source_quality: 0.15,
+    authority_weight_cross_newsletter: 0.2,
+    authority_weight_feedback: 0.1,
+    authority_weight_duplicate: 0.05,
+    upvote_authority_weight: 0.05,
+    downvote_authority_weight: -0.05,
+    authority_decay_rate: 0.9,
     ...overrides,
   }
 }

@@ -150,6 +150,19 @@ describe("CandidateQueuePage", () => {
     selectProjectMock.mockReturnValue(project)
   })
 
+  it("renders the no-project empty state and skips candidate lookups", async () => {
+    getProjectsMock.mockResolvedValue([])
+    selectProjectMock.mockReturnValue(null)
+
+    await renderCandidateQueuePage({})
+
+    expect(selectProjectMock).toHaveBeenCalledWith([], {})
+    expect(screen.getByText("No project found for this API user.")).toBeInTheDocument()
+    expect(screen.getByText("Create a project first in Django admin.")).toBeInTheDocument()
+    expect(getProjectEntitiesMock).not.toHaveBeenCalled()
+    expect(getProjectEntityCandidatesMock).not.toHaveBeenCalled()
+  })
+
   it("renders grouped pending candidate clusters", async () => {
     getProjectEntityCandidatesMock.mockResolvedValue([
       createEntityCandidate(),

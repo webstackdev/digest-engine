@@ -9,12 +9,14 @@ const {
   getProjectTopicClusterMock,
   getProjectTopicClustersMock,
   getProjectsMock,
+  trendsPageContentMock,
   selectProjectMock,
 } = vi.hoisted(() => ({
   getProjectContentsMock: vi.fn(),
   getProjectTopicClusterMock: vi.fn(),
   getProjectTopicClustersMock: vi.fn(),
   getProjectsMock: vi.fn(),
+  trendsPageContentMock: vi.fn(() => <div data-testid="trends-page-content" />),
   selectProjectMock: vi.fn(),
 }))
 
@@ -36,18 +38,8 @@ vi.mock("@/components/layout/AppShell", () => ({
   ),
 }))
 
-vi.mock("@/components/elements/StatusBadge", () => ({
-  StatusBadge: ({
-    children,
-    tone,
-  }: {
-    children: ReactNode
-    tone: string
-  }) => (
-    <span data-testid="status-badge" data-tone={tone}>
-      {children}
-    </span>
-  ),
+vi.mock("@/app/trends/_components/TrendsPageContent", () => ({
+  TrendsPageContent: trendsPageContentMock,
 }))
 
 vi.mock("@/lib/api", () => ({
@@ -193,16 +185,6 @@ async function renderTrendsPage(
   )
 }
 
-describe("buildVelocityTrendPoints", () => {
-  it("returns a sparkline across ordered velocity snapshots", async () => {
-    const { buildVelocityTrendPoints } = await loadTrendsPageModule()
-
-    expect(
-      buildVelocityTrendPoints(createTopicClusterDetail().velocity_history),
-    ).toBe("0.0,36.0 220.0,18.6")
-  })
-})
-
 describe("TrendsPage", () => {
   beforeEach(() => {
     const project = createProject()
@@ -217,21 +199,50 @@ describe("TrendsPage", () => {
     getProjectContentsMock.mockResolvedValue([createContent()])
     getProjectTopicClustersMock.mockResolvedValue([createTopicCluster()])
     getProjectTopicClusterMock.mockResolvedValue(createTopicClusterDetail())
+    trendsPageContentMock.mockClear()
     selectProjectMock.mockReturnValue(project)
   })
 
-  it("renders cluster cards and member drill-down content", async () => {
+  it("renders the missing-project guard when no project is available", async () => {
+    selectProjectMock.mockReturnValue(null)
+
+    await renderTrendsPage({ project: "1" })
+
+    expect(screen.getByText("Create a project first in Django admin.")).toBeInTheDocument()
+    expect(getProjectTopicClustersMock).not.toHaveBeenCalled()
+  })
+
+  it("loads the selected trend workspace into TrendsPageContent", async () => {
+    const project = createProject()
+    const content = createContent()
+    const cluster = createTopicCluster()
+    const clusterDetail = createTopicClusterDetail()
+
+    getProjectsMock.mockResolvedValue([project])
+    getProjectContentsMock.mockResolvedValue([content])
+    getProjectTopicClustersMock.mockResolvedValue([cluster])
+    getProjectTopicClusterMock.mockResolvedValue(clusterDetail)
+    selectProjectMock.mockReturnValue(project)
+
     await renderTrendsPage({ project: "1", cluster: "5" })
 
-    expect(screen.getByText("Trend analysis")).toBeInTheDocument()
-    expect(
-      screen.getByRole("heading", { level: 2, name: "Platform Signals" }),
-    ).toBeInTheDocument()
-    expect(screen.getByText("Useful AI briefing")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: "Open detail" })).toHaveAttribute(
-      "href",
-      "/content/41?project=1",
-    )
+    expect(trendsPageContentMock).toHaveBeenCalled()
+    const props = (trendsPageContentMock.mock.calls[0] as unknown[] | undefined)?.[0]
+
+    expect(props).toEqual({
+      projects: [project],
+      selectedProject: project,
+      filteredClusterDetails: [clusterDetail],
+      selectedCluster: clusterDetail,
+      contentMap: new Map([[content.id, content]]),
+      availableSources: ["rss"],
+      sourceFilter: "",
+      daysFilter: 14,
+      averageVelocityScore: 0.81,
+      errorMessage: "",
+      successMessage: "",
+    })
+    expect(screen.getByTestId("trends-page-content")).toBeInTheDocument()
     expect(getProjectTopicClustersMock).toHaveBeenCalledWith(1)
     expect(getProjectTopicClusterMock).toHaveBeenCalledWith(1, 5)
   })

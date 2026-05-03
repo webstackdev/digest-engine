@@ -118,6 +118,18 @@ async function renderIdeasPage() {
   )
 }
 
+async function renderIdeasPageWithSearchParams(
+  searchParams: Record<string, string | string[] | undefined>,
+) {
+  const { default: IdeasPage } = await import("./page")
+
+  return render(
+    await IdeasPage({
+      searchParams: Promise.resolve(searchParams),
+    }),
+  )
+}
+
 describe("IdeasPage", () => {
   beforeEach(() => {
     const project = createProject()
@@ -138,5 +150,34 @@ describe("IdeasPage", () => {
     expect(screen.getByText("Useful AI briefing")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Generate now" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument()
+  })
+
+  it("renders the no-project empty state when selection fails", async () => {
+    selectProjectMock.mockReturnValueOnce(null)
+
+    await renderIdeasPageWithSearchParams({})
+
+    expect(screen.getByText("Ideas")).toBeInTheDocument()
+    expect(screen.getByText("Create a project first in Django admin.")).toBeInTheDocument()
+    expect(getProjectOriginalContentIdeasMock).not.toHaveBeenCalled()
+  })
+
+  it("filters the queue by requested status", async () => {
+    getProjectOriginalContentIdeasMock.mockResolvedValue([
+      createIdea(),
+      createIdea({
+        id: 10,
+        angle_title: "Accepted idea",
+        status: "accepted",
+        decided_at: "2026-04-29T09:00:00Z",
+        decided_by: 2,
+        decided_by_username: "editor-2",
+      }),
+    ])
+
+    await renderIdeasPageWithSearchParams({ project: "1", status: "accepted" })
+
+    expect(screen.getByText("Accepted idea")).toBeInTheDocument()
+    expect(screen.queryByText("Explain the operator gap")).not.toBeInTheDocument()
   })
 })
