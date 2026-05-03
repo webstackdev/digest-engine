@@ -19,7 +19,7 @@ from django.utils import timezone
 from langgraph.graph import END, StateGraph
 
 from content.deduplication import canonicalize_url
-from content.models import Content
+from content.models import Content, ContentPipelineState
 from core.embeddings import (
     build_content_embedding_text,
     embed_text,
@@ -30,7 +30,19 @@ from core.embeddings import (
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
 from entities.extraction import run_entity_extraction
 from entities.models import EntityMention
-from pipeline.models import ReviewQueue, ReviewReason, SkillResult, SkillStatus
+from pipeline.models import (
+    ReviewQueue,
+    ReviewReason,
+    ReviewResolution,
+    SkillResult,
+    SkillStatus,
+)
+from pipeline.resilience import (
+    ResilientSkillError,
+    RetryBudget,
+    build_retry_budget,
+    execute_with_resilience,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +53,13 @@ RELEVANCE_SKILL_NAME = "relevance_scoring"
 SUMMARIZATION_SKILL_NAME = "summarization"
 RELATED_CONTENT_SKILL_NAME = "find_related"
 ASYNC_AD_HOC_SKILL_NAMES = frozenset({RELEVANCE_SKILL_NAME, SUMMARIZATION_SKILL_NAME})
+PIPELINE_RETRY_SKILLS = (
+    DEDUPLICATION_SKILL_NAME,
+    CLASSIFICATION_SKILL_NAME,
+    ENTITY_EXTRACTION_SKILL_NAME,
+    RELEVANCE_SKILL_NAME,
+    SUMMARIZATION_SKILL_NAME,
+)
 
 DEDUPLICATION_EXACT_CONFIDENCE = 1.0
 DEDUPLICATION_SEMANTIC_THRESHOLD = 0.92
@@ -71,6 +90,11 @@ class PipelineState(TypedDict, total=False):
     entity_extraction: dict[str, Any] | None
     relevance: dict[str, Any] | None
     summary: dict[str, Any] | None
+    retry_budget_remaining: int
+    failed_node: str
+    failure_reason: str
+    failure_detail: str
+    skill_invocation_id: str
     status: str
 
 
@@ -121,11 +145,26 @@ def get_ingestion_graph():
         route_after_dedup,
         {
             "duplicate": END,
+            "review": "queue_review",
             "unique": "classify",
         },
     )
-    graph.add_edge("classify", "extract_entities")
-    graph.add_edge("extract_entities", "score_relevance")
+    graph.add_conditional_edges(
+        "classify",
+        route_after_classification,
+        {
+            "continue": "extract_entities",
+            "review": "queue_review",
+        },
+    )
+    graph.add_conditional_edges(
+        "extract_entities",
+        route_after_entity_extraction,
+        {
+            "continue": "score_relevance",
+            "review": "queue_review",
+        },
+    )
     graph.add_conditional_edges(
         "score_relevance",
         route_by_relevance,
@@ -133,9 +172,17 @@ def get_ingestion_graph():
             "relevant": "summarize",
             "borderline": "queue_review",
             "irrelevant": "archive",
+            "review": "queue_review",
         },
     )
-    graph.add_edge("summarize", END)
+    graph.add_conditional_edges(
+        "summarize",
+        route_after_summary,
+        {
+            "completed": END,
+            "review": "queue_review",
+        },
+    )
     graph.add_edge("archive", END)
     graph.add_edge("queue_review", END)
     return graph.compile()
@@ -152,9 +199,13 @@ def process_content_pipeline(content_id: int) -> PipelineState:
     """
 
     content = Content.objects.select_related("project").get(pk=content_id)
+    content.pipeline_state = ContentPipelineState.PROCESSING
+    content.save(update_fields=["pipeline_state"])
+    retry_budget = build_retry_budget(PIPELINE_RETRY_SKILLS)
     initial_state: PipelineState = {
         "content_id": _require_pk(content),
         "project_id": _project_pk(content),
+        "retry_budget_remaining": retry_budget.remaining_retries,
         "status": "processing",
     }
     return cast(PipelineState, get_ingestion_graph().invoke(initial_state))
@@ -164,9 +215,8 @@ def deduplicate_node(state: PipelineState) -> PipelineState:
     """Detect duplicates before downstream skills consume the content."""
 
     content = _get_content(state)
-    dedup = _execute_with_retries(
-        DEDUPLICATION_SKILL_NAME, lambda: run_deduplication(content)
-    )
+    retry_budget = _retry_budget_from_state(state)
+    dedup = run_deduplication(content, retry_budget=retry_budget)
 
     update_fields = ["canonical_url"]
     content.canonical_url = dedup["canonical_url"]
@@ -178,20 +228,37 @@ def deduplicate_node(state: PipelineState) -> PipelineState:
         )
         content.duplicate_of = duplicate_target
         content.is_active = False
-        update_fields.extend(["duplicate_of", "is_active"])
+        content.pipeline_state = ContentPipelineState.DUPLICATE
+        update_fields.extend(["duplicate_of", "is_active", "pipeline_state"])
     content.save(update_fields=update_fields)
 
-    _create_skill_result(
+    skill_result = _create_skill_result(
         content,
         skill_name=DEDUPLICATION_SKILL_NAME,
         status=SkillStatus.COMPLETED,
         result_data=dedup,
+        error_message=str(dedup.get("failure_detail", "")),
         model_used=dedup["model_used"],
         latency_ms=dedup["latency_ms"],
         confidence=dedup["confidence"],
     )
+    if dedup.get("review_required"):
+        return {
+            "dedup": dedup,
+            "retry_budget_remaining": retry_budget.remaining_retries,
+            "failed_node": "deduplicate",
+            "failure_reason": str(
+                dedup.get("failure_reason", ReviewReason.RETRY_EXHAUSTED)
+            ),
+            "failure_detail": str(
+                dedup.get("failure_detail", dedup.get("explanation", ""))
+            ),
+            "skill_invocation_id": str(skill_result.invocation_id),
+            "status": "awaiting_review",
+        }
     return {
         "dedup": dedup,
+        "retry_budget_remaining": retry_budget.remaining_retries,
         "status": "duplicate" if dedup["is_duplicate"] else "processing",
     }
 
@@ -200,55 +267,93 @@ def classify_node(state: PipelineState) -> PipelineState:
     """Classify the content item and persist the resulting skill output."""
 
     content = _get_content(state)
-    classification = _execute_with_retries(
-        CLASSIFICATION_SKILL_NAME, lambda: run_content_classification(content)
-    )
+    retry_budget = _retry_budget_from_state(state)
+    classification = run_content_classification(content, retry_budget=retry_budget)
     content.content_type = classification["content_type"]
     content.save(update_fields=["content_type"])
-    _create_skill_result(
+    skill_result = _create_skill_result(
         content,
         skill_name=CLASSIFICATION_SKILL_NAME,
         status=SkillStatus.COMPLETED,
         result_data=classification,
+        error_message=str(classification.get("failure_detail", "")),
         model_used=classification["model_used"],
         latency_ms=classification["latency_ms"],
         confidence=classification["confidence"],
     )
+    if classification.get("degraded"):
+        return {
+            "classification": classification,
+            "retry_budget_remaining": retry_budget.remaining_retries,
+            "failed_node": "classify",
+            "failure_reason": str(
+                classification.get("failure_reason", ReviewReason.RETRY_EXHAUSTED)
+            ),
+            "failure_detail": str(
+                classification.get(
+                    "failure_detail", classification.get("explanation", "")
+                )
+            ),
+            "skill_invocation_id": str(skill_result.invocation_id),
+            "status": "awaiting_review",
+        }
     if classification["confidence"] < settings.AI_CLASSIFICATION_REVIEW_THRESHOLD:
         _upsert_review_queue_item(
             content,
             reason=ReviewReason.LOW_CONFIDENCE_CLASSIFICATION,
             confidence=float(classification["confidence"]),
+            failed_node="classify",
+            failure_detail=str(classification.get("explanation", "")),
+            skill_invocation_id=str(skill_result.invocation_id),
         )
-    return {"classification": classification}
+    return {
+        "classification": classification,
+        "retry_budget_remaining": retry_budget.remaining_retries,
+    }
 
 
 def extract_entities_node(state: PipelineState) -> PipelineState:
     """Extract tracked-entity mentions before relevance scoring."""
 
     content = _get_content(state)
-    extraction = _execute_with_retries(
-        ENTITY_EXTRACTION_SKILL_NAME, lambda: run_entity_extraction(content)
-    )
-    _create_skill_result(
+    retry_budget = _retry_budget_from_state(state)
+    extraction = run_entity_extraction(content, retry_budget=retry_budget)
+    skill_result = _create_skill_result(
         content,
         skill_name=ENTITY_EXTRACTION_SKILL_NAME,
         status=SkillStatus.COMPLETED,
         result_data=extraction,
+        error_message=str(extraction.get("failure_detail", "")),
         model_used=extraction["model_used"],
         latency_ms=extraction["latency_ms"],
         confidence=extraction["confidence"],
     )
-    return {"entity_extraction": extraction}
+    if extraction.get("degraded"):
+        return {
+            "entity_extraction": extraction,
+            "retry_budget_remaining": retry_budget.remaining_retries,
+            "failed_node": "extract_entities",
+            "failure_reason": str(
+                extraction.get("failure_reason", ReviewReason.RETRY_EXHAUSTED)
+            ),
+            "failure_detail": str(
+                extraction.get("failure_detail", extraction.get("explanation", ""))
+            ),
+            "skill_invocation_id": str(skill_result.invocation_id),
+            "status": "awaiting_review",
+        }
+    return {
+        "entity_extraction": extraction,
+        "retry_budget_remaining": retry_budget.remaining_retries,
+    }
 
 
 def relevance_node(state: PipelineState) -> PipelineState:
     """Score content relevance, persist the score, and keep the item active."""
 
     content = _get_content(state)
-    relevance = _execute_with_retries(
-        RELEVANCE_SKILL_NAME, lambda: run_relevance_scoring(content)
-    )
+    retry_budget = _retry_budget_from_state(state)
+    relevance = run_relevance_scoring(content, retry_budget=retry_budget)
     relevance, effective_relevance_score = _apply_authority_adjustment(
         content, relevance
     )
@@ -257,34 +362,72 @@ def relevance_node(state: PipelineState) -> PipelineState:
     content.save(
         update_fields=["relevance_score", "authority_adjusted_score", "is_active"]
     )
-    _create_skill_result(
+    skill_result = _create_skill_result(
         content,
         skill_name=RELEVANCE_SKILL_NAME,
         status=SkillStatus.COMPLETED,
         result_data=relevance,
+        error_message=str(relevance.get("failure_detail", "")),
         model_used=relevance["model_used"],
         latency_ms=relevance["latency_ms"],
         confidence=effective_relevance_score,
     )
-    return {"relevance": relevance}
+    if relevance.get("degraded"):
+        return {
+            "relevance": relevance,
+            "retry_budget_remaining": retry_budget.remaining_retries,
+            "failed_node": "score_relevance",
+            "failure_reason": str(
+                relevance.get("failure_reason", ReviewReason.RETRY_EXHAUSTED)
+            ),
+            "failure_detail": str(
+                relevance.get("failure_detail", relevance.get("explanation", ""))
+            ),
+            "skill_invocation_id": str(skill_result.invocation_id),
+            "status": "awaiting_review",
+        }
+    return {
+        "relevance": relevance,
+        "retry_budget_remaining": retry_budget.remaining_retries,
+    }
 
 
 def summarize_node(state: PipelineState) -> PipelineState:
     """Generate and store a newsletter-ready summary for relevant content."""
 
     content = _get_content(state)
-    summary = _execute_with_retries(
-        SUMMARIZATION_SKILL_NAME, lambda: run_summarization(content)
-    )
-    _create_skill_result(
+    retry_budget = _retry_budget_from_state(state)
+    summary = run_summarization(content, retry_budget=retry_budget)
+    skill_result = _create_skill_result(
         content,
         skill_name=SUMMARIZATION_SKILL_NAME,
         status=SkillStatus.COMPLETED,
         result_data=summary,
+        error_message=str(summary.get("failure_detail", "")),
         model_used=summary["model_used"],
         latency_ms=summary["latency_ms"],
     )
-    return {"summary": summary, "status": "completed"}
+    if summary.get("degraded"):
+        return {
+            "summary": summary,
+            "retry_budget_remaining": retry_budget.remaining_retries,
+            "failed_node": "summarize",
+            "failure_reason": str(
+                summary.get("failure_reason", ReviewReason.RETRY_EXHAUSTED)
+            ),
+            "failure_detail": str(
+                summary.get("failure_detail", summary.get("summary", ""))
+            ),
+            "skill_invocation_id": str(skill_result.invocation_id),
+            "status": "awaiting_review",
+        }
+    content.pipeline_state = ContentPipelineState.COMPLETED
+    content.save(update_fields=["pipeline_state"])
+    return {
+        "summary": summary,
+        "retry_budget_remaining": retry_budget.remaining_retries,
+        "status": "completed",
+    }
 
 
 def archive_node(state: PipelineState) -> PipelineState:
@@ -292,7 +435,8 @@ def archive_node(state: PipelineState) -> PipelineState:
 
     content = _get_content(state)
     content.is_active = False
-    content.save(update_fields=["is_active"])
+    content.pipeline_state = ContentPipelineState.ARCHIVED
+    content.save(update_fields=["is_active", "pipeline_state"])
     return {"status": "archived"}
 
 
@@ -301,21 +445,32 @@ def queue_review_node(state: PipelineState) -> PipelineState:
 
     content = _get_content(state)
     relevance = state.get("relevance") or {}
+    reason = cast(
+        ReviewReason,
+        state.get("failure_reason") or ReviewReason.BORDERLINE_RELEVANCE,
+    )
     _upsert_review_queue_item(
         content,
-        reason=ReviewReason.BORDERLINE_RELEVANCE,
+        reason=reason,
         confidence=float(
             relevance.get("relevance_score", settings.AI_RELEVANCE_REVIEW_THRESHOLD)
         ),
+        failed_node=str(state.get("failed_node", "score_relevance")),
+        failure_detail=str(
+            state.get("failure_detail")
+            or relevance.get("explanation", "Queued for manual review.")
+        ),
+        skill_invocation_id=cast(str | None, state.get("skill_invocation_id")),
     )
     content.is_active = True
-    content.save(update_fields=["is_active"])
+    content.pipeline_state = ContentPipelineState.AWAITING_REVIEW
+    content.save(update_fields=["is_active", "pipeline_state"])
     return {"status": "review"}
 
 
 def route_by_relevance(
     state: PipelineState,
-) -> Literal["relevant", "borderline", "irrelevant"]:
+) -> Literal["relevant", "borderline", "irrelevant", "review"]:
     """Choose the next workflow branch from the computed relevance score.
 
     Args:
@@ -325,6 +480,8 @@ def route_by_relevance(
         The route name consumed by LangGraph to continue processing.
     """
 
+    if state.get("status") == "awaiting_review":
+        return "review"
     relevance = state.get("relevance") or {}
     score = float(
         relevance.get(
@@ -341,14 +498,40 @@ def route_by_relevance(
     return "borderline"
 
 
-def route_after_dedup(state: PipelineState) -> Literal["duplicate", "unique"]:
+def route_after_dedup(state: PipelineState) -> Literal["duplicate", "review", "unique"]:
     """Choose whether deduplication should short-circuit the pipeline."""
 
     dedup = state.get("dedup") or {}
+    if state.get("status") == "awaiting_review" or dedup.get("review_required"):
+        return "review"
     return "duplicate" if dedup.get("is_duplicate", False) else "unique"
 
 
-def run_deduplication(content: Content) -> dict[str, Any]:
+def route_after_classification(state: PipelineState) -> Literal["continue", "review"]:
+    """Route degraded classification output into the review queue."""
+
+    return "review" if state.get("status") == "awaiting_review" else "continue"
+
+
+def route_after_entity_extraction(
+    state: PipelineState,
+) -> Literal["continue", "review"]:
+    """Route degraded entity extraction output into the review queue."""
+
+    return "review" if state.get("status") == "awaiting_review" else "continue"
+
+
+def route_after_summary(state: PipelineState) -> Literal["completed", "review"]:
+    """Route degraded summarization output into the review queue."""
+
+    return "review" if state.get("status") == "awaiting_review" else "completed"
+
+
+def run_deduplication(
+    content: Content,
+    *,
+    retry_budget: RetryBudget | None = None,
+) -> dict[str, Any]:
     """Detect whether the content row duplicates an existing project item."""
 
     canonical_url = canonicalize_url(content.url)
@@ -422,7 +605,11 @@ def run_deduplication(content: Content) -> dict[str, Any]:
             continue
 
         llm_decision = _run_deduplication_tiebreak(
-            content, duplicate_target, canonical_url, similarity
+            content,
+            duplicate_target,
+            canonical_url,
+            similarity,
+            retry_budget=retry_budget,
         )
         if llm_decision["is_duplicate"]:
             return {
@@ -436,6 +623,22 @@ def run_deduplication(content: Content) -> dict[str, Any]:
                 "confidence": llm_decision["confidence"],
                 "model_used": llm_decision["model_used"],
                 "latency_ms": llm_decision["latency_ms"],
+            }
+        if llm_decision.get("degraded"):
+            return {
+                "is_duplicate": False,
+                "canonical_url": canonical_url,
+                "matched_content_id": _require_pk(duplicate_target),
+                "matched_stage": "llm_fallback",
+                "similarity_score": similarity,
+                "used_llm": False,
+                "explanation": llm_decision["explanation"],
+                "confidence": similarity,
+                "model_used": llm_decision["model_used"],
+                "latency_ms": llm_decision["latency_ms"],
+                "review_required": True,
+                "failure_reason": llm_decision["failure_reason"],
+                "failure_detail": llm_decision["failure_detail"],
             }
 
     return {
@@ -452,7 +655,11 @@ def run_deduplication(content: Content) -> dict[str, Any]:
     }
 
 
-def run_content_classification(content: Content) -> dict[str, Any]:
+def run_content_classification(
+    content: Content,
+    *,
+    retry_budget: RetryBudget | None = None,
+) -> dict[str, Any]:
     """Classify a content item into a newsletter-oriented content type.
 
     Args:
@@ -465,19 +672,24 @@ def run_content_classification(content: Content) -> dict[str, Any]:
 
     if settings.OPENROUTER_API_KEY:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_CLASSIFICATION_MODEL,
-                system_prompt=get_skill_definition(
-                    CLASSIFICATION_SKILL_NAME
-                ).instructions_markdown,
-                user_prompt=build_skill_user_prompt(
-                    CLASSIFICATION_SKILL_NAME,
-                    {
-                        "title": content.title,
-                        "content_text": content.content_text[:5000],
-                        "url": content.url,
-                    },
+            response = execute_with_resilience(
+                CLASSIFICATION_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_CLASSIFICATION_MODEL,
+                    system_prompt=get_skill_definition(
+                        CLASSIFICATION_SKILL_NAME
+                    ).instructions_markdown,
+                    user_prompt=build_skill_user_prompt(
+                        CLASSIFICATION_SKILL_NAME,
+                        {
+                            "title": content.title,
+                            "content_text": content.content_text[:5000],
+                            "url": content.url,
+                        },
+                    ),
                 ),
+                retry_budget=retry_budget,
+                use_circuit_breaker=True,
             )
             payload = response.payload
             content_type = str(payload.get("content_type", "other"))
@@ -493,11 +705,16 @@ def run_content_classification(content: Content) -> dict[str, Any]:
                 "model_used": response.model,
                 "latency_ms": response.latency_ms,
             }
-        except Exception:
+        except ResilientSkillError as exc:
             logger.exception(
                 "Classification model call failed; falling back to heuristic classifier",
                 extra={"content_id": _require_pk(content)},
             )
+            fallback = _heuristic_classification(content)
+            fallback["degraded"] = True
+            fallback["failure_reason"] = exc.reason
+            fallback["failure_detail"] = exc.detail
+            return fallback
     return _heuristic_classification(content)
 
 
@@ -548,6 +765,8 @@ def _run_deduplication_tiebreak(
     candidate: Content,
     canonical_url: str,
     similarity: float,
+    *,
+    retry_budget: RetryBudget | None = None,
 ) -> dict[str, Any]:
     """Use the deduplication skill markdown as an LLM tiebreak."""
 
@@ -561,26 +780,31 @@ def _run_deduplication_tiebreak(
         }
 
     try:
-        response = openrouter_chat_json(
-            model=settings.AI_RELEVANCE_MODEL,
-            system_prompt=get_skill_definition(
-                DEDUPLICATION_SKILL_NAME
-            ).instructions_markdown,
-            user_prompt=build_skill_user_prompt(
-                DEDUPLICATION_SKILL_NAME,
-                {
-                    "title": content.title,
-                    "content_text": content.content_text[:4000],
-                    "canonical_url": canonical_url,
-                    "candidate_title": candidate.title,
-                    "candidate_content_text": candidate.content_text[:4000],
-                    "candidate_canonical_url": candidate.canonical_url
-                    or canonicalize_url(candidate.url),
-                    "similarity_score": f"{similarity:.3f}",
-                },
+        response = execute_with_resilience(
+            DEDUPLICATION_SKILL_NAME,
+            lambda: openrouter_chat_json(
+                model=settings.AI_RELEVANCE_MODEL,
+                system_prompt=get_skill_definition(
+                    DEDUPLICATION_SKILL_NAME
+                ).instructions_markdown,
+                user_prompt=build_skill_user_prompt(
+                    DEDUPLICATION_SKILL_NAME,
+                    {
+                        "title": content.title,
+                        "content_text": content.content_text[:4000],
+                        "canonical_url": canonical_url,
+                        "candidate_title": candidate.title,
+                        "candidate_content_text": candidate.content_text[:4000],
+                        "candidate_canonical_url": candidate.canonical_url
+                        or canonicalize_url(candidate.url),
+                        "similarity_score": f"{similarity:.3f}",
+                    },
+                ),
             ),
+            retry_budget=retry_budget,
+            use_circuit_breaker=True,
         )
-    except Exception:
+    except ResilientSkillError as exc:
         logger.exception(
             "Deduplication tiebreak model call failed; treating the borderline pair as distinct",
             extra={
@@ -594,6 +818,9 @@ def _run_deduplication_tiebreak(
             "explanation": "Borderline semantic match remained distinct after the LLM tiebreak failed.",
             "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
             "latency_ms": 0,
+            "degraded": True,
+            "failure_reason": exc.reason,
+            "failure_detail": exc.detail,
         }
 
     payload = response.payload
@@ -627,7 +854,11 @@ def _normalize_title(value: str) -> str:
     return " ".join(value.lower().split())
 
 
-def run_relevance_scoring(content: Content) -> dict[str, Any]:
+def run_relevance_scoring(
+    content: Content,
+    *,
+    retry_budget: RetryBudget | None = None,
+) -> dict[str, Any]:
     """Score how relevant a content item is to its project's topic.
 
     The function first measures similarity to the project's reference corpus in
@@ -663,24 +894,29 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
 
     if settings.OPENROUTER_API_KEY:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_RELEVANCE_MODEL,
-                system_prompt=get_skill_definition(
-                    RELEVANCE_SKILL_NAME
-                ).instructions_markdown,
-                user_prompt=build_skill_user_prompt(
-                    RELEVANCE_SKILL_NAME,
-                    {
-                        "newsletter_topic": content.project.topic_description,
-                        "reference_similarity": f"{reference_similarity:.3f}",
-                        "centroid_similarity": f"{centroid_similarity:.3f}",
-                        "embedding_baseline_similarity": f"{similarity:.3f}",
-                        "title": content.title,
-                        "content_text": content.content_text[:5000],
-                        "url": content.url,
-                        "source_plugin": content.source_plugin,
-                    },
+            response = execute_with_resilience(
+                RELEVANCE_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_RELEVANCE_MODEL,
+                    system_prompt=get_skill_definition(
+                        RELEVANCE_SKILL_NAME
+                    ).instructions_markdown,
+                    user_prompt=build_skill_user_prompt(
+                        RELEVANCE_SKILL_NAME,
+                        {
+                            "newsletter_topic": content.project.topic_description,
+                            "reference_similarity": f"{reference_similarity:.3f}",
+                            "centroid_similarity": f"{centroid_similarity:.3f}",
+                            "embedding_baseline_similarity": f"{similarity:.3f}",
+                            "title": content.title,
+                            "content_text": content.content_text[:5000],
+                            "url": content.url,
+                            "source_plugin": content.source_plugin,
+                        },
+                    ),
                 ),
+                retry_budget=retry_budget,
+                use_circuit_breaker=True,
             )
             payload = response.payload
             return {
@@ -694,11 +930,24 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
                 "model_used": response.model,
                 "latency_ms": response.latency_ms,
             }
-        except Exception:
+        except ResilientSkillError as exc:
             logger.exception(
                 "Relevance model call failed; falling back to heuristic relevance",
                 extra={"content_id": _require_pk(content)},
             )
+            return {
+                "relevance_score": similarity,
+                "explanation": (
+                    f"Borderline embedding similarity of {similarity:.2f} against the project baseline for "
+                    f"'{content.project.topic_description}'."
+                ),
+                "used_llm": False,
+                "model_used": f"embedding:{settings.EMBEDDING_MODEL}",
+                "latency_ms": 0,
+                "degraded": True,
+                "failure_reason": exc.reason,
+                "failure_detail": exc.detail,
+            }
 
     return {
         "relevance_score": similarity,
@@ -712,7 +961,11 @@ def run_relevance_scoring(content: Content) -> dict[str, Any]:
     }
 
 
-def run_summarization(content: Content) -> dict[str, Any]:
+def run_summarization(
+    content: Content,
+    *,
+    retry_budget: RetryBudget | None = None,
+) -> dict[str, Any]:
     """Generate a concise newsletter summary for a content item.
 
     Args:
@@ -724,20 +977,25 @@ def run_summarization(content: Content) -> dict[str, Any]:
 
     if settings.OPENROUTER_API_KEY:
         try:
-            response = openrouter_chat_json(
-                model=settings.AI_SUMMARIZATION_MODEL,
-                system_prompt=get_skill_definition(
-                    SUMMARIZATION_SKILL_NAME
-                ).instructions_markdown,
-                user_prompt=build_skill_user_prompt(
-                    SUMMARIZATION_SKILL_NAME,
-                    {
-                        "newsletter_topic": content.project.topic_description,
-                        "title": content.title,
-                        "content_text": content.content_text[:5000],
-                        "url": content.url,
-                    },
+            response = execute_with_resilience(
+                SUMMARIZATION_SKILL_NAME,
+                lambda: openrouter_chat_json(
+                    model=settings.AI_SUMMARIZATION_MODEL,
+                    system_prompt=get_skill_definition(
+                        SUMMARIZATION_SKILL_NAME
+                    ).instructions_markdown,
+                    user_prompt=build_skill_user_prompt(
+                        SUMMARIZATION_SKILL_NAME,
+                        {
+                            "newsletter_topic": content.project.topic_description,
+                            "title": content.title,
+                            "content_text": content.content_text[:5000],
+                            "url": content.url,
+                        },
+                    ),
                 ),
+                retry_budget=retry_budget,
+                use_circuit_breaker=True,
             )
             return {
                 "summary": _normalize_summary(
@@ -746,11 +1004,19 @@ def run_summarization(content: Content) -> dict[str, Any]:
                 "model_used": response.model,
                 "latency_ms": response.latency_ms,
             }
-        except Exception:
+        except ResilientSkillError as exc:
             logger.exception(
                 "Summarization model call failed; falling back to heuristic summary",
                 extra={"content_id": _require_pk(content)},
             )
+            return {
+                "summary": _heuristic_summary(content),
+                "model_used": "heuristic",
+                "latency_ms": 0,
+                "degraded": True,
+                "failure_reason": exc.reason,
+                "failure_detail": exc.detail,
+            }
     return {
         "summary": _heuristic_summary(content),
         "model_used": "heuristic",
@@ -873,9 +1139,7 @@ def _execute_ad_hoc_classification(content: Content) -> SkillResult:
     """Run classification immediately and persist success or failure."""
 
     try:
-        classification = _execute_with_retries(
-            CLASSIFICATION_SKILL_NAME, lambda: run_content_classification(content)
-        )
+        classification = run_content_classification(content)
         content.content_type = classification["content_type"]
         content.save(update_fields=["content_type"])
         if classification["confidence"] < settings.AI_CLASSIFICATION_REVIEW_THRESHOLD:
@@ -966,9 +1230,7 @@ def _execute_ad_hoc_related_content(content: Content) -> SkillResult:
 def _run_ad_hoc_relevance(content: Content) -> tuple[dict[str, Any], float]:
     """Apply ad hoc relevance scoring and update the content row accordingly."""
 
-    relevance = _execute_with_retries(
-        RELEVANCE_SKILL_NAME, lambda: run_relevance_scoring(content)
-    )
+    relevance = run_relevance_scoring(content)
     relevance, relevance_score = _apply_authority_adjustment(content, relevance)
     content.relevance_score = float(relevance["relevance_score"])
     content.is_active = relevance_score >= settings.AI_RELEVANCE_REVIEW_THRESHOLD
@@ -1010,9 +1272,7 @@ def _run_ad_hoc_summarization(content: Content) -> dict[str, Any]:
             "Summarization requires relevance_score >= "
             f"{settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD:.2f}. Run relevance scoring first or review the content."
         )
-    return _execute_with_retries(
-        SUMMARIZATION_SKILL_NAME, lambda: run_summarization(content)
-    )
+    return run_summarization(content)
 
 
 def _apply_authority_adjustment(
@@ -1067,7 +1327,12 @@ def _get_primary_authority_entity(content: Content):
     return best_mention.entity
 
 
-def _execute_with_retries(skill_name: str, fn):
+def _execute_with_retries(
+    skill_name: str,
+    fn,
+    *,
+    retry_budget: RetryBudget | None = None,
+):
     """Retry a skill callable up to the configured retry budget.
 
     Args:
@@ -1081,18 +1346,7 @@ def _execute_with_retries(skill_name: str, fn):
         Exception: Re-raises the final exception after all retries fail.
     """
 
-    last_exc: Exception | None = None
-    for attempt in range(settings.AI_MAX_NODE_RETRIES + 1):
-        try:
-            return fn()
-        except Exception as exc:  # pragma: no cover
-            last_exc = exc
-            logger.exception(
-                "Skill execution failed",
-                extra={"skill_name": skill_name, "attempt": attempt + 1},
-            )
-    assert last_exc is not None
-    raise last_exc
+    return execute_with_resilience(skill_name, fn, retry_budget=retry_budget)
 
 
 def _serialize_related_match(match: Any) -> dict[str, Any]:
@@ -1185,21 +1439,40 @@ def _get_content(state: PipelineState) -> Content:
 
 
 def _upsert_review_queue_item(
-    content: Content, *, reason: ReviewReason, confidence: float
+    content: Content,
+    *,
+    reason: ReviewReason,
+    confidence: float,
+    failed_node: str = "",
+    failure_detail: str = "",
+    skill_invocation_id: str | None = None,
 ) -> ReviewQueue:
     existing = ReviewQueue.objects.filter(
-        content=content, reason=reason, resolved=False
+        content=content, reason=reason, failed_node=failed_node, resolved=False
     ).first()
     if existing:
         existing.confidence = confidence
-        existing.save(update_fields=["confidence"])
+        existing.failure_detail = failure_detail
+        existing.skill_invocation_id = skill_invocation_id
+        existing.save(
+            update_fields=["confidence", "failure_detail", "skill_invocation_id"]
+        )
         return existing
     return ReviewQueue.objects.create(
         project=content.project,
         content=content,
         reason=reason,
         confidence=confidence,
+        failed_node=failed_node,
+        failure_detail=failure_detail,
+        skill_invocation_id=skill_invocation_id,
     )
+
+
+def _retry_budget_from_state(state: PipelineState) -> RetryBudget:
+    """Materialize a mutable retry budget from graph state."""
+
+    return RetryBudget(int(state.get("retry_budget_remaining", 0)))
 
 
 def _create_skill_result(
@@ -1272,3 +1545,64 @@ def _update_skill_result(
         ]
     )
     return skill_result
+
+
+def retry_review_queue_item(review_item: ReviewQueue) -> dict[str, object]:
+    """Retry a review item from its recorded failed node when possible."""
+
+    content = review_item.content
+    content.pipeline_state = ContentPipelineState.PROCESSING
+    content.save(update_fields=["pipeline_state"])
+
+    failed_node = review_item.failed_node or "score_relevance"
+    if failed_node in {"deduplicate", "classify"}:
+        result = process_content_pipeline(_require_pk(content))
+    elif failed_node == "extract_entities":
+        result = process_content_pipeline(_require_pk(content))
+    elif failed_node == "score_relevance":
+        relevance, relevance_score = _run_ad_hoc_relevance(content)
+        result = {
+            "relevance": relevance,
+            "status": (
+                "awaiting_review"
+                if relevance.get("degraded")
+                else (
+                    "completed"
+                    if relevance_score >= settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD
+                    else "review"
+                )
+            ),
+        }
+        if relevance_score >= settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD:
+            summary = _run_ad_hoc_summarization(content)
+            result["summary"] = summary
+            content.pipeline_state = (
+                ContentPipelineState.AWAITING_REVIEW
+                if summary.get("degraded")
+                else ContentPipelineState.COMPLETED
+            )
+            content.save(update_fields=["pipeline_state"])
+    else:
+        summary = _run_ad_hoc_summarization(content)
+        result = {
+            "summary": summary,
+            "status": "awaiting_review" if summary.get("degraded") else "completed",
+        }
+        content.pipeline_state = (
+            ContentPipelineState.AWAITING_REVIEW
+            if summary.get("degraded")
+            else ContentPipelineState.COMPLETED
+        )
+        content.save(update_fields=["pipeline_state"])
+
+    if result.get("status") != "awaiting_review":
+        review_item.resolved = True
+        review_item.resolution = ReviewResolution.RETRIED
+        review_item.resolved_at = timezone.now()
+        review_item.save(update_fields=["resolved", "resolution", "resolved_at"])
+
+    return {
+        "review_item_id": _require_pk(review_item),
+        "content_id": _require_pk(content),
+        "status": str(result.get("status", "completed")),
+    }

@@ -1,0 +1,5 @@
+{
+  "name": "content_classification",
+  "max_retries": 2,
+  "backoff_seconds": [5, 30]
+}

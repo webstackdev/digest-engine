@@ -1,0 +1,5 @@
+{
+  "name": "deduplication",
+  "max_retries": 2,
+  "backoff_seconds": [5, 30]
+}

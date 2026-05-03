@@ -11,6 +11,17 @@ class FeedbackType(models.TextChoices):
     DOWNVOTE = "downvote", "Downvote"
 
 
+class ContentPipelineState(models.TextChoices):
+    """High-level processing state for one content item in the AI pipeline."""
+
+    PENDING = "pending", "Pending"
+    PROCESSING = "processing", "Processing"
+    COMPLETED = "completed", "Completed"
+    AWAITING_REVIEW = "awaiting_review", "Awaiting Review"
+    ARCHIVED = "archived", "Archived"
+    DUPLICATE = "duplicate", "Duplicate"
+
+
 class Content(models.Model):
     """Stores an ingested content item that may appear in a newsletter."""
 
@@ -47,6 +58,12 @@ class Content(models.Model):
     duplicate_signal_count = models.IntegerField(default=0)
     is_reference = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    pipeline_state = models.CharField(
+        max_length=32,
+        choices=ContentPipelineState.choices,
+        default=ContentPipelineState.PENDING,
+        db_index=True,
+    )
     newsletter_promotion_at = models.DateTimeField(null=True, blank=True)
     newsletter_promotion_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

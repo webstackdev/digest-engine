@@ -21,12 +21,17 @@ from core.pipeline import (
     execute_background_skill_result,
     process_content_pipeline,
 )
+from core.pipeline import (
+    retry_review_queue_item as retry_review_queue_item_from_pipeline,
+)
 from entities.models import (
     Entity,
     EntityAuthoritySnapshot,
     EntityMention,
     EntityMentionRole,
 )
+from pipeline.models import ReviewQueue
+from pipeline.resilience import opened_circuit_breakers, probe_circuit_breaker
 from projects.models import Project, ProjectConfig
 
 logger = logging.getLogger(__name__)
@@ -39,6 +44,7 @@ AUTHORITY_ROLE_SIGNALS = (
 )
 
 __all__ = [
+    "circuit_breaker_health_check",
     "recompute_source_quality",
     "recompute_authority_scores",
     "run_all_source_quality_recomputations",
@@ -47,6 +53,7 @@ __all__ = [
     "run_summarization_skill",
     "queue_content_skill",
     "process_content",
+    "retry_pipeline_review_item",
 ]
 
 
@@ -113,6 +120,36 @@ def process_content(content_id: int):
     """Run the main AI pipeline for a stored content item."""
 
     return process_content_pipeline(content_id)
+
+
+@shared_task(name="core.tasks.circuit_breaker_health_check")
+def circuit_breaker_health_check() -> dict[str, object]:
+    """Probe opened circuit breakers and close the ones that recover."""
+
+    opened = opened_circuit_breakers()
+    recovered: list[str] = []
+    for breaker in opened:
+        try:
+            if probe_circuit_breaker(breaker.skill_name):
+                recovered.append(breaker.skill_name)
+        except Exception:
+            logger.exception(
+                "Circuit breaker health probe failed for %s", breaker.skill_name
+            )
+    return {
+        "opened_breaker_count": len(opened),
+        "recovered_breakers": recovered,
+    }
+
+
+@shared_task(name="core.tasks.retry_pipeline_review_item")
+def retry_pipeline_review_item(review_item_id: int) -> dict[str, object]:
+    """Retry one pipeline review item from its failed node."""
+
+    review_item = ReviewQueue.objects.select_related("content", "project").get(
+        pk=review_item_id
+    )
+    return retry_review_queue_item_from_pipeline(review_item)
 
 
 @shared_task(name="core.tasks.recompute_source_quality")

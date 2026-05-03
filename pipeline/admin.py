@@ -5,11 +5,13 @@ from typing import Any, cast
 
 from django.contrib import admin, messages
 from django.db.models import Avg
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from unfold.admin import ModelAdmin
 
-from pipeline.models import ReviewQueue, SkillResult
+from core.tasks import retry_pipeline_review_item
+from pipeline.models import ReviewQueue, ReviewResolution, SkillResult
 
 
 @admin.register(SkillResult)
@@ -32,6 +34,7 @@ class SkillResultAdmin(ModelAdmin):
     readonly_fields = (
         "pretty_result_data",
         "latency_ms",
+        "invocation_id",
         "created_at",
         "superseded_by",
     )
@@ -48,7 +51,15 @@ class SkillResultAdmin(ModelAdmin):
         ),
         (
             "Performance Metrics",
-            {"fields": ("latency_ms", "confidence", "created_at", "superseded_by")},
+            {
+                "fields": (
+                    "latency_ms",
+                    "confidence",
+                    "invocation_id",
+                    "created_at",
+                    "superseded_by",
+                )
+            },
         ),
     )
 
@@ -158,14 +169,26 @@ class ReviewQueueAdmin(ModelAdmin):
         "get_content_title",
         "project",
         "reason",
+        "failed_node",
         "display_confidence",
         "resolved",
         "resolution",
         "created_at",
     )
-    list_filter = ("resolved", "reason", ("project", admin.RelatedOnlyFieldListFilter))
+    list_filter = (
+        "resolved",
+        "reason",
+        "failed_node",
+        ("project", admin.RelatedOnlyFieldListFilter),
+    )
     list_editable = ("resolved", "resolution")
-    actions = ["mark_as_approved", "mark_as_rejected"]
+    actions = [
+        "retry_selected_items",
+        "mark_as_approved",
+        "mark_as_rejected",
+        "mark_as_resolved",
+        "archive_selected_items",
+    ]
 
     @admin.display(description="Content")
     def get_content_title(self, obj):
@@ -189,15 +212,53 @@ class ReviewQueueAdmin(ModelAdmin):
     def mark_as_approved(self, request, queryset):
         """Resolve selected review items as approved."""
 
-        queryset.update(resolved=True, resolution="APPROVED")
+        queryset.update(
+            resolved=True,
+            resolution=ReviewResolution.HUMAN_APPROVED,
+            resolved_at=timezone.now(),
+        )
         self.message_user(request, "Selected items approved.", messages.SUCCESS)
 
     @admin.action(description="Reject selected items")
     def mark_as_rejected(self, request, queryset):
         """Resolve selected review items as rejected."""
 
-        queryset.update(resolved=True, resolution="REJECTED")
+        queryset.update(
+            resolved=True,
+            resolution=ReviewResolution.HUMAN_REJECTED,
+            resolved_at=timezone.now(),
+        )
         self.message_user(request, "Selected items rejected.", messages.WARNING)
+
+    @admin.action(description="Mark selected items resolved")
+    def mark_as_resolved(self, request, queryset):
+        """Resolve selected review items without approving or rejecting content."""
+
+        queryset.update(
+            resolved=True,
+            resolution=ReviewResolution.MANUALLY_RESOLVED,
+            resolved_at=timezone.now(),
+        )
+        self.message_user(request, "Selected items marked resolved.", messages.SUCCESS)
+
+    @admin.action(description="Archive selected items")
+    def archive_selected_items(self, request, queryset):
+        """Archive selected review items."""
+
+        queryset.update(
+            resolved=True,
+            resolution=ReviewResolution.ARCHIVED,
+            resolved_at=timezone.now(),
+        )
+        self.message_user(request, "Selected items archived.", messages.SUCCESS)
+
+    @admin.action(description="Retry selected items")
+    def retry_selected_items(self, request, queryset):
+        """Retry selected review items from their recorded failed node."""
+
+        for review_item in queryset:
+            retry_pipeline_review_item.delay(review_item.pk)
+        self.message_user(request, "Selected items queued for retry.", messages.SUCCESS)
 
     def changelist_view(self, request, extra_context=None):
         """Augment the changelist with pending-volume and confidence stats."""

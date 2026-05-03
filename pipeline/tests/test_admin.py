@@ -11,7 +11,7 @@ from django.test import RequestFactory
 from django.utils import timezone
 
 from content.models import Content
-from pipeline.models import ReviewQueue, ReviewReason, SkillResult
+from pipeline.models import ReviewQueue, ReviewReason, ReviewResolution, SkillResult
 from pipeline.admin import ReviewQueueAdmin, SkillResultAdmin
 from projects.model_support import SourcePluginName
 from projects.models import Project
@@ -238,9 +238,11 @@ def test_review_queue_actions_update_resolution_and_emit_message(
     approve_item.refresh_from_db()
     reject_item.refresh_from_db()
     assert approve_item.resolved is True
-    assert approve_item.resolution == "APPROVED"
+    assert approve_item.resolution == ReviewResolution.HUMAN_APPROVED
+    assert approve_item.resolved_at is not None
     assert reject_item.resolved is True
-    assert reject_item.resolution == "REJECTED"
+    assert reject_item.resolution == ReviewResolution.HUMAN_REJECTED
+    assert reject_item.resolved_at is not None
     assert message_user_mock.call_count == 2
 
 

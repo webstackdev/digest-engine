@@ -27,6 +27,7 @@ from mastodon import Mastodon
 
 from core.embeddings import build_entity_embedding_text, embed_text
 from core.llm import openrouter_chat_json
+from pipeline.resilience import ResilientSkillError, execute_with_resilience
 from entities.extraction import (
     _normalize_name,
     accept_entity_candidate,
@@ -696,16 +697,20 @@ def _candidate_disambiguation_confidence(candidate: EntityCandidate) -> float:
         return _heuristic_candidate_confidence(candidate, evidence_rows)
 
     try:
-        response = openrouter_chat_json(
-            model=settings.AI_CLASSIFICATION_MODEL,
-            system_prompt=(
-                "You validate whether an extracted entity candidate refers to one "
-                "stable real-world entity that is safe to auto-promote. "
-                "Return JSON with confidence (0 to 1) and explanation."
+        response = execute_with_resilience(
+            "entity_extraction",
+            lambda: openrouter_chat_json(
+                model=settings.AI_CLASSIFICATION_MODEL,
+                system_prompt=(
+                    "You validate whether an extracted entity candidate refers to one "
+                    "stable real-world entity that is safe to auto-promote. "
+                    "Return JSON with confidence (0 to 1) and explanation."
+                ),
+                user_prompt=_candidate_disambiguation_prompt(candidate, evidence_rows),
             ),
-            user_prompt=_candidate_disambiguation_prompt(candidate, evidence_rows),
+            use_circuit_breaker=True,
         )
-    except Exception:
+    except ResilientSkillError:
         logger.exception(
             "Falling back to heuristic candidate confidence for candidate id=%s",
             _require_pk(candidate),

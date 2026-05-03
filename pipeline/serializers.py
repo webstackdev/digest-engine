@@ -22,6 +22,7 @@ class SkillResultSerializer(ProjectScopedSerializerMixin, serializers.ModelSeria
             "model_used",
             "latency_ms",
             "confidence",
+            "invocation_id",
             "created_at",
             "superseded_by",
         ]
@@ -54,8 +55,12 @@ class ReviewQueueSerializer(ProjectScopedSerializerMixin, serializers.ModelSeria
             "content",
             "reason",
             "confidence",
+            "failed_node",
+            "failure_detail",
+            "skill_invocation_id",
             "created_at",
             "resolved",
+            "resolved_at",
             "resolution",
         ]
         read_only_fields = ["id", "project", "created_at"]
