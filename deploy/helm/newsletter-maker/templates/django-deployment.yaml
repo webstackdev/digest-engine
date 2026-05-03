@@ -27,7 +27,7 @@ spec:
             - configMapRef:
                 name: {{ include "newsletter-maker.fullname" . }}-env
             - secretRef:
-                name: {{ include "newsletter-maker.fullname" . }}-secret
+                name: {{ include "newsletter-maker.secretName" . }}
           ports:
             - name: http
               containerPort: {{ .Values.django.port }}

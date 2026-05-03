@@ -209,6 +209,17 @@ seed:
     @{{backend_env}}
     @{{compose}} exec django python manage.py seed_demo
 
+# Bootstrap RSS and Reddit source configs for one project in local development
+bootstrap-live-sources project_id:
+    @{{backend_env}}
+    @python3 manage.py bootstrap_live_sources \
+        --project-id {{project_id}} \
+        ${RSS_FEEDS:+--rss-feed "$RSS_FEEDS"} \
+        ${SUBREDDITS:+--subreddit "$SUBREDDITS"} \
+        ${REDDIT_LISTING:+--reddit-listing "$REDDIT_LISTING"} \
+        ${REDDIT_LIMIT:+--reddit-limit "$REDDIT_LIMIT"} \
+        ${RUN_NOW:+--run-now}
+
 # Sync embeddings for all eligible content
 embed-all:
     @{{backend_env}}

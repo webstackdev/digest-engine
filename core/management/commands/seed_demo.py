@@ -690,6 +690,7 @@ class Command(BaseCommand):
                 )
             )
             if relevance_score >= settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD:
+                content.summary_text = self._summary_for_article(article)
                 skill_results.append(
                     SkillResult(
                         content=content,
@@ -697,7 +698,7 @@ class Command(BaseCommand):
                         skill_name=SUMMARIZATION_SKILL_NAME,
                         status=SkillStatus.COMPLETED,
                         result_data={
-                            "summary": self._summary_for_article(article),
+                            "summary": content.summary_text,
                         },
                         model_used=settings.AI_SUMMARIZATION_MODEL,
                         latency_ms=640 + (index % 6) * 40,
@@ -730,7 +731,7 @@ class Command(BaseCommand):
 
         Content.objects.bulk_update(
             content_updates,
-            ["content_type", "relevance_score", "is_active"],
+            ["content_type", "relevance_score", "is_active", "summary_text"],
         )
         SkillResult.objects.bulk_create(skill_results)
         ReviewQueue.objects.bulk_create(review_items)

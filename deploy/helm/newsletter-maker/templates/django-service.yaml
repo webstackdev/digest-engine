@@ -4,6 +4,7 @@ metadata:
   name: {{ include "newsletter-maker.djangoHost" . }}
   labels:
     {{- include "newsletter-maker.labels" . | nindent 4 }}
+    {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "django") | nindent 4 }}
 spec:
   ports:
     - name: http

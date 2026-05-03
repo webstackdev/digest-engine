@@ -117,6 +117,21 @@ def _project_pk(content: Content) -> int:
     return _require_pk(content.project)
 
 
+def _persist_content_summary(
+    content: Content,
+    summary: dict[str, Any],
+    *,
+    extra_update_fields: list[str] | None = None,
+) -> None:
+    """Persist the latest summary text onto the content row."""
+
+    update_fields = ["summary_text"]
+    content.summary_text = str(summary.get("summary", "")).strip()
+    if extra_update_fields:
+        update_fields.extend(extra_update_fields)
+    content.save(update_fields=update_fields)
+
+
 def _content_id_from_state(state: PipelineState) -> int:
     """Extract a required content id from pipeline state."""
 
@@ -462,7 +477,11 @@ def summarize_node(state: PipelineState) -> PipelineState:
             "status": "awaiting_review",
         }
     content.pipeline_state = ContentPipelineState.COMPLETED
-    content.save(update_fields=["pipeline_state"])
+    _persist_content_summary(
+        content,
+        summary,
+        extra_update_fields=["pipeline_state"],
+    )
     return {
         "summary": summary,
         "retry_budget_remaining": retry_budget.remaining_retries,
@@ -1155,6 +1174,7 @@ def execute_background_skill_result(
             )
         if skill_name == SUMMARIZATION_SKILL_NAME:
             summary = _run_ad_hoc_summarization(skill_result.content)
+            _persist_content_summary(skill_result.content, summary)
             return _update_skill_result(
                 skill_result,
                 status=SkillStatus.COMPLETED,
@@ -1230,6 +1250,7 @@ def _execute_ad_hoc_summarization(content: Content) -> SkillResult:
 
     try:
         summary = _run_ad_hoc_summarization(content)
+        _persist_content_summary(content, summary)
         return _create_skill_result(
             content,
             skill_name=SUMMARIZATION_SKILL_NAME,

@@ -1,0 +1,23 @@
+{{- if and .Values.serviceMonitor.enabled (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1") }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "newsletter-maker.djangoHost" . }}
+  labels:
+    {{- include "newsletter-maker.labels" . | nindent 4 }}
+    {{- with .Values.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "newsletter-maker.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "django") | nindent 6 }}
+  endpoints:
+    - port: http
+      path: {{ .Values.serviceMonitor.path | quote }}
+      interval: {{ .Values.serviceMonitor.interval | quote }}
+      scrapeTimeout: {{ .Values.serviceMonitor.scrapeTimeout | quote }}
+      bearerTokenSecret:
+        name: {{ include "newsletter-maker.secretName" . }}
+        key: METRICS_TOKEN
+{{- end }}

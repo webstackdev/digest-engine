@@ -131,6 +131,7 @@ def test_process_content_runs_full_pipeline_for_relevant_content(
     assert pipeline_context.content.content_type == "release_notes"
     assert pipeline_context.content.relevance_score == pytest.approx(0.92)
     assert pipeline_context.content.authority_adjusted_score == pytest.approx(1.0)
+    assert pipeline_context.content.summary_text == "A concise summary for the editor."
     assert pipeline_context.content.is_active is True
     assert (
         SkillResult.objects.filter(
@@ -861,7 +862,12 @@ def test_execute_ad_hoc_summarization_allows_adjusted_score_to_pass_gate(
 
     result = execute_ad_hoc_skill(pipeline_context.content, SUMMARIZATION_SKILL_NAME)
 
+    pipeline_context.content.refresh_from_db()
     assert result.status == SkillStatus.COMPLETED
+    assert (
+        pipeline_context.content.summary_text
+        == "Authority-adjusted content is now eligible."
+    )
     assert result.result_data == {
         "summary": "Authority-adjusted content is now eligible.",
         "model_used": "heuristic",
@@ -925,8 +931,10 @@ def test_execute_background_skill_result_completes_summary_when_requirements_are
     )
 
     pending_result.refresh_from_db()
+    pipeline_context.content.refresh_from_db()
     assert result.status == SkillStatus.COMPLETED
     assert pending_result.status == SkillStatus.COMPLETED
+    assert pipeline_context.content.summary_text == "Manual summary output."
     assert pending_result.result_data == {
         "summary": "Manual summary output.",
         "model_used": "heuristic",

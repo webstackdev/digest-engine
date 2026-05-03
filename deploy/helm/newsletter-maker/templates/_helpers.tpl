@@ -10,6 +10,14 @@
 {{- end -}}
 {{- end -}}
 
+{{- define "newsletter-maker.secretName" -}}
+{{- if .Values.secrets.existingSecretName -}}
+{{- .Values.secrets.existingSecretName | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-secret" (include "newsletter-maker.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "newsletter-maker.labels" -}}
 app.kubernetes.io/name: {{ include "newsletter-maker.name" . }}
 helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}

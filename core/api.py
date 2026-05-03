@@ -250,6 +250,7 @@ CONTENT_RESPONSE_EXAMPLE = OpenApiExample(
         "published_date": "2026-04-25T14:00:00Z",
         "ingested_at": "2026-04-26T12:05:00Z",
         "content_text": "A walkthrough of short-term and long-term memory patterns for production agents.",
+        "summary_text": "The piece explains practical patterns for combining short-term context with durable memory in production agents.",
         "relevance_score": 0.92,
         "authority_adjusted_score": 0.95,
         "embedding_id": "emb_01jabcxyz",
