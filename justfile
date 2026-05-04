@@ -4,6 +4,8 @@ compose := "docker compose"
 backend_env := "if [ ! -f .env ]; then cp .env.example .env; fi"
 frontend_env := "if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi"
 frontend_cd := "cd frontend &&"
+django_manage := "docker compose exec django python manage.py"
+host_backend_test_env := "set -a && . ./.env.test && set +a &&"
 
 # -----------------------------------------------------------------------------
 # Setup
@@ -56,12 +58,10 @@ dev:
 
 # Build the backend Docker image used by the local stack
 backend-build:
-    @{{backend_env}}
-    @{{compose}} build django
+    @DOCKER_BUILDKIT=0 docker compose build django
 
 # Build the frontend production bundle
 frontend-build:
-    @{{frontend_env}}
     @{{frontend_cd}} npm run build
 
 # Build both backend and frontend deliverables
@@ -78,12 +78,11 @@ frontend-typecheck:
 
 # Lint and validate the backend Python and template code
 backend-lint:
-    @{{backend_env}}
     @ruff check manage.py core newsletter_maker tests
     @djlint core/templates --check
-    @python3 -m mypy
+    @{{host_backend_test_env}} python3 -m mypy
     @pre-commit run --all-files check-yaml
-    @python3 manage.py check
+    @{{host_backend_test_env}} python3 manage.py check
 
 # Lint and typecheck the frontend codebase
 frontend-lint:
@@ -96,7 +95,6 @@ lint: backend-lint frontend-lint helm-lint
 
 # Auto-fix backend lint issues where supported, then re-run backend validation
 backend-lint-fix:
-    @{{backend_env}}
     @ruff check manage.py core newsletter_maker tests --fix
     @djlint core/templates --reformat
     @pre-commit run --all-files end-of-file-fixer
@@ -138,12 +136,12 @@ frontend-test-all:
 
 # Run the backend test suite
 backend-test:
-    @python3 -m pytest
+    @{{host_backend_test_env}} python3 -m pytest
 
 # Run backend tests with terminal coverage output
 backend-test-coverage:
     @python3 -m coverage erase
-    @python3 -m coverage run -m pytest
+    @{{host_backend_test_env}} python3 -m coverage run -m pytest
     @python3 -m coverage report -m
 
 # Generate backend HTML coverage output
@@ -209,20 +207,20 @@ changepassword username:
     @{{backend_env}}
     @{{compose}} exec django python manage.py changepassword {{username}}
 
-# Apply Django database migrations locally
+# Apply Django database migrations in the running backend container
 migrate:
     @{{backend_env}}
-    @python3 manage.py migrate
+    @{{django_manage}} migrate
 
 # Seed demo data into the running backend container
 seed:
     @{{backend_env}}
     @{{compose}} exec django python manage.py seed_demo
 
-# Bootstrap RSS and Reddit source configs for one project in local development
+# Bootstrap RSS and Reddit source configs for one project in the running backend container
 bootstrap-live-sources project_id:
     @{{backend_env}}
-    @python3 manage.py bootstrap_live_sources \
+    @{{django_manage}} bootstrap_live_sources \
         --project-id {{project_id}} \
         ${RSS_FEEDS:+--rss-feed "$RSS_FEEDS"} \
         ${SUBREDDITS:+--subreddit "$SUBREDDITS"} \
@@ -230,30 +228,30 @@ bootstrap-live-sources project_id:
         ${REDDIT_LIMIT:+--reddit-limit "$REDDIT_LIMIT"} \
         ${RUN_NOW:+--run-now}
 
-# Sync embeddings for all eligible content
+# Sync embeddings for all eligible content in the running backend container
 embed-all:
     @{{backend_env}}
-    @python3 manage.py sync_embeddings
+    @{{django_manage}} sync_embeddings
 
-# Sync embeddings for a single project
+# Sync embeddings for a single project in the running backend container
 embed-project project_id:
     @{{backend_env}}
-    @python3 manage.py sync_embeddings --project-id {{project_id}}
+    @{{django_manage}} sync_embeddings --project-id {{project_id}}
 
-# Run the embedding smoke test across the default sample content
+# Run the embedding smoke test across the default sample content in the running backend container
 embed-smoke:
     @{{backend_env}}
-    @python3 manage.py embedding_smoke
+    @{{django_manage}} embedding_smoke
 
-# Run the embedding smoke test for a single content item
+# Run the embedding smoke test for a single content item in the running backend container
 embed-smoke-content content_id:
     @{{backend_env}}
-    @python3 manage.py embedding_smoke --content-id {{content_id}}
+    @{{django_manage}} embedding_smoke --content-id {{content_id}}
 
-# Open a local Django shell
+# Open a Django shell in the running backend container
 shell:
     @{{backend_env}}
-    @python3 manage.py shell
+    @{{django_manage}} shell
 
 # Run the staged disaster recovery rehearsal workflow against the configured cluster
 disaster-recovery-rehearsal:

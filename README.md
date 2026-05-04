@@ -100,13 +100,17 @@ just install
 
 `just install` installs the backend and frontend dependencies and registers the repository's `pre-commit` hooks, so `git commit` runs the configured lint and test hooks locally.
 
-1. Run `just dev` to start Django, Celery, Postgres, Redis, Qdrant, and Nginx. On the first run Docker builds the app image automatically. After that, `just dev` reuses the existing image so normal restarts are fast. If `.env` is missing, the `just` command copies `.env.example` automatically.
-2. Run `just build` after changing `requirements.txt` or `docker/web/Dockerfile`.
-3. For a fully fresh local stack after schema changes, run `just reset-volumes` before starting the containers again. This drops the Docker-backed Postgres, Redis, and Qdrant state so regenerated migrations apply cleanly.
-4. Update `.env` with non-default secrets before using the stack outside local development. The example file uses SQLite and localhost URLs so host-side `manage.py` commands work even without Docker.
-5. Open `http://localhost:8080/healthz/` for a liveness check and `http://localhost:8080/admin/` for Django admin. Use `just seed` after the stack is up if you want the demo project and sample content.
+There are two intentionally separate workflows:
 
-For host-based development without Docker, install `requirements.txt`, then use `python3 manage.py migrate` and `python3 manage.py runserver`. The default `.env.example` is host-safe; Docker Compose overrides the service URLs inside containers.
+- `just lint` and `just test` run on the host without Docker. The backend half of those commands uses `.env.test`.
+- Runtime, data, and Django management commands run against the Docker Compose stack.
+
+1. Run `just dev` to start Django, Celery, Postgres, Redis, Qdrant, and Nginx. On the first run Docker builds the app image automatically. After that, `just dev` reuses the existing image so normal restarts are fast. If `.env` is missing, the `just` command copies `.env.example` automatically.
+2. Run `just build` after changing `requirements.txt` or `docker/web/Dockerfile`. It does not copy or depend on local env files.
+3. For a fully fresh local stack after schema changes, run `just reset-volumes` before starting the containers again. This drops the Docker-backed Postgres, Redis, and Qdrant state so regenerated migrations apply cleanly.
+4. Run Django management commands against the running backend container. `just migrate`, `just shell`, `just embed-all`, `just embed-project <project_id>`, `just embed-smoke`, `just embed-smoke-content <content_id>`, and `just bootstrap-live-sources <project_id>` all use `docker compose exec django ...`.
+5. `.env.example` is Compose-oriented and uses Docker service hostnames for the backend runtime. Update `.env` with non-default secrets before using the stack outside local development.
+6. Open `http://localhost:8080/healthz/` for a liveness check and `http://localhost:8080/admin/` for Django admin. Use `just seed` after the stack is up if you want the demo project and sample content.
 
 ### Testing
 
@@ -117,6 +121,10 @@ just test
 ```
 
 Pytest auto-loads `.env.test` during test startup. That file is intentionally checked in and only contains non-sensitive placeholder values used by tests, such as fake API keys, fake Reddit credentials, and localhost service URLs.
+
+`.env.test` also pins Django tests to an explicit SQLite configuration so backend tests stay independent from the Compose-backed Postgres development database.
+
+`backend-lint` also runs Django-aware host-side checks (`mypy` with the Django plugin and `manage.py check`) under `.env.test`, so `just lint` stays independent from Docker.
 
 Use `.env.test` for stable dummy values that make tests deterministic. Do not put real secrets in it. Real local or production secrets belong in `.env`, which remains ignored.
 
@@ -157,11 +165,11 @@ Use these commands to backfill or refresh embeddings for existing content:
 ```bash
 just embed-all
 just embed-project 1
-python3 manage.py sync_embeddings --content-id 42
-python3 manage.py sync_embeddings --references-only
+docker compose exec django python manage.py sync_embeddings --content-id 42
+docker compose exec django python manage.py sync_embeddings --references-only
 ```
 
-When `just dev` is running, Django admin uses the Postgres database inside Docker, not the host SQLite database. That means host commands like `python manage.py createsuperuser` create users in SQLite and will not let you log into the Docker-backed admin site.
+When `just dev` is running, Django admin and the developer-facing `just` wrappers all operate against the Compose-backed Postgres database.
 
 Create or update an admin user for the running Docker stack with:
 

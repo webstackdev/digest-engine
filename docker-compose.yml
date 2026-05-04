@@ -20,7 +20,16 @@ services:
     environment:
       BOOTSTRAP_APP: "true"
       <<: *shared-env
-    command: ["gunicorn", "newsletter_maker.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--reload"]
+    command:
+      [
+        "gunicorn",
+        "newsletter_maker.wsgi:application",
+        "--bind",
+        "0.0.0.0:8000",
+        "--workers",
+        "2",
+        "--reload",
+      ]
     depends_on:
       postgres:
         condition: service_healthy
@@ -29,7 +38,7 @@ services:
       qdrant:
         condition: service_started
     healthcheck:
-      test: ["CMD", "python", "manage.py", "check"]
+      test: [ "CMD", "python", "manage.py", "check" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -39,7 +48,20 @@ services:
     environment:
       BOOTSTRAP_APP: "false"
       <<: *shared-env
-    command: ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "celery", "-A", "newsletter_maker", "worker", "--loglevel=info"]
+    command:
+      [
+        "watchmedo",
+        "auto-restart",
+        "--directory=.",
+        "--pattern=*.py",
+        "--recursive",
+        "--",
+        "celery",
+        "-A",
+        "newsletter_maker",
+        "worker",
+        "--loglevel=info",
+      ]
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,7 +73,14 @@ services:
     environment:
       BOOTSTRAP_APP: "false"
       <<: *shared-env
-    command: ["watchmedo", "auto-restart", "--directory=.", "--pattern=*.py", "--recursive", "--", "celery", "-A", "newsletter_maker", "beat", "--loglevel=info"]
+    command:
+      [
+        "sh",
+        "-lc",
+        "mkdir -p .cache && exec watchmedo auto-restart --directory=.
+          --pattern=*.py --recursive -- celery -A newsletter_maker beat
+          --loglevel=info --schedule=.cache/celerybeat-schedule",
+      ]
     depends_on:
       postgres:
         condition: service_healthy
@@ -67,18 +96,18 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U newsletter -d newsletter_maker"]
+      test: [ "CMD-SHELL", "pg_isready -U newsletter -d newsletter_maker" ]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    command: [ "redis-server", "--save", "", "--appendonly", "no" ]
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -101,7 +130,12 @@ services:
   frontend:
     image: node:22-alpine
     working_dir: /app/frontend
-    command: ["sh", "-lc", "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000"]
+    command:
+      [
+        "sh",
+        "-lc",
+        "npm install && npm run dev -- --hostname 0.0.0.0 --port 3000",
+      ]
     env_file:
       - .env
     environment:
