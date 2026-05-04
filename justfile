@@ -1,4 +1,4 @@
-set dotenv-load := true
+set dotenv-load := false
 
 compose := "docker compose"
 backend_env := "if [ ! -f .env ]; then cp .env.example .env; fi"
