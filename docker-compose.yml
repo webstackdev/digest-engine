@@ -139,7 +139,7 @@ services:
     env_file:
       - .env
     environment:
-      NEWSLETTER_API_BASE_URL: http://nginx
+      NEWSLETTER_API_INTERNAL_URL: http://nginx
       NEXT_TELEMETRY_DISABLED: "1"
     depends_on:
       nginx:

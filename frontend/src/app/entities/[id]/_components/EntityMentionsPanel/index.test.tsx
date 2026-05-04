@@ -35,12 +35,15 @@ describe("EntityMentionsPanel", () => {
       "/content/22?project=3"
     )
     expect(screen.getByText("94% confidence")).toBeInTheDocument()
+    expect(screen.getByText("94% confidence").parentElement).toHaveClass("text-muted-foreground")
     expect(screen.getAllByText("Anthropic")).toHaveLength(2)
   })
 
   it("renders the empty mentions state", () => {
     render(<EntityMentionsPanel mentions={[]} projectId={1} />)
 
-    expect(screen.getByText("No extracted mentions exist for this entity yet.")).toBeInTheDocument()
+    expect(screen.getByText("No extracted mentions exist for this entity yet.")).toHaveClass(
+      "text-muted-foreground",
+    )
   })
 })

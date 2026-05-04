@@ -92,7 +92,7 @@ describe("HomePageContent", () => {
       />,
     )
 
-    expect(screen.getByText("borderline_relevance")).toBeInTheDocument()
+    expect(screen.getByText("Borderline relevance")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument()
   })
 })

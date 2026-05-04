@@ -85,7 +85,7 @@ kubectl port-forward svc/newsletter-maker-newsletter-maker-nginx 8080:80
 > Frontend credentials (from seed):
 >
 > Username: demo_editor
-> Password: demo_password
+> Password: demo-password
 
 **Command Summary:**
 

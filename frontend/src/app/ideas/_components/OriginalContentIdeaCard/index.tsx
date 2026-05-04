@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import type { OriginalContentIdea } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { formatDate, formatPercentScore } from "@/lib/view-helpers"
+import { formatDate, formatDisplayLabel, formatPercentScore } from "@/lib/view-helpers"
 
 import {
   DEFAULT_IDEA_DISMISSAL_REASONS,
@@ -49,7 +49,7 @@ export function OriginalContentIdeaCard({
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Original content idea</p>
             <h2 className="font-display text-title-md font-bold text-foreground">{idea.angle_title}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">{idea.summary}</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{idea.summary}</p>
           </div>
           <StatusBadge
             tone={
@@ -60,7 +60,7 @@ export function OriginalContentIdeaCard({
                   : "positive"
             }
           >
-            {idea.status}
+            {formatDisplayLabel(idea.status)}
           </StatusBadge>
         </div>
 
@@ -68,7 +68,7 @@ export function OriginalContentIdeaCard({
           <div className="space-y-4">
             <div>
               <p className="m-0 text-sm font-medium text-foreground">Suggested outline</p>
-              <div className="mt-2 space-y-2 text-sm leading-6 text-muted">
+              <div className="mt-2 space-y-2 text-sm leading-6 text-muted-foreground">
                 {idea.suggested_outline.split("\n").map((line) => (
                   <p className="m-0" key={line}>
                     {line}
@@ -78,7 +78,7 @@ export function OriginalContentIdeaCard({
             </div>
             <div>
               <p className="m-0 text-sm font-medium text-foreground">Why now</p>
-              <p className="mt-2 text-sm leading-6 text-muted">{idea.why_now}</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{idea.why_now}</p>
             </div>
             <div>
               <p className="m-0 text-sm font-medium text-foreground">Supporting content</p>
@@ -97,7 +97,7 @@ export function OriginalContentIdeaCard({
                     </Link>
                   ))
                 ) : (
-                  <p className="m-0 text-sm leading-6 text-muted">
+                  <p className="m-0 text-sm leading-6 text-muted-foreground">
                     No supporting content was attached to this idea.
                   </p>
                 )}
@@ -108,7 +108,7 @@ export function OriginalContentIdeaCard({
           <aside className="space-y-4 rounded-2xl border border-border/10 bg-muted/45 p-4">
             <div>
               <p className="m-0 text-sm font-medium text-foreground">Workflow metadata</p>
-              <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
+              <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
                 <span>Created {formatDate(idea.created_at)}</span>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -133,12 +133,12 @@ export function OriginalContentIdeaCard({
             </div>
 
             {idea.decided_by_username ? (
-              <p className="text-sm leading-6 text-muted">
+              <p className="text-sm leading-6 text-muted-foreground">
                 Decided by {idea.decided_by_username} on {formatDate(idea.decided_at)}
               </p>
             ) : null}
             {idea.dismissal_reason ? (
-              <p className="text-sm leading-6 text-muted">Dismissal reason: {idea.dismissal_reason}</p>
+              <p className="text-sm leading-6 text-muted-foreground">Dismissal reason: {formatDisplayLabel(idea.dismissal_reason)}</p>
             ) : null}
 
             {idea.status === "pending" ? (

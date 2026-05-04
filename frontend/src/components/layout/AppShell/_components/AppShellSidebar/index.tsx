@@ -67,6 +67,8 @@ export function AppShellSidebar({
   projectQuery,
   canManageMembers,
 }: AppShellSidebarProps) {
+  const selectedProject =
+    projects.find((project) => project.id === selectedProjectId) ?? null
   const messageThreadsQuery = useQuery({
     queryKey: MESSAGE_THREADS_QUERY_KEY,
     queryFn: fetchMessageThreads,
@@ -125,15 +127,15 @@ export function AppShellSidebar({
         <CardContent className="space-y-4 p-5">
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">
-              Newsletter Maker
+              Current project
             </p>
             <h1 className="mt-1 font-display text-display-hero font-bold leading-display">
-              Editor cockpit
+              {selectedProject?.name ?? "Select a project"}
             </h1>
           </div>
           <p className="text-sm leading-6 text-sidebar-foreground/74">
-            A compact review surface for relevance-ranked content, review work,
-            and source health.
+            {selectedProject?.topic_description ??
+              "Choose a project to review its content, editorial state, and source health."}
           </p>
         </CardContent>
       </Card>
@@ -142,7 +144,7 @@ export function AppShellSidebar({
         {navigationItems.map((item) =>
           item.kind === "messages" ? (
             <Card
-              className="rounded-panel bg-sidebar-accent/30 py-0 text-sidebar-foreground ring-sidebar-border/60 shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent/50 hover:ring-sidebar-ring/40"
+              className="rounded-panel bg-sidebar-accent/38 py-0 text-sidebar-foreground ring-sidebar-border/60 shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent/56 hover:ring-sidebar-ring/40"
               key={item.label}
             >
               <CardContent className="flex items-center justify-between gap-3 px-4 py-4">
@@ -170,7 +172,7 @@ export function AppShellSidebar({
             </Card>
           ) : (
             <Link className="block" href={item.href} key={item.label}>
-              <Card className="rounded-panel bg-sidebar-accent/30 py-0 text-sidebar-foreground ring-sidebar-border/60 shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent/50 hover:ring-sidebar-ring/40">
+              <Card className="rounded-panel bg-sidebar-accent/38 py-0 text-sidebar-foreground ring-sidebar-border/60 shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent/56 hover:ring-sidebar-ring/40">
                 <CardContent className="flex items-center justify-between gap-3 px-4 py-4">
                   <span>{item.label}</span>
                 </CardContent>
@@ -181,7 +183,7 @@ export function AppShellSidebar({
       </nav>
 
       <section>
-        <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Project</p>
+        <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Switch project</p>
         <div className="mt-4 grid gap-3">
           {projects.map((project) => {
             const isActive = project.id === selectedProjectId
@@ -197,8 +199,8 @@ export function AppShellSidebar({
                   className={cn(
                     "rounded-panel py-0 text-sidebar-foreground shadow-none transition hover:-translate-y-0.5",
                     isActive
-                      ? "bg-linear-to-b from-primary/15 to-sidebar-accent/40 ring-primary/30"
-                      : "bg-sidebar-accent/30 ring-sidebar-border/60 hover:bg-sidebar-accent/50 hover:ring-sidebar-ring/40",
+                      ? "bg-linear-to-b from-primary/15 to-sidebar-accent/48 ring-primary/30"
+                      : "bg-sidebar-accent/38 ring-sidebar-border/60 hover:bg-sidebar-accent/56 hover:ring-sidebar-ring/40",
                   )}
                 >
                   <CardContent className="grid gap-1 px-4 py-4">

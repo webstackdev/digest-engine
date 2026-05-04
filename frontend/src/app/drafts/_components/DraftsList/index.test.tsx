@@ -50,7 +50,10 @@ describe("DraftsList", () => {
     render(<DraftsList drafts={[createDraft()]} selectedProjectId={1} />)
 
     expect(screen.getByText("AI Weekly: Delivery signals and more")).toBeInTheDocument()
-    expect(screen.getByTestId("status-badge")).toHaveTextContent("ready")
+    expect(screen.getByText("A quick editor-ready summary.")).toHaveClass(
+      "text-muted-foreground",
+    )
+    expect(screen.getByTestId("status-badge")).toHaveTextContent("Ready")
     expect(screen.getByRole("link", { name: "Open draft" })).toHaveAttribute(
       "href",
       "/drafts/8?project=1",

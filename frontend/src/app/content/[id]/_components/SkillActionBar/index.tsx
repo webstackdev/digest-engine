@@ -165,7 +165,6 @@ export function SkillActionBar({
         }}
         size="lg"
         type="button"
-        variant="outline"
       >
         {getSkillLabel("summarization", isBusy("summarization"))}
       </Button>
@@ -177,7 +176,6 @@ export function SkillActionBar({
         }}
         size="lg"
         type="button"
-        variant="outline"
       >
         {getSkillLabel("relevance_scoring", isBusy("relevance_scoring"))}
       </Button>

@@ -2,6 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  buildLatestRunByPlugin,
+  filterNewsletterIntakes,
+} from "@/app/admin/sources/_components/helpers"
 import type {
   BlueskyCredentials,
   IngestionRun,
@@ -246,8 +250,7 @@ async function renderSourcesPage(
 }
 
 describe("buildLatestRunByPlugin", () => {
-  it("keeps the first run seen for each plugin", async () => {
-    const { buildLatestRunByPlugin } = await loadSourcesPageModule()
+  it("keeps the first run seen for each plugin", () => {
     const newestRssRun = createIngestionRun({ id: 100, plugin_name: "rss" })
     const olderRssRun = createIngestionRun({ id: 90, plugin_name: "rss" })
     const redditRun = createIngestionRun({ id: 80, plugin_name: "reddit" })
@@ -264,9 +267,7 @@ describe("buildLatestRunByPlugin", () => {
 })
 
 describe("filterNewsletterIntakes", () => {
-  it("filters newsletter intake rows by status and sender", async () => {
-    const { filterNewsletterIntakes } = await loadSourcesPageModule()
-
+  it("filters newsletter intake rows by status and sender", () => {
     const filtered = filterNewsletterIntakes(
       [
         createNewsletterIntake({ id: 1, status: "pending", sender_email: "first@example.com" }),

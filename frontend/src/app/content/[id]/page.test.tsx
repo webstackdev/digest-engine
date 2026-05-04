@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { deriveInitialPendingSkills } from "@/app/content/[id]/_components/helpers"
 import type {
   Content,
   Project,
@@ -203,9 +204,7 @@ async function renderContentDetailPage(
 }
 
 describe("deriveInitialPendingSkills", () => {
-  it("returns only active relevance and summarization jobs", async () => {
-    const { deriveInitialPendingSkills } = await loadContentDetailModule()
-
+  it("returns only active relevance and summarization jobs", () => {
     expect(
       deriveInitialPendingSkills([
         createSkillResult({
@@ -272,6 +271,7 @@ describe("ContentDetailPage", () => {
 
     await renderContentDetailPage({}, { id: "42" })
 
+    expect(screen.getByRole("heading", { name: "Content Detail" })).toBeInTheDocument()
     expect(selectProjectMock).toHaveBeenCalledWith([], {})
     expect(
       screen.getByText("No project is available for the configured API user."),
@@ -301,6 +301,7 @@ describe("ContentDetailPage", () => {
       project: "1",
     })
 
+    expect(screen.getByRole("heading", { name: "Content Detail" })).toBeInTheDocument()
     expect(selectProjectMock).toHaveBeenCalledWith(
       [expect.objectContaining({ id: 1 })],
       {
@@ -312,7 +313,7 @@ describe("ContentDetailPage", () => {
     expect(screen.getByText("Skill failed")).toBeInTheDocument()
     expect(screen.getByText("Feedback saved")).toBeInTheDocument()
     expect(screen.getByText("Unknown author")).toBeInTheDocument()
-    expect(screen.getByText("unclassified")).toBeInTheDocument()
+    expect(screen.getByText("Unclassified")).toBeInTheDocument()
     expect(
       screen.getByText("No review flags are attached to this content."),
     ).toBeInTheDocument()
@@ -456,7 +457,7 @@ describe("ContentDetailPage", () => {
     expect(getProjectContentMock).toHaveBeenCalledWith(3, 77)
     expect(screen.getByText("1/1")).toBeInTheDocument()
     expect(screen.getByText("Awaiting human resolution")).toBeInTheDocument()
-    expect(screen.getByText("human_approved")).toBeInTheDocument()
+    expect(screen.getByText("Human approved")).toBeInTheDocument()
     expect(screen.getByText("Index unavailable")).toBeInTheDocument()
     expect(screen.getByText("gpt-5.4-mini")).toBeInTheDocument()
     expect(screen.getByText("embed-model")).toBeInTheDocument()
@@ -483,8 +484,8 @@ describe("ContentDetailPage", () => {
     expect(badges[4]).toHaveAttribute("data-tone", "negative")
     expect(badges[4]).toHaveTextContent("embed-model")
     expect(badges[5]).toHaveAttribute("data-tone", "warning")
-    expect(badges[5]).toHaveTextContent("borderline_relevance")
+    expect(badges[5]).toHaveTextContent("Borderline relevance")
     expect(badges[6]).toHaveAttribute("data-tone", "neutral")
-    expect(badges[6]).toHaveTextContent("low_confidence_classification")
+    expect(badges[6]).toHaveTextContent("Low confidence classification")
   })
 })

@@ -34,14 +34,14 @@ const meta = {
           <CardContent className="p-5">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Visible clusters</p>
             <p className="mt-1 text-3xl font-bold">4</p>
-            <p className="text-sm leading-6 text-muted">Representative dashboard chrome for Storybook review.</p>
+            <p className="text-sm leading-6 text-muted-foreground">Representative dashboard chrome for Storybook review.</p>
           </CardContent>
         </Card>
         <Card className="rounded-3xl border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
           <CardContent className="p-5">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Recent activity</p>
             <p className="mt-1 text-3xl font-bold">12</p>
-            <p className="text-sm leading-6 text-muted">Use this story to check navigation, project switching, and header behavior.</p>
+            <p className="text-sm leading-6 text-muted-foreground">Use this story to check navigation, project switching, and header behavior.</p>
           </CardContent>
         </Card>
       </div>

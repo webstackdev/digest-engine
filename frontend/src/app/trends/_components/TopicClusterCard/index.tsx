@@ -42,7 +42,7 @@ export function TopicClusterCard({
               <h3 className="font-display text-title-sm font-bold text-foreground">
                 {cluster.label || `Cluster ${cluster.id}`}
               </h3>
-              <p className="mt-2 text-sm leading-6 text-muted">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {cluster.dominant_entity
                   ? `Dominant entity: ${cluster.dominant_entity.name}`
                   : "No dominant entity has been resolved yet."}
@@ -52,7 +52,7 @@ export function TopicClusterCard({
               {formatPercentScore(cluster.velocity_score)}
             </StatusBadge>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
+          <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted-foreground">
             <span>{cluster.member_count} members</span>
             <span>Z {formatScore(cluster.z_score)}</span>
             <span>Window {cluster.window_count ?? 0}</span>

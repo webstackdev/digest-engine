@@ -590,6 +590,8 @@ def test_recompute_topic_clusters_groups_recent_similar_content(
     source_plugin_context, mocker
 ):
     project = source_plugin_context.project
+    fixed_now = datetime(2026, 5, 4, 12, 0, tzinfo=timezone.utc)
+    mocker.patch("trends.tasks.timezone.now", return_value=fixed_now)
     second_entity = Entity.objects.create(
         project=project,
         name="Secondary Entity",

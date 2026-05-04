@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import type { Entity, EntityCandidate } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { formatDisplayLabel } from "@/lib/view-helpers"
 
 import { selectTriggerClassName } from "../shared"
 
@@ -71,7 +72,7 @@ export function EntityCandidatesCard({
                       {candidate.name}
                     </h3>
                     <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
-                      <span>{candidate.suggested_type}</span>
+                      <span>{formatDisplayLabel(candidate.suggested_type)}</span>
                       <span>
                         {candidate.occurrence_count} occurrence
                         {candidate.occurrence_count === 1 ? "" : "s"}
@@ -81,7 +82,7 @@ export function EntityCandidatesCard({
                       ) : null}
                     </div>
                   </div>
-                  <StatusBadge tone="warning">{candidate.status}</StatusBadge>
+                  <StatusBadge tone="warning">{formatDisplayLabel(candidate.status)}</StatusBadge>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <form action={`/api/entity-candidates/${candidate.id}`} method="POST">

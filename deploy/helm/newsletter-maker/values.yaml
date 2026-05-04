@@ -13,7 +13,7 @@ env:
   siteId: "1"
   channelLayerUrl: ""
   messagingEnabled: "true"
-  newsletterApiBaseUrl: "http://newsletter-maker.local"
+  newsletterPublicUrl: "http://newsletter-maker.local"
   emailBackend: anymail.backends.resend.EmailBackend
   defaultFromEmail: onboarding@resend.dev
   serverEmail: onboarding@resend.dev

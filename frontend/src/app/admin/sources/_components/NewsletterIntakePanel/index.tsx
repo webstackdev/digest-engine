@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select"
 import type { IntakeAllowlistEntry, NewsletterIntake, Project } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { formatDate } from "@/lib/view-helpers"
+import { formatDate, formatDisplayLabel } from "@/lib/view-helpers"
 
 import { buildNewsletterIntakePreview } from "../helpers"
 
@@ -298,7 +298,7 @@ export function NewsletterIntakePanel({
                                 : "warning"
                           }
                         >
-                          {intake.status}
+                          {formatDisplayLabel(intake.status)}
                         </StatusBadge>
                         <Link
                           className={cn(buttonVariants({ size: "lg", variant: "outline" }))}
@@ -329,7 +329,7 @@ export function NewsletterIntakePanel({
                               : "warning"
                         }
                       >
-                        {selectedIntake.status}
+                        {formatDisplayLabel(selectedIntake.status)}
                       </StatusBadge>
                     </div>
                     <div className="flex flex-wrap gap-2 text-sm text-muted">

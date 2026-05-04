@@ -17,6 +17,12 @@ describe("TopicClusterCard", () => {
       "href",
       "/trends?project=1&cluster=5",
     )
+    expect(
+      screen.getByText(`Dominant entity: ${cluster.dominant_entity?.name}`),
+    ).toHaveClass("text-muted-foreground")
     expect(screen.getByText(`${cluster.member_count} members`)).toBeInTheDocument()
+    expect(screen.getByText(`${cluster.member_count} members`).parentElement).toHaveClass(
+      "text-muted-foreground",
+    )
   })
 })

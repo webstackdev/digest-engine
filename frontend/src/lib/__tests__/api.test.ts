@@ -49,7 +49,7 @@ describe("api helpers", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.unstubAllEnvs()
-    vi.stubEnv("NEWSLETTER_API_BASE_URL", "https://api.example.com")
+    vi.stubEnv("NEWSLETTER_API_INTERNAL_URL", "https://api.example.com")
     vi.stubEnv("NEWSLETTER_API_USERNAME", "frontend-user")
     vi.stubEnv("NEWSLETTER_API_PASSWORD", "frontend-pass")
     getServerSessionMock.mockReset()

@@ -126,7 +126,7 @@ def _basic_auth_header(credentials: str) -> str:
 def test_handle_anymail_inbound_creates_pending_intake_and_sends_confirmation(
     settings, mocker, project
 ):
-    settings.NEWSLETTER_API_BASE_URL = "https://example.com"
+    settings.NEWSLETTER_PUBLIC_URL = "https://example.com"
     send_mock = mocker.patch("newsletters.intake.send_confirmation_email")
     event = SimpleNamespace(
         message=FakeInboundMessage(
@@ -185,7 +185,7 @@ def test_handle_anymail_inbound_queues_confirmed_sender(settings, mocker, projec
 def test_resend_inbound_webhook_posts_to_anymail_url(settings, client, mocker, project):
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
     settings.DEFAULT_FROM_EMAIL = "noreply@example.com"
-    settings.NEWSLETTER_API_BASE_URL = "https://example.com"
+    settings.NEWSLETTER_PUBLIC_URL = "https://example.com"
     settings.RESEND_API_KEY = "re_test_key"
     settings.RESEND_INBOUND_SECRET = "whsec_test_secret"
     settings.ANYMAIL = {
@@ -244,7 +244,7 @@ def test_resend_inbound_webhook_posts_to_anymail_url(settings, client, mocker, p
 def test_amazon_ses_inbound_webhook_posts_to_anymail_url(settings, client, project):
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
     settings.DEFAULT_FROM_EMAIL = "noreply@example.com"
-    settings.NEWSLETTER_API_BASE_URL = "https://example.com"
+    settings.NEWSLETTER_PUBLIC_URL = "https://example.com"
     settings.ANYMAIL = {
         "WEBHOOK_SECRET": "anymail:ses-secret",
     }

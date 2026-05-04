@@ -250,7 +250,7 @@ def send_confirmation_email(
 def build_confirmation_url(token: str) -> str:
     """Build the absolute confirmation URL for an allowlist token."""
 
-    base_url = settings.NEWSLETTER_API_BASE_URL.rstrip("/")
+    base_url = settings.NEWSLETTER_PUBLIC_URL.rstrip("/")
     return f"{base_url}{reverse('confirm-newsletter-sender', kwargs={'token': token})}"
 
 

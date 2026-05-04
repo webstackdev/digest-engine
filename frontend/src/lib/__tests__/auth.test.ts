@@ -75,7 +75,7 @@ describe("authOptions", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.unstubAllEnvs()
-    vi.stubEnv("NEWSLETTER_API_BASE_URL", "https://api.example.com")
+    vi.stubEnv("NEWSLETTER_API_INTERNAL_URL", "https://api.example.com")
     vi.stubEnv("NEXT_PUBLIC_API_URL", "https://public.example.com")
     credentialsProviderMock.mockClear()
     githubProviderMock.mockClear()

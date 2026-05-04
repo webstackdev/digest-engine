@@ -89,6 +89,13 @@ describe("AppShellSidebar", () => {
   it("adds the selected project query string to navigation links and marks the active project", () => {
     renderSidebar()
 
+    expect(screen.getByText("Current project")).toBeInTheDocument()
+    expect(screen.getAllByText("Platform Weekly").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Platform engineering").length).toBeGreaterThan(0)
+    expect(screen.getByText("Switch project")).toBeInTheDocument()
+    expect(screen.queryByText("Newsletter Maker")).not.toBeInTheDocument()
+    expect(screen.queryByText("Editor cockpit")).not.toBeInTheDocument()
+
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(
       "href",
       "/?project=2",

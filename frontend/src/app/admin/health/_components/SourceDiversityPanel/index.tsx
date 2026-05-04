@@ -78,7 +78,7 @@ export function SourceDiversityPanel({
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
                 <CardContent>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     Plugin diversity
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-foreground">
@@ -88,7 +88,7 @@ export function SourceDiversityPanel({
               </Card>
               <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
                 <CardContent>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     Source diversity
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-foreground">
@@ -98,7 +98,7 @@ export function SourceDiversityPanel({
               </Card>
               <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
                 <CardContent>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     Author diversity
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-foreground">
@@ -108,7 +108,7 @@ export function SourceDiversityPanel({
               </Card>
               <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
                 <CardContent>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     Cluster diversity
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-foreground">
@@ -118,7 +118,7 @@ export function SourceDiversityPanel({
               </Card>
               <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
                 <CardContent>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     Top plugin share
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-foreground">
@@ -128,7 +128,7 @@ export function SourceDiversityPanel({
               </Card>
               <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
                 <CardContent>
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                     Top source share
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-foreground">
@@ -141,7 +141,7 @@ export function SourceDiversityPanel({
             {visibleSnapshots.length > 1 ? (
               <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
                 <CardContent>
-                  <div className="flex items-center justify-between gap-3 text-sm text-muted">
+                  <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
                     <span>Top plugin share trend</span>
                     <span>Last {visibleSnapshots.length} snapshots</span>
                   </div>
@@ -181,7 +181,7 @@ export function SourceDiversityPanel({
               </div>
             ) : (
               <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
-                <CardContent className="text-sm leading-6 text-muted">
+                <CardContent className="text-sm leading-6 text-muted-foreground">
                   No source-diversity alerts are active for this project.
                 </CardContent>
               </Card>
@@ -194,7 +194,7 @@ export function SourceDiversityPanel({
                   <div className="mt-3 space-y-3">
                     {summary.latest_snapshot.breakdown.plugin_counts.slice(0, 4).map((item) => (
                       <div key={item.key}>
-                        <div className="flex items-center justify-between gap-3 text-sm text-muted">
+                        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
                           <span>{item.label}</span>
                           <span>{formatPercentScore(item.share)}</span>
                         </div>
@@ -210,7 +210,7 @@ export function SourceDiversityPanel({
                   <div className="mt-3 space-y-3">
                     {summary.latest_snapshot.breakdown.source_counts.slice(0, 4).map((item) => (
                       <div key={item.key}>
-                        <div className="flex items-center justify-between gap-3 text-sm text-muted">
+                        <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
                           <span>{item.label}</span>
                           <span>{formatPercentScore(item.share)}</span>
                         </div>
@@ -233,7 +233,7 @@ export function SourceDiversityPanel({
           </>
         ) : (
           <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
-            <CardContent className="text-sm leading-6 text-muted">
+            <CardContent className="text-sm leading-6 text-muted-foreground">
               No source-diversity snapshots exist for this project yet.
             </CardContent>
           </Card>

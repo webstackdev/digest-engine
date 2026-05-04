@@ -25,6 +25,9 @@ describe("LoginPageContent", () => {
     render(<LoginPageContent callbackUrl="/content/4?project=2" />)
 
     expect(screen.getByText("Welcome back")).toBeInTheDocument()
+    expect(
+      screen.getByText("Sign in with your project account or continue with an enabled social provider."),
+    ).toHaveClass("text-muted-foreground")
     expect(screen.getByTestId("social-auth-buttons")).toHaveAttribute(
       "data-callback-url",
       "/content/4?project=2",

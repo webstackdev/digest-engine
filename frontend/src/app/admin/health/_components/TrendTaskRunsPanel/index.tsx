@@ -21,7 +21,7 @@ import type {
   TrendTaskRun,
   TrendTaskRunObservabilitySummary,
 } from "@/lib/types"
-import { formatDate } from "@/lib/view-helpers"
+import { formatDate, formatDisplayLabel } from "@/lib/view-helpers"
 
 const TREND_TASK_LABELS: Record<string, string> = {
   recompute_topic_centroid: "Topic centroid",
@@ -197,7 +197,7 @@ export function TrendTaskRunsPanel({
                       </TableCell>
                       <TableCell className="px-3 py-4">
                         <StatusBadge tone={trendTaskRunTone(taskRun.status)}>
-                          {taskRun.status}
+                          {formatDisplayLabel(taskRun.status)}
                         </StatusBadge>
                       </TableCell>
                       <TableCell className="px-3 py-4 text-sm text-foreground">
@@ -269,7 +269,7 @@ export function TrendTaskRunsPanel({
                     </TableCell>
                     <TableCell className="px-3 py-4">
                       <StatusBadge tone={trendTaskRunTone(taskRun.status)}>
-                        {taskRun.status}
+                        {formatDisplayLabel(taskRun.status)}
                       </StatusBadge>
                     </TableCell>
                     <TableCell className="px-3 py-4 text-sm text-foreground">

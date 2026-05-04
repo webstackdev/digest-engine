@@ -178,7 +178,7 @@ describe("CandidateQueuePage", () => {
 
     expect(screen.getByText("Cluster of 2 candidates")).toBeInTheDocument()
     expect(screen.getByText("7 total occurrences")).toBeInTheDocument()
-    expect(screen.getAllByText("linkedin").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("LinkedIn").length).toBeGreaterThan(0)
     expect(screen.getByText("Accept cluster")).toBeInTheDocument()
     expect(screen.getByText("Merge cluster")).toBeInTheDocument()
   })
@@ -195,7 +195,7 @@ describe("CandidateQueuePage", () => {
     await renderCandidateQueuePage({ project: "1", tab: "auto-log" })
 
     expect(screen.getByText(/Resolved May 2, 2026/)).toBeInTheDocument()
-    expect(screen.getByText("accepted")).toBeInTheDocument()
+    expect(screen.getByText("Accepted")).toBeInTheDocument()
     expect(screen.getByText("2 sources")).toBeInTheDocument()
   })
 })

@@ -34,7 +34,7 @@ def _callback_url() -> str:
     """Build the absolute LinkedIn OAuth callback URL for this deployment."""
 
     return (
-        f"{settings.NEWSLETTER_API_BASE_URL.rstrip('/')}"
+        f"{settings.NEWSLETTER_PUBLIC_URL.rstrip('/')}"
         f"{reverse('v1:linkedin-oauth-callback')}"
     )
 

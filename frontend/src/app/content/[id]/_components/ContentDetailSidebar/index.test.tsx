@@ -66,7 +66,7 @@ function createReviewQueueItem(
 
 describe("ContentDetailSidebar", () => {
   it("renders feedback, review, promotion, and navigation state", () => {
-    render(
+    const { container } = render(
       <ContentDetailSidebar
         content={createContent({
           newsletter_promotion_at: "2026-04-28T12:00:00Z",
@@ -90,7 +90,7 @@ describe("ContentDetailSidebar", () => {
 
     expect(screen.getByText("2/1")).toBeInTheDocument()
     expect(screen.getByText("Awaiting human resolution")).toBeInTheDocument()
-    expect(screen.getByText("human_approved")).toBeInTheDocument()
+    expect(screen.getByText("Human approved")).toBeInTheDocument()
     expect(screen.getByText("Promoted by editor #6")).toBeInTheDocument()
     expect(
       screen.getByRole("link", { name: "Open promoting theme #14" }),
@@ -103,10 +103,11 @@ describe("ContentDetailSidebar", () => {
       "href",
       "/entities?project=1",
     )
+    expect(container.querySelector("aside .flex.flex-wrap.items-center.justify-center.gap-3")).not.toBeNull()
   })
 
   it("renders empty-state review and promotion copy", () => {
-    render(
+    const { container } = render(
       <ContentDetailSidebar
         content={createContent()}
         downvotes={0}
@@ -122,5 +123,17 @@ describe("ContentDetailSidebar", () => {
     expect(
       screen.getByText("This content has not been promoted by a theme suggestion yet."),
     ).toBeInTheDocument()
+    expect(
+      screen.getByText("No review flags are attached to this content."),
+    ).toHaveClass("text-muted-foreground")
+    expect(
+      screen.getByText("This content has not been promoted by a theme suggestion yet."),
+    ).toHaveClass("text-muted-foreground")
+    expect(screen.getByText("Review state")).toHaveClass("mb-3")
+    expect(screen.getByText("Promotion state")).toHaveClass("mb-3")
+    expect(screen.getByText("Navigate")).toHaveClass("mb-3")
+    expect(
+      container.querySelector("aside .flex.flex-wrap.items-center.justify-center.gap-3"),
+    ).not.toBeNull()
   })
 })

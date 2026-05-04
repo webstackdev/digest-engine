@@ -5,6 +5,7 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import type { PublicMembershipInvitation } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { formatDisplayLabel } from "@/lib/view-helpers"
 
 type InvitationDetailsCardProps = {
   invitation: PublicMembershipInvitation
@@ -34,7 +35,7 @@ export function InvitationDetailsCard({
             className="rounded-full px-3 py-1 text-sm capitalize"
             variant={invitation.status === "pending" ? "secondary" : "outline"}
           >
-            {invitation.status}
+            {formatDisplayLabel(invitation.status)}
           </Badge>
         </div>
 
@@ -45,7 +46,7 @@ export function InvitationDetailsCard({
           </div>
           <div>
             <p className="m-0 text-sm text-muted">Role</p>
-            <p className="m-0 text-sm font-medium capitalize text-foreground">{invitation.role}</p>
+            <p className="m-0 text-sm font-medium text-foreground">{formatDisplayLabel(invitation.role)}</p>
           </div>
         </div>
 

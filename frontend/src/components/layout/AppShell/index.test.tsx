@@ -14,15 +14,17 @@ vi.mock("@/lib/api", () => ({
 
 vi.mock("@/components/layout/AppShell/_components/AppShellHeader", () => ({
   AppShellHeader: ({
+    eyebrow,
     description,
     messagesHref,
     title,
   }: {
+    eyebrow: string
     description: string
     messagesHref: string
     title: string
   }) => (
-    <div data-messages-href={messagesHref} data-testid="app-shell-header">
+    <div data-eyebrow={eyebrow} data-messages-href={messagesHref} data-testid="app-shell-header">
       <span>{title}</span>
       <span>{description}</span>
     </div>
@@ -114,6 +116,10 @@ describe("AppShell", () => {
     expect(screen.getByTestId("app-shell-header")).toHaveTextContent("Dashboard")
     expect(screen.getByTestId("app-shell-header")).toHaveTextContent("A test description")
     expect(screen.getByTestId("app-shell-header")).toHaveAttribute(
+      "data-eyebrow",
+      "AI Weekly Dashboard",
+    )
+    expect(screen.getByTestId("app-shell-header")).toHaveAttribute(
       "data-messages-href",
       "/messages?project=1",
     )
@@ -148,6 +154,10 @@ describe("AppShell", () => {
     expect(screen.getByTestId("app-shell-sidebar")).toHaveAttribute(
       "data-unread-message-thread-count",
       "0",
+    )
+    expect(screen.getByTestId("app-shell-header")).toHaveAttribute(
+      "data-eyebrow",
+      "Platform Weekly Dashboard",
     )
     expect(screen.getByTestId("app-shell-header")).toHaveAttribute(
       "data-messages-href",

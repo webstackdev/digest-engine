@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Entity } from "@/lib/types"
+import { formatDisplayLabel } from "@/lib/view-helpers"
 
 import {
   type CandidateCluster,
@@ -56,12 +57,12 @@ export function CandidateClusterCard({
         <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
           {cluster.sourcePlugins.map((plugin) => (
             <Badge className="rounded-full px-3 py-1 text-sm" key={`${cluster.clusterKey}:${plugin}`} variant="secondary">
-              {plugin}
+              {formatDisplayLabel(plugin)}
             </Badge>
           ))}
           {cluster.identitySurfaces.map((surface) => (
             <Badge className="rounded-full px-3 py-1 text-sm" key={`${cluster.clusterKey}:${surface}`} variant="outline">
-              {surface} identity hint
+              {formatDisplayLabel(surface)} identity hint
             </Badge>
           ))}
         </div>
@@ -74,7 +75,7 @@ export function CandidateClusterCard({
                   <div>
                     <h3 className="m-0 font-semibold text-foreground">{candidate.name}</h3>
                     <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
-                      <span>{candidate.suggested_type}</span>
+                      <span>{formatDisplayLabel(candidate.suggested_type)}</span>
                       <span>{candidate.occurrence_count} occurrences</span>
                       <span>{candidate.evidence_count} evidence rows</span>
                       {candidate.first_seen_title ? (
@@ -82,7 +83,7 @@ export function CandidateClusterCard({
                       ) : null}
                     </div>
                   </div>
-                  <StatusBadge tone="warning">{candidate.status}</StatusBadge>
+                  <StatusBadge tone="warning">{formatDisplayLabel(candidate.status)}</StatusBadge>
                 </div>
                 {candidate.auto_promotion_blocked_reason ? (
                   <p className="mb-0 mt-3 text-sm leading-6 text-muted">
