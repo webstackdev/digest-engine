@@ -8,45 +8,80 @@ The system is organized into projects: each newsletter project has its own track
 
 ## Local Development
 
-Use the repo's `just` commands to get a local stack running:
+> [!IMPORTANT]
+> To run this project locally, you will need Docker Compose installed to manage the backend services.
 
-Linux:
+**Linux:**
 
 ```bash
+# Terminal 1
 python3 -m venv .venv
 source .venv/bin/activate
 just install
 just build
 just dev
+
+# Terminal 2
+source .venv/bin/activate
 just seed
 xdg-open http://localhost:8080/
 ```
 
-macOS:
+**macOS:**
 
 ```bash
+# Terminal 1
 python3 -m venv .venv
 source .venv/bin/activate
 just install
 just build
 just dev
+
+# Terminal 2
+source .venv/bin/activate
 just seed
 open http://localhost:8080/
 ```
 
-Windows PowerShell:
+**Windows PowerShell:**
 
 ```powershell
+# Terminal 1
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 just install
 just build
 just dev
+
+# Terminal 2
+.\.venv\Scripts\Activate.ps1
 just seed
 Start-Process http://localhost:8080/
 ```
 
-`just build` prepares the backend image and frontend bundle, `just dev` starts the Docker Compose stack, and `just seed` loads demo data into the running app. For the full workflow and troubleshooting notes, see [docs/developer-guide/local-development.md](docs/developer-guide/local-development.md).
+**Minikube:**
+
+```bash
+# Terminal 1
+minikube start
+just k8s-build-minikube
+just k8s-install-minikube
+
+# Terminal 2
+kubectl port-forward svc/newsletter-maker-newsletter-maker-nginx 8080:80
+```
+
+Then open <http://localhost:8080/> in your browser.
+
+**Command Summary:**
+
+- `just build`: Prepares backend images and frontend bundles.
+- `just dev`: Starts the Docker Compose stack in the foreground and keeps streaming logs.
+- `just seed`: Loads demo data from a second terminal while `just dev` is still running.
+- `just k8s-build-minikube`: Builds the app image and loads it into Minikube.
+- `just k8s-install-minikube`: Installs or upgrades the local Helm release in Minikube.
+
+For full workflows and troubleshooting, see [docs/developer-guide/local-development.md](docs/developer-guide/local-development.md).
 
 ## What This Does That Existing Tools Don't
 
