@@ -71,7 +71,21 @@ just k8s-install-minikube
 kubectl port-forward svc/newsletter-maker-newsletter-maker-nginx 8080:80
 ```
 
-Then open <http://localhost:8080/> in your browser.
+- Admin UI: <http://localhost:8080/admin/>
+- Frontend UI: <http://localhost:3000/>
+- Swagger schema: <http://localhost:8080/api/docs/#/>
+- Storybook (`just storybook-dev`): <http://localhost:6006/>
+
+> [!NOTE]
+> Admin credentials:
+>
+> Username: admin
+> Password: adminpass
+>
+> Frontend credentials (from seed):
+>
+> Username: demo_editor
+> Password: demo_password
 
 **Command Summary:**
 
