@@ -17,7 +17,7 @@ frontend/.next/
 frontend/coverage/
 frontend/node_modules/
 
-docs/
+docs/_internal_only/
 
 *storybook.log
 storybook-static
