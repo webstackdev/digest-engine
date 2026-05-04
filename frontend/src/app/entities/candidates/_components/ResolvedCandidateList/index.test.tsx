@@ -38,6 +38,6 @@ describe("ResolvedCandidateList", () => {
 
     expect(screen.getByText(/Resolved May 2, 2026/)).toBeInTheDocument()
     expect(screen.getByText("2 sources")).toBeInTheDocument()
-    expect(screen.getByTestId("status-badge")).toHaveTextContent("accepted")
+    expect(screen.getByTestId("status-badge")).toHaveTextContent("Accepted")
   })
 })

@@ -30,7 +30,7 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
             <h2 className="m-0 font-display text-title-lg font-bold text-foreground">
               {entity.name}
             </h2>
-            <div className="flex flex-wrap gap-2 text-sm text-muted">
+            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
               <span>Created {formatDate(entity.created_at)}</span>
               <span>
                 {entity.mention_count} mention{entity.mention_count === 1 ? "" : "s"}
@@ -43,7 +43,7 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-3 rounded-2xl border border-border/10 bg-muted/45 p-4">
-            <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+            <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Description
             </h3>
             <p className="m-0 text-sm leading-7 text-foreground">
@@ -51,10 +51,10 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
             </p>
           </div>
           <div className="space-y-3 rounded-2xl border border-border/10 bg-muted/45 p-4">
-            <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+            <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Identity links
             </h3>
-            <ul className="m-0 grid list-none gap-2 p-0 text-sm text-muted">
+            <ul className="m-0 grid list-none gap-2 p-0 text-sm text-muted-foreground">
               {identityLinks.map((link) => (
                 <li key={link.label}>
                   <a

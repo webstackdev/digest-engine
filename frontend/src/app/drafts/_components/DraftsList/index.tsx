@@ -5,7 +5,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import type { NewsletterDraft, NewsletterDraftStatus } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { formatDate } from "@/lib/view-helpers"
+import { formatDate, formatDisplayLabel } from "@/lib/view-helpers"
 
 type DraftsListProps = {
   /** Drafts after the current status filter has been applied. */
@@ -32,7 +32,7 @@ export function DraftsList({ drafts, selectedProjectId }: DraftsListProps) {
     <section className="space-y-4">
       {drafts.length === 0 ? (
         <Card className="rounded-panel border-0 bg-muted/60 shadow-none">
-          <CardContent className="px-4 py-4 text-sm leading-6 text-muted">
+          <CardContent className="px-4 py-4 text-sm leading-6 text-muted-foreground">
             No newsletter drafts matched the current filter.
           </CardContent>
         </Card>
@@ -45,14 +45,14 @@ export function DraftsList({ drafts, selectedProjectId }: DraftsListProps) {
               <div>
                 <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Draft #{draft.id}</p>
                 <h2 className="font-display text-title-md font-bold text-foreground">{draft.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted">
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {draft.intro || "No intro has been added yet."}
                 </p>
               </div>
-              <StatusBadge tone={draftTone(draft.status)}>{draft.status}</StatusBadge>
+              <StatusBadge tone={draftTone(draft.status)}>{formatDisplayLabel(draft.status)}</StatusBadge>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
+            <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted-foreground">
               <span>Generated {formatDate(draft.generated_at)}</span>
               <span>
                 {draft.sections.length} section{draft.sections.length === 1 ? "" : "s"}

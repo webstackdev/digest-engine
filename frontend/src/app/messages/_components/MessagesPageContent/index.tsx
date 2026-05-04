@@ -19,7 +19,11 @@ type MessagesPageContentProps = {
 }
 
 function getApiBaseUrl() {
-  return process.env.NEWSLETTER_API_BASE_URL ?? "http://127.0.0.1:8080"
+  return (
+    process.env.NEWSLETTER_API_INTERNAL_URL ??
+    process.env.NEWSLETTER_API_BASE_URL ??
+    "http://127.0.0.1:8080"
+  )
 }
 
 /** Render the editor-facing direct-message workspace for one selected project shell. */

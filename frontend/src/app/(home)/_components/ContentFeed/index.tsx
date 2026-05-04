@@ -6,7 +6,12 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import type { Content } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { formatDate, formatPercentScore, truncateText } from "@/lib/view-helpers"
+import {
+  formatDate,
+  formatDisplayLabel,
+  formatPercentScore,
+  truncateText,
+} from "@/lib/view-helpers"
 
 import type { ContentClusterBadge } from "../shared"
 
@@ -41,10 +46,10 @@ export function ContentFeed({
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="space-y-3">
                   <h3 className="font-display text-title-md font-bold">{content.title}</h3>
-                  <div className="flex flex-wrap gap-2 text-sm text-muted">
+                  <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                     <span>{formatDate(content.published_date)}</span>
                     <span>{content.author || "Unknown author"}</span>
-                    <span>{content.source_plugin}</span>
+                    <span>{formatDisplayLabel(content.source_plugin)}</span>
                   </div>
                 </div>
                 <StatusBadge
@@ -73,7 +78,7 @@ export function ContentFeed({
                   </span>
                 ) : null}
                 <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">
-                  {content.content_type || "unclassified"}
+                  {formatDisplayLabel(content.content_type || "unclassified")}
                 </span>
                 {content.duplicate_signal_count > 0 ? (
                   <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">
@@ -102,7 +107,7 @@ export function ContentFeed({
                 ) : null}
               </div>
 
-              <p className="text-sm leading-6 text-muted">{truncateText(content.content_text)}</p>
+              <p className="text-sm leading-6 text-muted-foreground">{truncateText(content.content_text)}</p>
 
               <div className="flex flex-wrap items-center gap-3">
                 <Link

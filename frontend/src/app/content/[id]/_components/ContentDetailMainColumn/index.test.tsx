@@ -148,7 +148,7 @@ describe("ContentDetailMainColumn", () => {
     )
 
     expect(screen.getByText("Unknown author")).toBeInTheDocument()
-    expect(screen.getByText("unclassified")).toBeInTheDocument()
+    expect(screen.getByText("Unclassified")).toBeInTheDocument()
     expect(screen.getByTestId("status-badge")).toHaveTextContent("Adjusted n/a")
   })
 })

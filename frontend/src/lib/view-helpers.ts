@@ -129,6 +129,50 @@ export function formatPercentScore(value: number | null | undefined) {
   return `${Math.round(value * 100)}%`
 }
 
+const DISPLAY_LABEL_OVERRIDES: Record<string, string> = {
+  rss: "RSS",
+  reddit: "Reddit",
+  linkedin: "LinkedIn",
+  github: "GitHub",
+  bluesky: "Bluesky",
+  mastodon: "Mastodon",
+  youtube: "YouTube",
+  resend_inbound: "Resend inbound",
+}
+
+/**
+ * Convert backend enum-style labels into readable UI text.
+ *
+ * Underscores and hyphens become spaces, the first letter is capitalized, and
+ * a small set of common source/plugin names keep their expected brand casing.
+ *
+ * @param value - Raw backend label, enum value, or slug-like identifier.
+ * @returns Human-readable display text.
+ * @example
+ * ```ts
+ * const status = formatDisplayLabel("relevance_scoring")
+ * ```
+ */
+export function formatDisplayLabel(value: string | null | undefined) {
+  if (!value) {
+    return ""
+  }
+
+  const normalized = value.trim()
+  if (!normalized) {
+    return ""
+  }
+
+  const lookupKey = normalized.toLowerCase()
+  const overriddenLabel = DISPLAY_LABEL_OVERRIDES[lookupKey]
+  if (overriddenLabel) {
+    return overriddenLabel
+  }
+
+  const humanized = lookupKey.replace(/[_-]+/g, " ")
+  return humanized.charAt(0).toUpperCase() + humanized.slice(1)
+}
+
 /**
  * Shorten long content previews without leaving trailing whitespace before ellipses.
  *

@@ -268,7 +268,7 @@ describe("EntitiesPage", () => {
 
     const badges = screen.getAllByTestId("status-badge")
     expect(badges[0]).toHaveAttribute("data-tone", "warning")
-    expect(badges[0]).toHaveTextContent("pending")
+    expect(badges[0]).toHaveTextContent("Pending")
     expect(badges[1]).toHaveAttribute("data-tone", "neutral")
     expect(badges[1]).toHaveTextContent("organization")
 

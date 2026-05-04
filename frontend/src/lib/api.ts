@@ -57,7 +57,9 @@ import type {
 } from "@/lib/types"
 
 const API_BASE_URL =
-  process.env.NEWSLETTER_API_BASE_URL ?? "http://127.0.0.1:8080"
+  process.env.NEWSLETTER_API_INTERNAL_URL ??
+  process.env.NEWSLETTER_API_BASE_URL ??
+  "http://127.0.0.1:8080"
 
 type AuthorizationSource = "token" | "bearer" | "basic"
 

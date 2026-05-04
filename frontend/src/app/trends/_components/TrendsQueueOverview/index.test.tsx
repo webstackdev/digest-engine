@@ -17,5 +17,8 @@ describe("TrendsQueueOverview", () => {
     expect(screen.getByText("Visible clusters")).toBeInTheDocument()
     expect(screen.getByText("Tracked content")).toBeInTheDocument()
     expect(screen.getByText("18")).toBeInTheDocument()
+    expect(
+      screen.getByText("Clusters matching the current source and date filters."),
+    ).toHaveClass("text-muted-foreground")
   })
 })

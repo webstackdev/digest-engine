@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select"
 import type { ThemeSuggestion, TopicCluster, TopicClusterDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { formatDate, formatPercentScore } from "@/lib/view-helpers"
+import { formatDate, formatDisplayLabel, formatPercentScore } from "@/lib/view-helpers"
 
 import { DEFAULT_THEME_DISMISSAL_REASONS } from "../shared"
 
@@ -59,7 +59,7 @@ export function ThemeSuggestionCard({
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Theme suggestion</p>
             <h2 className="font-display text-title-md font-bold text-foreground">{theme.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">{theme.pitch}</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{theme.pitch}</p>
           </div>
           <StatusBadge
             tone={
@@ -70,7 +70,7 @@ export function ThemeSuggestionCard({
                   : "positive"
             }
           >
-            {theme.status}
+            {formatDisplayLabel(theme.status)}
           </StatusBadge>
         </div>
 
@@ -78,11 +78,11 @@ export function ThemeSuggestionCard({
           <div className="space-y-4">
             <div>
               <p className="m-0 text-sm font-medium text-foreground">Why it matters</p>
-              <p className="mt-2 text-sm leading-6 text-muted">{theme.why_it_matters}</p>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{theme.why_it_matters}</p>
             </div>
             <div>
               <p className="m-0 text-sm font-medium text-foreground">Suggested angle</p>
-              <p className="mt-2 text-sm leading-6 text-muted">
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
                 {theme.suggested_angle || "No suggested angle was returned for this theme."}
               </p>
             </div>
@@ -133,28 +133,28 @@ export function ThemeSuggestionCard({
                   {theme.cluster.label || `Cluster ${theme.cluster.id}`}
                 </Link>
               ) : (
-                <p className="mt-2 text-sm leading-6 text-muted">No cluster is attached to this theme.</p>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">No cluster is attached to this theme.</p>
               )}
               {cluster?.dominant_entity ? (
-                <p className="mt-2 text-sm leading-6 text-muted">
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   Dominant entity: {cluster.dominant_entity.name}
                 </p>
               ) : null}
             </div>
 
-            <div className="flex flex-wrap gap-2 text-sm text-muted">
+            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
               <span>Created {formatDate(theme.created_at)}</span>
               <span>Velocity {formatPercentScore(theme.velocity_at_creation)}</span>
               <span>Novelty {formatPercentScore(theme.novelty_score)}</span>
             </div>
 
             {theme.decided_by_username ? (
-              <p className="text-sm leading-6 text-muted">
+              <p className="text-sm leading-6 text-muted-foreground">
                 Decided by {theme.decided_by_username} on {formatDate(theme.decided_at)}
               </p>
             ) : null}
             {theme.dismissal_reason ? (
-              <p className="text-sm leading-6 text-muted">Dismissal reason: {theme.dismissal_reason}</p>
+              <p className="text-sm leading-6 text-muted-foreground">Dismissal reason: {formatDisplayLabel(theme.dismissal_reason)}</p>
             ) : null}
 
             {theme.status === "pending" ? (

@@ -3,7 +3,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import type { EntityCandidate } from "@/lib/types"
-import { formatDate } from "@/lib/view-helpers"
+import { formatDate, formatDisplayLabel } from "@/lib/view-helpers"
 
 type ResolvedCandidateListProps = {
   resolvedCandidates: EntityCandidate[]
@@ -43,18 +43,18 @@ export function ResolvedCandidateList({
                 </div>
               </div>
               <StatusBadge tone={candidate.status === "rejected" ? "negative" : "positive"}>
-                {candidate.status}
+                {formatDisplayLabel(candidate.status)}
               </StatusBadge>
             </div>
             <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
               {candidate.source_plugins.map((plugin) => (
                 <Badge className="rounded-full px-3 py-1 text-sm" key={`${candidate.id}:${plugin}`} variant="secondary">
-                  {plugin}
+                  {formatDisplayLabel(plugin)}
                 </Badge>
               ))}
               {candidate.identity_surfaces.map((surface) => (
                 <Badge className="rounded-full px-3 py-1 text-sm" key={`${candidate.id}:${surface}`} variant="outline">
-                  {surface} identity hint
+                  {formatDisplayLabel(surface)} identity hint
                 </Badge>
               ))}
             </div>

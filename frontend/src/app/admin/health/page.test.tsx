@@ -2,6 +2,10 @@ import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  buildCentroidDriftTrendPoints,
+  deriveSourceStatus,
+} from "@/app/admin/health/_components/helpers"
 import type {
   IngestionRun,
   Project,
@@ -263,39 +267,29 @@ async function renderHealthPage(
 }
 
 describe("deriveSourceStatus", () => {
-  it('returns "idle" for inactive sources', async () => {
-    const { deriveSourceStatus } = await loadHealthPageModule()
-
+  it('returns "idle" for inactive sources', () => {
     expect(deriveSourceStatus(false, "success", "2026-04-28T08:00:00Z")).toBe(
       "idle",
     )
   })
 
-  it('returns "failing" for failed ingestion runs', async () => {
-    const { deriveSourceStatus } = await loadHealthPageModule()
-
+  it('returns "failing" for failed ingestion runs', () => {
     expect(deriveSourceStatus(true, "failed", "2026-04-28T08:00:00Z")).toBe(
       "failing",
     )
   })
 
-  it('returns "degraded" for running ingestion runs', async () => {
-    const { deriveSourceStatus } = await loadHealthPageModule()
-
+  it('returns "degraded" for running ingestion runs', () => {
     expect(deriveSourceStatus(true, "running", "2026-04-28T08:00:00Z")).toBe(
       "degraded",
     )
   })
 
-  it('returns "degraded" when the source has never fetched', async () => {
-    const { deriveSourceStatus } = await loadHealthPageModule()
-
+  it('returns "degraded" when the source has never fetched', () => {
     expect(deriveSourceStatus(true, null, null)).toBe("degraded")
   })
 
-  it('returns "healthy" when the source is active and has successful history', async () => {
-    const { deriveSourceStatus } = await loadHealthPageModule()
-
+  it('returns "healthy" when the source is active and has successful history', () => {
     expect(deriveSourceStatus(true, "success", "2026-04-28T08:00:00Z")).toBe(
       "healthy",
     )
@@ -303,9 +297,7 @@ describe("deriveSourceStatus", () => {
 })
 
 describe("buildCentroidDriftTrendPoints", () => {
-  it("returns a sparkline across ordered centroid snapshots", async () => {
-    const { buildCentroidDriftTrendPoints } = await loadHealthPageModule()
-
+  it("returns a sparkline across ordered centroid snapshots", () => {
     expect(
       buildCentroidDriftTrendPoints([
         createTopicCentroidSnapshot({
@@ -416,7 +408,7 @@ describe("HealthPage", () => {
 
     await renderHealthPage()
 
-    expect(screen.getByText("reddit", { selector: "strong" })).toBeInTheDocument()
+    expect(screen.getByText("Reddit", { selector: "strong" })).toBeInTheDocument()
     expect(screen.getByText("No runs yet")).toBeInTheDocument()
   })
 
@@ -431,7 +423,7 @@ describe("HealthPage", () => {
     await renderHealthPage({ project: "2" })
 
     expect(selectProjectMock).toHaveBeenCalledWith(projects, { project: "2" })
-    expect(screen.getByText("rss", { selector: "strong" })).toBeInTheDocument()
+    expect(screen.getByText("RSS", { selector: "strong" })).toBeInTheDocument()
   })
 
   it("maps derived health states to badge tones and labels", async () => {
@@ -460,8 +452,8 @@ describe("HealthPage", () => {
     await renderHealthPage({ project: "3" })
 
     const badges = screen.getAllByTestId("status-badge")
-    const healthyBadge = badges.find((badge) => badge.textContent === "healthy")
-    const failingBadge = badges.find((badge) => badge.textContent === "failing")
+    const healthyBadge = badges.find((badge) => badge.textContent === "Healthy")
+    const failingBadge = badges.find((badge) => badge.textContent === "Failing")
 
     expect(healthyBadge).toHaveAttribute("data-tone", "positive")
     expect(failingBadge).toHaveAttribute("data-tone", "negative")

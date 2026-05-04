@@ -48,7 +48,7 @@ export function TrendsQueueOverview({
           <CardContent className="p-5">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">{item.label}</p>
             <p className="mt-1 text-3xl font-bold">{item.value}</p>
-            <p className="text-sm leading-6 text-muted">{item.description}</p>
+            <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
           </CardContent>
         </Card>
       ))}

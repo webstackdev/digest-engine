@@ -44,7 +44,9 @@ describe("DraftsOverviewCards", () => {
       />,
     )
 
-    expect(screen.getByText("Drafts currently being composed.")).toBeInTheDocument()
+    expect(screen.getByText("Drafts currently being composed.")).toHaveClass(
+      "text-muted-foreground",
+    )
     expect(screen.getByText("Drafts ready for editorial review.")).toBeInTheDocument()
     expect(screen.getByText("Drafts with local editorial changes.")).toBeInTheDocument()
     expect(screen.getByText("Drafts marked published in the backend.")).toBeInTheDocument()

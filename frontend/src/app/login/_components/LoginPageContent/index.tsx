@@ -23,7 +23,7 @@ export default function LoginPageContent({ callbackUrl }: LoginPageContentProps)
             <h1 className="mt-2 font-display text-display-page font-bold text-foreground">
               Welcome back
             </h1>
-            <p className="mt-2 text-sm leading-6 text-muted">
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Sign in with your project account or continue with an enabled social provider.
             </p>
           </div>
@@ -41,7 +41,7 @@ export default function LoginPageContent({ callbackUrl }: LoginPageContentProps)
 
           <LoginForm callbackUrl={callbackUrl} />
 
-          <p className="text-center text-sm text-muted">
+          <p className="text-center text-sm text-muted-foreground">
             Need an account? Use the <Link className="font-medium text-primary hover:text-primary" href="/admin/">Django admin</Link> or registration API.
           </p>
         </CardContent>

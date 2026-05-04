@@ -5,7 +5,7 @@ import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import type { Content, ReviewQueueItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { formatDate, formatScore } from "@/lib/view-helpers"
+import { formatDate, formatDisplayLabel, formatScore } from "@/lib/view-helpers"
 
 type ContentDetailSidebarProps = {
   content: Content
@@ -26,36 +26,36 @@ export function ContentDetailSidebar({
   return (
     <aside className="space-y-4">
       <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
-        <CardContent className="pt-5">
-          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Feedback</p>
+        <CardContent className="p-5">
+          <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">Feedback</p>
           <p className="mt-1 text-3xl font-bold">
             {upvotes}/{downvotes}
           </p>
-          <p className="text-sm leading-6 text-muted">
+          <p className="text-sm leading-6 text-muted-foreground">
             Upvotes and downvotes recorded for this item.
           </p>
         </CardContent>
       </Card>
 
       <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
-        <CardContent className="space-y-4 pt-5">
-          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Review state</p>
+        <CardContent className="space-y-4 p-5">
+          <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">Review state</p>
           {reviewItems.length === 0 ? (
-            <p className="text-sm leading-6 text-muted">
+            <p className="text-sm leading-6 text-muted-foreground">
               No review flags are attached to this content.
             </p>
           ) : null}
           {reviewItems.map((item) => (
             <div className="space-y-3" key={item.id}>
               <StatusBadge tone={item.resolved ? "neutral" : "warning"}>
-                {item.reason}
+                {formatDisplayLabel(item.reason)}
               </StatusBadge>
-              <p className="text-sm leading-6 text-muted">
+              <p className="text-sm leading-6 text-muted-foreground">
                 Confidence {formatScore(item.confidence)}
               </p>
-              <p className="text-sm leading-6 text-muted">
+              <p className="text-sm leading-6 text-muted-foreground">
                 {item.resolved
-                  ? item.resolution || "resolved"
+                  ? formatDisplayLabel(item.resolution || "resolved")
                   : "Awaiting human resolution"}
               </p>
             </div>
@@ -64,10 +64,10 @@ export function ContentDetailSidebar({
       </Card>
 
       <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
-        <CardContent className="space-y-4 pt-5">
-          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Promotion state</p>
+        <CardContent className="space-y-4 p-5">
+          <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">Promotion state</p>
           {content.newsletter_promotion_at ? (
-            <div className="space-y-3 text-sm leading-6 text-muted">
+            <div className="space-y-3 text-sm leading-6 text-muted-foreground">
               <p className="m-0">Promoted at {formatDate(content.newsletter_promotion_at)}</p>
               {content.newsletter_promotion_by ? (
                 <p className="m-0">Promoted by editor #{content.newsletter_promotion_by}</p>
@@ -82,7 +82,7 @@ export function ContentDetailSidebar({
               ) : null}
             </div>
           ) : (
-            <p className="text-sm leading-6 text-muted">
+            <p className="text-sm leading-6 text-muted-foreground">
               This content has not been promoted by a theme suggestion yet.
             </p>
           )}
@@ -90,20 +90,22 @@ export function ContentDetailSidebar({
       </Card>
 
       <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
-        <CardContent className="space-y-3 pt-5">
-          <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Navigate</p>
-          <Link
-            className={cn(buttonVariants({ size: "lg" }), "rounded-full")}
-            href={`/?project=${selectedProjectId}`}
-          >
-            Back to dashboard
-          </Link>
-          <Link
-            className={cn(buttonVariants({ size: "lg", variant: "outline" }), "rounded-full")}
-            href={`/entities?project=${selectedProjectId}`}
-          >
-            Manage entities
-          </Link>
+        <CardContent className="p-5">
+          <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">Navigate</p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              className={cn(buttonVariants({ size: "sm" }), "min-h-10 rounded-full px-4")}
+              href={`/?project=${selectedProjectId}`}
+            >
+              Back to dashboard
+            </Link>
+            <Link
+              className={cn(buttonVariants({ size: "sm", variant: "outline" }), "min-h-10 rounded-full px-4")}
+              href={`/entities?project=${selectedProjectId}`}
+            >
+              Manage entities
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </aside>

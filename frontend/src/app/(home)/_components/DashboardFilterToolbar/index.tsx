@@ -19,6 +19,9 @@ import {
   duplicateStateOptions,
 } from "../shared"
 
+const dashboardSelectTriggerClassName =
+  "w-full rounded-2xl border-border/45 bg-card/95 px-4 py-3 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-secondary/88 focus-visible:border-ring"
+
 type DashboardFilterToolbarProps = {
   projectId: number
   view: DashboardView
@@ -52,10 +55,7 @@ export function DashboardFilterToolbar({
           <div className="grid gap-2">
             <Label htmlFor="dashboard-view-filter">View</Label>
             <Select defaultValue={view} name="view">
-              <SelectTrigger
-                className="w-full rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-foreground"
-                id="dashboard-view-filter"
-              >
+              <SelectTrigger className={dashboardSelectTriggerClassName} id="dashboard-view-filter">
                 <SelectValue placeholder="View" />
               </SelectTrigger>
               <SelectContent>
@@ -70,10 +70,7 @@ export function DashboardFilterToolbar({
           <div className="grid gap-2">
             <Label htmlFor="dashboard-content-type-filter">Content type</Label>
             <Select defaultValue={contentTypeFilter} name="contentType">
-              <SelectTrigger
-                className="w-full rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-foreground"
-                id="dashboard-content-type-filter"
-              >
+              <SelectTrigger className={dashboardSelectTriggerClassName} id="dashboard-content-type-filter">
                 <SelectValue placeholder="All types" />
               </SelectTrigger>
               <SelectContent>
@@ -89,10 +86,7 @@ export function DashboardFilterToolbar({
           <div className="grid gap-2">
             <Label htmlFor="dashboard-source-filter">Source</Label>
             <Select defaultValue={sourceFilter} name="source">
-              <SelectTrigger
-                className="w-full rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-foreground"
-                id="dashboard-source-filter"
-              >
+              <SelectTrigger className={dashboardSelectTriggerClassName} id="dashboard-source-filter">
                 <SelectValue placeholder="All sources" />
               </SelectTrigger>
               <SelectContent>
@@ -108,10 +102,7 @@ export function DashboardFilterToolbar({
           <div className="grid gap-2">
             <Label htmlFor="dashboard-days-filter">Published within</Label>
             <Select defaultValue={String(daysFilter)} name="days">
-              <SelectTrigger
-                className="w-full rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-foreground"
-                id="dashboard-days-filter"
-              >
+              <SelectTrigger className={dashboardSelectTriggerClassName} id="dashboard-days-filter">
                 <SelectValue placeholder="Published within" />
               </SelectTrigger>
               <SelectContent>
@@ -126,10 +117,7 @@ export function DashboardFilterToolbar({
           <div className="grid gap-2">
             <Label htmlFor="dashboard-duplicate-filter">Duplicate state</Label>
             <Select defaultValue={duplicateStateFilter} name="duplicateState">
-              <SelectTrigger
-                className="w-full rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-foreground"
-                id="dashboard-duplicate-filter"
-              >
+              <SelectTrigger className={dashboardSelectTriggerClassName} id="dashboard-duplicate-filter">
                 <SelectValue placeholder="Duplicate state" />
               </SelectTrigger>
               <SelectContent>

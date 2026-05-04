@@ -32,6 +32,6 @@ describe("EntityCandidatesCard", () => {
     expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Merge" })).toBeInTheDocument()
     expect(screen.getByLabelText("Merge into existing entity")).toBeInTheDocument()
-    expect(screen.getByText("pending")).toBeInTheDocument()
+    expect(screen.getByText("Pending")).toBeInTheDocument()
   })
 })

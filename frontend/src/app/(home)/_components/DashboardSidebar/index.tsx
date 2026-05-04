@@ -19,7 +19,7 @@ export function DashboardSidebar({
         <CardContent className="p-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Project focus</p>
           <h3 className="font-display text-title-md">{selectedProject.name}</h3>
-          <p className="text-sm leading-6 text-muted">{selectedProject.topic_description}</p>
+          <p className="text-sm leading-6 text-muted-foreground">{selectedProject.topic_description}</p>
         </CardContent>
       </Card>
 
@@ -29,7 +29,7 @@ export function DashboardSidebar({
           <p className="mt-1 text-3xl font-bold">
             {sourceConfigs.filter((item) => item.is_active).length}
           </p>
-          <p className="text-sm leading-6 text-muted">
+          <p className="text-sm leading-6 text-muted-foreground">
             Configured feeds and subreddits delivering new content.
           </p>
         </CardContent>
@@ -39,7 +39,7 @@ export function DashboardSidebar({
         <CardContent className="p-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Editorial queue</p>
           <p className="mt-1 text-3xl font-bold">{pendingReviewCount}</p>
-          <p className="text-sm leading-6 text-muted">
+          <p className="text-sm leading-6 text-muted-foreground">
             Use the view switch above to resolve borderline items.
           </p>
         </CardContent>

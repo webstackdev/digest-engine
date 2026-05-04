@@ -8,6 +8,7 @@ import type { Content, TopicClusterDetail } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
   formatDate,
+  formatDisplayLabel,
   formatPercentScore,
   formatScore,
   truncateText,
@@ -46,7 +47,7 @@ export function TrendClusterDetailPanel({
             <h2 className="font-display text-title-md font-bold text-foreground">
               {selectedCluster.label || `Cluster ${selectedCluster.id}`}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-muted">
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
               {selectedCluster.dominant_entity
                 ? `${selectedCluster.dominant_entity.name} leads this cluster.`
                 : "This cluster does not have a dominant entity yet."}
@@ -59,7 +60,7 @@ export function TrendClusterDetailPanel({
 
         {selectedCluster.velocity_history.length > 1 ? (
           <div className="mt-4 rounded-panel bg-muted/60 px-4 py-4">
-            <div className="flex items-center justify-between gap-3 text-sm text-muted">
+            <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
               <span>Velocity history</span>
               <span>{selectedCluster.velocity_history.length} snapshots</span>
             </div>
@@ -90,18 +91,18 @@ export function TrendClusterDetailPanel({
                 className="rounded-panel border border-border/12 bg-muted/55 p-4"
                 key={membership.id}
               >
-                <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
-                  <span>{membership.content.source_plugin}</span>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  <span>{formatDisplayLabel(membership.content.source_plugin)}</span>
                   <span>{formatDate(membership.content.published_date)}</span>
                   <span>Similarity {formatScore(membership.similarity)}</span>
                 </div>
                 <h3 className="mt-3 font-display text-title-sm font-bold text-foreground">
                   {membership.content.title}
                 </h3>
-                <p className="mt-2 text-sm leading-6 text-muted">
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   {truncateText(content?.content_text || membership.content.title)}
                 </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted">
+                <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
                   <span>
                     Adjusted {formatPercentScore(content?.authority_adjusted_score ?? content?.relevance_score ?? null)}
                   </span>

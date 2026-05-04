@@ -1,5 +1,6 @@
 import { ContentDetailMainColumn } from "@/app/content/[id]/_components/ContentDetailMainColumn"
 import { ContentDetailSidebar } from "@/app/content/[id]/_components/ContentDetailSidebar"
+import { deriveInitialPendingSkills } from "@/app/content/[id]/_components/helpers"
 import { AppShell } from "@/components/layout/AppShell"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -23,23 +24,6 @@ type ContentDetailPageProps = {
 }
 
 /**
- * Derive the pending skill actions that should hydrate the client action bar.
- */
-export function deriveInitialPendingSkills(
-  skillResults: Awaited<ReturnType<typeof getProjectSkillResults>>,
-) {
-  return skillResults
-    .filter(
-      (item) =>
-        item.superseded_by === null &&
-        (item.skill_name === "relevance_scoring" ||
-          item.skill_name === "summarization") &&
-        (item.status === "pending" || item.status === "running"),
-    )
-    .map((item) => item.skill_name as "relevance_scoring" | "summarization")
-}
-
-/**
  * Render the detail view for a single content item within the selected project.
  */
 export default async function ContentDetailPage({
@@ -56,7 +40,8 @@ export default async function ContentDetailPage({
   if (!selectedProject) {
     return (
       <AppShell
-        title="Content detail"
+        eyebrow={null}
+        title="Content Detail"
         description="No project is available for the configured API user."
         projects={[]}
         selectedProjectId={null}
@@ -96,7 +81,8 @@ export default async function ContentDetailPage({
 
   return (
     <AppShell
-      title="Content detail"
+      eyebrow={null}
+      title="Content Detail"
       description="Inspect the raw article, persisted skill outputs, and editorial status for a single content item."
       projects={projects}
       selectedProjectId={selectedProject.id}

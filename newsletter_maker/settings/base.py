@@ -32,7 +32,7 @@ def env_list(name: str, default: str = "") -> list[str]:
 # been created yet. Production should still provide a real secret.
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-secret-key")
 DEBUG = env_bool("DEBUG", default=True)
-ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", default="localhost,127.0.0.1")
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", default="localhost,127.0.0.1,nginx")
 
 CSRF_TRUSTED_ORIGINS = env_list(
     "CSRF_TRUSTED_ORIGINS",
@@ -41,7 +41,18 @@ CSRF_TRUSTED_ORIGINS = env_list(
 
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
 SITE_ID = int(os.getenv("SITE_ID", "1"))
-NEWSLETTER_API_BASE_URL = os.getenv("NEWSLETTER_API_BASE_URL", "http://127.0.0.1:8080")
+_DEFAULT_NEWSLETTER_URL = "http://127.0.0.1:8080"
+_LEGACY_NEWSLETTER_API_BASE_URL = os.getenv("NEWSLETTER_API_BASE_URL")
+NEWSLETTER_API_INTERNAL_URL = os.getenv(
+    "NEWSLETTER_API_INTERNAL_URL",
+    _LEGACY_NEWSLETTER_API_BASE_URL or _DEFAULT_NEWSLETTER_URL,
+)
+NEWSLETTER_PUBLIC_URL = os.getenv(
+    "NEWSLETTER_PUBLIC_URL",
+    _LEGACY_NEWSLETTER_API_BASE_URL or _DEFAULT_NEWSLETTER_URL,
+)
+# Backward-compatible alias for code paths that still expect the old internal URL name.
+NEWSLETTER_API_BASE_URL = NEWSLETTER_API_INTERNAL_URL
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://127.0.0.1:3000")
 METRICS_TOKEN = os.getenv("METRICS_TOKEN", "")
 OTEL_ENABLED = env_bool("OTEL_ENABLED", default=False)

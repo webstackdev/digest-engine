@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { Content, ReviewQueueItem } from "@/lib/types"
-import { formatDate, formatScore } from "@/lib/view-helpers"
+import { formatDate, formatDisplayLabel, formatScore } from "@/lib/view-helpers"
 
 type ReviewQueueTableProps = {
   projectId: number
@@ -27,7 +27,7 @@ export function ReviewQueueTable({
     <section className="overflow-hidden rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
       <Table>
         <TableHeader>
-          <TableRow className="text-sm text-muted">
+          <TableRow className="text-sm text-muted-foreground">
             <TableHead className="px-3 py-4 font-medium">Content</TableHead>
             <TableHead className="px-3 py-4 font-medium">Reason</TableHead>
             <TableHead className="px-3 py-4 font-medium">Confidence</TableHead>
@@ -56,9 +56,9 @@ export function ReviewQueueTable({
                   <strong className="font-medium text-foreground">
                     {content?.title ?? `Content #${item.content}`}
                   </strong>
-                  <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
-                    <span>{content?.source_plugin ?? "unknown source"}</span>
-                    <span>{content?.content_type || "unclassified"}</span>
+                  <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                    <span>{formatDisplayLabel(content?.source_plugin ?? "unknown source")}</span>
+                    <span>{formatDisplayLabel(content?.content_type || "unclassified")}</span>
                     {content?.duplicate_signal_count ? (
                       <span>
                         Also seen in {content.duplicate_signal_count} source
@@ -69,7 +69,7 @@ export function ReviewQueueTable({
                   </div>
                 </TableCell>
                 <TableCell className="px-3 py-4 align-top whitespace-normal text-sm text-foreground">
-                  {item.reason}
+                  {formatDisplayLabel(item.reason)}
                 </TableCell>
                 <TableCell className="px-3 py-4 align-top whitespace-normal text-sm text-foreground">
                   {formatScore(item.confidence)}

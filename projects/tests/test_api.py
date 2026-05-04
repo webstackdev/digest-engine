@@ -553,6 +553,7 @@ class ProjectApiTests(APITestCase):
         LINKEDIN_CLIENT_ID="linkedin-client-id",
         LINKEDIN_CLIENT_SECRET="linkedin-client-secret",
         LINKEDIN_OAUTH_SCOPES="openid email w_member_social",
+        NEWSLETTER_PUBLIC_URL="https://public.example.com",
     )
     def test_build_linkedin_authorize_url_uses_configured_scopes(self):
         authorize_url = build_linkedin_authorize_url(
@@ -564,6 +565,10 @@ class ProjectApiTests(APITestCase):
         query = parse_qs(parsed_url.query)
 
         self.assertEqual(parsed_url.netloc, "www.linkedin.com")
+        self.assertEqual(
+            query["redirect_uri"],
+            ["https://public.example.com/api/v1/linkedin/oauth/callback/"],
+        )
         self.assertEqual(
             query["scope"],
             ["openid email w_member_social"],

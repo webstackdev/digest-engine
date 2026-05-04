@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import type { HealthStatus, IngestionRun, SourceConfig } from "@/lib/types"
-import { formatDate, healthTone } from "@/lib/view-helpers"
+import { formatDate, formatDisplayLabel, healthTone } from "@/lib/view-helpers"
 
 type SourceHealthRow = {
   /** Stored source configuration for one plugin. */
@@ -61,7 +61,7 @@ export function SourceHealthPanel({
       <CardContent>
         {rows.length === 0 ? (
           <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
-            <CardContent className="text-sm leading-6 text-muted">
+            <CardContent className="text-sm leading-6 text-muted-foreground">
               No source configurations exist for this project yet.
             </CardContent>
           </Card>
@@ -82,22 +82,22 @@ export function SourceHealthPanel({
                 <TableRow key={sourceConfig.id} className="border-border/12 align-top">
                   <TableCell className="px-3 py-4 whitespace-normal">
                     <strong className="font-medium text-foreground">
-                      {sourceConfig.plugin_name}
+                      {formatDisplayLabel(sourceConfig.plugin_name)}
                     </strong>
-                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
+                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
                       <span>Config #{sourceConfig.id}</span>
-                      <span>{sourceConfig.is_active ? "active" : "disabled"}</span>
+                      <span>{formatDisplayLabel(sourceConfig.is_active ? "active" : "disabled")}</span>
                     </div>
                   </TableCell>
                   <TableCell className="px-3 py-4">
-                    <StatusBadge tone={healthTone(status)}>{status}</StatusBadge>
+                    <StatusBadge tone={healthTone(status)}>{formatDisplayLabel(status)}</StatusBadge>
                   </TableCell>
                   <TableCell className="px-3 py-4 text-sm text-foreground">
                     {formatDate(sourceConfig.last_fetched_at)}
                   </TableCell>
                   <TableCell className="px-3 py-4 whitespace-normal text-sm text-foreground">
                     {latestRun
-                      ? `${latestRun.status} at ${formatDate(latestRun.started_at)}`
+                      ? `${formatDisplayLabel(latestRun.status)} at ${formatDate(latestRun.started_at)}`
                       : "No runs yet"}
                   </TableCell>
                   <TableCell className="px-3 py-4 text-sm text-foreground">

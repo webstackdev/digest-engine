@@ -7,6 +7,7 @@ import { AppShellHeader } from "./_components/AppShellHeader"
 import { AppShellSidebar } from "./_components/AppShellSidebar"
 
 type AppShellProps = {
+  eyebrow?: string | null
   title: string
   description: string
   projects: Project[]
@@ -15,6 +16,7 @@ type AppShellProps = {
 }
 
 export async function AppShell({
+  eyebrow,
   title,
   description,
   projects,
@@ -25,6 +27,12 @@ export async function AppShell({
   const selectedProject =
     projects.find((project) => project.id === selectedProjectId) ?? null
   const canManageMembers = selectedProject?.user_role === "admin"
+  const headerEyebrow =
+    eyebrow === undefined
+      ? selectedProject
+        ? `${selectedProject.name} Dashboard`
+        : "Dashboard"
+      : eyebrow
   const initialMessageThreads: MessageThread[] = await getMessageThreads().catch(
     () => [],
   )
@@ -41,6 +49,7 @@ export async function AppShell({
 
       <main className="p-5 md:p-8">
         <AppShellHeader
+          eyebrow={headerEyebrow}
           description={description}
           messagesHref={`/messages${projectQuery}`}
           title={title}

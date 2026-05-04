@@ -13,7 +13,7 @@ data:
   CHANNEL_LAYER_URL: {{ default (include "newsletter-maker.redisUrl" .) .Values.env.channelLayerUrl | quote }}
   QDRANT_URL: {{ include "newsletter-maker.qdrantUrl" . | quote }}
   MESSAGING_ENABLED: {{ .Values.env.messagingEnabled | quote }}
-  NEWSLETTER_API_BASE_URL: {{ .Values.env.newsletterApiBaseUrl | quote }}
+  NEWSLETTER_PUBLIC_URL: {{ .Values.env.newsletterPublicUrl | quote }}
   EMAIL_BACKEND: {{ .Values.env.emailBackend | quote }}
   DEFAULT_FROM_EMAIL: {{ .Values.env.defaultFromEmail | quote }}
   SERVER_EMAIL: {{ .Values.env.serverEmail | quote }}

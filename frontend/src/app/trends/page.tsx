@@ -1,4 +1,3 @@
-import { buildVelocityTrendPoints } from "@/app/trends/_components/shared"
 import { TrendsPageContent } from "@/app/trends/_components/TrendsPageContent"
 import { AppShell } from "@/components/layout/AppShell"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -111,5 +110,3 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
     />
   )
 }
-
-export { buildVelocityTrendPoints }

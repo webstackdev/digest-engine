@@ -22,12 +22,12 @@ export function EntityMentionsPanel({ mentions, projectId }: EntityMentionsPanel
               Extracted mentions linked to this entity
             </h3>
           </div>
-          <span className="text-sm text-muted">
+          <span className="text-sm text-muted-foreground">
             {mentions.length} total mention{mentions.length === 1 ? "" : "s"}
           </span>
         </div>
         {mentions.length === 0 ? (
-          <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
+          <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted-foreground">
             No extracted mentions exist for this entity yet.
           </div>
         ) : (
@@ -42,7 +42,7 @@ export function EntityMentionsPanel({ mentions, projectId }: EntityMentionsPanel
                     >
                       {mention.content_title}
                     </Link>
-                    <div className="flex flex-wrap gap-2 text-sm text-muted">
+                    <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                       <span>{mention.role}</span>
                       {mention.sentiment ? <span>{mention.sentiment}</span> : null}
                       <span>{Math.round(mention.confidence * 100)}% confidence</span>
