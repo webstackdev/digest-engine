@@ -94,11 +94,9 @@ The orchestrator handles multi-model routing — each skill uses a model chosen 
 
 Skills are exposed as actions throughout the UI. When viewing any content item, editors can invoke skills directly — summarize an article, extract entities, explain a relevance score — without understanding the underlying pipeline. Results render inline with copy, regenerate, and follow-up actions.
 
-The roadmap progresses from contextual actions (MVP) to multi-step skill chaining (user picks a sequence, output feeds forward) to saved workflow templates that editors can re-run with one click.
-
 ### Plugin Architecture for Data Sources
 
-Each data source implements a common interface (`fetch_new_content`, `get_entity_profile`, `health_check`) and handles its own auth and rate limiting. The core system just calls the interface. Planned integrations:
+Each data source implements a common interface (`fetch_new_content`, `get_entity_profile`, `health_check`) and handles its own auth and rate limiting. The core system just calls the interface. Current integrations:
 
 | Source | Purpose |
 | ------ | ------- |
