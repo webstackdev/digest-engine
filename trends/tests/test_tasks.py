@@ -17,9 +17,9 @@ from trends.models import (
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
+    TopicVelocitySnapshot,
     TrendTaskRun,
     TrendTaskRunStatus,
-    TopicVelocitySnapshot,
 )
 from trends.tasks import (
     ORIGINAL_CONTENT_IDEA_WEEKLY_CAP,
@@ -139,10 +139,12 @@ def test_recompute_topic_centroid_persists_drift_from_previous_and_week_old_snap
     source_plugin_context, mocker
 ):
     project = source_plugin_context.project
+    fixed_now = datetime(2026, 4, 29, 12, 0, tzinfo=timezone.utc)
     mocker.patch("content.signals.queue_topic_centroid_recompute")
     upsert_mock = mocker.patch("trends.tasks.upsert_topic_centroid")
     delete_mock = mocker.patch("trends.tasks.delete_topic_centroid")
     mocker.patch("trends.tasks.embed_text", return_value=[1.0, 0.0])
+    mocker.patch("trends.tasks.timezone.now", return_value=fixed_now)
 
     recent_snapshot = TopicCentroidSnapshot.objects.create(
         project=project,
@@ -290,9 +292,11 @@ def test_run_all_topic_cluster_recomputations_enqueues_all_projects(
 
 
 def test_recompute_source_diversity_persists_entropy_breakdown_and_alerts(
-    source_plugin_context,
+    source_plugin_context, mocker
 ):
     project = source_plugin_context.project
+    fixed_now = datetime(2026, 4, 25, 12, 0, tzinfo=timezone.utc)
+    mocker.patch("trends.tasks.timezone.now", return_value=fixed_now)
     rss_source = SourceConfig.objects.create(
         project=project,
         plugin_name=SourcePluginName.RSS,
@@ -662,6 +666,7 @@ def test_assign_content_to_topic_cluster_adds_similar_content_to_existing_cluste
     source_plugin_context, mocker
 ):
     project = source_plugin_context.project
+    fixed_now = datetime(2026, 4, 25, 12, 0, tzinfo=timezone.utc)
     vector_lookup = {
         "Cluster 1": [1.0, 0.0],
         "Cluster 2": [0.99, 0.01],
@@ -672,6 +677,7 @@ def test_assign_content_to_topic_cluster_adds_similar_content_to_existing_cluste
         "trends.tasks.embed_text",
         side_effect=lambda text: vector_lookup[text.split("\n\n", 1)[0]],
     )
+    mocker.patch("trends.tasks.timezone.now", return_value=fixed_now)
 
     existing_contents = []
     for index in range(3):

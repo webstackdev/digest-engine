@@ -12,10 +12,10 @@ from projects.model_support import (
     bluesky_credentials_fernet,
     generate_project_intake_token,
     linkedin_credentials_fernet,
-    normalize_linkedin_urn,
     mastodon_credentials_fernet,
     normalize_bluesky_handle,
     normalize_bluesky_pds_url,
+    normalize_linkedin_urn,
     normalize_mastodon_handle,
     normalize_mastodon_instance_url,
 )

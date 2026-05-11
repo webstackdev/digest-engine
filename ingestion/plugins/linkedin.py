@@ -13,8 +13,8 @@ from django.utils.dateparse import parse_datetime
 from ingestion.plugins.base import ContentItem, SourcePlugin
 from projects.model_support import (
     SourcePluginName,
-    normalize_linkedin_urn,
     normalize_linkedin_url,
+    normalize_linkedin_urn,
 )
 from projects.models import LinkedInCredentials
 

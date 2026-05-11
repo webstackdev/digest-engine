@@ -11,8 +11,8 @@ from django.test import RequestFactory
 from django.utils import timezone
 
 from content.models import Content
-from pipeline.models import ReviewQueue, ReviewReason, ReviewResolution, SkillResult
 from pipeline.admin import ReviewQueueAdmin, SkillResultAdmin
+from pipeline.models import ReviewQueue, ReviewReason, ReviewResolution, SkillResult
 from projects.model_support import SourcePluginName
 from projects.models import Project
 

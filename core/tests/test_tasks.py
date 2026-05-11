@@ -1,4 +1,5 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
+from datetime import timezone as dt_timezone
 from types import SimpleNamespace
 
 import pytest
@@ -336,7 +337,9 @@ def test_apply_retention_policies_deletes_old_observability_records(
 def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
     source_plugin_context, mocker
 ):
+    fixed_now = datetime(2026, 4, 29, 12, 0, tzinfo=dt_timezone.utc)
     mocker.patch("content.signals.queue_topic_centroid_recompute")
+    mocker.patch("core.tasks.timezone.now", return_value=fixed_now)
     project = source_plugin_context.project
     config = ProjectConfig.objects.create(
         project=project,

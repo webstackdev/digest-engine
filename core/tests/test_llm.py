@@ -17,8 +17,8 @@ def test_openrouter_chat_json_requires_api_key(settings):
 def test_openrouter_chat_json_posts_expected_request(settings, mocker):
     settings.OPENROUTER_API_KEY = "test-key"
     settings.OPENROUTER_API_BASE = "https://openrouter.example/api/v1/"
-    settings.OPENROUTER_APP_URL = "https://newsletter-maker.example"
-    settings.OPENROUTER_APP_NAME = "newsletter-maker"
+    settings.OPENROUTER_APP_URL = "https://digest-engine.example"
+    settings.OPENROUTER_APP_NAME = "digest-engine"
     settings.AI_REQUEST_TIMEOUT_SECONDS = 12.5
 
     response = SimpleNamespace(
@@ -44,8 +44,8 @@ def test_openrouter_chat_json_posts_expected_request(settings, mocker):
     assert post_mock.call_args.kwargs["headers"] == {
         "Authorization": "Bearer test-key",
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://newsletter-maker.example",
-        "X-OpenRouter-Title": "newsletter-maker",
+        "HTTP-Referer": "https://digest-engine.example",
+        "X-OpenRouter-Title": "digest-engine",
     }
     assert post_mock.call_args.kwargs["json"] == {
         "model": "openrouter/test-model",

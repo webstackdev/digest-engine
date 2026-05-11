@@ -1,10 +1,10 @@
 # Projects and Content
 
 ## What a Project Is
-In this platform, a **Project** equates to a specific newsletter brand or topic. Everything—Settings, Articles, Team Members, and specifically the AI's "understanding" of your taste—lives strictly inside boundaries of a single Project. 
+In this platform, a **Project** equates to a specific newsletter brand or topic. Everything—Settings, Articles, Team Members, and specifically the AI's "understanding" of your taste—lives strictly inside boundaries of a single Project.
 
 ## Content List & Filters
-The Content Dashboard displays every article discovered from your plugins. 
+The Content Dashboard displays every article discovered from your plugins.
 * Use the **Category** dropdown to filter items down to just *Tutorials* or just *News*.
 * Use the **Relevance** slider to hide junk items.
 

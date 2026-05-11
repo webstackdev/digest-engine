@@ -10,14 +10,14 @@ use_parentheses = true
 [tool.ruff]
 line-length = 120
 target-version = "py313"
-extend-exclude = ["core/migrations"]
+extend-exclude = ["*/migrations"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["core", "newsletter_maker"]
+known-first-party = ["content", "core", "digest_engine", "entities", "ingestion", "messaging", "newsletters", "notifications", "pipeline", "projects", "trends", "users"]
 
 [tool.djlint]
 profile = "django"
@@ -27,16 +27,16 @@ max_line_length = 120
 [tool.mypy]
 python_version = "3.13"
 plugins = ["mypy_django_plugin.main"]
-files = ["manage.py", "core", "newsletter_maker", "tests"]
-exclude = ["core/migrations/"]
+files = ["conftest.py", "manage.py", "content", "core", "digest_engine", "entities", "ingestion", "messaging", "newsletters", "notifications", "pipeline", "projects", "tests", "trends", "users"]
+exclude = [".*/migrations/"]
 ignore_missing_imports = true
 
 [tool.django-stubs]
-django_settings_module = "newsletter_maker.settings"
+django_settings_module = "digest_engine.settings"
 
 [tool.coverage.run]
 branch = true
-source = ["core", "newsletter_maker"]
+source = ["content", "core", "digest_engine", "entities", "ingestion", "messaging", "newsletters", "notifications", "pipeline", "projects", "trends", "users"]
 omit = ["*/tests/*", "*/migrations/*"]
 
 [tool.coverage.report]

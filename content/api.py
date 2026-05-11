@@ -3,6 +3,7 @@
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
 from content.models import Content, UserFeedback
@@ -12,8 +13,8 @@ from core.api import (
     CONTENT_CREATE_REQUEST_EXAMPLE,
     CONTENT_RESPONSE_EXAMPLE,
     PROJECT_ID_PARAMETER,
-    ProjectOwnedQuerysetMixin,
     SKILL_NAME_PARAMETER,
+    ProjectOwnedQuerysetMixin,
     build_crud_action_overrides,
     document_project_owned_viewset,
 )
@@ -54,6 +55,7 @@ class ContentViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         """Allow all members to read content, contributors to edit, and admins to delete."""
 
+        permission_classes: list[type[BasePermission]]
         if self.action == "destroy":
             permission_classes = [IsProjectAdmin]
         elif self.action in {"create", "update", "partial_update", "run_skill"}:

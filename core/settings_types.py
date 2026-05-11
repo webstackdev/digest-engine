@@ -2,6 +2,7 @@ from typing import Protocol
 
 
 class CoreSettings(Protocol):
+    AI_TRACE_URL_TEMPLATE: str
     BLUESKY_CREDENTIALS_ENCRYPTION_KEY: str
     CELERY_TASK_ALWAYS_EAGER: bool
     DEFAULT_FROM_EMAIL: str

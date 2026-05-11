@@ -1,20 +1,21 @@
 """Celery tasks and helpers for trends-domain centroid and cluster recomputation."""
 
-from collections import Counter
 import math
+from collections import Counter
 from datetime import datetime, timedelta
 from functools import lru_cache, wraps
 from pathlib import Path
 from typing import Any, Callable, Protocol, TypeVar, cast
 
 from celery import shared_task
-from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Model, OuterRef, Prefetch, Subquery
 from django.utils import timezone
 
+from content.models import Content, FeedbackType, UserFeedback
 from core.embeddings import (
     build_content_embedding_text,
     delete_topic_centroid,
@@ -23,12 +24,11 @@ from core.embeddings import (
     upsert_topic_centroid,
 )
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
-from content.models import Content, FeedbackType, UserFeedback
+from digest_engine.telemetry import trace_span
 from entities.models import Entity, EntityMention, EntityMentionRole
 from pipeline.resilience import execute_with_resilience
 from projects.models import Project, SourceConfig
 from trends.observability import observe_trend_task_run
-from newsletter_maker.telemetry import trace_span
 
 from .models import (
     ContentClusterMembership,
@@ -517,7 +517,6 @@ def recompute_source_diversity(project_id: int) -> dict[str, object]:
     }
 
     top_plugin_item = _top_count_item(plugin_counts)
-    top_source_item = _top_count_item(source_counts)
     plugin_entropy = _normalized_shannon_entropy(plugin_counts)
     source_entropy = _normalized_shannon_entropy(source_counts)
     author_entropy = _normalized_shannon_entropy(author_counts)

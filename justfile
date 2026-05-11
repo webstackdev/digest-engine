@@ -2,10 +2,13 @@ set dotenv-load := false
 
 compose := "docker compose"
 backend_env := "if [ ! -f .env ]; then cp .env.example .env; fi"
+backend_venv := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi"
+backend_python := ".venv/bin/python3"
+backend_python_targets := "conftest.py manage.py content core digest_engine entities ingestion messaging newsletters notifications pipeline projects trends users tests"
 frontend_env := "if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi"
 frontend_cd := "cd frontend &&"
 django_manage := "docker compose exec django python manage.py"
-host_backend_test_env := "set -a && . ./.env.test && set +a &&"
+host_backend_test_env := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi && set -a && . ./.env.test && set +a &&"
 
 # -----------------------------------------------------------------------------
 # Setup
@@ -14,18 +17,19 @@ host_backend_test_env := "set -a && . ./.env.test && set +a &&"
 # Install backend Python dependencies and initialize the root env file
 backend-install:
     @{{backend_env}}
-    @python3 -m pip install -r requirements.txt
+    @{{backend_venv}}
+    @{{backend_python}} -m pip install -r requirements.txt
 
 # Install frontend npm dependencies
 frontend-install:
     @{{frontend_cd}} npm install
 
-# Install backend, frontend, and git hook dependencies
-install: backend-install frontend-install install-hooks
-
 # Install pre-commit hooks when running inside a git checkout
 install-hooks:
-    @if git rev-parse --git-dir >/dev/null 2>&1; then pre-commit install --install-hooks; fi
+    @if git rev-parse --git-dir >/dev/null 2>&1; then {{backend_venv}} && {{backend_python}} -m pre_commit install --install-hooks; fi
+
+# Install backend, frontend, and git hook dependencies
+install: backend-install frontend-install install-hooks
 
 # -----------------------------------------------------------------------------
 # Development And Builds
@@ -78,11 +82,12 @@ frontend-typecheck:
 
 # Lint and validate the backend Python and template code
 backend-lint:
-    @ruff check manage.py core newsletter_maker tests
-    @djlint core/templates --check
-    @{{host_backend_test_env}} python3 -m mypy
-    @pre-commit run --all-files check-yaml
-    @{{host_backend_test_env}} python3 manage.py check
+    @{{backend_venv}}
+    @{{backend_python}} -m ruff check {{backend_python_targets}}
+    @{{backend_python}} -m djlint core/templates --check
+    @{{host_backend_test_env}} {{backend_python}} -m mypy --check-untyped-defs
+    @{{backend_python}} -m pre_commit run --all-files check-yaml
+    @{{host_backend_test_env}} {{backend_python}} manage.py check
 
 # Lint and typecheck the frontend codebase
 frontend-lint:
@@ -95,10 +100,11 @@ lint: backend-lint frontend-lint helm-lint
 
 # Auto-fix backend lint issues where supported, then re-run backend validation
 backend-lint-fix:
-    @ruff check manage.py core newsletter_maker tests --fix
-    @djlint core/templates --reformat
-    @pre-commit run --all-files end-of-file-fixer
-    @pre-commit run --all-files trailing-whitespace
+    @{{backend_venv}}
+    @{{backend_python}} -m ruff check {{backend_python_targets}} --fix
+    @{{backend_python}} -m djlint core/templates --reformat
+    @{{backend_python}} -m pre_commit run --all-files end-of-file-fixer
+    @{{backend_python}} -m pre_commit run --all-files trailing-whitespace
     @just backend-lint
 
 # Auto-fix frontend lint issues where supported
@@ -136,17 +142,18 @@ frontend-test-all:
 
 # Run the backend test suite
 backend-test:
-    @{{host_backend_test_env}} python3 -m pytest
+    @{{host_backend_test_env}} {{backend_python}} -m pytest
 
 # Run backend tests with terminal coverage output
 backend-test-coverage:
-    @python3 -m coverage erase
-    @{{host_backend_test_env}} python3 -m coverage run -m pytest
-    @python3 -m coverage report -m
+    @{{backend_venv}}
+    @{{backend_python}} -m coverage erase
+    @{{host_backend_test_env}} {{backend_python}} -m coverage run -m pytest
+    @{{backend_python}} -m coverage report -m
 
 # Generate backend HTML coverage output
 backend-test-coverage-html: backend-test-coverage
-    @python3 -m coverage html
+    @{{backend_python}} -m coverage html
 
 # Run the main backend and frontend test suites
 test: backend-test frontend-test
@@ -264,21 +271,21 @@ disaster-recovery-rehearsal:
 
 # Lint the Helm chart configuration
 helm-lint:
-    @helm lint deploy/helm/newsletter-maker
+    @helm lint deploy/helm/digest-engine
 
 # Render the Helm chart to a temporary output file
 helm-template:
-    @helm template newsletter-maker deploy/helm/newsletter-maker -f deploy/helm/newsletter-maker/values-minikube.yaml > /tmp/newsletter-maker-helm-template.yaml
+    @helm template digest-engine deploy/helm/digest-engine -f deploy/helm/digest-engine/values-minikube.yaml > /tmp/digest-engine-helm-template.yaml
 
 # Build and load the local image into Minikube
 k8s-build-minikube:
-    @DOCKER_BUILDKIT=1 docker build -t newsletter-maker:minikube -f docker/web/Dockerfile .
-    @minikube image load newsletter-maker:minikube
+    @DOCKER_BUILDKIT=1 docker build -t digest-engine:minikube -f docker/web/Dockerfile .
+    @minikube image load digest-engine:minikube
 
 # Install or upgrade the Helm release in Minikube
 k8s-install-minikube:
-    @helm upgrade --install newsletter-maker ./deploy/helm/newsletter-maker -f ./deploy/helm/newsletter-maker/values-minikube.yaml
+    @helm upgrade --install digest-engine ./deploy/helm/digest-engine -f ./deploy/helm/digest-engine/values-minikube.yaml
 
 # Uninstall the Helm release from Minikube
 k8s-uninstall-minikube:
-    @helm uninstall newsletter-maker || true
+    @helm uninstall digest-engine || true

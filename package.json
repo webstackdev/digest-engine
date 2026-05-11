@@ -1,0 +1,27 @@
+{
+  "name": "digest-engine",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "marketing",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/webstackdev/digest-engine.git"
+  },
+  "keywords": [],
+  "author": "Kevin Brown <kevin@webstackdev.com>",
+  "license": "AGPL-3.0-only",
+  "bugs": {
+    "url": "https://github.com/webstackdev/digest-engine/issues"
+  },
+  "homepage": "https://github.com/webstackdev/digest-engine#readme",
+  "devDependencies": {
+    "turbo": "^2.9.12"
+  }
+}

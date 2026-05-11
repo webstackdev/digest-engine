@@ -32,17 +32,17 @@ jobs:
         uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4
 
       - name: Lint chart
-        run: helm lint deploy/helm/newsletter-maker
+        run: helm lint deploy/helm/digest-engine
 
       - name: Render chart
-        run: helm template newsletter-maker deploy/helm/newsletter-maker -f
-          deploy/helm/newsletter-maker/values-minikube.yaml >
-          /tmp/newsletter-maker-chart.yaml
+        run: helm template digest-engine deploy/helm/digest-engine -f
+          deploy/helm/digest-engine/values-minikube.yaml >
+          /tmp/digest-engine-chart.yaml
 
       - name: Render staging overlay
-        run: helm template newsletter-maker-staging deploy/helm/newsletter-maker -f
-          deploy/helm/newsletter-maker/values-staging.yaml >
-          /tmp/newsletter-maker-staging-chart.yaml
+        run: helm template digest-engine-staging deploy/helm/digest-engine -f
+          deploy/helm/digest-engine/values-staging.yaml >
+          /tmp/digest-engine-staging-chart.yaml
 
   build-frontend:
     name: Build frontend
@@ -88,13 +88,13 @@ jobs:
       - name: Build backend image
         env:
           DOCKER_BUILDKIT: "1"
-        run: docker build -t newsletter-maker-ci:${{ github.sha }} -f
+        run: docker build -t digest-engine-ci:${{ github.sha }} -f
           docker/web/Dockerfile .
 
       - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
-          image-ref: newsletter-maker-ci:${{ github.sha }}
+          image-ref: digest-engine-ci:${{ github.sha }}
           scan-type: image
           severity: HIGH,CRITICAL
           ignore-unfixed: true
@@ -111,22 +111,22 @@ jobs:
       - name: Publish backend image
         if: github.event_name == 'push'
         env:
-          IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/newsletter-maker
+          IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/digest-engine
         run: |
           set -euo pipefail
 
-          docker tag newsletter-maker-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:${GITHUB_SHA}
+          docker tag digest-engine-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:${GITHUB_SHA}
           docker push ${IMAGE_REPOSITORY}:${GITHUB_SHA}
 
           if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            docker tag newsletter-maker-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:main
+            docker tag digest-engine-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:main
             docker push ${IMAGE_REPOSITORY}:main
           fi
 
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             version_tag="${GITHUB_REF#refs/tags/}"
-            docker tag newsletter-maker-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:${version_tag}
+            docker tag digest-engine-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:${version_tag}
             docker push ${IMAGE_REPOSITORY}:${version_tag}
-            docker tag newsletter-maker-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:latest
+            docker tag digest-engine-ci:${GITHUB_SHA} ${IMAGE_REPOSITORY}:latest
             docker push ${IMAGE_REPOSITORY}:latest
           fi

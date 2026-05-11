@@ -18,7 +18,7 @@ export default function LoginPageContent({ callbackUrl }: LoginPageContentProps)
         <CardContent className="space-y-8 pt-6">
           <div className="text-center">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-muted">
-              Newsletter Maker
+              Digest Engine
             </p>
             <h1 className="mt-2 font-display text-display-page font-bold text-foreground">
               Welcome back

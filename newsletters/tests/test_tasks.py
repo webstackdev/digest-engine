@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import cast
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -146,13 +147,20 @@ def test_generate_newsletter_draft_builds_tree_and_renderings(settings):
         trigger_source="scheduled",
     )
 
-    draft = NewsletterDraft.objects.get(pk=result["draft_id"])
+    draft_id = cast(int | None, result["draft_id"])
+    assert draft_id is not None
+    draft = NewsletterDraft.objects.get(pk=draft_id)
+    first_section = draft.sections.first()
+    first_original_piece = draft.original_pieces.first()
+
     assert result["status"] == NewsletterDraftStatus.READY
     assert draft.sections.count() == 2
     assert draft.original_pieces.count() == 1
-    assert draft.sections.first().theme_suggestion in {theme_one, theme_two}
-    assert draft.sections.first().items.count() >= 1
-    assert draft.original_pieces.first().idea == idea
+    assert first_section is not None
+    assert first_original_piece is not None
+    assert first_section.theme_suggestion in {theme_one, theme_two}
+    assert first_section.items.count() >= 1
+    assert first_original_piece.idea == idea
     assert "# " in draft.render_markdown()
     assert "<h1>" in draft.render_html()
     assert draft.generation_metadata["trigger_source"] == "scheduled"
@@ -254,12 +262,15 @@ def test_regenerate_newsletter_draft_section_replaces_items_and_marks_draft_edit
 
     draft.refresh_from_db()
     section.refresh_from_db()
+    replacement_item = section.items.first()
+
     assert result["status"] == "completed"
     assert draft.status == NewsletterDraftStatus.EDITED
     assert draft.last_edited_at is not None
     assert not NewsletterDraftItem.objects.filter(pk=_require_pk(old_item)).exists()
     assert section.items.count() == 1
-    assert section.items.first().summary_used != "Old summary"
+    assert replacement_item is not None
+    assert replacement_item.summary_used != "Old summary"
 
 
 def test_task_generate_newsletter_draft_notifies_project_admins_on_success(

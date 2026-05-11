@@ -15,11 +15,6 @@ from django.utils import timezone
 from content.models import Content
 from core.embeddings import search_similar_entities_for_content
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
-from pipeline.resilience import (
-    RetryBudget,
-    ResilientSkillError,
-    execute_with_resilience,
-)
 from entities.models import (
     Entity,
     EntityCandidate,
@@ -33,6 +28,11 @@ from entities.models import (
     IdentitySurface,
 )
 from pipeline.models import SkillResult, SkillStatus
+from pipeline.resilience import (
+    ResilientSkillError,
+    RetryBudget,
+    execute_with_resilience,
+)
 from projects.model_support import (
     SourcePluginName,
     normalize_bluesky_handle,

@@ -13,7 +13,7 @@
 * If all scores sit at 0.1, the Qdrant `is_reference=True` corpus is either empty or entirely corrupted. Tag at least 5 articles as explicitly "Reference Quality" to set a project boundary.
 
 ## Qdrant Search Returns Nothing
-* Connect to Qdrant UI mapping on port `6333`. Ensure the collections exist and match the `EMBEDDING_PROVIDER` token sizes. 
+* Connect to Qdrant UI mapping on port `6333`. Ensure the collections exist and match the `EMBEDDING_PROVIDER` token sizes.
 
 ## Embeddings Worker Idle
 * Double check `OLLAMA_URL` network resolution if running local containers.

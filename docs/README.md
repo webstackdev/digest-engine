@@ -1,6 +1,6 @@
-# Newsletter Maker Documentation
+# Digest Engine Documentation
 
-Newsletter Maker is an AI-powered platform for ingesting, scoring, and writing domain-specific newsletters. It uses LangGraph to orchestrate Claude Skills against incoming RSS, Reddit, and forwarded email content to synthesize high-quality reading lists.
+Digest Engine is an AI-powered platform for ingesting, scoring, and writing domain-specific newsletters. It uses LangGraph to orchestrate Claude Skills against incoming RSS, Reddit, and forwarded email content to synthesize high-quality reading lists.
 
 These documents are organized by audience.
 
@@ -10,5 +10,5 @@ These documents are organized by audience.
 * **I need to understand the underlying Math and Logic**: Head to the [Reference Section](reference/data-model.md) to see how LangGraph, LangChain, Celery, Qdrant, and the Cosine similarity algorithms are wired together.
 
 ## Terminology Note
-In this repository, a distinct newsletter workspace is called a **Project** (not a Tenant, not a Workspace). An article or extracted text is called **Content**. 
+In this repository, a distinct newsletter workspace is called a **Project** (not a Tenant, not a Workspace). An article or extracted text is called **Content**.
 See the full [Glossary](reference/glossary.md) for clarification on Entities, Skills, and Velocity.

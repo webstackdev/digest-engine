@@ -1,0 +1,21 @@
+{{- if .Values.keda.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "digest-engine.fullname" . }}-celery-worker
+  labels:
+    {{- include "digest-engine.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "digest-engine.fullname" . }}-celery-worker
+  minReplicaCount: {{ .Values.keda.minReplicaCount }}
+  maxReplicaCount: {{ .Values.keda.maxReplicaCount }}
+  pollingInterval: {{ .Values.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.keda.cooldownPeriod }}
+  triggers:
+    - type: redis
+      metadata:
+        address: {{ printf "%s:%v" (include "digest-engine.redisHost" .) .Values.redis.service.port | quote }}
+        listName: {{ .Values.keda.redisListName | quote }}
+        listLength: "5"
+{{- end }}

@@ -17,7 +17,7 @@ def healthz_view(request):
     """Return a lightweight liveness response for load balancers and probes."""
 
     return JsonResponse(
-        {"status": "ok", "service": "newsletter-maker"}, status=HTTPStatus.OK
+        {"status": "ok", "service": "digest-engine"}, status=HTTPStatus.OK
     )
 
 

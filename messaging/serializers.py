@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
-from typing import cast
 
 from messaging.models import (
     DirectMessage,

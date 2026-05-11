@@ -5,7 +5,7 @@
 2. LinkedIn OAuth (If configured via `LINKEDIN_CLIENT_ID`).
 
 ## Project Membership Model
-We do not use standard Django Groups for multi-tenancy. Access is strictly mapped via `ProjectMembership` with explicit Roles: `admin`, `member`, `reader`. 
+We do not use standard Django Groups for multi-tenancy. Access is strictly mapped via `ProjectMembership` with explicit Roles: `admin`, `member`, `reader`.
 
 ## Django Groups and Roles
 Django `Group` and `Permission` models are retained ONLY for granting staff/Superuser global abilities (e.g., viewing standard Django Admin), NOT for managing newsletter workspaces.

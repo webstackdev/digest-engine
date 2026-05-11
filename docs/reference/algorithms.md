@@ -29,7 +29,7 @@ This document breaks down the major decision-making mathematics behind the AI pi
 ## Authority Scoring
 * **What it computes**: Assigns an influence multiplier (`authority_score`) to an `Entity` based on how frequently and prominently it is mentioned or referenced.
 * **Inputs**: Detected mentions, source quality signals.
-* **Algorithmic Model**: A multi-signal model including raw mention frequency layered against a time-based decay function ($score_{new} = score_{previous} \times decay\_rate$), bounded engagement corroboration. 
+* **Algorithmic Model**: A multi-signal model including raw mention frequency layered against a time-based decay function ($score_{new} = score_{previous} \times decay\_rate$), bounded engagement corroboration.
 * **Tunables**: `ProjectConfig.authority_decay_rate`.
 * **Location**: `entities/` models and Celery tasks.
 

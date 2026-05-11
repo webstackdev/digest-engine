@@ -125,7 +125,7 @@ def test_reddit_client_requires_credentials(settings):
 def test_reddit_client_builds_praw_client(settings, mocker):
     settings.REDDIT_CLIENT_ID = "client-id"
     settings.REDDIT_CLIENT_SECRET = "client-secret"
-    settings.REDDIT_USER_AGENT = "newsletter-maker-test"
+    settings.REDDIT_USER_AGENT = "digest-engine-test"
     reddit_cls = mocker.patch(
         "ingestion.plugins.reddit.praw.Reddit", return_value="reddit-client"
     )
@@ -136,5 +136,5 @@ def test_reddit_client_builds_praw_client(settings, mocker):
     reddit_cls.assert_called_once_with(
         client_id="client-id",
         client_secret="client-secret",
-        user_agent="newsletter-maker-test",
+        user_agent="digest-engine-test",
     )

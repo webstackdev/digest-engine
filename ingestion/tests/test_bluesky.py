@@ -3,9 +3,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from ingestion.plugins.bluesky import BlueskySourcePlugin
-from ingestion.plugins.base import ContentItem
 from entities.models import Entity
+from ingestion.plugins.base import ContentItem
+from ingestion.plugins.bluesky import BlueskySourcePlugin
 from projects.model_support import SourcePluginName
 from projects.models import BlueskyCredentials, Project, SourceConfig
 

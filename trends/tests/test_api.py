@@ -22,9 +22,9 @@ from trends.models import (
     ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
+    TopicVelocitySnapshot,
     TrendTaskRun,
     TrendTaskRunStatus,
-    TopicVelocitySnapshot,
 )
 
 

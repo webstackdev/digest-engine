@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Newsletter Maker Frontend",
+  title: "Digest Engine Frontend",
   description: "Minimal dashboard for reviewing ingested newsletter content.",
   icons: {
     icon: "/favicon.ico",

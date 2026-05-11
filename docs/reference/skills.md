@@ -15,7 +15,7 @@ Skills are invoked dynamically. `core/llm.py` loads the prompt text directly fro
 * **Failure Mode**: Item is categorized as `Unknown`.
 
 ### Relevance Scoring
-* **Purpose**: Act as tie-breaker for items sitting in the ambiguous cosine-similarity band (`0.50 - 0.85`). 
+* **Purpose**: Act as tie-breaker for items sitting in the ambiguous cosine-similarity band (`0.50 - 0.85`).
 * **Inputs**: The project's topic description, precomputed reference similarity score, candidate title, candidate text (trimmed to 5000 chars).
 * **Outputs**: A JSON payload containing a `relevance_score` and `explanation`.
 * **Prompt Location**: `skills/relevance-scoring/SKILL.md`.

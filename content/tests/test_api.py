@@ -11,7 +11,6 @@ from rest_framework.test import APIClient, APITestCase
 from content.models import Content, FeedbackType, UserFeedback
 from entities.models import Entity
 from pipeline.models import SkillResult, SkillStatus
-from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectMembership, ProjectRole
 from trends.models import ThemeSuggestion, ThemeSuggestionStatus, TopicCluster
 

@@ -24,8 +24,8 @@ from newsletters.models import (
     NewsletterDraftItem,
     NewsletterDraftOriginalPiece,
     NewsletterDraftSection,
-    NewsletterIntake,
     NewsletterDraftStatus,
+    NewsletterIntake,
 )
 from newsletters.serializers import (
     IntakeAllowlistSerializer,

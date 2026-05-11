@@ -3,7 +3,7 @@
 ## Postgres Backup
 Back up Postgres using standard `pg_dump`:
 ```bash
-docker compose exec postgres pg_dump -U newsletter newsletter_maker > backup.sql
+docker compose exec postgres pg_dump -U newsletter digest_engine > backup.sql
 ```
 
 ## Qdrant Snapshot

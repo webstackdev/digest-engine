@@ -93,7 +93,7 @@ describe("AppShellSidebar", () => {
     expect(screen.getAllByText("Platform Weekly").length).toBeGreaterThan(0)
     expect(screen.getAllByText("Platform engineering").length).toBeGreaterThan(0)
     expect(screen.getByText("Switch project")).toBeInTheDocument()
-    expect(screen.queryByText("Newsletter Maker")).not.toBeInTheDocument()
+    expect(screen.queryByText("Digest Engine")).not.toBeInTheDocument()
     expect(screen.queryByText("Editor cockpit")).not.toBeInTheDocument()
 
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute(

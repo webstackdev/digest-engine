@@ -4,8 +4,8 @@ from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
-from django.urls import reverse
 from django.test import override_settings
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 

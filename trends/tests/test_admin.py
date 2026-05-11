@@ -175,7 +175,7 @@ def test_source_diversity_snapshot_admin_changelist_view_builds_dashboard_stats(
         name="Second Diversity Project",
         topic_description="Analytics",
     )
-    first_snapshot = SourceDiversitySnapshot.objects.create(
+    SourceDiversitySnapshot.objects.create(
         project=source_admin_context.project,
         window_days=14,
         plugin_entropy=0.8,
@@ -194,7 +194,7 @@ def test_source_diversity_snapshot_admin_changelist_view_builds_dashboard_stats(
             ]
         },
     )
-    second_snapshot = SourceDiversitySnapshot.objects.create(
+    SourceDiversitySnapshot.objects.create(
         project=second_project,
         window_days=14,
         plugin_entropy=0.2,

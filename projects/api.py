@@ -8,6 +8,7 @@ from django.utils import timezone
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
 from core.api import (
@@ -15,20 +16,20 @@ from core.api import (
     BLUESKY_CREDENTIALS_RESPONSE_EXAMPLE,
     BLUESKY_CREDENTIALS_VERIFY_RESPONSE,
     LINKEDIN_CREDENTIALS_RESPONSE_EXAMPLE,
+    LINKEDIN_CREDENTIALS_VERIFY_RESPONSE,
     LINKEDIN_OAUTH_AUTHORIZE_RESPONSE,
     LINKEDIN_OAUTH_AUTHORIZE_RESPONSE_EXAMPLE,
-    LINKEDIN_CREDENTIALS_VERIFY_RESPONSE,
     MASTODON_CREDENTIALS_RESPONSE_EXAMPLE,
     MASTODON_CREDENTIALS_VERIFY_RESPONSE,
     PROJECT_CREATE_REQUEST_EXAMPLE,
     PROJECT_RESPONSE_EXAMPLE,
-    ProjectOwnedQuerysetMixin,
     SOURCE_CONFIG_BLUESKY_REQUEST_EXAMPLE,
     SOURCE_CONFIG_CREATE_REQUEST_EXAMPLE,
     SOURCE_CONFIG_LINKEDIN_REQUEST_EXAMPLE,
     SOURCE_CONFIG_MASTODON_REQUEST_EXAMPLE,
     SOURCE_CONFIG_REDDIT_REQUEST_EXAMPLE,
     SOURCE_CONFIG_RESPONSE_EXAMPLE,
+    ProjectOwnedQuerysetMixin,
     build_crud_action_overrides,
     build_success_response,
     document_group_access_viewset,
@@ -133,6 +134,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Apply role-aware permissions by action for project-level operations."""
 
+        permission_classes: list[type[BasePermission]]
         if self.action in {
             "update",
             "partial_update",
@@ -148,7 +150,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
             permission_classes = [IsProjectMember]
         else:
             permission_classes = cast(
-                list[type[Any]], getattr(self, "permission_classes", []) or []
+                list[type[BasePermission]],
+                getattr(self, "permission_classes", []) or [],
             )
         return [permission() for permission in permission_classes]
 
@@ -468,6 +471,7 @@ class ProjectConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         """Allow all members to read project config, but only admins to modify it."""
 
+        permission_classes: list[type[BasePermission]]
         if self.action in {
             "update",
             "partial_update",
@@ -661,6 +665,7 @@ class SourceConfigViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         """Allow all members to read source configs, but only contributors to modify them."""
 
+        permission_classes: list[type[BasePermission]]
         if self.action == "destroy":
             permission_classes = [IsProjectMemberWritable]
         elif self.action in {"create", "update", "partial_update"}:

@@ -1,7 +1,7 @@
 # Entities and Authority
 
 ## What an Entity Is
-An **Entity** is a semantic object tracked by the system—typically a Person, Company, Product, or Vendor. 
+An **Entity** is a semantic object tracked by the system—typically a Person, Company, Product, or Vendor.
 
 ## Candidate Review Queue
 When the AI reads an article, it highlights Proper Nouns it doesn't recognize and marks them as **Entity Candidates**. These are pooled in the Candidate Review Queue awaiting human triage.

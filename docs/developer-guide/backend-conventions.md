@@ -12,7 +12,7 @@ Because this is a multi-project (not tenant) system, data leakage is the worst p
 * Pass the `project` object via `serializer.context` during creation overrides.
 
 ## Code Placement
-Do not dump everything into `core/`. 
+Do not dump everything into `core/`.
 If you are adding functionality for trend clustering, it belongs in `trends/`. If you are adding a new ingestion source, it belongs in `ingestion/`. `core/` is exclusively for plumbing (auth, WSGI, abstract models, LLM wrappers).
 
 ## Plugin Interface
