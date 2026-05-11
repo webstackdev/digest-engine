@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
 from django.db.models import Model
 
 from content.deduplication import canonicalize_url
+from content.models import Content, ContentPipelineState
 from core.pipeline import (
     CLASSIFICATION_SKILL_NAME,
     DEDUPLICATION_SKILL_NAME,
@@ -30,7 +32,6 @@ from core.pipeline import (
     run_summarization,
 )
 from core.tasks import process_content
-from content.models import Content, ContentPipelineState
 from entities.models import (
     Entity,
     EntityCandidate,
@@ -432,6 +433,10 @@ def test_process_content_marks_exact_duplicates_and_skips_downstream_skills(
 def test_process_content_marks_semantic_duplicates_with_high_similarity(
     pipeline_context, mocker
 ):
+    mocker.patch(
+        "core.pipeline.timezone.now",
+        return_value=datetime(2026, 4, 27, 0, 0, tzinfo=timezone.utc),
+    )
     existing = Content.objects.create(
         project=pipeline_context.project,
         url="https://example.com/existing-semantic-story",
@@ -474,6 +479,10 @@ def test_run_deduplication_uses_llm_tiebreak_for_borderline_similarity(
     pipeline_context, settings, mocker
 ):
     settings.OPENROUTER_API_KEY = "test-key"
+    mocker.patch(
+        "core.pipeline.timezone.now",
+        return_value=datetime(2026, 4, 27, 0, 0, tzinfo=timezone.utc),
+    )
     candidate = Content.objects.create(
         project=pipeline_context.project,
         url="https://example.com/candidate-story",
@@ -812,6 +821,7 @@ def test_execute_ad_hoc_relevance_uses_adjusted_score_for_routing(
     assert adjusted_score is not None
     assert adjusted_score > settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD
     assert result.confidence == pytest.approx(adjusted_score)
+    assert result.result_data is not None
     assert result.result_data["relevance_score"] == pytest.approx(base_score)
     assert result.result_data["authority_adjusted_score"] == pytest.approx(
         adjusted_score
@@ -986,6 +996,7 @@ def test_execute_background_skill_result_uses_adjusted_score_for_relevance_confi
     assert adjusted_score is not None
     assert adjusted_score > settings.AI_RELEVANCE_SUMMARIZE_THRESHOLD
     assert pending_result.confidence == pytest.approx(adjusted_score)
+    assert pending_result.result_data is not None
     assert pending_result.result_data["relevance_score"] == pytest.approx(base_score)
     assert pending_result.result_data["authority_adjusted_score"] == pytest.approx(
         adjusted_score
@@ -1335,4 +1346,5 @@ def test_process_content_records_entity_extraction_skill_result(
     assert result["status"] == "completed"
     assert skill_result.status == SkillStatus.COMPLETED
     assert skill_result.confidence == pytest.approx(0.88)
+    assert skill_result.result_data is not None
     assert skill_result.result_data["mentions"][0]["entity_name"] == entity.name

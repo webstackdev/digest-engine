@@ -4,10 +4,8 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
-
-from core.tasks import retry_pipeline_review_item
-from rest_framework import viewsets
 
 from core.api import (
     SKILL_RESULT_RESPONSE_EXAMPLE,
@@ -20,6 +18,7 @@ from core.permissions import (
     IsProjectMember,
     IsProjectMemberWritable,
 )
+from core.tasks import retry_pipeline_review_item
 from pipeline.models import ReviewQueue, ReviewResolution, SkillResult
 from pipeline.serializers import ReviewQueueSerializer, SkillResultSerializer
 
@@ -45,6 +44,7 @@ class SkillResultViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         """Allow all members to read skill results and contributors to modify them."""
 
+        permission_classes: list[type[BasePermission]]
         if self.action in {"create", "update", "partial_update", "destroy"}:
             permission_classes = [IsProjectMemberWritable]
         else:

@@ -136,7 +136,7 @@
   "refresh": "30s",
   "schemaVersion": 39,
   "style": "dark",
-  "tags": ["newsletter-maker", "operational-maturity"],
+  "tags": ["digest-engine", "operational-maturity"],
   "templating": {
     "list": [
       {
@@ -152,7 +152,7 @@
     ]
   },
   "time": {"from": "now-24h", "to": "now"},
-  "title": "Newsletter Maker Operational Maturity",
+  "title": "Digest Engine Operational Maturity",
   "timezone": "browser",
   "version": 1
 }

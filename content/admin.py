@@ -1,11 +1,14 @@
 """Admin configuration for content-domain models."""
 
+from typing import cast
+
 from django.contrib import admin, messages
 from django.db.models import Avg
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 
 from content.models import Content, UserFeedback
+from core.settings_types import CoreSettings
 
 
 def _score_to_percent(value):
@@ -124,6 +127,8 @@ class ContentAdmin(admin.ModelAdmin):
         from django.conf import settings
         from django.urls import reverse
 
+        typed_settings = cast(CoreSettings, settings)
+
         latest_skill_result = (
             obj.skill_results.filter(superseded_by__isnull=True)
             .order_by("-created_at")
@@ -173,12 +178,8 @@ class ContentAdmin(admin.ModelAdmin):
                     trace_id = value
                     break
 
-        if (
-            not trace_url
-            and trace_id
-            and getattr(settings, "AI_TRACE_URL_TEMPLATE", "")
-        ):
-            trace_url = settings.AI_TRACE_URL_TEMPLATE.format(
+        if not trace_url and trace_id and typed_settings.AI_TRACE_URL_TEMPLATE:
+            trace_url = typed_settings.AI_TRACE_URL_TEMPLATE.format(
                 content_id=obj.id,
                 run_id=trace_id,
                 skill_name=latest_skill_result.skill_name,

@@ -7,7 +7,7 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "newsletter_maker.settings")
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "digest_engine.settings")
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:

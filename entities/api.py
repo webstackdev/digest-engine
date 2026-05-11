@@ -6,6 +6,7 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.filters import OrderingFilter
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 
 from core.api import (
@@ -71,6 +72,7 @@ class EntityViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         """Apply read, contributor-write, and admin-delete permissions for entities."""
 
+        permission_classes: list[type[BasePermission]]
         if self.action == "destroy":
             permission_classes = [IsProjectAdmin]
         elif self.action in {"create", "update", "partial_update"}:
@@ -185,6 +187,7 @@ class EntityCandidateViewSet(ProjectOwnedQuerysetMixin, viewsets.ReadOnlyModelVi
     def get_permissions(self):
         """Allow all members to read candidates and contributors to resolve them."""
 
+        permission_classes: list[type[BasePermission]]
         if self.action in {"accept", "reject", "merge"}:
             permission_classes = [IsProjectContributor]
         else:

@@ -1,6 +1,6 @@
 # Getting Started (Hosted SaaS)
 
-Welcome to Newsletter Maker! Depending on whether you are using our cloud version or self-hosting, your first steps differ slightly. 
+Welcome to Digest Engine! Depending on whether you are using our cloud version or self-hosting, your first steps differ slightly.
 
 ## Signup & Email Verification
 Navigate to the hosted application URL and register for an account using your email. We will send you a secure login link. Once verified, you will be taken to your dashboard.
@@ -12,7 +12,7 @@ A **Project** is your workspace. It represents ONE specific newsletter topic (e.
 Head to the **Members** tab to invite coworkers as Editors or Readers.
 
 ## Adding Your First Source
-The system has no content until you tell it where to look. 
+The system has no content until you tell it where to look.
 Navigate to **Sources**. Add an RSS Feed (e.g., `https://news.ycombinator.com/rss`) or a Reddit Subreddit (e.g., `r/MachineLearning`). The system will immediately begin fetching historical items.
 
 ## Viewing the Content Dashboard

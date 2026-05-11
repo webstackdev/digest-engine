@@ -1,6 +1,0 @@
-apiVersion: v2
-name: newsletter-maker
-description: Helm chart for the Newsletter Maker backend stack.
-type: application
-version: 0.1.0
-appVersion: "0.1.0"

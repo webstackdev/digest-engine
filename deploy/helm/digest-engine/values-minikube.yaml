@@ -1,0 +1,22 @@
+image:
+  repository: digest-engine
+  tag: minikube
+  pullPolicy: IfNotPresent
+
+env:
+  debug: "true"
+  allowedHosts: "localhost,127.0.0.1,digest-engine.local"
+  csrfTrustedOrigins: "http://localhost,http://127.0.0.1,http://digest-engine.local"
+  newsletterPublicUrl: "http://digest-engine.local"
+
+nginx:
+  service:
+    type: NodePort
+    port: 80
+
+jobs:
+  seedDemo:
+    enabled: true
+
+networkPolicy:
+  enabled: true

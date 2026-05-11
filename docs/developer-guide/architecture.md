@@ -1,6 +1,6 @@
 # Architecture
 
-This document maps the flow of data and requests through the Newsletter Maker platform.
+This document maps the flow of data and requests through the Digest Engine platform.
 
 ## Sync Request Path
 Standard API requests (e.g., fetching content, editing entity thresholds) follow a standard synchronous Django flow:

@@ -1,5 +1,5 @@
 x-app-common: &app-common
-  image: newsletter-maker-app:dev
+  image: digest-engine-app:dev
   pull_policy: never
   build:
     context: .
@@ -10,7 +10,7 @@ x-app-common: &app-common
     - .:/app
 
 x-shared-env: &shared-env
-  DATABASE_URL: postgresql://newsletter:newsletter@postgres:5432/newsletter_maker
+  DATABASE_URL: postgresql://newsletter:newsletter@postgres:5432/digest_engine
   REDIS_URL: redis://redis:6379/0
   QDRANT_URL: http://qdrant:6333
 
@@ -23,7 +23,7 @@ services:
     command:
       [
         "gunicorn",
-        "newsletter_maker.wsgi:application",
+        "digest_engine.wsgi:application",
         "--bind",
         "0.0.0.0:8000",
         "--workers",
@@ -58,7 +58,7 @@ services:
         "--",
         "celery",
         "-A",
-        "newsletter_maker",
+        "digest_engine",
         "worker",
         "--loglevel=info",
       ]
@@ -78,7 +78,7 @@ services:
         "sh",
         "-lc",
         "mkdir -p .cache && exec watchmedo auto-restart --directory=.
-          --pattern=*.py --recursive -- celery -A newsletter_maker beat
+          --pattern=*.py --recursive -- celery -A digest_engine beat
           --loglevel=info --schedule=.cache/celerybeat-schedule",
       ]
     depends_on:
@@ -90,13 +90,13 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: newsletter_maker
+      POSTGRES_DB: digest_engine
       POSTGRES_USER: newsletter
       POSTGRES_PASSWORD: newsletter
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U newsletter -d newsletter_maker" ]
+      test: [ "CMD-SHELL", "pg_isready -U newsletter -d digest_engine" ]
       interval: 10s
       timeout: 5s
       retries: 5

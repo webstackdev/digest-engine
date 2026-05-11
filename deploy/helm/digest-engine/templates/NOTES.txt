@@ -1,0 +1,8 @@
+1. Install the chart into minikube:
+   helm upgrade --install digest-engine ./deploy/helm/digest-engine -f ./deploy/helm/digest-engine/values-minikube.yaml
+
+2. Check the rollout state:
+   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+
+3. Reach the cluster service:
+   kubectl port-forward svc/{{ include "digest-engine.fullname" . }}-nginx 8080:{{ .Values.nginx.service.port }}

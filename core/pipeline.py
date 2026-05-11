@@ -28,9 +28,9 @@ from core.embeddings import (
     search_similar_content,
 )
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
+from digest_engine.telemetry import trace_span
 from entities.extraction import run_entity_extraction
 from entities.models import EntityMention
-from newsletter_maker.telemetry import trace_span
 from pipeline.models import (
     ReviewQueue,
     ReviewReason,
@@ -175,13 +175,13 @@ def get_ingestion_graph():
     """
 
     graph = StateGraph(PipelineState)
-    graph.add_node("deduplicate", deduplicate_node)
-    graph.add_node("classify", classify_node)
-    graph.add_node("extract_entities", extract_entities_node)
-    graph.add_node("score_relevance", relevance_node)
-    graph.add_node("summarize", summarize_node)
-    graph.add_node("archive", archive_node)
-    graph.add_node("queue_review", queue_review_node)
+    graph.add_node("deduplicate", cast(Any, deduplicate_node))
+    graph.add_node("classify", cast(Any, classify_node))
+    graph.add_node("extract_entities", cast(Any, extract_entities_node))
+    graph.add_node("score_relevance", cast(Any, relevance_node))
+    graph.add_node("summarize", cast(Any, summarize_node))
+    graph.add_node("archive", cast(Any, archive_node))
+    graph.add_node("queue_review", cast(Any, queue_review_node))
     graph.set_entry_point("deduplicate")
     graph.add_conditional_edges(
         "deduplicate",

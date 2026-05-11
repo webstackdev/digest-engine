@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "digest-engine.djangoHost" . }}
+  labels:
+    {{- include "digest-engine.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.django.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "django") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "django") | nindent 8 }}
+    spec:
+      containers:
+        - name: django
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.django.command | nindent 12 }}
+          env:
+            - name: BOOTSTRAP_APP
+              value: "false"
+          envFrom:
+            - configMapRef:
+                name: {{ include "digest-engine.fullname" . }}-env
+            - secretRef:
+                name: {{ include "digest-engine.secretName" . }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.django.port }}
+          readinessProbe:
+            httpGet:
+              path: /readyz/
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /healthz/
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.django.resources | nindent 12 }}

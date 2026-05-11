@@ -2,7 +2,7 @@ import json
 from base64 import b64encode
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from django.core import mail
@@ -11,6 +11,7 @@ from django.db.models import Model
 from django.urls import reverse
 from svix.webhooks import Webhook
 
+from content.models import Content
 from newsletters.intake import (
     extract_newsletter_items,
     sanitize_newsletter_html,
@@ -18,7 +19,6 @@ from newsletters.intake import (
 )
 from newsletters.models import IntakeAllowlist, NewsletterIntake, NewsletterIntakeStatus
 from newsletters.signals import handle_anymail_inbound
-from content.models import Content
 from projects.models import Project
 
 pytestmark = pytest.mark.django_db
@@ -389,9 +389,12 @@ def test_process_newsletter_intake_creates_content_for_confirmed_sender(
     assert result["items_ingested"] == 1
     intake.refresh_from_db()
     content = Content.objects.get(project=project, url="https://example.com/article")
+    extraction_result = cast(dict[str, Any], intake.extraction_result)
+
     assert intake.status == NewsletterIntakeStatus.EXTRACTED
-    assert intake.extraction_result["method"] == "heuristic"
+    assert extraction_result["method"] == "heuristic"
     assert content.source_plugin == "newsletter"
-    assert content.source_metadata["newsletter_intake_id"] == _require_pk(intake)
+    source_metadata = cast(dict[str, Any], content.source_metadata)
+    assert source_metadata["newsletter_intake_id"] == _require_pk(intake)
     upsert_mock.assert_called_once_with(content)
     delay_mock.assert_called_once_with(_require_pk(content))

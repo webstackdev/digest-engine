@@ -23,11 +23,10 @@ from trends.models import (
     OriginalContentIdea,
     SourceDiversitySnapshot,
     ThemeSuggestion,
-    ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
-    TrendTaskRun,
     TopicVelocitySnapshot,
+    TrendTaskRun,
 )
 from trends.observability import TRACKED_TREND_TASKS
 from trends.serializers import (
@@ -37,18 +36,19 @@ from trends.serializers import (
     SourceDiversitySnapshotSerializer,
     ThemeSuggestionDismissSerializer,
     ThemeSuggestionSerializer,
-    TopicClusterDetailSerializer,
-    TopicClusterSerializer,
     TopicCentroidObservabilitySummarySerializer,
     TopicCentroidSnapshotSerializer,
+    TopicClusterDetailSerializer,
+    TopicClusterSerializer,
+    TopicVelocitySnapshotSerializer,
     TrendTaskRunObservabilitySummarySerializer,
     TrendTaskRunSerializer,
-    TopicVelocitySnapshotSerializer,
 )
-from trends.tasks import accept_theme_suggestion, dismiss_theme_suggestion
 from trends.tasks import (
     accept_original_content_idea,
+    accept_theme_suggestion,
     dismiss_original_content_idea,
+    dismiss_theme_suggestion,
     generate_original_content_ideas,
     mark_original_content_idea_written,
 )

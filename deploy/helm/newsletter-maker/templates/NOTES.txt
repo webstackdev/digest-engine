@@ -1,8 +1,0 @@
-1. Install the chart into minikube:
-   helm upgrade --install newsletter-maker ./deploy/helm/newsletter-maker -f ./deploy/helm/newsletter-maker/values-minikube.yaml
-
-2. Check the rollout state:
-   kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }}
-
-3. Reach the cluster service:
-   kubectl port-forward svc/{{ include "newsletter-maker.fullname" . }}-nginx 8080:{{ .Values.nginx.service.port }}

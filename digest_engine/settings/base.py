@@ -1,0 +1,345 @@
+import os
+import sys
+from pathlib import Path
+
+import dj_database_url
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+if "pytest" in sys.modules:
+    load_dotenv(BASE_DIR / ".env.test", override=True)
+
+load_dotenv(BASE_DIR / ".env")
+
+
+# Helpers: environment variables always arrive as strings. These helpers coerce
+# common boolean and comma-separated list values into the Python types Django
+# actually expects.
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_list(name: str, default: str = "") -> list[str]:
+    raw_value = os.getenv(name, default)
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+
+# Fallback: this default keeps local development bootable even if .env has not
+# been created yet. Production should still provide a real secret.
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-only-secret-key")
+DEBUG = env_bool("DEBUG", default=True)
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", default="localhost,127.0.0.1,nginx")
+
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    default="http://localhost,http://127.0.0.1,http://localhost:8080,http://127.0.0.1:8080",
+)
+
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+SITE_ID = int(os.getenv("SITE_ID", "1"))
+_DEFAULT_NEWSLETTER_URL = "http://127.0.0.1:8080"
+_LEGACY_NEWSLETTER_API_BASE_URL = os.getenv("NEWSLETTER_API_BASE_URL")
+NEWSLETTER_API_INTERNAL_URL = os.getenv(
+    "NEWSLETTER_API_INTERNAL_URL",
+    _LEGACY_NEWSLETTER_API_BASE_URL or _DEFAULT_NEWSLETTER_URL,
+)
+NEWSLETTER_PUBLIC_URL = os.getenv(
+    "NEWSLETTER_PUBLIC_URL",
+    _LEGACY_NEWSLETTER_API_BASE_URL or _DEFAULT_NEWSLETTER_URL,
+)
+# Backward-compatible alias for code paths that still expect the old internal URL name.
+NEWSLETTER_API_BASE_URL = NEWSLETTER_API_INTERNAL_URL
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://127.0.0.1:3000")
+METRICS_TOKEN = os.getenv("METRICS_TOKEN", "")
+OTEL_ENABLED = env_bool("OTEL_ENABLED", default=False)
+MESSAGING_ENABLED = env_bool("MESSAGING_ENABLED", default=False)
+CHANNEL_LAYER_URL = os.getenv("CHANNEL_LAYER_URL", "")
+CHANNEL_LAYER_PREFIX = os.getenv("CHANNEL_LAYER_PREFIX", "digest-engine")
+OTEL_SERVICE_NAME = os.getenv("OTEL_SERVICE_NAME", "digest-engine")
+OTEL_SERVICE_NAMESPACE = os.getenv("OTEL_SERVICE_NAMESPACE", "digest-engine")
+OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+OTEL_EXPORTER_OTLP_HEADERS = os.getenv("OTEL_EXPORTER_OTLP_HEADERS", "")
+OTEL_EXPORTER_OTLP_TIMEOUT_SECONDS = float(
+    os.getenv("OTEL_EXPORTER_OTLP_TIMEOUT_SECONDS", "10")
+)
+OBSERVABILITY_SNAPSHOT_RETENTION_DAYS = int(
+    os.getenv("OBSERVABILITY_SNAPSHOT_RETENTION_DAYS", "90")
+)
+OBSERVABILITY_TREND_TASK_RUN_RETENTION_DAYS = int(
+    os.getenv("OBSERVABILITY_TREND_TASK_RUN_RETENTION_DAYS", "30")
+)
+OBSERVABILITY_REVIEW_QUEUE_RETENTION_DAYS = int(
+    os.getenv("OBSERVABILITY_REVIEW_QUEUE_RETENTION_DAYS", "30")
+)
+BLUESKY_CREDENTIALS_ENCRYPTION_KEY = os.getenv("BLUESKY_CREDENTIALS_ENCRYPTION_KEY", "")
+LINKEDIN_CREDENTIALS_ENCRYPTION_KEY = os.getenv(
+    "LINKEDIN_CREDENTIALS_ENCRYPTION_KEY", ""
+)
+LINKEDIN_CLIENT_ID = os.getenv("LINKEDIN_CLIENT_ID", "")
+LINKEDIN_CLIENT_SECRET = os.getenv("LINKEDIN_CLIENT_SECRET", "")
+LINKEDIN_OAUTH_SCOPES = os.getenv(
+    "LINKEDIN_OAUTH_SCOPES", "openid profile email offline_access"
+)
+
+REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
+REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
+REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "digest-engine/0.1")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+RESEND_FROM_EMAIL = os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+RESEND_INBOUND_SECRET = os.getenv("RESEND_INBOUND_SECRET", "")
+ANYMAIL_WEBHOOK_SECRET = os.getenv("ANYMAIL_WEBHOOK_SECRET", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", RESEND_FROM_EMAIL)
+SERVER_EMAIL = os.getenv("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "anymail.backends.resend.EmailBackend")
+ANYMAIL = {}
+if RESEND_API_KEY:
+    ANYMAIL["RESEND_API_KEY"] = RESEND_API_KEY
+if RESEND_INBOUND_SECRET:
+    ANYMAIL["RESEND_INBOUND_SECRET"] = RESEND_INBOUND_SECRET
+if ANYMAIL_WEBHOOK_SECRET:
+    ANYMAIL["WEBHOOK_SECRET"] = ANYMAIL_WEBHOOK_SECRET
+
+INSTALLED_APPS = [
+    # 1. High-priority middleware dependencies
+    "corsheaders",
+    # 2. Unfold Admin Overrides (Must stay at the top and before django.contrib.admin)
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+    "unfold.contrib.import_export",  # Specific Unfold integration for import_export
+    # 3. Core Django Apps
+    "django.contrib.admin",
+    "django.contrib.admindocs",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "django.contrib.sites",  # Required for allauth
+    "channels",
+    # 4. Third-Party Authentication & API Tools
+    "rest_framework",
+    "rest_framework.authtoken",
+    "dj_rest_auth",
+    "dj_rest_auth.registration",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
+    "allauth.socialaccount.providers.github",
+    "anymail",
+    # 5. Utilities & Schema Tools
+    "import_export",  # Standard library
+    "drf_spectacular",
+    "drf_standardized_errors",
+    # 6. Project Apps
+    "users",
+    "projects",
+    "content",
+    "entities",
+    "ingestion",
+    "newsletters",
+    "pipeline",
+    "trends",
+    "notifications",
+    "messaging",
+    "core",
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+
+ROOT_URLCONF = "digest_engine.urls"
+ASGI_APPLICATION = "digest_engine.asgi.application"
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+        },
+    },
+]
+
+WSGI_APPLICATION = "digest_engine.wsgi.application"
+
+if CHANNEL_LAYER_URL:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [CHANNEL_LAYER_URL],
+                "prefix": f"{CHANNEL_LAYER_PREFIX}:channels",
+            },
+        }
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }
+
+DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=600)}
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+AUTH_USER_MODEL = "users.AppUser"
+
+ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
+
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
+USE_I18N = True
+USE_TZ = True
+
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "default": {
+        "BACKEND": os.environ.get(
+            "DEFAULT_FILE_STORAGE",
+            "django.core.files.storage.FileSystemStorage",
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "")
+AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL", "")
+AWS_S3_CUSTOM_DOMAIN = os.getenv("AWS_S3_CUSTOM_DOMAIN", "")
+AWS_QUERYSTRING_AUTH = False
+AWS_DEFAULT_ACL = None
+AWS_S3_FILE_OVERWRITE = False
+MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "var" / "media")))
+
+# DRF: the API defaults to authenticated access so browser sessions and basic
+# auth work locally, but anonymous requests are rejected.
+REST_FRAMEWORK = {
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework.authentication.TokenAuthentication",
+        "rest_framework.authentication.BasicAuthentication",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_standardized_errors.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
+}
+
+DRF_STANDARDIZED_ERRORS = {
+    "ALLOWED_ERROR_STATUS_CODES": ["400", "403", "404"],
+}
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+__all__ = [
+    "BASE_DIR",
+    "SECRET_KEY",
+    "DEBUG",
+    "ALLOWED_HOSTS",
+    "CSRF_TRUSTED_ORIGINS",
+    "DATABASE_URL",
+    "SITE_ID",
+    "NEWSLETTER_API_BASE_URL",
+    "FRONTEND_BASE_URL",
+    "BLUESKY_CREDENTIALS_ENCRYPTION_KEY",
+    "CHANNEL_LAYER_PREFIX",
+    "CHANNEL_LAYER_URL",
+    "LINKEDIN_CREDENTIALS_ENCRYPTION_KEY",
+    "LINKEDIN_CLIENT_ID",
+    "LINKEDIN_CLIENT_SECRET",
+    "REDDIT_CLIENT_ID",
+    "REDDIT_CLIENT_SECRET",
+    "REDDIT_USER_AGENT",
+    "RESEND_API_KEY",
+    "RESEND_INBOUND_SECRET",
+    "RESEND_FROM_EMAIL",
+    "ANYMAIL_WEBHOOK_SECRET",
+    "DEFAULT_FROM_EMAIL",
+    "SERVER_EMAIL",
+    "EMAIL_BACKEND",
+    "ANYMAIL",
+    "INSTALLED_APPS",
+    "MIDDLEWARE",
+    "ROOT_URLCONF",
+    "TEMPLATES",
+    "ASGI_APPLICATION",
+    "WSGI_APPLICATION",
+    "DATABASES",
+    "AUTH_PASSWORD_VALIDATORS",
+    "AUTH_USER_MODEL",
+    "AUTHENTICATION_BACKENDS",
+    "ACCOUNT_EMAIL_VERIFICATION",
+    "ACCOUNT_LOGIN_METHODS",
+    "ACCOUNT_SIGNUP_FIELDS",
+    "LANGUAGE_CODE",
+    "TIME_ZONE",
+    "USE_I18N",
+    "USE_TZ",
+    "STATIC_URL",
+    "STATIC_ROOT",
+    "STORAGES",
+    "AWS_STORAGE_BUCKET_NAME",
+    "AWS_S3_REGION_NAME",
+    "AWS_S3_ENDPOINT_URL",
+    "AWS_S3_CUSTOM_DOMAIN",
+    "AWS_QUERYSTRING_AUTH",
+    "AWS_DEFAULT_ACL",
+    "AWS_S3_FILE_OVERWRITE",
+    "MEDIA_URL",
+    "MEDIA_ROOT",
+    "MESSAGING_ENABLED",
+    "REST_FRAMEWORK",
+    "DRF_STANDARDIZED_ERRORS",
+    "CHANNEL_LAYERS",
+    "SECURE_PROXY_SSL_HEADER",
+    "USE_X_FORWARDED_HOST",
+    "DEFAULT_AUTO_FIELD",
+]

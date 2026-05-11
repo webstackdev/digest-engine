@@ -1,8 +1,8 @@
-# Newsletter Maker
+# Digest Engine
 
 ![Image of AI-powered newsletter workflow](readme.jpg)
 
-An AI-powered content curation platform for technically-oriented newsletters. Newsletter Maker ingests content from dozens of sources, builds authority models of people and companies in a domain, and surfaces the most relevant articles, trends, and themes for each edition — so editors spend their time writing, not searching.
+An AI-powered content curation platform for technically-oriented newsletters. Digest Engine ingests content from dozens of sources, builds authority models of people and companies in a domain, and surfaces the most relevant articles, trends, and themes for each edition — so editors spend their time writing, not searching.
 
 The system is organized into projects: each newsletter project has its own tracked entities, relevance model, and content pipeline. Projects are assigned to Django groups so editorial access can be shared cleanly. Designed for non-technical editors who don't know what a vector database is and don't need to.
 
@@ -68,7 +68,7 @@ just k8s-build-minikube
 just k8s-install-minikube
 
 # Terminal 2
-kubectl port-forward svc/newsletter-maker-newsletter-maker-nginx 8080:80
+kubectl port-forward svc/digest-engine-digest-engine-nginx 8080:80
 ```
 
 - Admin UI: <http://localhost:8080/admin/>
@@ -99,7 +99,7 @@ For full workflows and troubleshooting, see [docs/developer-guide/local-developm
 
 ## What This Does That Existing Tools Don't
 
-Tools like Feedly, UpContent, and ContentStudio handle parts of the content curation problem. Newsletter Maker combines several capabilities none of them offer:
+Tools like Feedly, UpContent, and ContentStudio handle parts of the content curation problem. Digest Engine combines several capabilities none of them offer:
 
 - **Authority scoring from newsletter cross-referencing.** By ingesting peer newsletters, the system builds an authority model based on who real editors actually link to — a human-curated endorsement signal no existing tool provides.
 - **Per-project relevance training.** Upvote/downvote feedback trains a personalized relevance model per project. The tool learns what each editorial project considers valuable.
@@ -172,7 +172,7 @@ The system is designed for graceful failure, not silent corruption. Unparseable 
 
 ## Project Documentation
 
-Newsletter Maker documentation is organized by audience inside the `docs/` folder:
+Digest Engine documentation is organized by audience inside the `docs/` folder:
 
 - [User Guide](docs/user-guide/getting-started-saas.md) covers managing projects, intaking content, and curating drafts.
 - [Admin Guide](docs/admin-guide/overview.md) covers installation, configuration, user management, and operational health.

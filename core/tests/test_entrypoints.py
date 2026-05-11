@@ -4,7 +4,7 @@ import sys
 
 from channels.routing import ProtocolTypeRouter
 
-from newsletter_maker.celery import app
+from digest_engine.celery import app
 
 
 def _import_fresh(module_name: str):
@@ -18,10 +18,10 @@ def test_asgi_module_sets_default_settings_and_builds_application(mocker):
         "django.core.asgi.get_asgi_application", return_value="asgi-app"
     )
 
-    module = _import_fresh("newsletter_maker.asgi")
+    module = _import_fresh("digest_engine.asgi")
 
     setdefault_mock.assert_called_once_with(
-        "DJANGO_SETTINGS_MODULE", "newsletter_maker.settings"
+        "DJANGO_SETTINGS_MODULE", "digest_engine.settings"
     )
     get_app_mock.assert_called_once_with()
     assert module.django_asgi_application == "asgi-app"
@@ -36,10 +36,10 @@ def test_wsgi_module_sets_default_settings_and_builds_application(mocker):
         "django.core.wsgi.get_wsgi_application", return_value="wsgi-app"
     )
 
-    module = _import_fresh("newsletter_maker.wsgi")
+    module = _import_fresh("digest_engine.wsgi")
 
     setdefault_mock.assert_called_once_with(
-        "DJANGO_SETTINGS_MODULE", "newsletter_maker.settings"
+        "DJANGO_SETTINGS_MODULE", "digest_engine.settings"
     )
     get_app_mock.assert_called_once_with()
     assert module.application == "wsgi-app"

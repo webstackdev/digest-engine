@@ -1,6 +1,6 @@
 # Admin Overview
 
-Welcome to the operator's manual for Newsletter Maker. This guide is assuming you are running the system, not writing code for it.
+Welcome to the operator's manual for Digest Engine. This guide is assuming you are running the system, not writing code for it.
 
 ## Component Map
 * **Django (API & Workers)**: Python core running the REST API.

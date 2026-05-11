@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, cast
+from typing import cast
 
 from django.conf import settings
 from django.db import transaction
@@ -16,7 +16,6 @@ from django.utils import timezone
 
 from content.models import Content
 from core.llm import openrouter_chat_json
-from pipeline.resilience import execute_with_resilience
 from newsletters.models import (
     NewsletterDraft,
     NewsletterDraftItem,
@@ -24,9 +23,9 @@ from newsletters.models import (
     NewsletterDraftSection,
     NewsletterDraftStatus,
 )
+from pipeline.resilience import execute_with_resilience
 from projects.models import Project
 from trends.models import (
-    ContentClusterMembership,
     OriginalContentIdea,
     OriginalContentIdeaStatus,
     ThemeSuggestion,

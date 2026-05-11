@@ -5,7 +5,7 @@ This document collects all parameters, thresholds, and variables that change how
 ## How Settings Are Read
 
 1. Environment variables set at the Docker Compose / Kubernetes pod level.
-2. Loaded in `newsletter_maker/settings/base.py` and combined with defaults.
+2. Loaded in `digest_engine/settings/base.py` and combined with defaults.
 3. Consumed via `django.conf.settings` across the project.
 
 ## LLM & Embeddings

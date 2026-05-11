@@ -1,11 +1,11 @@
-# Newsletter Maker Project Instructions
+# Digest Engine Project Instructions
 
-You are working in Newsletter Maker, a Django + DRF + Celery + Qdrant backend with a Next.js App Router frontend.
+You are working in Digest Engine, a Django + DRF + Celery + Qdrant backend with a Next.js App Router frontend.
 
 ## Repository Shape
 
 - Backend runtime code is split across `core/`, `projects/`, `content/`, `entities/`, `ingestion/`, `newsletters/`, `pipeline/`, `trends/`, and `users/`.
-- Django project settings and top-level URLs live in `newsletter_maker/`.
+- Django project settings and top-level URLs live in `digest_engine/`.
 - Backend tests live in app-local `tests/` packages first (`users/tests/`, `projects/tests/`, `ingestion/tests/`, `newsletters/tests/`, `pipeline/tests/`), with `core/tests/` reserved for the remaining cross-cutting coverage.
 - The repo-root `tests/` package is for integration coverage only. New unit and app-scoped tests should live in the owning app's `tests/` package.
 - Frontend application code lives in `frontend/src/app/`, shared UI in `frontend/src/components/`, and shared API/types/helpers in `frontend/src/lib/`.

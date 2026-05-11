@@ -1,0 +1,61 @@
+---
+title: Configuration
+---
+
+# Configuration Guide
+
+Learn how to configure your Torqbit template with custom settings and environment variables.
+
+## Environment Variables
+
+Create a `.env.local` file in your project root with the following variables:
+
+```env
+# Required
+NEXT_PUBLIC_TORQBIT_API_KEY=your_api_key_here
+
+
+```
+
+## App Configuration
+
+### Branding
+
+Update `src/lib/props.tsx` to customize your brand:
+
+```typescript
+export const brand = {
+  name: "Your Brand",
+  logo: "/logo.png",
+  tagline: "Your tagline here",
+};
+```
+
+### Edit Brand color
+
+Edit `src/app/global.css` to customize your brand color:
+
+```css
+:root {
+  --brand-color: #5b63d3; /* Change this to your desired brand color */
+}
+```
+
+## Next.js Configuration
+
+Customize Next.js settings in `next.config.js`:
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  images: {
+    domains: ["images.unsplash.com"],
+  },
+  experimental: {
+    serverActions: true,
+  },
+};
+
+export default nextConfig;
+```

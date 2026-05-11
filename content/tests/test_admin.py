@@ -331,7 +331,7 @@ def test_high_value_filter_only_returns_high_value_reference_content(
         model=Content,
         model_admin=ContentAdmin(Content, AdminSite()),
     )
-    filter_instance.value = lambda: "high_value"
+    cast(Any, filter_instance).value = lambda: "high_value"
 
     filtered = filter_instance.queryset(_request(), Content.objects.all())
 
@@ -368,7 +368,7 @@ def test_duplicate_state_filter_returns_canonical_rows_with_duplicate_signals(
         model=Content,
         model_admin=ContentAdmin(Content, AdminSite()),
     )
-    filter_instance.value = lambda: "canonical_with_duplicates"
+    cast(Any, filter_instance).value = lambda: "canonical_with_duplicates"
 
     filtered = filter_instance.queryset(_request(), Content.objects.all())
 
@@ -406,7 +406,7 @@ def test_duplicate_state_filter_returns_suppressed_duplicates(
         model=Content,
         model_admin=ContentAdmin(Content, AdminSite()),
     )
-    filter_instance.value = lambda: "suppressed_duplicates"
+    cast(Any, filter_instance).value = lambda: "suppressed_duplicates"
 
     filtered = filter_instance.queryset(_request(), Content.objects.all())
 
@@ -558,7 +558,7 @@ def test_high_value_filter_lookups_and_noop_queryset(source_admin_context):
         model=Content,
         model_admin=ContentAdmin(Content, AdminSite()),
     )
-    filter_instance.value = lambda: None
+    cast(Any, filter_instance).value = lambda: None
     content = Content.objects.create(
         project=source_admin_context.project,
         url="https://example.com/high-value-noop",

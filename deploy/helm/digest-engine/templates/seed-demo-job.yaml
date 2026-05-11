@@ -1,0 +1,31 @@
+{{- if .Values.jobs.seedDemo.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "digest-engine.fullname" . }}-seed-demo
+  labels:
+    {{- include "digest-engine.labels" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "seed-demo") | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: seed-demo
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - manage.py
+            - seed_demo
+          env:
+            - name: BOOTSTRAP_APP
+              value: "false"
+          envFrom:
+            - configMapRef:
+                name: {{ include "digest-engine.fullname" . }}-env
+            - secretRef:
+              name: {{ include "digest-engine.secretName" . }}
+{{- end }}

@@ -28,7 +28,7 @@ export function InvitePageContent({
         <CardContent className="space-y-6 pt-4 md:pt-6">
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-muted">
-              Newsletter Maker
+              Digest Engine
             </p>
             <h1 className="mt-2 font-display text-display-page font-bold text-foreground">
               Project invitation

@@ -15,7 +15,7 @@ Celery tasks and Django requests inject a correlation ID into the log context, p
 When Helm/Kubernetes deployments activate the `ServiceMonitor`, we expose:
 * `django_http_requests_total`
 * `django_http_requests_latency_seconds`
-* `celery_task_status_total` 
+* `celery_task_status_total`
 * `ai_skill_invocation_total` (Labeled by skill name and model)
 
 *Metrics enablement requires `METRICS_TOKEN` authentication on the scraping endpoint.*
@@ -33,5 +33,5 @@ Since raw telemetry can overwhelm DBs quickly, the application enforces automate
 - `OBSERVABILITY_REVIEW_QUEUE_RETENTION_DAYS` (30 days)
 
 ## How to Add a New Log/Metric
-Always fetch the bound logger instance initialized at the module level rather than calling `logging.info()` directly. 
+Always fetch the bound logger instance initialized at the module level rather than calling `logging.info()` directly.
 When logging errors for a pipeline node, pass the `payload` kwargs so the JSON log payload has exactly what the LLM received.

@@ -1,9 +1,9 @@
 ---
 name: "Backend Python Guidelines"
-description: "Use when editing Django, DRF, Celery, plugin, management command, or backend test code in Python. Covers project scoping, workflow placement, docstrings, and focused validation for core/, newsletter_maker/, tests/, and manage.py."
+description: "Use when editing Django, DRF, Celery, plugin, management command, or backend test code in Python. Covers project scoping, workflow placement, docstrings, and focused validation for core/, digest_engine/, tests/, and manage.py."
 applyTo:
   - "core/**/*.py"
-  - "newsletter_maker/**/*.py"
+  - "digest_engine/**/*.py"
   - "tests/**/*.py"
   - "manage.py"
 ---

@@ -1,6 +1,6 @@
 # Local Development
 
-Newsletter Maker uses a **two-workflow split** to isolate fast local iteration from full full-stack fidelity.
+Digest Engine uses a **two-workflow split** to isolate fast local iteration from full full-stack fidelity.
 
 ## The Two-Workflow Split
 1. **Host-Side Track**: Used for fast linting, typechecking, and unit tests WITHOUT spinning up Docker.

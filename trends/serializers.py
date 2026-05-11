@@ -7,14 +7,12 @@ from core.serializer_mixins import ProjectScopedSerializerMixin
 from trends.models import (
     ContentClusterMembership,
     OriginalContentIdea,
-    OriginalContentIdeaStatus,
     SourceDiversitySnapshot,
     ThemeSuggestion,
-    ThemeSuggestionStatus,
     TopicCentroidSnapshot,
     TopicCluster,
-    TrendTaskRun,
     TopicVelocitySnapshot,
+    TrendTaskRun,
 )
 
 

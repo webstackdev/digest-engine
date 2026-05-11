@@ -35,7 +35,7 @@ just k8s-install-minikube
 Forward the Nginx service locally:
 
 ```bash
-kubectl port-forward svc/newsletter-maker-newsletter-maker-nginx 8080:80
+kubectl port-forward svc/digest-engine-digest-engine-nginx 8080:80
 ```
 
 Then open <http://localhost:8080/> in your browser.

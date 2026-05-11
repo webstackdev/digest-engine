@@ -27,7 +27,6 @@ from mastodon import Mastodon
 
 from core.embeddings import build_entity_embedding_text, embed_text
 from core.llm import openrouter_chat_json
-from pipeline.resilience import ResilientSkillError, execute_with_resilience
 from entities.extraction import (
     _normalize_name,
     accept_entity_candidate,
@@ -42,6 +41,7 @@ from entities.models import (
 )
 from ingestion.plugins.bluesky import PUBLIC_APPVIEW_BASE_URL
 from ingestion.plugins.mastodon import MastodonSourcePlugin
+from pipeline.resilience import ResilientSkillError, execute_with_resilience
 from projects.model_support import (
     normalize_bluesky_handle,
     normalize_linkedin_url,
@@ -338,7 +338,7 @@ def _probe_github_claim(claim: EntityIdentityClaim) -> IdentityProbeResult:
         f"{GITHUB_API_BASE_URL}/users/{github_login}",
         headers={
             "Accept": "application/vnd.github+json",
-            "User-Agent": settings.OPENROUTER_APP_NAME or "newsletter-maker",
+            "User-Agent": settings.OPENROUTER_APP_NAME or "digest-engine",
         },
         timeout=20,
     )

@@ -8,7 +8,7 @@ from typing import Any, TypeVar, cast
 import structlog
 from django.utils import timezone
 
-from newsletter_maker.telemetry import trace_span
+from digest_engine.telemetry import trace_span
 from trends.models import TrendTaskRun, TrendTaskRunStatus
 
 TrendTaskSummary = dict[str, Any]

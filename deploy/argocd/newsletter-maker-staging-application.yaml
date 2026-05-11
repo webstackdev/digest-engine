@@ -1,20 +1,20 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: newsletter-maker-staging
+  name: digest-engine-staging
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: https://github.com/webstackdev/newsletter-maker.git
+    repoURL: https://github.com/webstackdev/digest-engine.git
     targetRevision: main
-    path: deploy/helm/newsletter-maker
+    path: deploy/helm/digest-engine
     helm:
       valueFiles:
         - values-staging.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: newsletter-maker-staging
+    namespace: digest-engine-staging
   syncPolicy:
     automated:
       prune: true

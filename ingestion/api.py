@@ -1,6 +1,7 @@
 """Ingestion-domain API viewsets kept under the existing nested project routes."""
 
 from rest_framework import viewsets
+from rest_framework.permissions import BasePermission
 
 from core.api import (
     ProjectOwnedQuerysetMixin,
@@ -32,6 +33,7 @@ class IngestionRunViewSet(ProjectOwnedQuerysetMixin, viewsets.ModelViewSet):
     def get_permissions(self):
         """Allow all members to read ingestion runs and contributors to manage them."""
 
+        permission_classes: list[type[BasePermission]]
         if self.action in {"create", "update", "partial_update", "destroy"}:
             permission_classes = [IsProjectMemberWritable]
         else:

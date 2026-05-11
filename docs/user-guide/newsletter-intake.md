@@ -21,4 +21,4 @@ You will receive an automated reply containing a Confirmation Link. You must cli
 Under Settings -> Allowlist, you can view your trusted senders, pre-clear new emails, or revoke access if an address is compromised.
 
 ## Troubleshooting Drops
-If a newsletter fails to show up in your Content view after 10 minutes, contact your administrator to verify the email successfully reached the Anymail webhook. 
+If a newsletter fails to show up in your Content view after 10 minutes, contact your administrator to verify the email successfully reached the Anymail webhook.
