@@ -34,14 +34,15 @@ const RubiksCube = () => {
   const animationIdRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!mountRef.current) return;
+    const mountElement = mountRef.current;
+    if (!mountElement) return;
 
     // Create scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
     // Create camera with adjusted settings for larger cube
-    const camera = new THREE.PerspectiveCamera(35, mountRef.current.clientWidth / mountRef.current.clientHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(35, mountElement.clientWidth / mountElement.clientHeight, 0.1, 1000);
     camera.position.set(4, 4, 8);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
@@ -50,9 +51,8 @@ const RubiksCube = () => {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 
     const updateRendererSize = () => {
-      if (!mountRef.current) return;
-      const width = mountRef.current.clientWidth;
-      const height = mountRef.current.clientHeight;
+      const width = mountElement.clientWidth;
+      const height = mountElement.clientHeight;
 
       renderer.setSize(width, height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap pixel ratio for performance
@@ -64,7 +64,7 @@ const RubiksCube = () => {
     };
 
     updateRendererSize();
-    mountRef.current.appendChild(renderer.domElement);
+    mountElement.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // Enhanced lighting for better vibrancy
@@ -214,8 +214,8 @@ const RubiksCube = () => {
       mouseRef.current.isHovering = false;
     };
 
-    mountRef.current.addEventListener("mousemove", handleMouseMove);
-    mountRef.current.addEventListener("mouseleave", handleMouseLeave);
+    mountElement.addEventListener("mousemove", handleMouseMove);
+    mountElement.addEventListener("mouseleave", handleMouseLeave);
 
     // Handle window resize
     const handleResize = () => {
@@ -290,11 +290,11 @@ const RubiksCube = () => {
         cancelAnimationFrame(animationIdRef.current);
       }
       window.removeEventListener("resize", handleResize);
-      if (mountRef.current) {
-        mountRef.current.removeEventListener("mousemove", handleMouseMove);
-        mountRef.current.removeEventListener("mouseleave", handleMouseLeave);
-        if (renderer.domElement && mountRef.current.contains(renderer.domElement)) {
-          mountRef.current.removeChild(renderer.domElement);
+      if (mountElement) {
+        mountElement.removeEventListener("mousemove", handleMouseMove);
+        mountElement.removeEventListener("mouseleave", handleMouseLeave);
+        if (renderer.domElement && mountElement.contains(renderer.domElement)) {
+          mountElement.removeChild(renderer.domElement);
         }
       }
 

@@ -6,7 +6,7 @@ import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carouse
 const Companies: FC<{
   logos: React.JSX.Element[];
 }> = ({ logos }) => {
-  const plugin = React.useRef(
+  const [plugin] = React.useState(() =>
     Autoplay({
       delay: 4000,
       stopOnInteraction: false,
@@ -25,10 +25,10 @@ const Companies: FC<{
           slidesToScroll: 1,
           inViewThreshold: 0.5,
         }}
-        plugins={[plugin.current]}
+        plugins={[plugin]}
         className='w-full relative nextra-border border-l border-r border-b'
-        onMouseEnter={() => plugin.current.stop()}
-        onMouseLeave={() => plugin.current.play()}>
+        onMouseEnter={() => plugin.stop()}
+        onMouseLeave={() => plugin.play()}>
         <CarouselContent className='flex'>
           {logos.map((logo, index) => {
             return (

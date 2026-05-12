@@ -1,14 +1,28 @@
 {
-  "name": "digest-engine",
+  "name": "digestengine-monorepo",
   "private": true,
-  "workspaces": [
-    "frontend",
-    "marketing",
-    "packages/*"
-  ],
+  "packageManager": "pnpm@11.1.0",
+  "engines": {
+    "node": ">=24.8.0",
+    "pnpm": ">=11.1.0"
+  },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev"
+    "build:frontend": "turbo run build --filter=@digestengine/frontend",
+    "build:marketing": "turbo run build --filter=@digestengine/marketing",
+    "dev": "turbo run dev",
+    "dev:frontend": "turbo run dev --filter=@digestengine/frontend",
+    "dev:marketing": "turbo run dev --filter=@digestengine/marketing",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test:run",
+    "test:all": "turbo run test:all",
+    "test:storybook": "turbo run test:storybook --filter=@digestengine/frontend",
+    "storybook": "turbo run storybook --filter=@digestengine/frontend",
+    "build-storybook": "turbo run build-storybook --filter=@digestengine/frontend",
+    "format": "turbo run format",
+    "format:check": "turbo run format:check"
   },
   "repository": {
     "type": "git",

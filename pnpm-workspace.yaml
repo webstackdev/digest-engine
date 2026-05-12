@@ -1,0 +1,9 @@
+packages:
+  - 'frontend'
+  - 'marketing'
+  - 'packages/*'
+
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true

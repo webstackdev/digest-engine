@@ -1,7 +1,7 @@
 import { FC, ReactNode } from "react";
 import { PageSection } from "../ui/page-section";
 
-const FeatureCard: FC<{ title: string; icon: ReactNode; description: string; link: string }> = ({ title, icon, description, link }) => {
+const FeatureCard: FC<{ title: string; icon: ReactNode; description: string; link: string }> = ({ title, icon, description }) => {
   return (
     <div className=' flex items-center flex-col justify-between gap-[10px]  p-[20px]  hover:bg-(--bg-selected-menu) transition-all ease-linear'>
       <i className='leading-[0] text-[25px] rounded-[8px]  p-[8px] flex item-center justify-center bg-(--bg-secondary)'>{icon}</i>

@@ -6,7 +6,7 @@ import { FC } from "react";
 import SvgIcons from "../SvgIcons";
 import { brand } from "@/lib/props";
 
-const Navbar: FC<{}> = () => {
+const Navbar: FC = () => {
   const { theme, setTheme } = useTheme();
   return (
     <header className='nextra-navbar x:sticky x:top-0 x:z-30 x:w-full x:bg-nextra-bg nextra-border x:border-b x:backdrop-blur-md x:print:hidden x:max-md:[.nextra-banner:not([class$=hidden])~&amp;]:top-(--nextra-banner-height)'>

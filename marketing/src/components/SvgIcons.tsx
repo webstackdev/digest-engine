@@ -1,4 +1,4 @@
-export default {
+const svgIcons = {
   youtube: (
     <svg width="1em" height="1em" viewBox="0 0 132 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g clipPath="url(#clip0_201_8173)">
@@ -436,3 +436,5 @@ export default {
     </svg>
   ),
 };
+
+export default svgIcons;

@@ -1,9 +1,8 @@
-`"use client"`;
+"use client";
 
 import AnimatedGradientTextView from "../ui/animated-gradient-text";
 import { FC, ReactNode } from "react";
 import { ShineBorder } from "../ui/shiny-border";
-import { useTheme } from "next-themes";
 import { Button } from "../ui/button";
 import dynamic from "next/dynamic";
 
@@ -28,9 +27,8 @@ const Hero: FC<{
     link: string;
   };
   extraDescription?: string;
-  extraContent: ReactNode;
+  extraContent?: ReactNode;
 }> = ({ notification, description, title, btnGetStarted, btnBookDemo, extraDescription, extraContent }) => {
-  const theme = useTheme();
   return (
     <section className='flex flex-col lg:flex-row items-center justify-between py-6 md:py-10 nextra-border border-l border-r border-b relative px-4 sm:px-6 lg:px-8'>
       <div className='flex flex-col items-start w-full lg:w-1/2 gap-2 sm:gap-4 justify-between h-full'>
@@ -67,6 +65,7 @@ const Hero: FC<{
         {extraDescription && extraDescription.trim() !== "" && (
           <p className='text-sm sm:text-base text-gray-600 dark:text-gray-400 w-full'>{extraDescription}</p>
         )}
+        {extraContent ? <div className='w-full'>{extraContent}</div> : null}
       </div>
 
       <RubiksCube />

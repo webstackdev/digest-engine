@@ -13,9 +13,20 @@ celerybeat-schedule*
 db.sqlite3
 htmlcov/
 staticfiles/
+.next/
+coverage/
+node_modules/
+.turbo/
+**/.turbo/
 frontend/.next/
 frontend/coverage/
 frontend/node_modules/
+marketing/.next/
+marketing/coverage/
+marketing/node_modules/
+packages/*/.next/
+packages/*/coverage/
+packages/*/node_modules/
 
 docs/_internal_only/
 

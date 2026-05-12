@@ -1,6 +1,6 @@
 const siteUrl = "https://acme.torqbit.com";
 
-export default {
+const sitemapConfig = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || siteUrl,
   generateRobotsTxt: true,
   outDir: "./out", // matches your static export directory
@@ -8,3 +8,5 @@ export default {
   priority: 0.7,
   sitemapSize: 7000,
 };
+
+export default sitemapConfig;

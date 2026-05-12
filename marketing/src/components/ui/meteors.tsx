@@ -33,7 +33,14 @@ export const Meteors = ({
       animationDelay: Math.random() * (maxDelay - minDelay) + minDelay + "s",
       animationDuration: Math.floor(Math.random() * (maxDuration - minDuration) + minDuration) + "s",
     }));
-    setMeteorStyles(styles);
+
+    const frameId = window.requestAnimationFrame(() => {
+      setMeteorStyles(styles);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [number, minDelay, maxDelay, minDuration, maxDuration, angle]);
 
   return (

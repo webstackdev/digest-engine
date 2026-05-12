@@ -1,4 +1,4 @@
-export default {
+const meta = {
   index: {
     type: "page",
     display: "hidden",
@@ -21,3 +21,5 @@ export default {
     },
   },
 };
+
+export default meta;

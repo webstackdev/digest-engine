@@ -1,65 +1,27 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "../packages/typescript-config/nextjs.json",
   "compilerOptions": {
-    "allowJs": false,
-    "esModuleInterop": true,
+    "baseUrl": ".",
     "forceConsistentCasingInFileNames": true,
-    "incremental": true,
-    "isolatedModules": true,
-    "jsx": "react-jsx",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "noEmit": true,
+    "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
-      "@/components/layout/*": [
-        "./src/components/layout/*/index.tsx",
-        "./src/components/layout/*/index.ts",
-        "./src/components/layout/*"
-      ],
-      "@/components/elements/*": [
-        "./src/components/elements/*/index.tsx",
-        "./src/components/elements/*/index.ts",
-        "./src/components/elements/*"
-      ],
+      "@/*": ["./src/*"],
+      "@digestengine/ui": ["../packages/ui/src/index.ts"],
+      "@/components/layout/*": ["./src/components/layout/*"],
+      "@/components/elements/*": ["./src/components/elements/*"],
       "@/components/ui/*": [
-        "./src/components/ui/*/index.tsx",
-        "./src/components/ui/*/index.ts",
-        "./src/components/elements/*/index.tsx",
-        "./src/components/elements/*/index.ts",
         "./src/components/ui/*",
         "./src/components/elements/*"
-      ],
-      "@/*": [
-        "./src/*"
       ]
-    },
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "target": "ES2017",
-    "types": [
-      "vitest/globals",
-      "@testing-library/jest-dom"
-    ]
+    }
   },
   "include": [
-    "next-env.d.ts",
-    "**/*.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    "next-env.d.ts", 
+    "**/*.d.ts", 
+    "**/*.ts", 
+    "**/*.tsx", 
+    ".next/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

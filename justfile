@@ -6,7 +6,12 @@ backend_venv := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi"
 backend_python := ".venv/bin/python3"
 backend_python_targets := "conftest.py manage.py content core digest_engine entities ingestion messaging newsletters notifications pipeline projects trends users tests"
 frontend_env := "if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi"
-frontend_cd := "cd frontend &&"
+pnpm_setup := "corepack enable && corepack prepare pnpm@11.1.0 --activate"
+pnpm_exec := "pnpm"
+turbo_exec := "pnpm turbo"
+frontend_filter := "--filter=@digestengine/frontend"
+marketing_filter := "--filter=@digestengine/marketing"
+packages_filter := "--filter=@digestengine/ui"
 django_manage := "docker compose exec django python manage.py"
 host_backend_test_env := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi && set -a && . ./.env.test && set +a &&"
 
@@ -20,40 +25,71 @@ backend-install:
     @{{backend_venv}}
     @{{backend_python}} -m pip install -r requirements.txt
 
-# Install frontend npm dependencies
+# Ensure pnpm is enabled, then install JavaScript workspace dependencies
 frontend-install:
-    @{{frontend_cd}} npm install
+    @{{frontend_env}}
+    @{{pnpm_setup}}
+    @{{pnpm_exec}} install {{frontend_filter}}
+
+# Ensure pnpm is enabled, then install marketing site dependencies
+marketing-install:
+    @{{pnpm_setup}}
+    @{{pnpm_exec}} install {{marketing_filter}}
+
+# Ensure pnpm is enabled, then install shared package dependencies
+packages-install:
+    @{{pnpm_setup}}
+    @{{pnpm_exec}} install {{packages_filter}}
 
 # Install pre-commit hooks when running inside a git checkout
 install-hooks:
     @if git rev-parse --git-dir >/dev/null 2>&1; then {{backend_venv}} && {{backend_python}} -m pre_commit install --install-hooks; fi
 
 # Install backend, frontend, and git hook dependencies
-install: backend-install frontend-install install-hooks
+install: backend-install frontend-install marketing-install packages-install install-hooks
+
+# Remove generated caches, coverage output, and frontend build artifacts
+clean:
+    @find . \
+        \( -path './.git' -o -path './.venv' -o -path './node_modules' -o -path './frontend/node_modules' -o -path './marketing/node_modules' -o -path './packages/ui/node_modules' \) -prune -o \
+        -type d \( -name '__pycache__' -o -name '.pytest_cache' -o -name '.mypy_cache' -o -name '.ruff_cache' \) -exec rm -rf {} +
+    @rm -rf .coverage .turbo htmlcov frontend/.next frontend/coverage frontend/storybook-static frontend/node_modules/.cache marketing/.next marketing/node_modules/.cache
 
 # -----------------------------------------------------------------------------
 # Development And Builds
 # -----------------------------------------------------------------------------
+
+# App development tasks stay separate from the standalone marketing site.
+# Use `backend-dev` with `frontend-dev` when working on the product app,
+# and use `marketing-dev` on its own when working only on the marketing site.
 
 # Start the backend development stack with Django, workers, and dependencies
 backend-dev:
     @{{backend_env}}
     @{{compose}} up django celery-worker celery-beat postgres redis qdrant nginx
 
-# Start the Next.js frontend development server
+# Start only the app frontend development server
 frontend-dev:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run dev
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run dev {{frontend_filter}}
+
+# Start the standalone marketing site development server
+marketing-dev:
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run dev {{marketing_filter}}
 
 # Start Storybook for local frontend component development
 storybook-dev:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run storybook
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run storybook {{frontend_filter}}
 
 # Build the static Storybook site for production
 storybook-build:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run build-storybook
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run build-storybook {{frontend_filter}}
 
 # Start the full local docker-compose development stack
 dev:
@@ -66,10 +102,23 @@ backend-build:
 
 # Build the frontend production bundle
 frontend-build:
-    @{{frontend_cd}} npm run build
+    @{{frontend_env}}
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run build {{frontend_filter}}
+
+# Build the marketing production bundle
+marketing-build:
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run build {{marketing_filter}}
+
+# Build all TypeScript workspace applications through Turbo
+typescript-build:
+    @{{frontend_env}}
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run build
 
 # Build both backend and frontend deliverables
-build: backend-build frontend-build
+build: backend-build typescript-build
 
 # -----------------------------------------------------------------------------
 # Quality Checks
@@ -78,7 +127,8 @@ build: backend-build frontend-build
 # Run the frontend TypeScript typecheck
 frontend-typecheck:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run typecheck
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run typecheck
 
 # Lint and validate the backend Python and template code
 backend-lint:
@@ -89,14 +139,24 @@ backend-lint:
     @{{backend_python}} -m pre_commit run --all-files check-yaml
     @{{host_backend_test_env}} {{backend_python}} manage.py check
 
-# Lint and typecheck the frontend codebase
+# Lint and typecheck the TypeScript workspace
 frontend-lint:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run typecheck
-    @{{frontend_cd}} npm run lint
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run typecheck lint {{frontend_filter}}
+
+# Lint and typecheck the standalone marketing site
+marketing-lint:
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run typecheck lint {{marketing_filter}}
+
+# Lint the shared workspace packages
+packages-lint:
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run typecheck lint {{packages_filter}}
 
 # Run all lint and validation tasks
-lint: backend-lint frontend-lint helm-lint
+lint: backend-lint frontend-lint marketing-lint packages-lint helm-lint
 
 # Auto-fix backend lint issues where supported, then re-run backend validation
 backend-lint-fix:
@@ -110,35 +170,61 @@ backend-lint-fix:
 # Auto-fix frontend lint issues where supported
 frontend-lint-fix:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run lint:fix
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run lint:fix {{frontend_filter}}
+
+# Auto-fix marketing lint issues where supported
+marketing-lint-fix:
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run lint:fix {{marketing_filter}}
+
+# Auto-fix shared package lint issues where supported
+packages-lint-fix:
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run lint:fix {{packages_filter}}
 
 # Run all available lint auto-fixes
-lint-fix: backend-lint-fix frontend-lint-fix
+lint-fix: backend-lint-fix frontend-lint-fix marketing-lint-fix packages-lint-fix
 
 # Format frontend source files with Prettier
 frontend-format:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run format
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run format
 
 # Check frontend formatting without modifying files
 frontend-format-check:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run format:check
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run format:check
 
 # Run the frontend test suite
 frontend-test:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run test:run
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run test:run {{frontend_filter}}
+
+# Run the marketing site test suite
+marketing-test:
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run test:run {{marketing_filter}}
+
+# Run the shared package test suite
+packages-test:
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run test:run {{packages_filter}}
 
 # Run Storybook browser tests for frontend components
 frontend-storybook-test:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run test:storybook
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run test:storybook {{frontend_filter}}
 
 # Run the complete frontend test suite including Storybook browser tests
 frontend-test-all:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run test:all
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run test:all
 
 # Run the backend test suite
 backend-test:
@@ -156,7 +242,7 @@ backend-test-coverage-html: backend-test-coverage
     @{{backend_python}} -m coverage html
 
 # Run the main backend and frontend test suites
-test: backend-test frontend-test
+test: backend-test frontend-test marketing-test packages-test
 
 # -----------------------------------------------------------------------------
 # Compose Runtime

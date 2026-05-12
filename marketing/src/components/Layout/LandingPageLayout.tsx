@@ -2,11 +2,8 @@
 // import "../LandingPage/layout.css";
 
 import { FC, ReactNode } from "react";
-import { useTheme, useThemeConfig } from "nextra-theme-docs";
-import Navbar from "../Navbar/Navbar";
 
 const LandingPageLayout: FC<{ children: ReactNode }> = ({ children }) => {
-  const theme = useTheme();
   return (
     <>
       <section className='relative w-full'>

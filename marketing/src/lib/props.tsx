@@ -1,4 +1,5 @@
 import SvgIcons from "@/components/SvgIcons";
+import Image from "next/image";
 import {
   ShieldCheckIcon,
   FunnelIcon,
@@ -30,7 +31,7 @@ export const HeroProps = {
     text: "Book a Demo",
     link: "/",
   },
-  extraContent: <img src='img/doc-bg.png' alt='' />,
+  extraContent: <Image src='/img/doc-bg.png' alt='' width={1200} height={675} className='h-auto w-full' />,
   extraDescription: "Powering the world's leading companies with AI automation.",
 };
 

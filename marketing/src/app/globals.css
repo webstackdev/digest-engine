@@ -1,9 +1,9 @@
 @import "tailwindcss";
-/* Optional: import Nextra theme styles */
 @import "nextra-theme-docs/style.css";
 @import "tw-animate-css";
+@import "@digestengine/ui/theme.css";
 
-@custom-variant dark (&:is(.dark *)); /* or nextra-theme-blog/style.css */
+@custom-variant dark (&:is(.dark *));
 
 @variant dark (&:where(.dark *));
 

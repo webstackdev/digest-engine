@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@digestengine/ui/theme.css";
 @import "./shadcn.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
