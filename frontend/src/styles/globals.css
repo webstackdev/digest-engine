@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "./theme.css";
+@import "./radix.css";
+
+/**
+ * Tailwind v4 requires you to explicitly point to shared component libraries
+ * so it can scan them for utility classes since 'content' is now automatic
+ */
+@source "../../../packages/ui/src/**/*.tsx";
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-sans;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(circle at top left, var(--color-spotlight-left), transparent 34%),
+      radial-gradient(circle at top right, var(--color-spotlight-right), transparent 30%),
+      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+      linear-gradient(180deg, var(--color-canvas-start) 0%, var(--color-canvas-end) 100%);
+    background-position: center, center, center, center, center;
+    background-size: auto, auto, 32px 32px, 32px 32px, auto;
+    min-height: 100vh;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 24%, transparent);
+    color: var(--foreground);
+  }
+
+  [data-slot="card"] .text-muted,
+  .rounded-panel.text-muted,
+  .rounded-panel .text-muted {
+    color: var(--color-muted-foreground);
+  }
+
+  .dark body {
+    background-image:
+      radial-gradient(circle at top left, var(--color-spotlight-left), transparent 36%),
+      radial-gradient(circle at top right, var(--color-spotlight-right), transparent 28%),
+      linear-gradient(var(--color-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-grid) 1px, transparent 1px),
+      linear-gradient(180deg, var(--color-canvas-start) 0%, var(--color-canvas-end) 100%);
+  }
+}

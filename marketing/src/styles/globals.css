@@ -1,0 +1,199 @@
+@import "tailwindcss";
+@import "nextra-theme-docs/style.css";
+@import "tw-animate-css";
+@import "./theme.css";
+
+/**
+ * Tailwind v4 requires you to explicitly point to shared component libraries
+ * so it can scan them for utility classes since 'content' is now automatic
+ */
+@source "../../../packages/ui/src/**/*.tsx";
+
+@theme inline {
+  @keyframes gradient {
+    to {
+      background-position: var(--bg-size, 300%) 0;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    background-color: #edf2f8;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    min-height: 100vh;
+    background-color: #edf2f8;
+    background-image:
+      linear-gradient(rgba(121, 143, 173, 0.46) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(121, 143, 173, 0.46) 1px, transparent 1px);
+    background-position: 0 0, 0 0;
+    background-size: 48px 68px, 48px 68px;
+    background-repeat: repeat, repeat;
+    font-size: 16px;
+  }
+}
+
+@theme inline {
+  --animate-meteor: meteor 5s linear infinite;
+  --animate-shine: shine var(--duration) infinite linear;
+
+  @keyframes shine {
+    0% {
+      background-position: 0% 0%;
+    }
+    50% {
+      background-position: 100% 100%;
+    }
+    to {
+      background-position: 0% 0%;
+    }
+  }
+
+  @keyframes meteor {
+    0% {
+      transform: rotate(var(--angle)) translateX(0);
+      opacity: 1;
+    }
+    70% {
+      opacity: 1;
+    }
+    100% {
+      transform: rotate(var(--angle)) translateX(-500px);
+      opacity: 0;
+    }
+  }
+}
+
+button {
+  cursor: pointer;
+}
+
+body {
+  background-color: var(--x-color-nextra-bg);
+}
+
+p {
+  font-size: 1rem;
+  color: var(--font-secondary);
+  line-height: 1.5;
+  font-family: var(--font-geist-sans);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--font-primary);
+}
+
+h5,
+h6 {
+  color: var(--font-secondary);
+}
+a {
+  text-decoration: none;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--brand-fill-primary) 22%, white);
+  color: var(--font-primary);
+}
+
+.marketing-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.marketing-panel {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(244, 246, 248, 0.82));
+  box-shadow:
+    0 26px 60px rgba(62, 77, 107, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+.marketing-nav-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.marketing-nav-shell {
+  pointer-events: none;
+}
+
+.marketing-nav {
+  pointer-events: auto;
+}
+
+.nextra-body-typesetting-article {
+  max-width: none !important;
+}
+
+.nextra-content {
+  width: 100%;
+}
+
+.nextra-body-typesetting-article > * {
+  max-width: none !important;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 4px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+.sub-heading {
+  font-size: 0.9rem;
+  color: var(--font-hint);
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  /* background: var(--btn-primary); */
+  background: var(--bg-scroll-bar);
+
+  border-radius: 30px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: var(--font-secondary);
+}
+
+@media only screen and (max-width: 435px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: 1.8rem;
+  }
+  h4 {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .marketing-nav-wrap {
+    position: static;
+  }
+
+  .marketing-shell {
+    gap: 1.25rem;
+  }
+}

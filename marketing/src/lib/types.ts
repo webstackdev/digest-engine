@@ -9,6 +9,8 @@ export interface PricingPlan {
 }
 
 export interface IPricingProps {
+  title: string;
+  description: string;
   annualDiscount: number;
   plans: PricingPlan[];
 }

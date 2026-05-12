@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+@source "./";
+
+/**
+ * Shared brand tokens for every Tailwind consumer in the workspace.
+ *
+ * Use the raw palette tokens from `@theme` for component-level utility classes such as
+ * `bg-brand-primary-500`, `text-brand-sage-700`, or `border-brand-burnt-500`.
+ * Use the semantic CSS variables below from app-level globals for themed surfaces,
+ * foregrounds, borders, and focus states.
+ *
+ * Do not redefine palette values in app-local globals. Alias local semantic names to the
+ * shared `--brand-*` variables instead so light and dark stay in sync.
+ * Dark mode intentionally reuses the same palette with the scale reversed for surfaces,
+ * fills, and text contrast.
+ */
+
+@theme {
+  /* Brand Primary: Slate Blue */
+  --color-brand-primary-50: #f4f6f8;
+  --color-brand-primary-100: #e9edf1;
+  --color-brand-primary-200: #cfd8e3;
+  --color-brand-primary-300: #8fa2c1;
+  --color-brand-primary-400: #697c9f;
+  --color-brand-primary-500: #3e4d6b;
+  --color-brand-primary-600: #34425b;
+  --color-brand-primary-700: #2d384d;
+  --color-brand-primary-800: #232c3d;
+  --color-brand-primary-900: #1b222e;
+
+  /* Brand Secondary: Sage Green */
+  --color-brand-sage-50: #f3f6f4;
+  --color-brand-sage-100: #e7edea;
+  --color-brand-sage-200: #d0ddd4;
+  --color-brand-sage-300: #b2c9b8;
+  --color-brand-sage-400: #9ab4a1;
+  --color-brand-sage-500: #86a68d;
+  --color-brand-sage-600: #738d79;
+  --color-brand-sage-700: #5f7a65;
+  --color-brand-sage-800: #4c6152;
+  --color-brand-sage-900: #3d4f41;
+
+  /* Brand Accent: Burnt Orange */
+  --color-brand-burnt-50: #fcf4f1;
+  --color-brand-burnt-100: #f7e6df;
+  --color-brand-burnt-200: #efcbbb;
+  --color-brand-burnt-300: #e2a38d;
+  --color-brand-burnt-400: #d58369;
+  --color-brand-burnt-500: #c66b52;
+  --color-brand-burnt-600: #ae563f;
+  --color-brand-burnt-700: #8f4332;
+  --color-brand-burnt-800: #72382c;
+  --color-brand-burnt-900: #5d3027;
+
+  /* Shared Fonts */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui;
+}
+
+:root {
+  --brand-bg-canvas: var(--color-brand-primary-50);
+  --brand-bg-surface: #ffffff;
+  --brand-bg-subtle: var(--color-brand-primary-100);
+  --brand-selected: color-mix(in srgb, var(--color-brand-primary-100) 78%, white);
+  --brand-text-strong: var(--color-brand-primary-900);
+  --brand-text: var(--color-brand-primary-700);
+  --brand-text-soft: color-mix(in srgb, var(--color-brand-primary-700) 68%, white);
+  --brand-fill-primary: var(--color-brand-primary-500);
+  --brand-fill-primary-strong: var(--color-brand-primary-700);
+  --brand-fill-primary-contrast: var(--color-brand-primary-50);
+  --brand-fill-secondary: var(--color-brand-sage-500);
+  --brand-fill-secondary-strong: var(--color-brand-sage-700);
+  --brand-fill-secondary-contrast: var(--color-brand-primary-50);
+  --brand-fill-accent: var(--color-brand-burnt-500);
+  --brand-fill-accent-strong: var(--color-brand-burnt-700);
+  --brand-fill-accent-contrast: var(--color-brand-primary-50);
+  --brand-border: color-mix(in srgb, var(--color-brand-primary-300) 42%, white);
+  --brand-input: color-mix(in srgb, var(--color-brand-primary-300) 28%, white);
+  --brand-ring: color-mix(in srgb, var(--color-brand-primary-500) 76%, white);
+  --brand-scrollbar: color-mix(in srgb, var(--color-brand-primary-300) 64%, var(--color-brand-sage-300));
+  --brand-canvas-start: color-mix(in srgb, var(--color-brand-primary-50) 82%, white);
+  --brand-canvas-end: var(--color-brand-primary-100);
+  --brand-grid: color-mix(in srgb, var(--color-brand-primary-500) 8%, transparent);
+  --brand-spotlight-left: color-mix(in srgb, var(--color-brand-primary-300) 26%, transparent);
+  --brand-spotlight-right: color-mix(in srgb, var(--color-brand-sage-300) 20%, transparent);
+  --brand-chart-1: var(--color-brand-primary-500);
+  --brand-chart-2: var(--color-brand-primary-300);
+  --brand-chart-3: var(--color-brand-sage-500);
+  --brand-chart-4: var(--color-brand-sage-300);
+  --brand-chart-5: var(--color-brand-burnt-500);
+}
+
+:where(.dark, [data-theme="dark"]) {
+  --brand-bg-canvas: var(--color-brand-primary-900);
+  --brand-bg-surface: var(--color-brand-primary-800);
+  --brand-bg-subtle: var(--color-brand-primary-700);
+  --brand-selected: color-mix(in srgb, var(--color-brand-primary-800) 74%, black);
+  --brand-text-strong: var(--color-brand-primary-50);
+  --brand-text: var(--color-brand-primary-100);
+  --brand-text-soft: var(--color-brand-primary-200);
+  --brand-fill-primary: var(--color-brand-primary-300);
+  --brand-fill-primary-strong: var(--color-brand-primary-100);
+  --brand-fill-primary-contrast: var(--color-brand-primary-900);
+  --brand-fill-secondary: var(--color-brand-sage-300);
+  --brand-fill-secondary-strong: var(--color-brand-sage-100);
+  --brand-fill-secondary-contrast: var(--color-brand-primary-900);
+  --brand-fill-accent: var(--color-brand-burnt-300);
+  --brand-fill-accent-strong: var(--color-brand-burnt-100);
+  --brand-fill-accent-contrast: var(--color-brand-primary-900);
+  --brand-border: color-mix(in srgb, var(--color-brand-primary-500) 38%, black);
+  --brand-input: color-mix(in srgb, var(--color-brand-primary-500) 52%, black);
+  --brand-ring: var(--color-brand-primary-300);
+  --brand-scrollbar: color-mix(in srgb, var(--color-brand-primary-500) 62%, var(--color-brand-sage-500));
+  --brand-canvas-start: var(--color-brand-primary-800);
+  --brand-canvas-end: color-mix(in srgb, var(--color-brand-primary-900) 84%, black);
+  --brand-grid: color-mix(in srgb, var(--color-brand-primary-200) 10%, transparent);
+  --brand-spotlight-left: color-mix(in srgb, var(--color-brand-primary-300) 24%, transparent);
+  --brand-spotlight-right: color-mix(in srgb, var(--color-brand-sage-300) 18%, transparent);
+  --brand-chart-1: var(--color-brand-primary-300);
+  --brand-chart-2: var(--color-brand-primary-100);
+  --brand-chart-3: var(--color-brand-sage-300);
+  --brand-chart-4: var(--color-brand-sage-100);
+  --brand-chart-5: var(--color-brand-burnt-300);
+}

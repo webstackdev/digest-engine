@@ -1,34 +1,23 @@
-import { FlickeringGrid } from "./flickering-grid";
 import React, { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export const PageSection: React.FC<{ name?: string; description?: string; isLastSection?: boolean; children: ReactNode }> = ({
   name,
   description,
-  isLastSection,
   children,
 }) => {
   return (
-    <div className={cn("w-full border-x", isLastSection && "border-b")}>
+    <section className={cn("space-y-6 sm:space-y-8")}>
       {name && description && (
-        <div className='relative w-full h-[200px] overflow-hidden border-b'>
-          <FlickeringGrid
-            className='absolute inset-0 w-full h-full z-0 [mask-image:radial-gradient(450px_circle_at_center,white,transparent)]'
-            squareSize={4}
-            gridGap={6}
-            color='#9b9b9bff'
-            maxOpacity={0.2}
-            flickerChance={0.1}
-            height={200}
-            width={1400}
-          />
-          <div className='absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-6'>
-            <h2 className='text-3xl font-bold text-foreground mb-2'>{name}</h2>
-            <p className='text-muted-foreground max-w-2xl'>{description}</p>
-          </div>
+        <div className='mx-auto flex max-w-3xl flex-col items-center gap-3 px-4 text-center sm:px-6'>
+          <span className='rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-(--font-secondary) shadow-[0_12px_26px_rgba(62,77,107,0.08)] backdrop-blur'>
+            Overview
+          </span>
+          <h2 className='text-3xl font-semibold tracking-tight text-foreground sm:text-4xl'>{name}</h2>
+          <p className='max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg'>{description}</p>
         </div>
       )}
       <div>{children}</div>
-    </div>
+    </section>
   );
 };
