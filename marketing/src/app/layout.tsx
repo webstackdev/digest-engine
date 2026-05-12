@@ -1,9 +1,17 @@
-import { Footer, Layout, Navbar } from "nextra-theme-docs";
+import { Footer, Navbar } from "nextra-theme-docs";
+// @ts-expect-error nextra-theme-docs 4.6.1 does not export these provider internals publicly.
+import { ThemeConfigProvider, ConfigProvider } from "../../node_modules/nextra-theme-docs/dist/stores/index.js";
+// @ts-expect-error nextra-theme-docs 4.6.1 does not export this component publicly.
+import { MobileNav } from "../../node_modules/nextra-theme-docs/dist/components/sidebar.js";
+// @ts-expect-error nextra-theme-docs 4.6.1 does not export this schema publicly.
+import { LayoutPropsSchema } from "../../node_modules/nextra-theme-docs/dist/schemas.js";
 import { Head } from "nextra/components";
+import { SkipNavLink } from "nextra/components";
 import { getPageMap } from "nextra/page-map";
 import "../app/globals.css";
 import Image from "next/image";
 import { Metadata } from "next";
+import type { ReactNode } from "react";
 import { brand } from "@/lib/props";
 
 export const metadata: Metadata = {
@@ -19,6 +27,43 @@ const footer = (
     </div>
   </Footer>
 );
+
+type DocsLayoutProps = {
+  children: ReactNode;
+  pageMap: Awaited<ReturnType<typeof getPageMap>>;
+  docsRepositoryBase: string;
+  darkMode?: boolean;
+  footer?: ReactNode;
+  navbar?: ReactNode;
+};
+
+function DocsLayout({ children, ...themeConfig }: DocsLayoutProps) {
+  const parsed = LayoutPropsSchema.safeParse({ children, ...themeConfig });
+
+  if (!parsed.success) {
+    throw new Error(parsed.error.message);
+  }
+
+  const {
+    banner,
+    footer,
+    navbar,
+    pageMap,
+    children: layoutChildren,
+    ...rest
+  } = parsed.data;
+
+  return (
+    <ThemeConfigProvider value={rest}>
+      <SkipNavLink />
+      {banner}
+      <ConfigProvider pageMap={pageMap} navbar={navbar} footer={footer}>
+        <MobileNav />
+        {layoutChildren}
+      </ConfigProvider>
+    </ThemeConfigProvider>
+  );
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const pageMap = await getPageMap();
@@ -38,8 +83,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         ></script>
       </Head>
       <body>
-        <Layout
+        <DocsLayout
           pageMap={pageMap}
+          darkMode={false}
           docsRepositoryBase='https://github.com/shuding/nextra/tree/main/docs'
           footer={footer}
           navbar={
@@ -56,7 +102,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }
         >
           {children}
-        </Layout>
+        </DocsLayout>
       </body>
     </html>
   );

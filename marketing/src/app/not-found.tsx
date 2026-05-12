@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function NotFound() {
   return (
     <main className='mx-auto flex min-h-[50vh] max-w-3xl flex-col items-center justify-center gap-4 px-6 py-16 text-center'>
@@ -6,12 +8,12 @@ export default function NotFound() {
       <p className='max-w-xl text-base text-(--font-secondary)'>
         The page you requested does not exist or has moved. Use the navigation to return to the docs or homepage.
       </p>
-      <a
+      <Link
         href='/'
         className='rounded-full bg-(--bg-secondary) px-5 py-3 text-sm font-medium text-(--font-primary) transition-colors hover:bg-(--bg-selected-menu)'
       >
         Back to home
-      </a>
+      </Link>
     </main>
   );
 }
