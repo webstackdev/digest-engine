@@ -1,20 +1,23 @@
 /**
- * Typography Base Styles
- * Modernized for Tailwind v4 compatibility using @layer base
+ * Shared typography foundations for the frontend and marketing apps.
+ *
+ * This layer should stay close to the product direction in the comp: calm,
+ * modern, and sans-led, with Outfit handling display headings and Public Sans
+ * handling body copy.
  */
 @theme {
-  /* Font Sizes */
+  /* Type scale */
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
   --font-size-base: 1rem;
   --font-size-lg: 1.125rem;
   --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.375rem;
-  --font-size-3xl: 1.5rem;
-  --font-size-4xl: 2rem;
-  --font-size-5xl: 2.25rem;
-  --font-size-6xl: 2.5rem;
-  --font-size-7xl: 3rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  --font-size-5xl: 2.75rem;
+  --font-size-6xl: 3.5rem;
+  --font-size-7xl: 4.5rem;
 
   /* Font Weights */
   --font-weight-normal: 400;
@@ -23,107 +26,80 @@
   --font-weight-bold: 700;
 
   /* Line Heights */
-  --line-height-tight: 1.25;
-  --line-height-snug: 1.4;
-  --line-height-normal: 1.625;
+  --line-height-tight: 1.15;
+  --line-height-snug: 1.32;
+  --line-height-normal: 1.6;
 
   /* Letter Spacing */
-  --letter-spacing-tighter: -0.1em;
-  --letter-spacing-tight: 0.025em;
-  --letter-spacing-normal: 0.05em;
-  --letter-spacing-wide: 0.1em;
-  --letter-spacing-wider: 0.2em;
+  --letter-spacing-tighter: -0.04em;
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.08em;
+  --letter-spacing-wider: 0.14em;
 }
 
-/* Mobile-first responsive typography */
+/* Desktop scale adjustments */
 @media (width >= 48em) {
   :root {
-    --font-size-xl: 1.5rem;
-    --font-size-2xl: 2rem;
-    --font-size-3xl: 2.5rem;
+    --font-size-xl: 1.375rem;
+    --font-size-2xl: 1.75rem;
+    --font-size-3xl: 2.25rem;
     --font-size-4xl: 3rem;
-    --font-size-5xl: 3.25rem;
-    --font-size-6xl: 3.5rem;
-    --font-size-7xl: 4rem;
+    --font-size-5xl: 3.75rem;
+    --font-size-6xl: 4.5rem;
+    --font-size-7xl: 5.25rem;
   }
 }
 
 @layer base {
-  /**
-   * Typography for base elements
-   */
   body {
-    background-color: var(--color-page-base);
-    color: var(--color-content);
-
-    /** Create a new block formatting context on the <body> element */
-    display: flow-root;
     font-family: var(--font-sans);
     font-size: var(--font-size-base);
     line-height: var(--line-height-normal);
     min-height: 100vh;
-
-    /**
-     * Overflow must be hidden on both <html> and <body> to avoid triggering
-     * horizontal scrolling
-     */
     overflow-x: hidden;
-    transition: color 0.15s, background-color 0.15s;
   }
 
-  /** Reset font-style for address elements */
   address {
     font-style: normal;
   }
 
-  /**
-  * Appearance of selected DOM nodes
-  * (Custom selection styling)
-  */
   ::selection {
-    background: var(--color-primary-offset);
-    color: var(--color-content-inverse);
+    background: color-mix(in srgb, var(--color-primary) 20%, white);
+    color: var(--color-foreground, inherit);
   }
 
-  /** Default link styling (single source of truth) */
   a {
-    color: var(--color-content);
-    text-decoration-color: var(--color-primary);
+    color: inherit;
     text-decoration-line: underline;
-    text-decoration-style: dotted;
-    text-underline-offset: 4px;
+    text-decoration-color: color-mix(in srgb, currentColor 28%, transparent);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.14em;
+    transition: color 150ms ease, text-decoration-color 150ms ease;
   }
 
   a:hover,
   a:focus-visible {
-    color: var(--color-secondary);
+    text-decoration-color: currentColor;
   }
 
-  /** Tooltip-backed markdown abbreviations keep their dotted underline affordance. */
   abbr[data-tooltip] {
     text-decoration-line: underline;
     text-decoration-style: dotted;
     text-underline-offset: 4px;
   }
 
-  /** Ensure proper font weight for bold elements */
   b,
   strong {
     font-weight: var(--font-weight-bold);
   }
 
-  /** Paragraph text styling */
   p {
-    font-size: var(--font-size-lg);
-
-    /**
-    * Help prevent overflow of long words/names/URLs
-    * (Enhancement not in Tailwind Preflight)
-    */
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
     hyphens: manual;
   }
 
-  /** Blockquote styling */
   blockquote > p::before {
     content: open-quote;
   }
@@ -136,78 +112,90 @@
     font-style: normal;
   }
 
-  /** Code elements */
   code,
   kbd,
   pre,
   samp {
     font-family: var(--font-mono);
-    font-size: var(--font-size-base);
+    font-size: 0.95em;
   }
 
-  /** Headings */
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    /**
-    * Help prevent overflow of long words/names/URLs
-    * (Enhancement not in Tailwind Preflight)
-    */
+    color: inherit;
+    font-family: var(--font-heading);
+    font-weight: var(--font-weight-semibold);
     hyphens: none;
-    line-height: var(--line-height-tight);
+    letter-spacing: var(--letter-spacing-tight);
     overflow-wrap: break-word;
+    text-wrap: balance;
   }
 
   h1,
   h2,
-  h3,
-  h4 {
-    font-family: var(--font-serif);
-    font-weight: var(--font-weight-bold);
+  h3 {
+    line-height: var(--leading-display, 0.94);
     text-rendering: optimizelegibility;
+  }
+
+  h4,
+  h5,
+  h6 {
+    line-height: var(--line-height-snug);
   }
 
   h1,
   .h1 {
-    font-size: var(--font-size-3xl);
+    font-size: var(--font-size-4xl);
   }
 
   h2,
   .h2 {
-    font-size: var(--font-size-2xl);
+    font-size: var(--font-size-3xl);
   }
 
   h3,
   .h3 {
-    font-size: var(--font-size-xl);
+    font-size: var(--font-size-2xl);
   }
 
   h4,
   .h4 {
+    font-size: var(--font-size-xl);
+  }
+
+  h5,
+  .h5 {
     font-size: var(--font-size-lg);
+  }
+
+  h6,
+  .h6 {
+    font-size: var(--font-size-base);
+    letter-spacing: var(--letter-spacing-normal);
   }
 
   @media (width <= 26em) {
     h1,
     .h1 {
-      font-size: var(--font-size-2xl);
+      font-size: var(--font-size-3xl);
     }
 
     h2,
     .h2 {
-      font-size: var(--font-size-xl);
+      font-size: var(--font-size-2xl);
     }
 
     h3,
     .h3 {
-      font-size: var(--font-size-lg);
+      font-size: var(--font-size-xl);
     }
   }
 
-  /** Form elements inherit font */
   input,
   button,
   textarea,
@@ -221,28 +209,22 @@
     line-height: normal;
   }
 
-  /** Legend styling */
   legend {
-    font-size: var(--font-size-3xl);
+    font-family: var(--font-heading);
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-semibold);
     line-height: inherit;
   }
 
-  /**
-  * Help prevent overflow of long words/names/URLs
-  * (Enhancement not in Tailwind Preflight)
-  */
   li {
-    /** Allow hyphens */
     hyphens: manual;
     overflow-wrap: break-word;
   }
 
-  /** Optgroup font weight */
   optgroup {
     font-weight: var(--font-weight-normal);
   }
 
-  /** Sub and sup elements */
   sub,
   sup {
     font-size: 0.75em;

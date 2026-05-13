@@ -45,44 +45,6 @@
     visibility: visible !important;
   }
 
-  /* Container component: undo overflow-hidden, min-h-0, flex constraints */
-  #main-content {
-    display: block !important;
-    height: auto !important;
-    margin: 0 !important;
-    max-width: none !important;
-    min-height: unset !important;
-    overflow: visible !important;
-    padding: 0 !important;
-    position: static !important;
-    width: 100% !important;
-  }
-
-  /* Scroll viewport: undo flex/scroll containment */
-  #scroll-viewport {
-    display: block !important;
-    flex: none !important;
-    height: auto !important;
-    margin-top: 0 !important;
-    min-height: unset !important;
-    overflow: visible !important;
-  }
-
-  #main {
-    display: block !important;
-    height: auto !important;
-    margin: 0 !important;
-    max-width: none !important;
-    width: 100% !important;
-  }
-
-  #header {
-    margin: 0 !important;
-    max-width: none !important;
-    width: 100% !important;
-  }
-
-
   /* --------------------------------------------------------------------------
      Typography — widows, orphans, page breaks
      -------------------------------------------------------------------------- */
@@ -90,23 +52,6 @@
   p, blockquote, figcaption {
     orphans: 3;
     widows: 3;
-  }
-
-  .screen-table-figure-caption,
-  .print-table-caption .screen-table-caption-copy {
-    display: none !important;
-  }
-
-  .print-table-caption {
-    caption-side: bottom !important;
-    display: table-caption !important;
-    font-style: italic;
-    padding-top: 0.75rem !important;
-    text-align: center !important;
-  }
-
-  .print-table-caption .print-table-figure-copy {
-    display: block !important;
   }
 
   /* Keep headings attached to the content that follows them */
@@ -142,100 +87,6 @@
 
   li, [data-qr-code] {
     break-inside: avoid;
-  }
-
-  .callout {
-    box-decoration-break: slice;
-    break-inside: avoid;
-    display: block !important;
-    overflow: visible !important;
-  }
-
-  .callout__header {
-    break-after: avoid;
-  }
-
-  .callout__content {
-    break-before: avoid;
-  }
-
-  .callout__header + .callout__content {
-    margin-top: 0.75rem;
-  }
-
-  .service-card {
-    background-clip: padding-box;
-    background-color: var(--color-content-inverse) !important;
-    border: 1px solid var(--color-trim) !important;
-    border-radius: 1rem !important;
-    box-decoration-break: clone;
-    overflow: visible !important;
-  }
-
-  .service-card-body {
-    background-color: var(--color-content-inverse) !important;
-    padding-bottom: 2rem !important;
-  }
-
-  .services-grid {
-    background-color: var(--color-page-base) !important;
-    row-gap: 3rem !important;
-  }
-
-  /**
-   * Make sure Zebra List doesn't leave an empty container with borders
-   * when it breaks across lines
-   */
-  .print-zebra-list {
-    border: 0 !important;
-    border-radius: 0 !important;
-    overflow: visible !important;
-  }
-
-  .print-zebra-list > .print-zebra-list-item {
-    border: 1px solid var(--color-trim) !important;
-    border-radius: 0 !important;
-  }
-
-  .print-zebra-list > .print-zebra-list-item + .print-zebra-list-item {
-    margin-top: -1px;
-  }
-
-  /**
-   * Table wrappers use a shared rounded, bordered shell for screen layouts.
-   * In print, that shell can fragment across pages and leave an empty bordered
-   * area at the bottom of the page. Make the shell non-visual and let the
-   * table's own row/header borders carry the printed structure instead.
-   */
-  .print-table-shell {
-    background: transparent !important;
-    border: 0 !important;
-    border-radius: 0 !important;
-    overflow: visible !important;
-  }
-
-  .print-table-shell tr > :first-child {
-    border-left: 1px solid var(--color-trim) !important;
-  }
-
-  .print-table-shell tr > :last-child {
-    border-right: 1px solid var(--color-trim) !important;
-  }
-
-  .print-table-has-head thead > tr:first-child > * {
-    border-top: 1px solid var(--color-trim) !important;
-  }
-
-  .print-table-no-head tbody:first-child > tr:first-child > * {
-    border-top: 1px solid var(--color-trim) !important;
-  }
-
-  .print-table-shell tfoot:last-child > tr:last-child > * {
-    border-bottom: 1px solid var(--color-trim) !important;
-  }
-
-  .print-table-shell tbody:last-child > tr:last-child > * {
-    border-bottom: 1px solid var(--color-trim) !important;
   }
 
   /* --------------------------------------------------------------------------
@@ -274,63 +125,6 @@
   }
 
   /* --------------------------------------------------------------------------
-     Fix header position — remove fixed positioning and z-index
-     so it prints in flow with the rest of the content
-     -------------------------------------------------------------------------- */
-
-  .header-fixed {
-    position: static !important;
-  }
-
-  /* --------------------------------------------------------------------------
-     Tabbed code blocks — print only the first language tab
-     -------------------------------------------------------------------------- */
-
-  /* Hide all tab panels, then show only the first one */
-  code-tabs [role="tabpanel"] {
-    display: none !important;
-  }
-
-  .code-tabs-print-header + pre,
-  .code-tabs-print-header + [role="tabpanel"] {
-    break-before: avoid;
-  }
-
-  code-tabs [role="tabpanel"]:first-of-type {
-    display: block !important;
-  }
-
-  .code-tabs-print-header {
-    break-after: avoid;
-  }
-
-  /* Hide copy buttons inside code blocks */
-  code-tabs button {
-    display: none !important;
-  }
-
-  /* --------------------------------------------------------------------------
-     Article layout — clean up for print
-     -------------------------------------------------------------------------- */
-
-  article {
-    break-before: always;
-    max-width: none !important;
-    width: 100% !important;
-  }
-
-  /* Content grid becomes single-column when TOC is hidden */
-  #content {
-    display: block !important;
-  }
-
-  /* Hero image on article pages */
-  .print-hero-image {
-    break-inside: avoid;
-    margin-bottom: 1cm;
-  }
-
-  /* --------------------------------------------------------------------------
      QR code — visible only in print (default isHidden adds `hidden` class)
      -------------------------------------------------------------------------- */
 
@@ -345,36 +139,6 @@
      Backgrounds — override grey offset areas to paper-white
      -------------------------------------------------------------------------- */
 
-  html, body, #main-content, #scroll-viewport, #main, article {
+  html, body {
     background-color: #fff !important;
   }
-
-  /**
-   * Override header background to white for print, and remove the
-   * "offset" effect created by the pseudo-element
-   */
-  .site-header::after {
-    background-color: #fff !important;
-  }
-
-  /* --------------------------------------------------------------------------
-     Containers that rely on color contrast — add visible borders for print
-     -------------------------------------------------------------------------- */
-
-  .callout,
-  blockquote {
-    border-left: 3px solid var(--color-trim) !important;
-    padding-left: 1em;
-  }
-}
-
-/* ==========================================================================
-   Color Print Stylesheet - use case is primarily for PDF generation
-   ========================================================================== */
-
-@media print and (color) {
-  * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-}
