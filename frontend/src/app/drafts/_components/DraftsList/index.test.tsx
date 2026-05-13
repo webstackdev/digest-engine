@@ -51,7 +51,7 @@ describe("DraftsList", () => {
 
     expect(screen.getByText("AI Weekly: Delivery signals and more")).toBeInTheDocument()
     expect(screen.getByText("A quick editor-ready summary.")).toHaveClass(
-      "text-muted-foreground",
+      "text-content-offset",
     )
     expect(screen.getByTestId("status-badge")).toHaveTextContent("Ready")
     expect(screen.getByRole("link", { name: "Open draft" })).toHaveAttribute(

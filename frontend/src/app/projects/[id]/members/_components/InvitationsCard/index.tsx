@@ -32,14 +32,14 @@ export function InvitationsCard({
   redirectTarget,
 }: InvitationsCardProps) {
   return (
-    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Pending access</p>
-          <h3 className="m-0 font-display text-title-sm font-bold text-foreground">Invitations</h3>
+          <h3 className="m-0 font-display text-title-sm font-bold text-content-active">Invitations</h3>
         </div>
         {invitations.length === 0 ? (
-          <Alert className="rounded-panel border-border bg-muted">
+          <Alert className="rounded-3xl border-trim-offset bg-muted">
             <AlertDescription>No active or historical invitations yet.</AlertDescription>
           </Alert>
         ) : (
@@ -49,12 +49,12 @@ export function InvitationsCard({
 
               return (
                 <article
-                  className="grid gap-4 rounded-2xl border border-border bg-muted p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+                  className="grid gap-4 rounded-2xl border border-trim-offset bg-muted p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
                   key={invitation.id}
                 >
                   <div className="space-y-2">
                     <div>
-                      <p className="m-0 text-sm font-semibold text-foreground">{invitation.email}</p>
+                      <p className="m-0 text-sm font-semibold text-content-active">{invitation.email}</p>
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <Badge className="rounded-full px-3 py-1 text-sm" variant="outline">
                           {invitation.role}

@@ -12,4 +12,4 @@ export const ideaStatusOptions = [
   { value: "dismissed", label: "Dismissed" },
 ] as const
 
-export const selectTriggerClassName = "min-h-11 w-full rounded-2xl border-border bg-muted px-4 py-3 text-sm text-foreground"
+export const selectTriggerClassName = "min-h-11 w-full rounded-2xl border-trim-offset bg-muted px-4 py-3 text-sm text-content-active"

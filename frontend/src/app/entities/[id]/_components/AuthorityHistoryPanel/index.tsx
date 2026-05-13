@@ -36,12 +36,12 @@ export function AuthorityHistoryPanel({
     : 0
 
   return (
-    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Authority view</p>
-            <h3 className="m-0 font-display text-title-sm font-bold text-foreground">
+            <h3 className="m-0 font-display text-title-sm font-bold text-content-active">
               Current score and history
             </h3>
           </div>
@@ -51,10 +51,10 @@ export function AuthorityHistoryPanel({
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
-          <div className="space-y-4 rounded-2xl border border-border bg-muted p-4">
+          <div className="space-y-4 rounded-2xl border border-trim-offset bg-muted p-4">
             <div className="space-y-1">
               <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">Authority score</p>
-              <p className="m-0 font-display text-4xl font-bold text-foreground">
+              <p className="m-0 font-display text-4xl font-bold text-content-active">
                 {formatPercentScore(entity.authority_score)}
               </p>
               <p className="m-0 text-sm leading-6 text-muted">
@@ -72,7 +72,7 @@ export function AuthorityHistoryPanel({
                 </div>
                 <div
                   aria-label="Authority component mix"
-                  className="overflow-hidden rounded-full border border-border bg-card"
+                  className="overflow-hidden rounded-full border border-trim-offset bg-page-base"
                   role="img"
                 >
                   <svg className="block h-4 w-full" preserveAspectRatio="none" viewBox="0 0 100 8">
@@ -132,7 +132,7 @@ export function AuthorityHistoryPanel({
             )}
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-border bg-muted p-4">
+          <div className="space-y-4 rounded-2xl border border-trim-offset bg-muted p-4">
             <div className="flex items-center justify-between gap-3">
               <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                 Latest components
@@ -188,7 +188,7 @@ export function AuthorityHistoryPanel({
         {authorityHistory.length > 0 ? (
           <ul className="m-0 grid list-none gap-3 p-0">
             {authorityHistory.slice(0, 5).map((snapshot) => (
-              <li className="rounded-2xl border border-border bg-muted p-4" key={snapshot.id}>
+              <li className="rounded-2xl border border-trim-offset bg-muted p-4" key={snapshot.id}>
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div className="flex flex-wrap gap-2 text-sm text-muted">
                     <span>{formatDate(snapshot.computed_at)}</span>
@@ -290,9 +290,9 @@ function formatWeightLabel(label: string) {
 
 function AuthorityComponentCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className="rounded-2xl border border-trim-offset bg-page-base p-4">
       <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">{label}</p>
-      <p className="mb-0 mt-2 text-2xl font-bold text-foreground">
+      <p className="mb-0 mt-2 text-2xl font-bold text-content-active">
         {formatPercentScore(value)}
       </p>
     </div>

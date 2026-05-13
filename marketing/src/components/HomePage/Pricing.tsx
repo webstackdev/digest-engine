@@ -15,13 +15,13 @@ const Pricing: React.FC<IPricingProps> = ({
   return (
     <PageSection id="pricing" classes="px-6 py-8 sm:px-8 sm:py-10">
       <div className="max-w-2xl">
-        <p className="text-2xs font-semibold uppercase tracking-section text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-widest text-content-offset">
           Pricing
         </p>
-        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-content-active sm:text-3xl">
           {title}
         </h2>
-        <p className="mt-3 text-base leading-7 text-muted-foreground">
+        <p className="mt-3 text-base leading-7 text-content-offset">
           {description}
         </p>
       </div>
@@ -30,19 +30,19 @@ const Pricing: React.FC<IPricingProps> = ({
         <div className="flex w-full justify-center px-4">
           <div
             className={cn(
-              "relative flex items-center gap-3 rounded-full border border-border bg-card px-2 py-2 shadow-soft backdrop-blur-[18px]",
+              "relative flex items-center gap-3 rounded-full border border-trim-offset bg-page-base px-2 py-2 shadow-soft backdrop-blur-[18px]",
             )}
           >
             <button
               type="button"
               className={cn(
                 "relative flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-colors",
-                isYearly ? "text-primary" : "text-muted-foreground",
+                isYearly ? "text-primary" : "text-content-offset",
               )}
               onClick={() => setIsYearly(true)}
             >
               {isYearly && (
-                <span className="absolute inset-0 -z-10 rounded-full border border-border bg-secondary shadow-soft backdrop-blur-[18px]" />
+                <span className="absolute inset-0 -z-10 rounded-full border border-trim-offset bg-secondary shadow-soft backdrop-blur-[18px]" />
               )}
               Yearly
               <span className="text-primary">
@@ -53,12 +53,12 @@ const Pricing: React.FC<IPricingProps> = ({
               type="button"
               className={cn(
                 "relative flex items-center rounded-full px-5 py-2 text-sm font-semibold transition-colors",
-                !isYearly ? "text-foreground" : "text-muted-foreground",
+                !isYearly ? "text-content-active" : "text-content-offset",
               )}
               onClick={() => setIsYearly(false)}
             >
               {!isYearly && (
-                <span className="absolute inset-0 -z-10 rounded-full border border-border bg-secondary shadow-soft backdrop-blur-[18px]" />
+                <span className="absolute inset-0 -z-10 rounded-full border border-trim-offset bg-secondary shadow-soft backdrop-blur-[18px]" />
               )}
               Monthly
             </button>
@@ -69,22 +69,22 @@ const Pricing: React.FC<IPricingProps> = ({
           {plans.map((plan) => {
             const buttonClass = plan.isPopular
               ? "bg-primary text-primary-foreground hover:bg-primary"
-              : "border-border bg-secondary text-primary shadow-soft backdrop-blur-[18px] hover:bg-card";
+              : "border-trim-offset bg-secondary text-primary shadow-soft backdrop-blur-[18px] hover:bg-page-base";
 
             return (
               <div
                 key={plan.name}
                 className={cn(
-                  "flex h-full flex-col gap-8 rounded-pricing border p-7 transition-transform duration-200 hover:-translate-y-1 sm:p-8",
+                  "flex h-full flex-col gap-8 rounded-4xl border p-7 transition-transform duration-200 hover:-translate-y-1 sm:p-8",
                   plan.isPopular
-                    ? "border-primary bg-card shadow-accent"
-                    : "border-border bg-card shadow-card",
+                    ? "border-primary bg-page-base shadow-accent"
+                    : "border-trim-offset bg-page-base shadow-card",
                 )}
               >
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold uppercase tracking-overline text-muted-foreground">
+                      <p className="text-sm font-semibold uppercase tracking-widest text-content-offset">
                         {plan.name}
                       </p>
                       {plan.isPopular && (
@@ -94,21 +94,21 @@ const Pricing: React.FC<IPricingProps> = ({
                       )}
                     </div>
                     <div>
-                      <h3 className="text-4xl font-semibold tracking-tight text-foreground">
+                      <h3 className="text-4xl font-semibold tracking-tight text-content-active">
                         $
                         {isYearly
                           ? Math.round(
                               plan.monthlyPrice * (1 - annualDiscount / 100),
                             )
                           : plan.monthlyPrice}
-                        <span className="text-base font-medium text-muted-foreground">
+                        <span className="text-base font-medium text-content-offset">
                           /mo
                         </span>
                       </h3>
                     </div>
                   </div>
 
-                  <p className="text-sm leading-7 text-muted-foreground">
+                  <p className="text-sm leading-7 text-content-offset">
                     {plan.description}
                   </p>
 
@@ -129,8 +129,8 @@ const Pricing: React.FC<IPricingProps> = ({
                                 clipRule="evenodd"
                               />
                             </svg>
-                            <span className="text-muted-foreground">
-                              <span className="font-semibold text-foreground">
+                            <span className="text-content-offset">
+                              <span className="font-semibold text-content-active">
                                 {value}
                               </span>{" "}
                               {rest.join(" ")}

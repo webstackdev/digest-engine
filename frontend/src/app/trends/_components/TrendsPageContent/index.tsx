@@ -55,12 +55,12 @@ export function TrendsPageContent({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
+        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-panel border-border bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-muted">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}
@@ -82,7 +82,7 @@ export function TrendsPageContent({
       <section className="grid gap-4 xl:grid-cols-[minmax(300px,0.95fr)_minmax(0,1.65fr)]">
         <div className="space-y-4">
           {filteredClusterDetails.length === 0 ? (
-            <Alert className="rounded-panel border-border bg-muted">
+            <Alert className="rounded-3xl border-trim-offset bg-muted">
               <AlertDescription>No topic clusters matched the current filters.</AlertDescription>
             </Alert>
           ) : null}

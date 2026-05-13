@@ -22,15 +22,15 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
   ].filter((label): label is string => label !== null)
 
   return (
-    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-5 pt-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-3">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Tracked entity</p>
-            <h2 className="m-0 font-display text-title-lg font-bold text-foreground">
+            <h2 className="m-0 font-display text-title-lg font-bold text-content-active">
               {entity.name}
             </h2>
-            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-2 text-sm text-content-offset">
               <span>Created {formatDate(entity.created_at)}</span>
               <span>
                 {entity.mention_count} mention{entity.mention_count === 1 ? "" : "s"}
@@ -42,23 +42,23 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-3 rounded-2xl border border-border bg-muted p-4">
-            <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="space-y-3 rounded-2xl border border-trim-offset bg-muted p-4">
+            <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-content-offset">
               Description
             </h3>
-            <p className="m-0 text-sm leading-7 text-foreground">
+            <p className="m-0 text-sm leading-7 text-content-active">
               {entity.description || "No description is set for this entity yet."}
             </p>
           </div>
-          <div className="space-y-3 rounded-2xl border border-border bg-muted p-4">
-            <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div className="space-y-3 rounded-2xl border border-trim-offset bg-muted p-4">
+            <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-content-offset">
               Identity links
             </h3>
-            <ul className="m-0 grid list-none gap-2 p-0 text-sm text-muted-foreground">
+            <ul className="m-0 grid list-none gap-2 p-0 text-sm text-content-offset">
               {identityLinks.map((link) => (
                 <li key={link.label}>
                   <a
-                    className="text-foreground transition hover:text-primary"
+                    className="text-content-active transition hover:text-primary"
                     href={link.href}
                     rel="noreferrer"
                     target="_blank"

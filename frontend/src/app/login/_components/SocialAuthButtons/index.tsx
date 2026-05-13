@@ -31,7 +31,7 @@ export default function SocialAuthButtons({ callbackUrl }: SocialAuthButtonsProp
       </Button>
 
       <Button
-        className="min-h-11 w-full justify-center gap-3 rounded-2xl border-border/20 bg-muted px-4 py-3 text-foreground hover:bg-muted"
+        className="min-h-11 w-full justify-center gap-3 rounded-2xl border-trim-offset/20 bg-muted px-4 py-3 text-content-active hover:bg-muted"
         onClick={() => signIn("google", { callbackUrl })}
         size="lg"
         type="button"

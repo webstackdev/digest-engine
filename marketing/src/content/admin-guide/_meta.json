@@ -1,0 +1,18 @@
+{
+  "overview": "Overview",
+  "installation": "Installation Guide",
+  "configuration": "Initial Configuration",
+  "--- Setup ---": {
+    "type": "separator",
+    "title": "Access & Infrastructure"
+  },
+  "users-and-access": "Users & Access Management",
+  "sources-and-allowlist": "Sources & Allowlists",
+  "--- Maintenance ---": {
+    "type": "separator",
+    "title": "Operations & Support"
+  },
+  "operations": "Daily Operations",
+  "backups-and-retention": "Backups & Data Retention",
+  "troubleshooting": "Troubleshooting & Logs"
+}

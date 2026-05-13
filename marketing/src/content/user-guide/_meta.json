@@ -1,0 +1,22 @@
+{
+  "--- Onboarding ---": {
+    "type": "separator",
+    "title": "Getting Started"
+  },
+  "getting-started-saas": "Cloud Setup (SaaS)",
+  "getting-started-selfhost": "Self-Hosted Deployment",
+  "--- Workspace ---": {
+    "type": "separator",
+    "title": "Content Management"
+  },
+  "projects-and-content": "Projects & Content Library",
+  "newsletter-intake": "Newsletter Intake Channels",
+  "newsletter-drafts": "Managing Newsletter Drafts",
+  "--- Intelligence ---": {
+    "type": "separator",
+    "title": "Curation & Analytics"
+  },
+  "entities-and-authority": "Entities & Authority Scoring",
+  "themes-and-trends": "Themes & Trend Discovery",
+  "feedback-and-tuning": "Feedback Loop & Tuning"
+}

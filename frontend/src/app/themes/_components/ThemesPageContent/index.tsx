@@ -86,12 +86,12 @@ export function ThemesPageContent({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
+        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-panel border-border bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-muted">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}
@@ -107,7 +107,7 @@ export function ThemesPageContent({
 
       <section className="space-y-4">
         {filteredThemes.length === 0 ? (
-          <Alert className="rounded-panel border-border bg-muted">
+          <Alert className="rounded-3xl border-trim-offset bg-muted">
             <AlertDescription>
               No theme suggestions matched the current filter. If the queue stays empty, check the cluster velocity thresholds and nightly theme-generation caps.
             </AlertDescription>

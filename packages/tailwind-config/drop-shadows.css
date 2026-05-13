@@ -1,0 +1,42 @@
+/**
+ * Inherit the hue of brand colors and blends it with transparency to
+ * create a realistic, glowing depth effect that matches the UI palette.
+ */
+@theme inline {
+  --shadow-soft: var(--shadow-soft-value);
+  --shadow-card: var(--shadow-card-value);
+  --shadow-card-strong: var(--shadow-card-strong-value);
+  --shadow-panel: var(--shadow-panel-value);
+  --shadow-accent: var(--shadow-accent-value);
+  --shadow-inset: var(--shadow-inset-value);
+}
+
+ :root {
+  --shadow-soft-value: 0 14px 34px
+    color-mix(in srgb, var(--color-primary-700) 10%, transparent);
+  --shadow-card-value: 0 22px 44px
+    color-mix(in srgb, var(--color-primary-700) 8%, transparent);
+  --shadow-card-strong-value: 0 34px 70px
+    color-mix(in srgb, var(--color-primary-700) 14%, transparent);
+  --shadow-panel-value:
+    0 26px 60px color-mix(in srgb, var(--color-primary-700) 12%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 72%, transparent);
+  --shadow-accent-value: 0 18px 38px
+    color-mix(in srgb, var(--color-burnt-450) 28%, transparent);
+  --shadow-inset-value: inset 0 0 0 1px
+    color-mix(in srgb, white 80%, transparent);
+}
+
+:where(.dark, [data-theme="dark"]) {
+  --shadow-soft-value: 0 14px 34px color-mix(in srgb, black 32%, transparent);
+  --shadow-card-value: 0 22px 44px color-mix(in srgb, black 36%, transparent);
+  --shadow-card-strong-value: 0 34px 70px
+    color-mix(in srgb, black 40%, transparent);
+  --shadow-panel-value:
+    0 26px 60px color-mix(in srgb, black 34%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--color-primary-50) 8%, transparent);
+  --shadow-accent-value: 0 18px 38px
+    color-mix(in srgb, var(--color-burnt-450) 30%, transparent);
+  --shadow-inset-value: inset 0 0 0 1px
+    color-mix(in srgb, var(--color-primary-50) 12%, transparent);
+}

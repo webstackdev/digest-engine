@@ -32,12 +32,12 @@ export function CandidateClusterCard({
   selectedProjectId,
 }: CandidateClusterCardProps) {
   return (
-    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="pt-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Cluster review</p>
-            <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
+            <h2 className="m-0 font-display text-title-sm font-bold text-content-active">
               Cluster of {cluster.members.length} candidate
               {cluster.members.length === 1 ? "" : "s"}
             </h2>
@@ -70,10 +70,10 @@ export function CandidateClusterCard({
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.95fr)]">
           <div className="space-y-3">
             {cluster.members.map((candidate) => (
-              <article className="rounded-2xl border border-border bg-muted p-4" key={candidate.id}>
+              <article className="rounded-2xl border border-trim-offset bg-muted p-4" key={candidate.id}>
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <h3 className="m-0 font-semibold text-foreground">{candidate.name}</h3>
+                    <h3 className="m-0 font-semibold text-content-active">{candidate.name}</h3>
                     <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
                       <span>{formatDisplayLabel(candidate.suggested_type)}</span>
                       <span>{candidate.occurrence_count} occurrences</span>
@@ -94,7 +94,7 @@ export function CandidateClusterCard({
             ))}
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-border bg-muted p-4">
+          <div className="space-y-3 rounded-2xl border border-trim-offset bg-muted p-4">
             <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
               Bulk cluster actions
             </p>

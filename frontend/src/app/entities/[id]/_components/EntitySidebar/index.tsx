@@ -17,7 +17,7 @@ export function EntitySidebar({
 }: EntitySidebarProps) {
   return (
     <div className="space-y-4">
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-4 pt-4">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Navigation</p>
           <div className="flex flex-wrap gap-2">
@@ -34,11 +34,11 @@ export function EntitySidebar({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-4 pt-4">
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Related entities</p>
-            <h3 className="m-0 font-display text-title-sm font-bold text-foreground">
+            <h3 className="m-0 font-display text-title-sm font-bold text-content-active">
               Same-project entities
             </h3>
           </div>
@@ -49,9 +49,9 @@ export function EntitySidebar({
           ) : (
             <ul className="m-0 grid list-none gap-3 p-0">
               {siblingEntities.slice(0, 6).map((siblingEntity) => (
-                <li className="rounded-2xl border border-border bg-muted p-4" key={siblingEntity.id}>
+                <li className="rounded-2xl border border-trim-offset bg-muted p-4" key={siblingEntity.id}>
                   <Link
-                    className="font-medium text-foreground transition hover:text-primary"
+                    className="font-medium text-content-active transition hover:text-primary"
                     href={`/entities/${siblingEntity.id}?project=${selectedProjectId}`}
                   >
                     {siblingEntity.name}

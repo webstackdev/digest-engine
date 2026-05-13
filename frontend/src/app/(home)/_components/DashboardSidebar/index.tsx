@@ -15,31 +15,31 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   return (
     <aside className="space-y-4">
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="p-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Project focus</p>
           <h3 className="font-display text-title-md">{selectedProject.name}</h3>
-          <p className="text-sm leading-6 text-muted-foreground">{selectedProject.topic_description}</p>
+          <p className="text-sm leading-6 text-content-offset">{selectedProject.topic_description}</p>
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="p-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Active sources</p>
           <p className="mt-1 text-3xl font-bold">
             {sourceConfigs.filter((item) => item.is_active).length}
           </p>
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p className="text-sm leading-6 text-content-offset">
             Configured feeds and subreddits delivering new content.
           </p>
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="p-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Editorial queue</p>
           <p className="mt-1 text-3xl font-bold">{pendingReviewCount}</p>
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p className="text-sm leading-6 text-content-offset">
             Use the view switch above to resolve borderline items.
           </p>
         </CardContent>

@@ -11,68 +11,12 @@
  * of invented in app-local theme files.
  */
 
-@theme inline {
-  --shadow-soft: var(--shadow-soft-value);
-  --shadow-card: var(--shadow-card-value);
-  --shadow-card-strong: var(--shadow-card-strong-value);
-  --shadow-panel: var(--shadow-panel-value);
-  --shadow-accent: var(--shadow-accent-value);
-  --shadow-inset: var(--shadow-inset-value);
-}
+/**
+ * Size aliases were removed from this legacy file.
+ *
+ * Use built-in Tailwind width, radius, text, spacing, tracking, and leading
+ * utilities in app code instead. Shared type scale overrides now live in
+ * `typography.css`.
+ */
 
-@theme {
-  /* Shared size and typography tokens */
-  --container-marketing: 73.75rem;
-  --container-headline: 12ch;
-  --container-hero-art: 30rem;
-  --aspect-hero: 21 / 20;
-  --spacing-half-screen: 50vh;
-  --radius-card: 1.4rem;
-  --radius-tile: 1.5rem;
-  --radius-shell: 1.65rem;
-  --radius-panel: 1.75rem;
-  --radius-pricing: 1.9rem;
-  --radius-display: 2rem;
-  --border-width-12: 12px;
-  --text-3xs: 0.625rem;
-  --text-2xs: 0.6875rem;
-  --text-button: 0.9375rem;
-  --tracking-step: 0.18em;
-  --tracking-tag: 0.2em;
-  --tracking-logo: 0.22em;
-  --tracking-overline: 0.24em;
-  --tracking-section: 0.28em;
-  --leading-display: 0.94;
 
-  --font-sans: var(--font-public-sans-family), ui-sans-serif, system-ui;
-}
-
-:root {
-  --shadow-soft-value: 0 14px 34px
-    color-mix(in srgb, var(--color-primary-700) 10%, transparent);
-  --shadow-card-value: 0 22px 44px
-    color-mix(in srgb, var(--color-primary-700) 8%, transparent);
-  --shadow-card-strong-value: 0 34px 70px
-    color-mix(in srgb, var(--color-primary-700) 14%, transparent);
-  --shadow-panel-value:
-    0 26px 60px color-mix(in srgb, var(--color-primary-700) 12%, transparent),
-    inset 0 1px 0 color-mix(in srgb, white 72%, transparent);
-  --shadow-accent-value: 0 18px 38px
-    color-mix(in srgb, var(--color-burnt-450) 28%, transparent);
-  --shadow-inset-value: inset 0 0 0 1px
-    color-mix(in srgb, white 80%, transparent);
-}
-
-:where(.dark, [data-theme="dark"]) {
-  --shadow-soft-value: 0 14px 34px color-mix(in srgb, black 32%, transparent);
-  --shadow-card-value: 0 22px 44px color-mix(in srgb, black 36%, transparent);
-  --shadow-card-strong-value: 0 34px 70px
-    color-mix(in srgb, black 40%, transparent);
-  --shadow-panel-value:
-    0 26px 60px color-mix(in srgb, black 34%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--color-primary-50) 8%, transparent);
-  --shadow-accent-value: 0 18px 38px
-    color-mix(in srgb, var(--color-burnt-450) 30%, transparent);
-  --shadow-inset-value: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-primary-50) 12%, transparent);
-}

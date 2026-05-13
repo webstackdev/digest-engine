@@ -1,0 +1,18 @@
+{
+  "glossary": "Glossary of Terms",
+  "data-model": "Data Model Schema",
+  "api": "API Reference",
+  "--- Engine ---": {
+    "type": "separator",
+    "title": "Engine Internals"
+  },
+  "pipeline": "Ingestion Pipeline",
+  "algorithms": "Core Algorithms",
+  "skills": "Skill Capabilities",
+  "--- System ---": {
+    "type": "separator",
+    "title": "System Observability"
+  },
+  "tunables": "System Tunables & Configuration",
+  "logging-and-observability": "Logging & Observability"
+}

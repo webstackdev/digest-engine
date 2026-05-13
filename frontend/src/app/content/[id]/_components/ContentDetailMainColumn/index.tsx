@@ -35,7 +35,7 @@ export function ContentDetailMainColumn({
 }: ContentDetailMainColumnProps) {
   return (
     <div className="space-y-4">
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-3">
@@ -43,7 +43,7 @@ export function ContentDetailMainColumn({
                 {formatDisplayLabel(content.source_plugin)}
               </p>
               <h2 className="font-display text-title-md font-bold">{content.title}</h2>
-              <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+              <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                 <span>{formatDate(content.published_date)}</span>
                 <span>{content.author || "Unknown author"}</span>
                 <span>{formatDisplayLabel(content.content_type || "unclassified")}</span>
@@ -95,24 +95,24 @@ export function ContentDetailMainColumn({
             </form>
           </div>
 
-          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">
+          <div className="flex flex-wrap gap-2 text-sm text-content-offset">
+            <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">
               Canonical URL {content.canonical_url || content.url}
             </span>
             {content.authority_adjusted_score !== null ? (
-              <span className="inline-flex items-center rounded-full border border-primary bg-primary px-3 py-1 text-sm text-foreground">
+              <span className="inline-flex items-center rounded-full border border-primary bg-primary px-3 py-1 text-sm text-content-active">
                 Base {formatPercentScore(content.relevance_score)}
               </span>
             ) : null}
             {content.duplicate_signal_count > 0 ? (
-              <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">
+              <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">
                 Also seen in {content.duplicate_signal_count} source
                 {content.duplicate_signal_count === 1 ? "" : "s"}
               </span>
             ) : null}
             {content.duplicate_of ? (
               <Link
-                className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground transition hover:bg-muted"
+                className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active transition hover:bg-muted"
                 href={`/content/${content.duplicate_of}?project=${selectedProjectId}`}
               >
                 Duplicate of #{content.duplicate_of}
@@ -120,7 +120,7 @@ export function ContentDetailMainColumn({
             ) : null}
             {content.newsletter_promotion_at ? (
               <Link
-                className="inline-flex items-center rounded-full border border-primary bg-primary px-3 py-1 text-sm text-foreground transition hover:bg-primary"
+                className="inline-flex items-center rounded-full border border-primary bg-primary px-3 py-1 text-sm text-content-active transition hover:bg-primary"
                 href={
                   content.newsletter_promotion_theme
                     ? `/themes?project=${selectedProjectId}&theme=${content.newsletter_promotion_theme}`
@@ -132,13 +132,13 @@ export function ContentDetailMainColumn({
             ) : null}
           </div>
 
-          <div className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground md:text-base">
+          <div className="whitespace-pre-wrap text-sm leading-7 text-content-offset md:text-base">
             {content.content_text}
           </div>
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-4 p-5">
           <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">
             Skill action bar
@@ -164,7 +164,7 @@ export function ContentDetailMainColumn({
               </Button>
             </form>
           </div>
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p className="text-sm leading-6 text-content-offset">
             These controls create new persisted SkillResult records. Summarization is
             only available once a content item has reached a final adjusted relevance
             score of at least 70%.
@@ -174,7 +174,7 @@ export function ContentDetailMainColumn({
 
       {contentSkillResults.map((skillResult) => (
         <Card
-          className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl"
+          className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl"
           key={skillResult.id}
         >
           <CardContent className="space-y-4 p-5">
@@ -199,17 +199,17 @@ export function ContentDetailMainColumn({
                 {skillResult.model_used || "model pending"}
               </StatusBadge>
             </div>
-            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-2 text-sm text-content-offset">
               <span>Created {formatDate(skillResult.created_at)}</span>
               <span>Latency {skillResult.latency_ms ?? 0} ms</span>
               <span>Confidence {formatScore(skillResult.confidence)}</span>
             </div>
             {skillResult.error_message ? (
-              <div className="rounded-panel bg-destructive px-4 py-4 text-sm leading-6 text-destructive">
+              <div className="rounded-3xl bg-destructive px-4 py-4 text-sm leading-6 text-destructive">
                 {skillResult.error_message}
               </div>
             ) : null}
-            <pre className="overflow-auto rounded-2xl border border-border bg-muted p-4 text-sm text-foreground">
+            <pre className="overflow-auto rounded-2xl border border-trim-offset bg-muted p-4 text-sm text-content-active">
               {JSON.stringify(skillResult.result_data, null, 2)}
             </pre>
           </CardContent>

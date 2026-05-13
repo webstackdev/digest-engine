@@ -49,11 +49,11 @@ export function AvatarDropzone({
   })
 
   return (
-    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Upload</p>
-          <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
+          <h2 className="m-0 font-display text-title-sm font-bold text-content-active">
             Drag, drop, or browse
           </h2>
         </div>
@@ -65,11 +65,11 @@ export function AvatarDropzone({
               ? "border-destructive bg-destructive"
               : isDragActive
                 ? "border-primary bg-primary"
-                : "border-border bg-muted hover:border-primary hover:bg-muted"
+                : "border-trim-offset bg-muted hover:border-primary hover:bg-muted"
           } ${isUploading ? "cursor-wait opacity-70" : "cursor-pointer"}`}
         >
           <input {...getInputProps({ "aria-label": "Upload avatar image" })} />
-          <p className="m-0 text-base font-medium text-foreground">
+          <p className="m-0 text-base font-medium text-content-active">
             {isUploading ? "Uploading avatar..." : "Drop an image here or click to browse."}
           </p>
           <p className="mb-0 mt-2 text-sm leading-6 text-muted">
@@ -78,7 +78,7 @@ export function AvatarDropzone({
         </div>
 
         {errorMessage ? (
-          <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
+          <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}

@@ -162,14 +162,14 @@ function SourcesPagePreview({ showError = false, showMessage = false }: SourcesP
       selectedProjectId={selectedProject.id}
     >
       {showError ? (
-        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
+        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
           <AlertDescription className="text-destructive">
             Could not save source
           </AlertDescription>
         </Alert>
       ) : null}
       {showMessage ? (
-        <Alert className="rounded-panel border-border bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-muted">
           <AlertDescription>Source saved</AlertDescription>
         </Alert>
       ) : null}

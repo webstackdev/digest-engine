@@ -43,7 +43,7 @@ export function SourceHealthPanel({
   statusTone = "neutral",
 }: SourceHealthPanelProps) {
   return (
-    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -60,15 +60,15 @@ export function SourceHealthPanel({
 
       <CardContent>
         {rows.length === 0 ? (
-          <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
-            <CardContent className="text-sm leading-6 text-muted-foreground">
+          <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
+            <CardContent className="text-sm leading-6 text-content-offset">
               No source configurations exist for this project yet.
             </CardContent>
           </Card>
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="border-border text-sm text-muted hover:bg-transparent">
+              <TableRow className="border-trim-offset text-sm text-muted hover:bg-transparent">
                 <TableHead className="px-3 py-4">Source</TableHead>
                 <TableHead className="px-3 py-4">Status</TableHead>
                 <TableHead className="px-3 py-4">Last fetch</TableHead>
@@ -79,12 +79,12 @@ export function SourceHealthPanel({
             </TableHeader>
             <TableBody>
               {rows.map(({ sourceConfig, latestRun, status }) => (
-                <TableRow key={sourceConfig.id} className="border-border align-top">
+                <TableRow key={sourceConfig.id} className="border-trim-offset align-top">
                   <TableCell className="px-3 py-4 whitespace-normal">
-                    <strong className="font-medium text-foreground">
+                    <strong className="font-medium text-content-active">
                       {formatDisplayLabel(sourceConfig.plugin_name)}
                     </strong>
-                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-content-offset">
                       <span>Config #{sourceConfig.id}</span>
                       <span>{formatDisplayLabel(sourceConfig.is_active ? "active" : "disabled")}</span>
                     </div>
@@ -92,20 +92,20 @@ export function SourceHealthPanel({
                   <TableCell className="px-3 py-4">
                     <StatusBadge tone={healthTone(status)}>{formatDisplayLabel(status)}</StatusBadge>
                   </TableCell>
-                  <TableCell className="px-3 py-4 text-sm text-foreground">
+                  <TableCell className="px-3 py-4 text-sm text-content-active">
                     {formatDate(sourceConfig.last_fetched_at)}
                   </TableCell>
-                  <TableCell className="px-3 py-4 whitespace-normal text-sm text-foreground">
+                  <TableCell className="px-3 py-4 whitespace-normal text-sm text-content-active">
                     {latestRun
                       ? `${formatDisplayLabel(latestRun.status)} at ${formatDate(latestRun.started_at)}`
                       : "No runs yet"}
                   </TableCell>
-                  <TableCell className="px-3 py-4 text-sm text-foreground">
+                  <TableCell className="px-3 py-4 text-sm text-content-active">
                     {latestRun
                       ? `${latestRun.items_ingested}/${latestRun.items_fetched}`
                       : "0/0"}
                   </TableCell>
-                  <TableCell className="px-3 py-4 whitespace-normal text-sm text-foreground">
+                  <TableCell className="px-3 py-4 whitespace-normal text-sm text-content-active">
                     {latestRun?.error_message || "-"}
                   </TableCell>
                 </TableRow>

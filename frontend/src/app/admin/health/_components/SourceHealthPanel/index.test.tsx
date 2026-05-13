@@ -50,7 +50,7 @@ describe("SourceHealthPanel", () => {
 
     expect(screen.getByText("Source configuration health")).toBeInTheDocument()
     expect(screen.getByText("RSS", { selector: "strong" })).toBeInTheDocument()
-    expect(screen.getByText("Config #7").parentElement).toHaveClass("text-muted-foreground")
+    expect(screen.getByText("Config #7").parentElement).toHaveClass("text-content-offset")
     expect(screen.getByText("9/12")).toBeInTheDocument()
   })
 
@@ -59,6 +59,6 @@ describe("SourceHealthPanel", () => {
 
     expect(
       screen.getByText("No source configurations exist for this project yet."),
-    ).toHaveClass("text-muted-foreground")
+    ).toHaveClass("text-content-offset")
   })
 })

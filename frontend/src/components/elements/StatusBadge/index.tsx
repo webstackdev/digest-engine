@@ -14,7 +14,7 @@ const statusBadgeVariants = cva(
         positive: "bg-primary text-primary",
         warning: "bg-secondary text-secondary-foreground",
         negative: "bg-destructive text-destructive",
-        neutral: "bg-muted text-muted-foreground",
+        neutral: "bg-muted text-content-offset",
       },
     },
     defaultVariants: {

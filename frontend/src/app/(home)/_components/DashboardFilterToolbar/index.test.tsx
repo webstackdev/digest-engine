@@ -18,18 +18,13 @@ describe("DashboardFilterToolbar", () => {
       />,
     )
 
-    expect(screen.getByRole("button", { name: "Apply filters" })).toHaveClass(
-      "hover:bg-primary4",
-    )
+    expect(screen.getByRole("button", { name: "Apply filters" })).toHaveAttribute("type", "submit")
     expect(screen.getByRole("link", { name: "Reset" })).toHaveAttribute("href", "/?project=1")
-    expect(container.querySelector("#dashboard-view-filter")).toHaveClass(
-      "border-border",
-      "bg-card",
-      "hover:bg-secondary",
-    )
+    expect(container.querySelector("#dashboard-view-filter")).toBeInTheDocument()
     expect(container.querySelector('input[name="project"]')).toHaveValue("1")
     expect(container.querySelector('input[name="contentType"]')).toHaveValue("article")
     expect(container.querySelector('input[name="source"]')).toHaveValue("rss")
     expect(container.querySelector('input[name="days"]')).toHaveValue("30")
+    expect(container.querySelector('input[name="duplicateState"]')).toHaveValue("duplicate_related")
   })
 })

@@ -42,13 +42,13 @@ export function TrendsQueueOverview({
     <section className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
         <Card
-          className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl"
+          className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl"
           key={item.label}
         >
           <CardContent className="p-5">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">{item.label}</p>
             <p className="mt-1 text-3xl font-bold">{item.value}</p>
-            <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
+            <p className="text-sm leading-6 text-content-offset">{item.description}</p>
           </CardContent>
         </Card>
       ))}

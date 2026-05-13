@@ -8,21 +8,21 @@ const FeatureCard: FC<{
   link: string;
 }> = ({ title, icon, description }) => {
   return (
-    <article className="group relative flex h-full flex-col gap-5 rounded-panel border border-border bg-card p-6 shadow-card transition-transform duration-200 hover:-translate-y-1">
+    <article className="group relative flex h-full flex-col gap-5 rounded-3xl border border-trim-offset bg-page-base p-6 shadow-card transition-transform duration-200 hover:-translate-y-1">
       <div className="flex items-start justify-between gap-4">
-        <div className="rounded-2xl border border-border bg-secondary px-3 py-2 text-primary shadow-soft">
+        <div className="rounded-2xl border border-trim-offset bg-secondary px-3 py-2 text-primary shadow-soft">
           {icon}
         </div>
-        <span className="text-xs font-semibold uppercase tracking-overline text-muted-foreground">
+        <span className="text-xs font-semibold uppercase tracking-widest text-content-offset">
           Feature
         </span>
       </div>
 
       <div className="space-y-3">
-        <h3 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+        <h3 className="text-xl font-semibold tracking-tight text-content-active sm:text-2xl">
           {title}
         </h3>
-        <p className="m-0 text-base leading-7 text-muted-foreground">
+        <p className="m-0 text-base leading-7 text-content-offset">
           {description}
         </p>
       </div>
@@ -46,13 +46,13 @@ const Features: FC<{
   return (
     <PageSection id="features" classes="px-6 py-8 sm:px-8 sm:py-10">
       <div className="max-w-2xl">
-        <p className="text-2xs font-semibold uppercase tracking-section text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-widest text-content-offset">
           Capabilities
         </p>
-        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-content-active sm:text-3xl">
           {title}
         </h2>
-        <p className="mt-3 text-base leading-7 text-muted-foreground">
+        <p className="mt-3 text-base leading-7 text-content-offset">
           {description}
         </p>
       </div>

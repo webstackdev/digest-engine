@@ -1,0 +1,22 @@
+{
+  "overview": "Overview",
+  "architecture": "System Architecture",
+  "--- Setup ---": {
+    "type": "separator",
+    "title": "Getting Started"
+  },
+  "local-development": "Local Development",
+  "contributing": "Contributing Guidelines",
+  "--- Standards ---": {
+    "type": "separator",
+    "title": "Codebase Standards"
+  },
+  "backend-conventions": "Backend Conventions",
+  "frontend-conventions": "Frontend Conventions",
+  "testing": "Testing & QA",
+  "--- Operations ---": {
+    "type": "separator",
+    "title": "Production"
+  },
+  "deployment": "Deployment & CI/CD"
+}

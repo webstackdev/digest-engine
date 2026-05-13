@@ -30,7 +30,7 @@ export default async function InviteMemberPage({ params, searchParams }: InviteM
         projects={projects}
         selectedProjectId={null}
       >
-        <Alert className="rounded-panel border-border bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-muted">
           <AlertDescription>Select a visible project first.</AlertDescription>
         </Alert>
       </AppShell>
@@ -45,7 +45,7 @@ export default async function InviteMemberPage({ params, searchParams }: InviteM
         projects={projects}
         selectedProjectId={selectedProject.id}
       >
-        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
+        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
           <AlertDescription>You need the admin role on this project to invite new members.</AlertDescription>
         </Alert>
       </AppShell>

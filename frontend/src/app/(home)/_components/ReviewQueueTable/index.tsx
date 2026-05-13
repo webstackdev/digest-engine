@@ -24,10 +24,10 @@ export function ReviewQueueTable({
   contentMap,
 }: ReviewQueueTableProps) {
   return (
-    <section className="overflow-hidden rounded-3xl border border-border bg-card p-5 shadow-panel backdrop-blur-xl">
+    <section className="overflow-hidden rounded-3xl border border-trim-offset bg-page-base p-5 shadow-panel backdrop-blur-xl">
       <Table>
         <TableHeader>
-          <TableRow className="text-sm text-muted-foreground">
+          <TableRow className="text-sm text-content-offset">
             <TableHead className="px-3 py-4 font-medium">Content</TableHead>
             <TableHead className="px-3 py-4 font-medium">Reason</TableHead>
             <TableHead className="px-3 py-4 font-medium">Confidence</TableHead>
@@ -39,7 +39,7 @@ export function ReviewQueueTable({
           {pendingReviewItems.length === 0 ? (
             <TableRow>
               <TableCell className="px-3 py-4" colSpan={5}>
-                <Alert className="rounded-panel border-border bg-muted">
+                <Alert className="rounded-3xl border-trim-offset bg-muted">
                   <AlertDescription>
                     No unresolved review items for this project right now.
                   </AlertDescription>
@@ -53,10 +53,10 @@ export function ReviewQueueTable({
             return (
               <TableRow key={item.id} className="align-top last:border-b-0">
                 <TableCell className="px-3 py-4 align-top whitespace-normal">
-                  <strong className="font-medium text-foreground">
+                  <strong className="font-medium text-content-active">
                     {content?.title ?? `Content #${item.content}`}
                   </strong>
-                  <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
+                  <div className="mt-2 flex flex-wrap gap-2 text-sm text-content-offset">
                     <span>{formatDisplayLabel(content?.source_plugin ?? "unknown source")}</span>
                     <span>{formatDisplayLabel(content?.content_type || "unclassified")}</span>
                     {content?.duplicate_signal_count ? (
@@ -68,13 +68,13 @@ export function ReviewQueueTable({
                     {content?.duplicate_of ? <span>Duplicate of #{content.duplicate_of}</span> : null}
                   </div>
                 </TableCell>
-                <TableCell className="px-3 py-4 align-top whitespace-normal text-sm text-foreground">
+                <TableCell className="px-3 py-4 align-top whitespace-normal text-sm text-content-active">
                   {formatDisplayLabel(item.reason)}
                 </TableCell>
-                <TableCell className="px-3 py-4 align-top whitespace-normal text-sm text-foreground">
+                <TableCell className="px-3 py-4 align-top whitespace-normal text-sm text-content-active">
                   {formatScore(item.confidence)}
                 </TableCell>
-                <TableCell className="px-3 py-4 align-top whitespace-normal text-sm text-foreground">
+                <TableCell className="px-3 py-4 align-top whitespace-normal text-sm text-content-active">
                   {formatDate(item.created_at)}
                 </TableCell>
                 <TableCell className="px-3 py-4 align-top whitespace-normal">

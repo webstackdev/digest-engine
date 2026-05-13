@@ -72,7 +72,7 @@ export function ProfileSettingsPanel() {
 
   if (profileQuery.isLoading) {
     return (
-      <Alert className="rounded-panel border-border bg-muted">
+      <Alert className="rounded-3xl border-trim-offset bg-muted">
         <AlertDescription>Loading profile...</AlertDescription>
       </Alert>
     )
@@ -85,7 +85,7 @@ export function ProfileSettingsPanel() {
         : "Unable to load profile."
 
     return (
-      <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
+      <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
         <AlertDescription>{message}</AlertDescription>
       </Alert>
     )

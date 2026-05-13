@@ -25,7 +25,7 @@ import { formatDate, formatDisplayLabel } from "@/lib/view-helpers"
 import { buildNewsletterIntakePreview } from "../helpers"
 
 const selectTriggerClassName =
-  "w-full rounded-2xl border-border bg-card px-4 py-3 text-sm data-[size=default]:h-11"
+  "w-full rounded-2xl border-trim-offset bg-page-base px-4 py-3 text-sm data-[size=default]:h-11"
 
 type NewsletterIntakePanelProps = {
   selectedProject: Project
@@ -48,14 +48,14 @@ export function NewsletterIntakePanel({
   intakeSenderFilter,
 }: NewsletterIntakePanelProps) {
   return (
-    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardHeader>
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">
               Newsletter intake
             </p>
-            <h2 className="font-display text-title-sm font-bold text-foreground">
+            <h2 className="font-display text-title-sm font-bold text-content-active">
               Project intake settings
             </h2>
             <CardDescription>
@@ -75,7 +75,7 @@ export function NewsletterIntakePanel({
             <Label htmlFor="project-intake-token">Intake token</Label>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Input
-                className="h-11 rounded-2xl border-border bg-muted px-4 font-mono text-sm"
+                className="h-11 rounded-2xl border-trim-offset bg-muted px-4 font-mono text-sm"
                 id="project-intake-token"
                 readOnly
                 value={selectedProject.intake_token ?? ""}
@@ -101,7 +101,7 @@ export function NewsletterIntakePanel({
             <Label htmlFor="project-intake-address-pattern">Address pattern</Label>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Input
-                className="h-11 rounded-2xl border-border bg-muted px-4 font-mono text-sm"
+                className="h-11 rounded-2xl border-trim-offset bg-muted px-4 font-mono text-sm"
                 id="project-intake-address-pattern"
                 readOnly
                 value={intakeAddressTemplate}
@@ -109,7 +109,7 @@ export function NewsletterIntakePanel({
               <CopyButton label="Copy pattern" value={intakeAddressTemplate} />
             </div>
             <p className="m-0 text-xs leading-5 text-muted">
-              Replace <span className="font-mono text-foreground">inbox.example.com</span>
+              Replace <span className="font-mono text-content-active">inbox.example.com</span>
               {" "}with the inbound mailbox domain configured for your email provider.
             </p>
           </div>
@@ -146,7 +146,7 @@ export function NewsletterIntakePanel({
         </form>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+          <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
             <CardHeader>
               <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                 Sender allowlist
@@ -170,7 +170,7 @@ export function NewsletterIntakePanel({
                 <div className="grid gap-2">
                   <Label htmlFor="allowlist-sender-email">Sender email</Label>
                   <Input
-                    className="h-11 rounded-2xl border-border bg-card px-4"
+                    className="h-11 rounded-2xl border-trim-offset bg-page-base px-4"
                     id="allowlist-sender-email"
                     name="senderEmail"
                     placeholder="newsletter@example.com"
@@ -184,16 +184,16 @@ export function NewsletterIntakePanel({
               </form>
 
               {intakeAllowlist.length === 0 ? (
-                <p className="m-0 rounded-panel bg-muted px-4 py-4 text-sm leading-6 text-muted">
+                <p className="m-0 rounded-3xl bg-muted px-4 py-4 text-sm leading-6 text-muted">
                   No senders have been allowlisted for this project yet.
                 </p>
               ) : (
                 <ul className="m-0 grid list-none gap-3 p-0">
                   {intakeAllowlist.map((entry) => (
-                    <li key={entry.id} className="rounded-2xl border border-border bg-card p-4">
+                    <li key={entry.id} className="rounded-2xl border border-trim-offset bg-page-base p-4">
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div className="space-y-1">
-                          <p className="m-0 text-sm font-medium text-foreground">{entry.sender_email}</p>
+                          <p className="m-0 text-sm font-medium text-content-active">{entry.sender_email}</p>
                           <p className="m-0 text-sm leading-6 text-muted">
                             {entry.is_confirmed
                               ? `Confirmed ${formatDate(entry.confirmed_at)}`
@@ -226,7 +226,7 @@ export function NewsletterIntakePanel({
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+          <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
             <CardHeader>
               <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                 Recent newsletter intake
@@ -257,7 +257,7 @@ export function NewsletterIntakePanel({
                 <div className="grid gap-2">
                   <Label htmlFor="recent-intake-sender">Sender contains</Label>
                   <Input
-                    className="h-11 rounded-2xl border-border bg-card px-4"
+                    className="h-11 rounded-2xl border-trim-offset bg-page-base px-4"
                     defaultValue={intakeSenderFilter}
                     id="recent-intake-sender"
                     name="intakeSender"
@@ -270,16 +270,16 @@ export function NewsletterIntakePanel({
               </form>
 
               {recentNewsletterIntakes.length === 0 ? (
-                <p className="m-0 rounded-panel bg-muted px-4 py-4 text-sm leading-6 text-muted">
+                <p className="m-0 rounded-3xl bg-muted px-4 py-4 text-sm leading-6 text-muted">
                   No inbound newsletters have been captured for this project yet.
                 </p>
               ) : (
                 <ul className="m-0 grid list-none gap-3 p-0">
                   {recentNewsletterIntakes.map((intake) => (
-                    <li key={intake.id} className="rounded-2xl border border-border bg-card p-4">
+                    <li key={intake.id} className="rounded-2xl border border-trim-offset bg-page-base p-4">
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div className="space-y-2">
-                          <p className="m-0 text-sm font-medium text-foreground">{intake.subject}</p>
+                          <p className="m-0 text-sm font-medium text-content-active">{intake.subject}</p>
                           <div className="flex flex-wrap gap-2 text-sm text-muted">
                             <span>{intake.sender_email}</span>
                             <span>{formatDate(intake.received_at)}</span>
@@ -313,11 +313,11 @@ export function NewsletterIntakePanel({
               )}
 
               {selectedIntake ? (
-                <Card className="rounded-2xl border border-border bg-card shadow-none ring-0">
+                <Card className="rounded-2xl border border-trim-offset bg-page-base shadow-none ring-0">
                   <CardContent className="space-y-3 pt-4">
                     <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                       <div>
-                        <p className="m-0 text-sm font-semibold text-foreground">Selected intake</p>
+                        <p className="m-0 text-sm font-semibold text-content-active">Selected intake</p>
                         <p className="m-0 text-sm leading-6 text-muted">{selectedIntake.subject}</p>
                       </div>
                       <StatusBadge
@@ -340,8 +340,8 @@ export function NewsletterIntakePanel({
                     {selectedIntake.extraction_result?.items?.length ? (
                       <ul className="m-0 grid list-none gap-2 p-0">
                         {selectedIntake.extraction_result.items.slice(0, 4).map((item) => (
-                          <li key={`${selectedIntake.id}:${item.position}`} className="rounded-2xl border border-border bg-muted p-3 text-sm text-muted">
-                            <span className="font-medium text-foreground">{item.title || item.url}</span>
+                          <li key={`${selectedIntake.id}:${item.position}`} className="rounded-2xl border border-trim-offset bg-muted p-3 text-sm text-muted">
+                            <span className="font-medium text-content-active">{item.title || item.url}</span>
                             <div className="mt-1 wrap-break-word">{item.url}</div>
                             {item.excerpt ? <div className="mt-1">{item.excerpt}</div> : null}
                           </li>
@@ -354,7 +354,7 @@ export function NewsletterIntakePanel({
                     )}
                     {selectedIntake.raw_text ? (
                       <details>
-                        <summary className="cursor-pointer text-sm font-medium text-foreground">
+                        <summary className="cursor-pointer text-sm font-medium text-content-active">
                           Raw text preview
                         </summary>
                         <pre className="mt-3 overflow-auto rounded-2xl bg-sidebar p-4 text-sm text-sidebar-foreground whitespace-pre-wrap">

@@ -27,7 +27,7 @@ export function IdeasToolbarCard({
   currentPageHref,
 }: IdeasToolbarCardProps) {
   return (
-    <Card className="mb-4 rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="mb-4 rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="flex flex-col gap-4 pt-4 xl:flex-row xl:items-end xl:justify-between">
         <form className="grid gap-2" method="GET">
           <input name="project" type="hidden" value={projectId} />

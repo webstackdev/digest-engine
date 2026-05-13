@@ -41,7 +41,7 @@ export function IdeasQueueOverview({
     <section className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {metrics.map((metric) => (
         <Card
-          className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl"
+          className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl"
           key={metric.label}
         >
           <CardContent className="pt-4">

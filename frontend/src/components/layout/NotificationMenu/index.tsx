@@ -127,7 +127,7 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Open notifications"
-        className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card p-0 shadow-sm transition hover:brightness-105"
+        className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-trim-offset bg-page-base p-0 shadow-sm transition hover:brightness-105"
       >
         <Bell className="size-5" />
         {unreadCount > 0 ? (
@@ -141,10 +141,10 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-88 overflow-hidden p-0">
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between border-b border-trim-offset px-4 py-3">
           <div>
             <p className="text-sm font-semibold">Notification inbox</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-content-offset">
               {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
             </p>
           </div>
@@ -166,7 +166,7 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
               Unable to load notifications.
             </div>
           ) : notifications.length === 0 ? (
-            <div className="px-3 py-4 text-sm text-muted-foreground">
+            <div className="px-3 py-4 text-sm text-content-offset">
               No notifications yet.
             </div>
           ) : (
@@ -185,7 +185,7 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
                 />
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="line-clamp-2 text-sm leading-5">{notification.body}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-content-offset">
                     {notification.created_at.replace("T", " ").replace("Z", " UTC")}
                   </p>
                 </div>

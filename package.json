@@ -14,6 +14,8 @@
     "dev:frontend": "turbo run dev --filter=@digestengine/frontend",
     "dev:marketing": "turbo run dev --filter=@digestengine/marketing",
     "lint": "turbo run lint",
+    "lint:style": "turbo run lint:style",
+    "lint:style:fix": "turbo run lint:style:fix",
     "lint:fix": "turbo run lint:fix",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test:run",
@@ -36,6 +38,8 @@
   },
   "homepage": "https://github.com/webstackdev/digest-engine#readme",
   "devDependencies": {
+    "stylelint": "^17.11.0",
+    "stylelint-config-standard": "^40.0.0",
     "turbo": "^2.9.12"
   }
 }

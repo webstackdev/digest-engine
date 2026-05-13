@@ -49,37 +49,37 @@ export const FeatureItems = {
   items: [
     {
       title: "Authority-aware ranking",
-      icon: <span className='text-sm font-semibold tracking-step'>01</span>,
+      icon: <span className='text-sm font-semibold tracking-widest'>01</span>,
       description: "Ingest peer newsletters and score people or companies by who trusted editors actually link to, not just who shouts the loudest.",
       link: "/docs/reference/algorithms",
     },
     {
       title: "Per-project relevance training",
-      icon: <span className='text-sm font-semibold tracking-step'>02</span>,
+      icon: <span className='text-sm font-semibold tracking-widest'>02</span>,
       description: "Thumbs up and thumbs down reshape the shortlist around your editorial judgment, with explicit feedback drifting the project centroid over time.",
       link: "/docs/reference/pipeline",
     },
     {
       title: "Unified entity profiles",
-      icon: <span className='text-sm font-semibold tracking-step'>03</span>,
+      icon: <span className='text-sm font-semibold tracking-widest'>03</span>,
       description: "Roll a person or company's blog, social posts, releases, and mentions into a single view with one authority score and one activity stream.",
       link: "/docs/reference/data-model",
     },
     {
       title: "Trend velocity over volume",
-      icon: <span className='text-sm font-semibold tracking-step'>04</span>,
+      icon: <span className='text-sm font-semibold tracking-widest'>04</span>,
       description: "Spot topics accelerating across the last few days before they become saturated. Trend detection focuses on momentum, not just mention count.",
       link: "/docs/reference/algorithms",
     },
     {
       title: "Human review by default",
-      icon: <span className='text-sm font-semibold tracking-step'>05</span>,
+      icon: <span className='text-sm font-semibold tracking-widest'>05</span>,
       description: "Low-confidence entities, failed skills, and ambiguous scores land in a review queue instead of silently becoming bad data.",
       link: "/docs/reference/pipeline",
     },
     {
       title: "Bring your own models",
-      icon: <span className='text-sm font-semibold tracking-step'>06</span>,
+      icon: <span className='text-sm font-semibold tracking-widest'>06</span>,
       description: "Run skills through OpenRouter in development or swap to Ollama in production. The model is a configuration choice, not a platform lock-in.",
       link: "/README.md",
     },

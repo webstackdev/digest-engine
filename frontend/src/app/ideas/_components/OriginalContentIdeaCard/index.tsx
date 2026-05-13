@@ -43,13 +43,13 @@ export function OriginalContentIdeaCard({
   dismissalReasons = DEFAULT_IDEA_DISMISSAL_REASONS,
 }: OriginalContentIdeaCardProps) {
   return (
-    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="pt-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Original content idea</p>
-            <h2 className="font-display text-title-md font-bold text-foreground">{idea.angle_title}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{idea.summary}</p>
+            <h2 className="font-display text-title-md font-bold text-content-active">{idea.angle_title}</h2>
+            <p className="mt-2 text-sm leading-6 text-content-offset">{idea.summary}</p>
           </div>
           <StatusBadge
             tone={
@@ -67,8 +67,8 @@ export function OriginalContentIdeaCard({
         <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.95fr)]">
           <div className="space-y-4">
             <div>
-              <p className="m-0 text-sm font-medium text-foreground">Suggested outline</p>
-              <div className="mt-2 space-y-2 text-sm leading-6 text-muted-foreground">
+              <p className="m-0 text-sm font-medium text-content-active">Suggested outline</p>
+              <div className="mt-2 space-y-2 text-sm leading-6 text-content-offset">
                 {idea.suggested_outline.split("\n").map((line) => (
                   <p className="m-0" key={line}>
                     {line}
@@ -77,11 +77,11 @@ export function OriginalContentIdeaCard({
               </div>
             </div>
             <div>
-              <p className="m-0 text-sm font-medium text-foreground">Why now</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{idea.why_now}</p>
+              <p className="m-0 text-sm font-medium text-content-active">Why now</p>
+              <p className="mt-2 text-sm leading-6 text-content-offset">{idea.why_now}</p>
             </div>
             <div>
-              <p className="m-0 text-sm font-medium text-foreground">Supporting content</p>
+              <p className="m-0 text-sm font-medium text-content-active">Supporting content</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {idea.supporting_contents.length > 0 ? (
                   idea.supporting_contents.map((content) => (
@@ -97,7 +97,7 @@ export function OriginalContentIdeaCard({
                     </Link>
                   ))
                 ) : (
-                  <p className="m-0 text-sm leading-6 text-muted-foreground">
+                  <p className="m-0 text-sm leading-6 text-content-offset">
                     No supporting content was attached to this idea.
                   </p>
                 )}
@@ -105,10 +105,10 @@ export function OriginalContentIdeaCard({
             </div>
           </div>
 
-          <aside className="space-y-4 rounded-2xl border border-border bg-muted p-4">
+          <aside className="space-y-4 rounded-2xl border border-trim-offset bg-muted p-4">
             <div>
-              <p className="m-0 text-sm font-medium text-foreground">Workflow metadata</p>
-              <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">
+              <p className="m-0 text-sm font-medium text-content-active">Workflow metadata</p>
+              <div className="mt-2 flex flex-wrap gap-2 text-sm text-content-offset">
                 <span>Created {formatDate(idea.created_at)}</span>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -133,12 +133,12 @@ export function OriginalContentIdeaCard({
             </div>
 
             {idea.decided_by_username ? (
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="text-sm leading-6 text-content-offset">
                 Decided by {idea.decided_by_username} on {formatDate(idea.decided_at)}
               </p>
             ) : null}
             {idea.dismissal_reason ? (
-              <p className="text-sm leading-6 text-muted-foreground">Dismissal reason: {formatDisplayLabel(idea.dismissal_reason)}</p>
+              <p className="text-sm leading-6 text-content-offset">Dismissal reason: {formatDisplayLabel(idea.dismissal_reason)}</p>
             ) : null}
 
             {idea.status === "pending" ? (

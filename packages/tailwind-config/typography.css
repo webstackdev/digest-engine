@@ -138,7 +138,7 @@
   h1,
   h2,
   h3 {
-    line-height: var(--leading-display, 0.94);
+    line-height: 1;
     text-rendering: optimizelegibility;
   }
 

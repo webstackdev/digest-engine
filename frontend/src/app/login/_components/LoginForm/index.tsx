@@ -60,7 +60,7 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
           <Label htmlFor="username">Username or email</Label>
           <Input
             autoComplete="username"
-            className="min-h-11 rounded-2xl border-border bg-muted px-4 py-3 text-foreground"
+            className="min-h-11 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-content-active"
             id="username"
             name="username"
             placeholder="your_username"
@@ -72,7 +72,7 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
           <Label htmlFor="password">Password</Label>
           <Input
             autoComplete="current-password"
-            className="min-h-11 rounded-2xl border-border bg-muted px-4 py-3 text-foreground"
+            className="min-h-11 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-content-active"
             id="password"
             name="password"
             placeholder="••••••••"
@@ -83,7 +83,7 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
       </div>
 
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
+        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
@@ -91,7 +91,7 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Checkbox id="remember-me" name="remember-me" />
-          <Label className="text-sm text-foreground" htmlFor="remember-me">
+          <Label className="text-sm text-content-active" htmlFor="remember-me">
             Remember me
           </Label>
         </div>

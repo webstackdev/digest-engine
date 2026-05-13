@@ -17,7 +17,7 @@ import {
 export default function Home() {
   return (
     <section className="marketing-page relative w-full">
-      <div className="mx-auto flex max-w-marketing flex-col gap-5 px-4 pb-16 pt-4 sm:px-6 md:gap-6 lg:px-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-16 pt-4 sm:px-6 md:gap-6 lg:px-8">
         <Hero {...HeroProps} />
         <Problems {...ProblemsProps} />
         <Clients {...ClientsProps} />

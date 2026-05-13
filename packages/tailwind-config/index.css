@@ -24,6 +24,8 @@
  */
 @import "./reset.css" layer(reset);
 @import "./fonts.css" layer(base);
+/** Contains top-level `@theme` tokens plus root theme variable blocks. */
+@import "./drop-shadows.css";
 /** Contains top-level `@theme` tokens plus its own `@layer base` rules. */
 @import "./typography.css";
 /** Self-layered as `base` inside the imported file. */
@@ -34,12 +36,6 @@
 /** Replaces "content" key in Tailwind config */
 @source "../../frontend/src/**/*.{ts,tsx,md,mdx}";
 @source "../../marketing/src/**/*.{ts,tsx,md,mdx}";
-
-/**
- * Allow-list any utility classes that are generated dynamically, and not otherwise
- * used in static CSS so that Tailwind knows to add them in the final CSS bundle
- */
-//@source inline("text-success");
 
 /** New CSS directive in v4 to import Tailwind plugins */
 @plugin "@tailwindcss/forms";

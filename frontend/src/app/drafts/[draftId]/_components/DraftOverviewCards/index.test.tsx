@@ -55,7 +55,7 @@ describe("DraftOverviewCards", () => {
 
     expect(screen.getByTestId("status-badge")).toHaveTextContent("Ready")
     expect(screen.getByText("Theme-backed sections in this edition.")).toHaveClass(
-      "text-muted-foreground",
+      "text-content-offset",
     )
     expect(screen.getByText("Accepted original ideas carried into the draft.")).toBeInTheDocument()
     expect(screen.getByText("2026-05-08")).toBeInTheDocument()

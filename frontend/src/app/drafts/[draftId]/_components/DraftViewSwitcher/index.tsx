@@ -31,7 +31,7 @@ export function DraftViewSwitcher({
   currentView,
 }: DraftViewSwitcherProps) {
   return (
-    <Card className="mb-4 rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="mb-4 rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="flex flex-wrap items-center gap-3 pt-5">
         <Link
           className={cn(

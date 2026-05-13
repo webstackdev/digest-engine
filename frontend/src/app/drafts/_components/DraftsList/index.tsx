@@ -31,28 +31,28 @@ export function DraftsList({ drafts, selectedProjectId }: DraftsListProps) {
   return (
     <section className="space-y-4">
       {drafts.length === 0 ? (
-        <Card className="rounded-panel border-0 bg-muted shadow-none">
-          <CardContent className="px-4 py-4 text-sm leading-6 text-muted-foreground">
+        <Card className="rounded-3xl border-0 bg-muted shadow-none">
+          <CardContent className="px-4 py-4 text-sm leading-6 text-content-offset">
             No newsletter drafts matched the current filter.
           </CardContent>
         </Card>
       ) : null}
 
       {drafts.map((draft) => (
-        <Card key={draft.id} className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+        <Card key={draft.id} className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
           <CardContent className="pt-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
                 <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Draft #{draft.id}</p>
-                <h2 className="font-display text-title-md font-bold text-foreground">{draft.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                <h2 className="font-display text-title-md font-bold text-content-active">{draft.title}</h2>
+                <p className="mt-2 text-sm leading-6 text-content-offset">
                   {draft.intro || "No intro has been added yet."}
                 </p>
               </div>
               <StatusBadge tone={draftTone(draft.status)}>{formatDisplayLabel(draft.status)}</StatusBadge>
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted-foreground">
+            <div className="mt-4 flex flex-wrap gap-2 text-sm text-content-offset">
               <span>Generated {formatDate(draft.generated_at)}</span>
               <span>
                 {draft.sections.length} section{draft.sections.length === 1 ? "" : "s"}
@@ -73,7 +73,7 @@ export function DraftsList({ drafts, selectedProjectId }: DraftsListProps) {
                 Open draft
               </Link>
               {draft.generation_metadata.models ? (
-                <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">
+                <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">
                   Composer {draft.generation_metadata.models.section_composer || "pending"}
                 </span>
               ) : null}

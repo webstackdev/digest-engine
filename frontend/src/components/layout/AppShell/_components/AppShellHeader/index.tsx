@@ -58,7 +58,7 @@ export function AppShellHeader({
           <UserMenu />
         </div>
       </div>
-      <p className="max-w-xl text-sm leading-6 text-muted-foreground md:text-base">{description}</p>
+      <p className="max-w-xl text-sm leading-6 text-content-offset md:text-base">{description}</p>
     </header>
   )
 }

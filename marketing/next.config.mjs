@@ -15,7 +15,13 @@ export default withNextra({
   },
   images: {
     unoptimized: true,
-    domains: ["torqbit-dev.b-cdn.net", "lh3.googleusercontent.com", "iframe.mediadelivery.net", "torqbit.b-cdn.net", "cdn.torqbit.com"],
+    remotePatterns: [
+      { protocol: "https", hostname: "torqbit-dev.b-cdn.net" },
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+      { protocol: "https", hostname: "iframe.mediadelivery.net" },
+      { protocol: "https", hostname: "torqbit.b-cdn.net" },
+      { protocol: "https", hostname: "cdn.torqbit.com" },
+    ],
   },
   // ... Add regular Next.js options here
 });

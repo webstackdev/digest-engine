@@ -111,7 +111,7 @@ export function TrendTaskRunsPanel({
 }: TrendTaskRunsPanelProps) {
   return (
     <>
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardHeader>
           <h2 className="font-heading text-base leading-snug font-medium">
             Trend pipeline runs
@@ -126,32 +126,32 @@ export function TrendTaskRunsPanel({
 
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
-            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
                   Persisted runs
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
+                <p className="mt-2 text-2xl font-semibold text-content-active">
                   {summary.run_count}
                 </p>
               </CardContent>
             </Card>
-            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
                   Latest task rows
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
+                <p className="mt-2 text-2xl font-semibold text-content-active">
                   {summary.latest_runs.length}
                 </p>
               </CardContent>
             </Card>
-            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">
                   Failed runs
                 </p>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
+                <p className="mt-2 text-2xl font-semibold text-content-active">
                   {summary.failed_run_count}
                 </p>
               </CardContent>
@@ -159,7 +159,7 @@ export function TrendTaskRunsPanel({
           </div>
 
           {summary.latest_runs.length === 0 ? (
-            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
               <CardContent className="text-sm leading-6 text-muted">
                 No trend pipeline runs have been persisted for this project yet.
               </CardContent>
@@ -169,7 +169,7 @@ export function TrendTaskRunsPanel({
               {visibleRuns.length > 0 ? (
                 <Link
                   aria-label="Open trend task run history"
-                  className="block rounded-panel bg-muted px-4 py-4 transition hover:bg-muted"
+                  className="block rounded-3xl bg-muted px-4 py-4 transition hover:bg-muted"
                   href={historyHref}
                 >
                   <div className="flex items-center justify-between gap-3 text-sm text-muted">
@@ -181,7 +181,7 @@ export function TrendTaskRunsPanel({
 
               <Table>
                 <TableHeader>
-                  <TableRow className="border-border text-sm text-muted hover:bg-transparent">
+                  <TableRow className="border-trim-offset text-sm text-muted hover:bg-transparent">
                     <TableHead className="px-3 py-4">Task</TableHead>
                     <TableHead className="px-3 py-4">Status</TableHead>
                     <TableHead className="px-3 py-4">Started</TableHead>
@@ -191,8 +191,8 @@ export function TrendTaskRunsPanel({
                 </TableHeader>
                 <TableBody>
                   {summary.latest_runs.map((taskRun) => (
-                    <TableRow key={taskRun.id} className="border-border align-top">
-                      <TableCell className="px-3 py-4 text-sm font-medium text-foreground">
+                    <TableRow key={taskRun.id} className="border-trim-offset align-top">
+                      <TableCell className="px-3 py-4 text-sm font-medium text-content-active">
                         {formatTrendTaskName(taskRun.task_name)}
                       </TableCell>
                       <TableCell className="px-3 py-4">
@@ -200,10 +200,10 @@ export function TrendTaskRunsPanel({
                           {formatDisplayLabel(taskRun.status)}
                         </StatusBadge>
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-sm text-foreground">
+                      <TableCell className="px-3 py-4 text-sm text-content-active">
                         {formatDate(taskRun.started_at)}
                       </TableCell>
-                      <TableCell className="px-3 py-4 text-sm text-foreground">
+                      <TableCell className="px-3 py-4 text-sm text-content-active">
                         {formatLatency(taskRun.latency_ms)}
                       </TableCell>
                       <TableCell className="px-3 py-4 whitespace-normal text-sm leading-6 text-muted">
@@ -222,7 +222,7 @@ export function TrendTaskRunsPanel({
       </Card>
 
       <Card
-        className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl"
+        className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl"
         id="trend-task-run-history"
       >
         <CardHeader>
@@ -241,7 +241,7 @@ export function TrendTaskRunsPanel({
 
         <CardContent>
           {visibleRuns.length === 0 ? (
-            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
               <CardContent className="text-sm leading-6 text-muted">
                 No trend task run history exists for this project yet.
               </CardContent>
@@ -249,7 +249,7 @@ export function TrendTaskRunsPanel({
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-border text-sm text-muted hover:bg-transparent">
+                <TableRow className="border-trim-offset text-sm text-muted hover:bg-transparent">
                   <TableHead className="px-3 py-4">Started</TableHead>
                   <TableHead className="px-3 py-4">Task</TableHead>
                   <TableHead className="px-3 py-4">Status</TableHead>
@@ -260,11 +260,11 @@ export function TrendTaskRunsPanel({
               </TableHeader>
               <TableBody>
                 {visibleRuns.map((taskRun) => (
-                  <TableRow key={taskRun.id} className="border-border align-top">
-                    <TableCell className="px-3 py-4 text-sm text-foreground">
+                  <TableRow key={taskRun.id} className="border-trim-offset align-top">
+                    <TableCell className="px-3 py-4 text-sm text-content-active">
                       {formatDate(taskRun.started_at)}
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-sm font-medium text-foreground">
+                    <TableCell className="px-3 py-4 text-sm font-medium text-content-active">
                       {formatTrendTaskName(taskRun.task_name)}
                     </TableCell>
                     <TableCell className="px-3 py-4">
@@ -272,10 +272,10 @@ export function TrendTaskRunsPanel({
                         {formatDisplayLabel(taskRun.status)}
                       </StatusBadge>
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-sm text-foreground">
+                    <TableCell className="px-3 py-4 text-sm text-content-active">
                       {formatDate(taskRun.finished_at)}
                     </TableCell>
-                    <TableCell className="px-3 py-4 text-sm text-foreground">
+                    <TableCell className="px-3 py-4 text-sm text-content-active">
                       {formatLatency(taskRun.latency_ms)}
                     </TableCell>
                     <TableCell className="px-3 py-4 whitespace-normal text-sm leading-6 text-muted">

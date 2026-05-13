@@ -18,10 +18,10 @@ export const PageSection = <T extends SectionTag = "section">({
     <Component
       id={id}
       className={cn(
-        "mx-auto max-w-marketing px-4 sm:px-6",
-        "rounded-display",
-        "border border-border",
-        "bg-card shadow-soft backdrop-blur-[18px]",
+        "mx-auto max-w-6xl px-4 sm:px-6",
+        "rounded-4xl",
+        "border border-trim-offset",
+        "bg-page-base shadow-soft backdrop-blur-[18px]",
         classes,
       )}
       {...props}

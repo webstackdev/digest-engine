@@ -57,7 +57,7 @@ const DEFAULT_CONFIG_VALUES = {
 } satisfies Omit<ProjectConfig, "id" | "project">
 
 const inputClassName =
-  "h-11 rounded-2xl border-border bg-muted px-4"
+  "h-11 rounded-2xl border-trim-offset bg-muted px-4"
 
 /**
  * Render admin-only sliders for project authority weights.
@@ -130,12 +130,12 @@ export function AuthorityWeightControls({
   }
 
   return (
-    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardHeader>
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Admin controls</p>
-            <CardTitle className="font-display text-title-sm font-bold text-foreground">
+            <CardTitle className="font-display text-title-sm font-bold text-content-active">
               Authority weights
             </CardTitle>
           </div>
@@ -239,12 +239,12 @@ export function AuthorityWeightControls({
         </div>
 
         {statusMessage ? (
-          <Alert className="rounded-panel border-border bg-muted" role="status">
+          <Alert className="rounded-3xl border-trim-offset bg-muted" role="status">
             <AlertDescription>{statusMessage}</AlertDescription>
           </Alert>
         ) : null}
         {errorMessage ? (
-          <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
+          <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
             <AlertDescription className="text-destructive">{errorMessage}</AlertDescription>
           </Alert>
         ) : null}

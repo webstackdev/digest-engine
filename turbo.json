@@ -21,6 +21,14 @@
     "lint": {
       "dependsOn": ["^build"]
     },
+    "lint:style": {
+      "cache": true,
+      "outputs": []
+    },
+    "lint:style:fix": {
+      "cache": false,
+      "outputs": []
+    },
     "dev": {
       "cache": false,
       "persistent": true

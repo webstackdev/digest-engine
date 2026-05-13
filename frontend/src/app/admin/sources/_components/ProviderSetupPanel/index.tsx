@@ -25,9 +25,9 @@ import { formatDate } from "@/lib/view-helpers"
 
 import type { VerificationState } from "../helpers"
 
-const inputClassName = "h-11 rounded-2xl border-border bg-card px-4"
+const inputClassName = "h-11 rounded-2xl border-trim-offset bg-page-base px-4"
 const selectTriggerClassName =
-  "w-full rounded-2xl border-border bg-card px-4 py-3 text-sm data-[size=default]:h-11"
+  "w-full rounded-2xl border-trim-offset bg-page-base px-4 py-3 text-sm data-[size=default]:h-11"
 
 type ProviderSetupPanelProps = {
   selectedProjectId: number
@@ -53,12 +53,12 @@ export function ProviderSetupPanel({
 }: ProviderSetupPanelProps) {
   return (
     <div className="space-y-4">
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Bluesky</p>
-              <h2 className="font-display text-title-sm font-bold text-foreground">
+              <h2 className="font-display text-title-sm font-bold text-content-active">
                 Credential verification
               </h2>
               <CardDescription>
@@ -73,12 +73,12 @@ export function ProviderSetupPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+            <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
               <CardContent className="space-y-2 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Stored credentials
                 </p>
-                <p className="m-0 text-sm leading-6 text-foreground">
+                <p className="m-0 text-sm leading-6 text-content-active">
                   {currentBlueskyCredentials
                     ? currentBlueskyCredentials.handle || "Handle available after save"
                     : "No Bluesky credentials are configured for this project yet."}
@@ -95,7 +95,7 @@ export function ProviderSetupPanel({
                 ) : null}
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+            <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
               <CardContent className="space-y-4 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Save credentials
@@ -149,7 +149,7 @@ export function ProviderSetupPanel({
                   </Button>
                 </form>
                 <p className="m-0 text-sm leading-6 text-muted">
-                  Use <span className="font-mono text-foreground">{"{\"actor\": \"newsroom.bsky.social\"}"}</span> for an author timeline or <span className="font-mono text-foreground">{"{\"feed_uri\": \"at://did:plc.../app.bsky.feed.generator/...\"}"}</span> for a custom feed.
+                  Use <span className="font-mono text-content-active">{"{\"actor\": \"newsroom.bsky.social\"}"}</span> for an author timeline or <span className="font-mono text-content-active">{"{\"feed_uri\": \"at://did:plc.../app.bsky.feed.generator/...\"}"}</span> for a custom feed.
                 </p>
               </CardContent>
             </Card>
@@ -164,12 +164,12 @@ export function ProviderSetupPanel({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">LinkedIn</p>
-              <h2 className="font-display text-title-sm font-bold text-foreground">
+              <h2 className="font-display text-title-sm font-bold text-content-active">
                 OAuth authorization
               </h2>
               <CardDescription>
@@ -184,12 +184,12 @@ export function ProviderSetupPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+            <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
               <CardContent className="space-y-2 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Stored authorization
                 </p>
-                <p className="m-0 text-sm leading-6 text-foreground">
+                <p className="m-0 text-sm leading-6 text-content-active">
                   {currentLinkedInCredentials
                     ? currentLinkedInCredentials.member_urn || "Member available after verification"
                     : "No LinkedIn authorization is configured for this project yet."}
@@ -211,7 +211,7 @@ export function ProviderSetupPanel({
                 ) : null}
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+            <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
               <CardContent className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
@@ -229,7 +229,7 @@ export function ProviderSetupPanel({
                   </Button>
                 </form>
                 <p className="m-0 text-sm leading-6 text-muted">
-                  Use <span className="font-mono text-foreground">{"{\"organization_urn\": \"urn:li:organization:1337\"}"}</span> for a company feed, <span className="font-mono text-foreground">{"{\"person_urn\": \"urn:li:person:abc123\"}"}</span> for a member feed, or <span className="font-mono text-foreground">{"{\"newsletter_urn\": \"urn:li:newsletter:42\"}"}</span> for a newsletter surface.
+                  Use <span className="font-mono text-content-active">{"{\"organization_urn\": \"urn:li:organization:1337\"}"}</span> for a company feed, <span className="font-mono text-content-active">{"{\"person_urn\": \"urn:li:person:abc123\"}"}</span> for a member feed, or <span className="font-mono text-content-active">{"{\"newsletter_urn\": \"urn:li:newsletter:42\"}"}</span> for a newsletter surface.
                 </p>
               </CardContent>
             </Card>
@@ -243,7 +243,7 @@ export function ProviderSetupPanel({
           </form>
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+            <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
               <CardContent className="space-y-4 pt-4">
                 <div className="space-y-1">
                   <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
@@ -298,13 +298,13 @@ export function ProviderSetupPanel({
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+            <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
               <CardContent className="space-y-2 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Quick config shapes
                 </p>
                 <p className="m-0 text-sm leading-6 text-muted">
-                  Organization and newsletter sources use <span className="font-mono text-foreground">max_posts_per_fetch</span>. Person sources use <span className="font-mono text-foreground">include_reshares</span>.
+                  Organization and newsletter sources use <span className="font-mono text-content-active">max_posts_per_fetch</span>. Person sources use <span className="font-mono text-content-active">include_reshares</span>.
                 </p>
                 <p className="m-0 text-sm leading-6 text-muted">
                   The generic source editor below still works for advanced payloads,
@@ -317,12 +317,12 @@ export function ProviderSetupPanel({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Mastodon</p>
-              <h2 className="font-display text-title-sm font-bold text-foreground">
+              <h2 className="font-display text-title-sm font-bold text-content-active">
                 Credential verification
               </h2>
               <CardDescription>
@@ -337,12 +337,12 @@ export function ProviderSetupPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+            <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
               <CardContent className="space-y-2 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Stored credentials
                 </p>
-                <p className="m-0 text-sm leading-6 text-foreground">
+                <p className="m-0 text-sm leading-6 text-content-active">
                   {currentMastodonCredentials
                     ? currentMastodonCredentials.account_acct || currentMastodonCredentials.instance_url
                     : "No Mastodon credentials are configured for this project yet."}
@@ -359,7 +359,7 @@ export function ProviderSetupPanel({
                 ) : null}
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
+            <Card className="rounded-2xl border border-trim-offset bg-muted shadow-none ring-0">
               <CardContent className="space-y-4 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Save credentials
@@ -409,7 +409,7 @@ export function ProviderSetupPanel({
                   </Button>
                 </form>
                 <p className="m-0 text-sm leading-6 text-muted">
-                  Use <span className="font-mono text-foreground">{"{\"instance_url\": \"https://hachyderm.io\", \"hashtag\": \"platformengineering\"}"}</span> for a hashtag timeline, <span className="font-mono text-foreground">{"{\"account_acct\": \"alice@hachyderm.io\"}"}</span> for an account, or <span className="font-mono text-foreground">{"{\"list_id\": 42}"}</span> for a list.
+                  Use <span className="font-mono text-content-active">{"{\"instance_url\": \"https://hachyderm.io\", \"hashtag\": \"platformengineering\"}"}</span> for a hashtag timeline, <span className="font-mono text-content-active">{"{\"account_acct\": \"alice@hachyderm.io\"}"}</span> for an account, or <span className="font-mono text-content-active">{"{\"list_id\": 42}"}</span> for a list.
                 </p>
               </CardContent>
             </Card>
@@ -424,10 +424,10 @@ export function ProviderSetupPanel({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardHeader>
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Add source</p>
-          <h2 className="font-display text-title-sm font-bold text-foreground">
+          <h2 className="font-display text-title-sm font-bold text-content-active">
             Create source configuration
           </h2>
         </CardHeader>
@@ -452,11 +452,11 @@ export function ProviderSetupPanel({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="create-source-config-json">Config JSON</Label>
-              <Textarea className="min-h-30 rounded-2xl border-border bg-muted px-4 py-3 font-mono text-sm" defaultValue={JSON.stringify({ feed_url: "https://example.com/feed.xml" }, null, 2)} id="create-source-config-json" name="config_json" />
+              <Textarea className="min-h-30 rounded-2xl border-trim-offset bg-muted px-4 py-3 font-mono text-sm" defaultValue={JSON.stringify({ feed_url: "https://example.com/feed.xml" }, null, 2)} id="create-source-config-json" name="config_json" />
             </div>
             <p className="m-0 text-sm leading-6 text-muted">
               Bluesky configs accept either an actor handle or a feed URI. Mastodon
-              configs accept an instance URL plus one of <span className="font-mono text-foreground">hashtag</span>, <span className="font-mono text-foreground">account_acct</span>, or <span className="font-mono text-foreground">list_id</span>. LinkedIn configs accept <span className="font-mono text-foreground">organization_urn</span>, <span className="font-mono text-foreground">person_urn</span>, or <span className="font-mono text-foreground">newsletter_urn</span>. RSS and Reddit continue to use the existing backend JSON shapes.
+              configs accept an instance URL plus one of <span className="font-mono text-content-active">hashtag</span>, <span className="font-mono text-content-active">account_acct</span>, or <span className="font-mono text-content-active">list_id</span>. LinkedIn configs accept <span className="font-mono text-content-active">organization_urn</span>, <span className="font-mono text-content-active">person_urn</span>, or <span className="font-mono text-content-active">newsletter_urn</span>. RSS and Reddit continue to use the existing backend JSON shapes.
             </p>
             <div className="grid gap-2">
               <Label htmlFor="create-source-active">Active</Label>

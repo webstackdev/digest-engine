@@ -22,7 +22,7 @@ export const Default: Story = {}
 
 export const InToolbarRow: Story = {
   render: () => (
-    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3">
+    <div className="flex items-center gap-3 rounded-2xl border border-trim-offset bg-page-base p-3">
       <span className="text-sm text-muted">Appearance</span>
       <ThemeToggle />
     </div>

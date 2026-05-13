@@ -51,15 +51,15 @@ export function ThemeSuggestionCard({
     <Card
       className={cn(
         "rounded-3xl border shadow-panel backdrop-blur-xl",
-        isHighlighted ? "border-primary bg-primary" : "border-border bg-card",
+        isHighlighted ? "border-primary bg-primary" : "border-trim-offset bg-page-base",
       )}
     >
       <CardContent className="p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Theme suggestion</p>
-            <h2 className="font-display text-title-md font-bold text-foreground">{theme.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{theme.pitch}</p>
+            <h2 className="font-display text-title-md font-bold text-content-active">{theme.title}</h2>
+            <p className="mt-2 text-sm leading-6 text-content-offset">{theme.pitch}</p>
           </div>
           <StatusBadge
             tone={
@@ -77,19 +77,19 @@ export function ThemeSuggestionCard({
         <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.9fr)]">
           <div className="space-y-4">
             <div>
-              <p className="m-0 text-sm font-medium text-foreground">Why it matters</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">{theme.why_it_matters}</p>
+              <p className="m-0 text-sm font-medium text-content-active">Why it matters</p>
+              <p className="mt-2 text-sm leading-6 text-content-offset">{theme.why_it_matters}</p>
             </div>
             <div>
-              <p className="m-0 text-sm font-medium text-foreground">Suggested angle</p>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              <p className="m-0 text-sm font-medium text-content-active">Suggested angle</p>
+              <p className="mt-2 text-sm leading-6 text-content-offset">
                 {theme.suggested_angle || "No suggested angle was returned for this theme."}
               </p>
             </div>
 
             {clusterDetail?.memberships.length ? (
               <div>
-                <p className="m-0 text-sm font-medium text-foreground">Supporting content preview</p>
+                <p className="m-0 text-sm font-medium text-content-active">Supporting content preview</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {clusterDetail.memberships.slice(0, 3).map((membership) => (
                     <Link
@@ -106,7 +106,7 @@ export function ThemeSuggestionCard({
 
             {theme.promoted_contents.length > 0 ? (
               <div>
-                <p className="m-0 text-sm font-medium text-foreground">Promoted contents</p>
+                <p className="m-0 text-sm font-medium text-content-active">Promoted contents</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {theme.promoted_contents.map((content) => (
                     <Link
@@ -122,9 +122,9 @@ export function ThemeSuggestionCard({
             ) : null}
           </div>
 
-          <aside className="space-y-4 rounded-panel bg-muted px-4 py-4">
+          <aside className="space-y-4 rounded-3xl bg-muted px-4 py-4">
             <div>
-              <p className="m-0 text-sm font-medium text-foreground">Cluster</p>
+              <p className="m-0 text-sm font-medium text-content-active">Cluster</p>
               {theme.cluster ? (
                 <Link
                   className={cn(buttonVariants({ size: "sm", variant: "outline" }), "mt-2 rounded-full px-3")}
@@ -133,28 +133,28 @@ export function ThemeSuggestionCard({
                   {theme.cluster.label || `Cluster ${theme.cluster.id}`}
                 </Link>
               ) : (
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">No cluster is attached to this theme.</p>
+                <p className="mt-2 text-sm leading-6 text-content-offset">No cluster is attached to this theme.</p>
               )}
               {cluster?.dominant_entity ? (
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                <p className="mt-2 text-sm leading-6 text-content-offset">
                   Dominant entity: {cluster.dominant_entity.name}
                 </p>
               ) : null}
             </div>
 
-            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+            <div className="flex flex-wrap gap-2 text-sm text-content-offset">
               <span>Created {formatDate(theme.created_at)}</span>
               <span>Velocity {formatPercentScore(theme.velocity_at_creation)}</span>
               <span>Novelty {formatPercentScore(theme.novelty_score)}</span>
             </div>
 
             {theme.decided_by_username ? (
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="text-sm leading-6 text-content-offset">
                 Decided by {theme.decided_by_username} on {formatDate(theme.decided_at)}
               </p>
             ) : null}
             {theme.dismissal_reason ? (
-              <p className="text-sm leading-6 text-muted-foreground">Dismissal reason: {formatDisplayLabel(theme.dismissal_reason)}</p>
+              <p className="text-sm leading-6 text-content-offset">Dismissal reason: {formatDisplayLabel(theme.dismissal_reason)}</p>
             ) : null}
 
             {theme.status === "pending" ? (
@@ -177,7 +177,7 @@ export function ThemeSuggestionCard({
                     </Label>
                     <Select defaultValue={dismissalReasons[0]} name="reason">
                       <SelectTrigger
-                        className="min-h-11 rounded-2xl border-border bg-muted px-4 py-3 text-sm text-foreground"
+                        className="min-h-11 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-sm text-content-active"
                         id={`dismiss-reason-${theme.id}`}
                       >
                         <SelectValue placeholder="Dismissal reason" />

@@ -20,7 +20,7 @@ describe("ThemesQueueOverview", () => {
     expect(screen.getByText("Total themes")).toBeInTheDocument()
     expect(screen.getByText("6")).toBeInTheDocument()
     expect(screen.getByText("Themes waiting for an editor decision.")).toHaveClass(
-      "text-muted-foreground",
+      "text-content-offset",
     )
   })
 })

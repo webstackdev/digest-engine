@@ -34,7 +34,7 @@ export default async function TrendsPage({ searchParams }: TrendsPageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <Alert className="rounded-panel border-border bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-muted">
           <AlertDescription>Create a project first in Django admin.</AlertDescription>
         </Alert>
       </AppShell>

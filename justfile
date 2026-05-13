@@ -11,6 +11,7 @@ pnpm_exec := "pnpm"
 turbo_exec := "pnpm turbo"
 frontend_filter := "--filter=@digestengine/frontend"
 marketing_filter := "--filter=@digestengine/marketing"
+tailwind_filter := "--filter=@digestengine/tailwind-config"
 django_manage := "docker compose exec django python manage.py"
 host_backend_test_env := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi && set -a && . ./.env.test && set +a &&"
 
@@ -137,12 +138,14 @@ backend-lint:
 frontend-lint:
     @{{frontend_env}}
     @{{pnpm_setup}}
-    @{{turbo_exec}} run typecheck lint {{frontend_filter}}
+    @{{turbo_exec}} run typecheck lint lint:style {{frontend_filter}}
+    @{{turbo_exec}} run lint:style {{tailwind_filter}}
 
 # Lint and typecheck the standalone marketing site
 marketing-lint:
     @{{pnpm_setup}}
-    @{{turbo_exec}} run typecheck lint {{marketing_filter}}
+    @{{turbo_exec}} run typecheck lint lint:style {{marketing_filter}}
+    @{{turbo_exec}} run lint:style {{tailwind_filter}}
 
 # Run all lint and validation tasks
 lint: backend-lint frontend-lint marketing-lint helm-lint
@@ -160,12 +163,14 @@ backend-lint-fix:
 frontend-lint-fix:
     @{{frontend_env}}
     @{{pnpm_setup}}
-    @{{turbo_exec}} run lint:fix {{frontend_filter}}
+    @{{turbo_exec}} run lint:fix lint:style:fix {{frontend_filter}}
+    @{{turbo_exec}} run lint:style:fix {{tailwind_filter}}
 
 # Auto-fix marketing lint issues where supported
 marketing-lint-fix:
     @{{pnpm_setup}}
-    @{{turbo_exec}} run lint:fix {{marketing_filter}}
+    @{{turbo_exec}} run lint:fix lint:style:fix {{marketing_filter}}
+    @{{turbo_exec}} run lint:style:fix {{tailwind_filter}}
 
 # Run all available lint auto-fixes
 lint-fix: backend-lint-fix frontend-lint-fix marketing-lint-fix

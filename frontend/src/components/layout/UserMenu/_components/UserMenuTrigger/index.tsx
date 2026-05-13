@@ -14,7 +14,7 @@ export function UserMenuTrigger({
   return (
     <DropdownMenuTrigger
       aria-label="Open user menu"
-      className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card p-0 shadow-sm transition hover:brightness-105"
+      className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-trim-offset bg-page-base p-0 shadow-sm transition hover:brightness-105"
     >
       <UserAvatar
         avatarUrl={avatarUrl}

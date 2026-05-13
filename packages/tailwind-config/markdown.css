@@ -1,5 +1,5 @@
 /**
- * Global styles for content in Markdown layout
+ * Global styles for content in Markdown layout.
  */
 
 /**
@@ -20,7 +20,7 @@
 }
 
 /**
- * Footnote reference numbers should not have dotted underlines (normal or hover).
+ * Footnote reference numbers should not have dotted underlines.
  */
 .nextra-content sup a[data-footnote-ref],
 .nextra-content sup a.footnote-ref,
@@ -30,7 +30,8 @@
 }
 
 /**
- * Footnote backref icon link should not inherit dotted underline decoration.
+ * Footnote backref icon links should stay unadorned and use the active text
+ * color on hover so they fit the rest of the docs theme.
  */
 .nextra-content a[data-footnote-backref],
 .nextra-content a.footnote-backref {
@@ -43,113 +44,38 @@
 .nextra-content a[data-footnote-backref]:focus-visible,
 .nextra-content a.footnote-backref:hover,
 .nextra-content a.footnote-backref:focus-visible {
-  color: var(--color-content-offset);
+  color: var(--color-content-active);
   text-decoration: none;
   transform: translateY(-2px);
 }
 
 /**
- * Add a separator above the generated footnotes section.
+ * Add a soft separator above the generated footnotes section.
  */
 .nextra-content section[data-footnotes] {
-  border-top: 1px solid var(--color-trim);
+  border-top: 1px solid var(--color-trim-offset);
   margin-top: 2rem;
   padding-top: 1rem;
 }
 
 /**
- * Details and Summary stylings. Gives a thin line with a "+" symbol,
- * and animates the content when opening and closing.
- */
-.nextra-content details {
-  border-block-end: 1px solid var(--theme-color-content);
-  interpolate-size: allow-keywords;
-  margin-block: .5rem;
-  margin-bottom: 2rem;
-  padding-block: .5rem;
-}
-
-/** Details closed state */
-.nextra-content details::details-content {
-  block-size: 0;
-  overflow: hidden;
-  transition: content-visibility, block-size;
-  transition-behavior: allow-discrete;
-  transition-duration: 750ms;
-}
-
-/** Details open state */
-.nextra-content details[open]::details-content {
-  block-size: auto;
-}
-
-.nextra-content summary {
-  /** Register summary as an anchor element */
-  anchor-name: --summary;
-
-  /** Pin the custom marker to the container */
-  position: relative;
-
-  &::marker {
-    content: "";
-  }
-
-  &::before,
-  &::after {
-    border-block-start: 3px solid var(--theme-color-content-active);
-
-    /** Custom marker dimensions */
-    content: "";
-    height: 0;
-
-    /** Positions the lines */
-    inset-block-start: 50%;
-    inset-inline-end: 0;
-
-    /** Anchor the shape to the summary */
-    position: absolute;
-    position-anchor: --summary;
-    width: 1rem;
-  }
-
-  /** Rotate just the ::after line to create a "+"" shape */
-  &::after {
-    transform: rotate(90deg);
-    transform-origin: 50%;
-  }
-}
-
-/** Rotate the line when open */
-.nextra-content details[open] summary::after {
-  transform: rotate(0deg);
-}
-
-@media (prefers-reduced-motion) {
-  .nextra-content details::details-content {
-     /** Use slower speed to open details box on reduced motion preference */
-    transition-duration: 0.8s;
-  }
-}
-
-/**
- * Space subscript slightly off content
+ * Space subscript slightly off content.
  */
 .nextra-content sub {
   margin-left: 0.15rem;
 }
 
 /**
- * Math - Tailwind preflight makes all svg elements `display: block`,
- * which breaks inline MathJax SVGs
+ * Tailwind preflight makes SVG elements block-level, which breaks inline
+ * MathJax output inside prose.
  */
 .nextra-content mjx-container svg {
   display: inline-block;
 }
 
 /**
- * Tables — the <figure> wrapping a captioned table is the scroll container.
- * On narrow viewports the figure scrolls horizontally instead of squishing
- * columns. The table itself keeps its natural (desktop) column widths.
+ * Let captioned tables scroll horizontally instead of clipping on narrow
+ * viewports.
  */
 .nextra-content figure:has(> table) {
   max-width: 100%;
@@ -157,143 +83,17 @@
 }
 
 /**
- * Lists
+ * Nextra already handles task list layout. We only restyle the checkbox so it
+ * matches the shared theme tokens.
  */
-.markdown-list ul,
-.markdown-list ol {
-  margin-bottom: 2rem;
-  margin-left: 1rem;
-}
-
-/**
- * Ordered list "steps" styling (markdown <ol>)
- */
-.markdown-list ol {
-  counter-reset: olSteps;
-  list-style: none;
-  padding-left: 0;
-}
-
-.markdown-list ol > li {
-  counter-increment: olSteps;
-  padding-left: calc(1.2em + 0.5rem);
-  position: relative;
-}
-
-.markdown-list ol > li::before {
-  background-color: var(--color-content);
-  border-radius: 9999px;
-  color: var(--color-content-inverse);
-  content: counter(olSteps);
-  display: inline-grid;
-  height: 1.2em;
-  left: 0;
-  line-height: 1.2em;
-  place-items: center;
-  position: absolute;
-  top: 0.15em;
-  width: 1.2em;
-}
-
-.markdown-list ol ol {
-  margin-top: 0.5rem;
-}
-
-/**
- * Unordered lists
- * Replace bullets with a checkmark marker (sized to match the ordered-list circles).
- */
-.markdown-list ul:not(.contains-task-list) {
-  list-style: none;
-  padding-left: 0;
-}
-
-.markdown-list ol > li,
-.markdown-list ul > li {
-  margin-bottom: 0.25rem;
-}
-
-.markdown-list ul:not(.contains-task-list) > li {
-  display: block;
-  min-width: 0;
-  padding-left: calc(1.2em + 0.5rem);
-  position: relative;
-}
-
-.markdown-list ul:not(.contains-task-list) > li::before {
-  background-color: var(--color-content);
-  border-radius: 9999px;
-  content: '';
-  height: 1.2em;
-  left: 0;
-  position: absolute;
-  top: 0.15em;
-  width: 1.2em;
-}
-
-.markdown-list ul:not(.contains-task-list) > li::after {
-  /* A checkmark SVG as a mask for the custom unordered list marker */
-  --ul-check-mask: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M9.999%2013.587L7.7%2011.292l-1.412%201.416%203.713%203.705%207.206-7.206-1.414-1.414z%22/%3E%3C/svg%3E");
-
-  background-color: var(--color-content-inverse);
-  content: '';
-  height: 1.2em;
-  left: 0;
-  mask-image: var(--ul-check-mask);
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: 1em 1em;
-  position: absolute;
-  top: 0.15em;
-  width: 1.2em;
-}
-
-.markdown-list ul:not(.contains-task-list) ul:not(.contains-task-list) {
-  margin-top: 0.5rem;
-}
-
-.markdown-list ol > li:last-child,
-.markdown-list ul > li:last-child {
-  margin-bottom: 0;
-}
-
-/**
- * Footnote list marker numbers should fit comfortably inside the circular marker.
- */
-.nextra-content [data-footnotes] ol {
-  margin-left: 4px;
-}
-
-.nextra-content [data-footnotes] ol > li {
-  padding-left: calc(1.32em + 0.375rem);
-}
-
-.nextra-content [data-footnotes] ol > li::before {
-  background-color: var(--color-content-active);
-  font-size: 0.8em;
-  height: 1.32em;
-  line-height: 1em;
-  top: calc(0.15em + 2px);
-  width: 1.32em;
-}
-
-/**
- * Task lists (remark-gfm)
- * Keep task lists free of custom markers.
- */
-.markdown-list ul.contains-task-list {
-  list-style: none;
-  padding-left: 0;
-}
-
-.markdown-list li.task-list-item {
+.nextra-content li.task-list-item {
   align-items: flex-start;
   display: flex;
   gap: 0.6rem;
   list-style: none;
 }
 
-.markdown-list li.task-list-item > input[type='checkbox'] {
+.nextra-content li.task-list-item > input[type='checkbox'] {
   appearance: none;
   background-color: var(--color-page-offset);
   background-image: none;
@@ -308,9 +108,9 @@
   width: 1.15em;
 }
 
-.markdown-list li.task-list-item > input[type='checkbox']::before {
-  border-bottom: 0.18em solid var(--color-gray-50);
-  border-right: 0.18em solid var(--color-gray-50);
+.nextra-content li.task-list-item > input[type='checkbox']::before {
+  border-bottom: 0.18em solid var(--color-content-inverse);
+  border-right: 0.18em solid var(--color-content-inverse);
   content: '';
   height: 0.55em;
   opacity: 0;
@@ -318,22 +118,22 @@
   width: 0.35em;
 }
 
-.markdown-list li.task-list-item > input[type='checkbox']:checked {
+.nextra-content li.task-list-item > input[type='checkbox']:checked {
   background-color: var(--color-success);
   background-image: none;
   border-color: var(--color-success);
 }
 
-.markdown-list li.task-list-item > input[type='checkbox']:checked::before {
+.nextra-content li.task-list-item > input[type='checkbox']:checked::before {
   opacity: 1;
 }
 
-.markdown-list li.task-list-item > input[type='checkbox']:disabled {
+.nextra-content li.task-list-item > input[type='checkbox']:disabled {
   cursor: default;
   opacity: 1;
 }
 
-.markdown-list li.task-list-item > input[type='checkbox']:focus-visible {
+.nextra-content li.task-list-item > input[type='checkbox']:focus-visible {
   outline: 2px solid var(--color-spotlight);
   outline-offset: 2px;
 }

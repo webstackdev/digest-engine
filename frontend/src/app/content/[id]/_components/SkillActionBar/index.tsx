@@ -180,13 +180,13 @@ export function SkillActionBar({
         {getSkillLabel("relevance_scoring", isBusy("relevance_scoring"))}
       </Button>
       {statusMessage ? (
-        <Alert className="basis-full rounded-panel border-border bg-muted" role="status">
+        <Alert className="basis-full rounded-3xl border-trim-offset bg-muted" role="status">
           <AlertDescription>{statusMessage}</AlertDescription>
         </Alert>
       ) : null}
       {errorMessage ? (
         <Alert
-          className="basis-full rounded-panel border-destructive bg-destructive"
+          className="basis-full rounded-3xl border-destructive bg-destructive"
           role="alert"
           variant="destructive"
         >

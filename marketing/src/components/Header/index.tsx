@@ -19,7 +19,7 @@ export function Header() {
     <PageSection as="header" id="marketing-nav" classes="flex items-center gap-6 mt-6 sm:mt-8">
       <Link
         href="/"
-        className="flex shrink-0 items-center gap-3 text-foreground no-underline"
+        className="flex shrink-0 items-center gap-3 text-content-active no-underline"
       >
         <Image
           src={logo}
@@ -27,7 +27,7 @@ export function Header() {
           className="h-16 w-16 shrink-0"
           priority
         />
-        <span className="ml-2 text-xl font-semibold tracking-tight text-primary hover:text-foreground sm:text-3xl">
+        <span className="ml-2 text-xl font-semibold tracking-tight text-primary hover:text-content-active sm:text-3xl">
           {brand.name}
         </span>
       </Link>
@@ -38,7 +38,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-base font-medium tracking-tight text-primary transition-colors hover:text-foreground sm:text-lg"
+              className="text-base font-medium tracking-tight text-primary transition-colors hover:text-content-active sm:text-lg"
             >
               {item.label}
             </Link>

@@ -32,17 +32,17 @@ export function TopicClusterCard({
       <Card
         className={cn(
           "rounded-3xl border shadow-panel backdrop-blur-xl",
-          isSelected ? "border-primary bg-primary" : "border-border bg-card",
+          isSelected ? "border-primary bg-primary" : "border-trim-offset bg-page-base",
         )}
       >
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Cluster</p>
-              <h3 className="font-display text-title-sm font-bold text-foreground">
+              <h3 className="font-display text-title-sm font-bold text-content-active">
                 {cluster.label || `Cluster ${cluster.id}`}
               </h3>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              <p className="mt-2 text-sm leading-6 text-content-offset">
                 {cluster.dominant_entity
                   ? `Dominant entity: ${cluster.dominant_entity.name}`
                   : "No dominant entity has been resolved yet."}
@@ -52,7 +52,7 @@ export function TopicClusterCard({
               {formatPercentScore(cluster.velocity_score)}
             </StatusBadge>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted-foreground">
+          <div className="mt-4 flex flex-wrap gap-2 text-sm text-content-offset">
             <span>{cluster.member_count} members</span>
             <span>Z {formatScore(cluster.z_score)}</span>
             <span>Window {cluster.window_count ?? 0}</span>

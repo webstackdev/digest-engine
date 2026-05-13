@@ -76,12 +76,12 @@ export function HomePageContent({
       />
 
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
+        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-panel border-border bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-muted">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}

@@ -11,7 +11,7 @@ const Hero = ({ description, title, btnGetStarted }: IHeroProps) => {
   return (
     <section
       id="about"
-      className="relative overflow-hidden rounded-display border border-border bg-card px-6 py-8 shadow-panel backdrop-blur-[18px] sm:px-8 sm:py-10 lg:px-12 lg:py-14"
+      className="relative overflow-hidden rounded-4xl border border-trim-offset bg-page-base px-6 py-8 shadow-panel backdrop-blur-[18px] sm:px-8 sm:py-10 lg:px-12 lg:py-14"
     >
       <div className="absolute inset-0 bg-background" />
       <div className="relative grid items-center gap-10 lg:grid-cols-2">
@@ -20,7 +20,7 @@ const Hero = ({ description, title, btnGetStarted }: IHeroProps) => {
             <h1 className="text-4xl font-semibold tracking-tight text-primary sm:text-5xl lg:text-6xl">
               {title}
             </h1>
-            <p className="max-w-2xl text-lg leading-8 text-foreground sm:text-xl">
+            <p className="max-w-2xl text-lg leading-8 text-content-active sm:text-xl">
               {description}
             </p>
           </div>
@@ -30,7 +30,7 @@ const Hero = ({ description, title, btnGetStarted }: IHeroProps) => {
               asChild
               variant="default"
               size="lg"
-              className="h-12 rounded-full bg-primary px-6 text-primary-foreground text-button font-semibold transition-colors hover:bg-primary"
+              className="h-12 rounded-full bg-primary px-6 text-primary-foreground text-sm font-semibold transition-colors hover:bg-primary"
             >
               <Link href={btnGetStarted.link}>{btnGetStarted.text}</Link>
             </Button>

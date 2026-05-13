@@ -14,16 +14,16 @@ type LoginPageContentProps = {
 export default function LoginPageContent({ callbackUrl }: LoginPageContentProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <Card className="w-full max-w-md rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
+      <Card className="w-full max-w-md rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-8 pt-6">
           <div className="text-center">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-muted">
               Digest Engine
             </p>
-            <h1 className="mt-2 font-display text-display-page font-bold text-foreground">
+            <h1 className="mt-2 font-display text-display-page font-bold text-content-active">
               Welcome back
             </h1>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            <p className="mt-2 text-sm leading-6 text-content-offset">
               Sign in with your project account or continue with an enabled social provider.
             </p>
           </div>
@@ -33,7 +33,7 @@ export default function LoginPageContent({ callbackUrl }: LoginPageContentProps)
           <div className="relative">
             <Separator className="bg-border/20" />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="bg-card px-2 text-xs uppercase text-muted">
+              <span className="bg-page-base px-2 text-xs uppercase text-muted">
                 Or continue with password
               </span>
             </div>
@@ -41,7 +41,7 @@ export default function LoginPageContent({ callbackUrl }: LoginPageContentProps)
 
           <LoginForm callbackUrl={callbackUrl} />
 
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-sm text-content-offset">
             Need an account? Use the <Link className="font-medium text-primary hover:text-primary" href="/admin/">Django admin</Link> or registration API.
           </p>
         </CardContent>

@@ -144,7 +144,7 @@ export function AppShellSidebar({
         {navigationItems.map((item) =>
           item.kind === "messages" ? (
             <Card
-              className="rounded-panel bg-sidebar-accent py-0 text-sidebar-foreground ring-sidebar-border shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent hover:ring-sidebar-ring"
+              className="rounded-3xl bg-sidebar-accent py-0 text-sidebar-foreground ring-sidebar-border shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent hover:ring-sidebar-ring"
               key={item.label}
             >
               <CardContent className="flex items-center justify-between gap-3 px-4 py-4">
@@ -172,7 +172,7 @@ export function AppShellSidebar({
             </Card>
           ) : (
             <Link className="block" href={item.href} key={item.label}>
-              <Card className="rounded-panel bg-sidebar-accent py-0 text-sidebar-foreground ring-sidebar-border shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent hover:ring-sidebar-ring">
+              <Card className="rounded-3xl bg-sidebar-accent py-0 text-sidebar-foreground ring-sidebar-border shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent hover:ring-sidebar-ring">
                 <CardContent className="flex items-center justify-between gap-3 px-4 py-4">
                   <span>{item.label}</span>
                 </CardContent>
@@ -197,7 +197,7 @@ export function AppShellSidebar({
               >
                 <Card
                   className={cn(
-                    "rounded-panel py-0 text-sidebar-foreground shadow-none transition hover:-translate-y-0.5",
+                    "rounded-3xl py-0 text-sidebar-foreground shadow-none transition hover:-translate-y-0.5",
                     isActive
                       ? "bg-linear-to-b from-primary to-sidebar-accent ring-primary"
                       : "bg-sidebar-accent ring-sidebar-border hover:bg-sidebar-accent hover:ring-sidebar-ring",

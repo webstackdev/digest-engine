@@ -19,10 +19,10 @@ describe("TopicClusterCard", () => {
     )
     expect(
       screen.getByText(`Dominant entity: ${cluster.dominant_entity?.name}`),
-    ).toHaveClass("text-muted-foreground")
+    ).toHaveClass("text-content-offset")
     expect(screen.getByText(`${cluster.member_count} members`)).toBeInTheDocument()
     expect(screen.getByText(`${cluster.member_count} members`).parentElement).toHaveClass(
-      "text-muted-foreground",
+      "text-content-offset",
     )
   })
 })
