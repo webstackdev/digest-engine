@@ -6,7 +6,6 @@
     "types": ["vitest/globals", "@testing-library/jest-dom"],
     "paths": {
       "@/*": ["./src/*"],
-      "@digestengine/ui": ["../packages/ui/src/index.ts"],
       "@/components/layout/*": ["./src/components/layout/*"],
       "@/components/elements/*": ["./src/components/elements/*"],
       "@/components/ui/*": [

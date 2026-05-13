@@ -4,8 +4,7 @@
   "compilerOptions": {
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@digestengine/ui": ["../packages/ui/src/index.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

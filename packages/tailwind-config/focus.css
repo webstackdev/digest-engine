@@ -1,10 +1,23 @@
 /**
  * Default Focus styles
+ *
+ * Next does not provide a custom, consistent focus style for links or forms.
  */
 @layer base {
-  :where(a, button):focus-visible,
-  :where(input, textarea):focus-visible,
-  :where(select):focus-visible {
+  :where(
+    a,
+    button,
+    input,
+    textarea,
+    select,
+    summary,
+    [role='button'],
+    [role='link'],
+    [role='menuitem'],
+    [role='menuitemcheckbox'],
+    [role='menuitemradio'],
+    [tabindex]:not([tabindex='-1'])
+  ):focus-visible {
     outline: 2px solid var(--color-spotlight);
     outline-offset: 2px;
 

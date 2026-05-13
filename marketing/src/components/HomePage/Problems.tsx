@@ -4,8 +4,7 @@ import { PageSection } from "../Section";
 const Problems: FC<{
   title: string;
   description: string;
-  items: { label: string; eyebrow: string }[];
-}> = () => {
+}> = ({ title, description }) => {
 
   return (
     <PageSection>
@@ -13,10 +12,10 @@ const Problems: FC<{
         <div className="max-w-3xl mx-auto">
           <span className="text-indigo-400 font-semibold uppercase tracking-wider text-sm block mb-3">Introducing Digest Engine</span>
           <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl mb-6">
-            Spend your time writing. Let AI handle the hunting.
+            {title}
           </h2>
           <p className="text-lg text-slate-400 leading-relaxed">
-            Digest Engine is an AI-powered content curation platform built specifically for technical newsletters. It quietly monitors your domain, maps industry authority, and surfaces the exact signals you need to stay relevant.
+            {description}
           </p>
         </div>
       </section>

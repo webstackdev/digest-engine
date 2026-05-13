@@ -11,7 +11,6 @@ pnpm_exec := "pnpm"
 turbo_exec := "pnpm turbo"
 frontend_filter := "--filter=@digestengine/frontend"
 marketing_filter := "--filter=@digestengine/marketing"
-packages_filter := "--filter=@digestengine/ui"
 django_manage := "docker compose exec django python manage.py"
 host_backend_test_env := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi && set -a && . ./.env.test && set +a &&"
 
@@ -36,22 +35,17 @@ marketing-install:
     @{{pnpm_setup}}
     @{{pnpm_exec}} install {{marketing_filter}}
 
-# Ensure pnpm is enabled, then install shared package dependencies
-packages-install:
-    @{{pnpm_setup}}
-    @{{pnpm_exec}} install {{packages_filter}}
-
 # Install pre-commit hooks when running inside a git checkout
 install-hooks:
     @if git rev-parse --git-dir >/dev/null 2>&1; then {{backend_venv}} && {{backend_python}} -m pre_commit install --install-hooks; fi
 
 # Install backend, frontend, and git hook dependencies
-install: backend-install frontend-install marketing-install packages-install install-hooks
+install: backend-install frontend-install marketing-install install-hooks
 
 # Remove generated caches, coverage output, and frontend build artifacts
 clean:
     @find . \
-        \( -path './.git' -o -path './.venv' -o -path './node_modules' -o -path './frontend/node_modules' -o -path './marketing/node_modules' -o -path './packages/ui/node_modules' \) -prune -o \
+        \( -path './.git' -o -path './.venv' -o -path './node_modules' -o -path './frontend/node_modules' -o -path './marketing/node_modules' \) -prune -o \
         -type d \( -name '__pycache__' -o -name '.pytest_cache' -o -name '.mypy_cache' -o -name '.ruff_cache' \) -exec rm -rf {} +
     @rm -rf .coverage .turbo htmlcov frontend/.next frontend/coverage frontend/storybook-static frontend/node_modules/.cache marketing/.next marketing/node_modules/.cache
 
@@ -150,13 +144,8 @@ marketing-lint:
     @{{pnpm_setup}}
     @{{turbo_exec}} run typecheck lint {{marketing_filter}}
 
-# Lint the shared workspace packages
-packages-lint:
-    @{{pnpm_setup}}
-    @{{turbo_exec}} run typecheck lint {{packages_filter}}
-
 # Run all lint and validation tasks
-lint: backend-lint frontend-lint marketing-lint packages-lint helm-lint
+lint: backend-lint frontend-lint marketing-lint helm-lint
 
 # Auto-fix backend lint issues where supported, then re-run backend validation
 backend-lint-fix:
@@ -178,13 +167,8 @@ marketing-lint-fix:
     @{{pnpm_setup}}
     @{{turbo_exec}} run lint:fix {{marketing_filter}}
 
-# Auto-fix shared package lint issues where supported
-packages-lint-fix:
-    @{{pnpm_setup}}
-    @{{turbo_exec}} run lint:fix {{packages_filter}}
-
 # Run all available lint auto-fixes
-lint-fix: backend-lint-fix frontend-lint-fix marketing-lint-fix packages-lint-fix
+lint-fix: backend-lint-fix frontend-lint-fix marketing-lint-fix
 
 # Format frontend source files with Prettier
 frontend-format:
@@ -208,11 +192,6 @@ frontend-test:
 marketing-test:
     @{{pnpm_setup}}
     @{{turbo_exec}} run test:run {{marketing_filter}}
-
-# Run the shared package test suite
-packages-test:
-    @{{pnpm_setup}}
-    @{{turbo_exec}} run test:run {{packages_filter}}
 
 # Run Storybook browser tests for frontend components
 frontend-storybook-test:
@@ -242,7 +221,7 @@ backend-test-coverage-html: backend-test-coverage
     @{{backend_python}} -m coverage html
 
 # Run the main backend and frontend test suites
-test: backend-test frontend-test marketing-test packages-test
+test: backend-test frontend-test marketing-test
 
 # -----------------------------------------------------------------------------
 # Compose Runtime

@@ -1,7 +1,5 @@
-import {
-  ThemeConfigProvider,
-  ConfigProvider,
-} from "../../node_modules/nextra-theme-docs/dist/stores/index.js";
+// @ts-expect-error nextra-theme-docs 4.6.1 does not ship declarations for this internal store module.
+import { ThemeConfigProvider, ConfigProvider } from "../../node_modules/nextra-theme-docs/dist/stores/index.js";
 // @ts-expect-error nextra-theme-docs 4.6.1 does not export this component publicly.
 import { MobileNav } from "../../node_modules/nextra-theme-docs/dist/components/sidebar.js";
 // @ts-expect-error nextra-theme-docs 4.6.1 does not export this schema publicly.

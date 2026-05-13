@@ -13,8 +13,20 @@ const Pricing: React.FC<IPricingProps> = ({
   const [isYearly, setIsYearly] = useState(false);
 
   return (
-    <PageSection name={title} description={description}>
-      <div id="pricing" className="space-y-8">
+    <PageSection id="pricing" classes="px-6 py-8 sm:px-8 sm:py-10">
+      <div className="max-w-2xl">
+        <p className="text-2xs font-semibold uppercase tracking-section text-muted-foreground">
+          Pricing
+        </p>
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          {title}
+        </h2>
+        <p className="mt-3 text-base leading-7 text-muted-foreground">
+          {description}
+        </p>
+      </div>
+
+      <div className="mt-8 space-y-8">
         <div className="flex w-full justify-center px-4">
           <div
             className={cn(

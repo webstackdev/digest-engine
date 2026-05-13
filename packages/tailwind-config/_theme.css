@@ -88,7 +88,7 @@
   --tracking-section: 0.28em;
   --leading-display: 0.94;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui;
+  --font-sans: var(--font-public-sans-family), ui-sans-serif, system-ui;
 }
 
 :root {

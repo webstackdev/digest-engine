@@ -20,7 +20,7 @@ import {
 } from "../shared"
 
 const dashboardSelectTriggerClassName =
-  "w-full rounded-2xl border-border/45 bg-card/95 px-4 py-3 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-secondary/88 focus-visible:border-ring"
+  "w-full rounded-2xl border-border/45 bg-card/95 px-4 py-3 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-secondary/88"
 
 type DashboardFilterToolbarProps = {
   projectId: number

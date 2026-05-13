@@ -331,7 +331,7 @@ export function MessagesWorkspace({
               <span>Recipient</span>
               <select
                 aria-label="Recipient"
-                className="h-10 rounded-lg border border-input bg-transparent px-3 text-sm outline-none transition focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-10 rounded-lg border border-input bg-transparent px-3 text-sm transition"
                 disabled={availableRecipients.length === 0 || openThreadMutation.isPending}
                 value={activeRecipientId ?? ""}
                 onChange={(event) => {

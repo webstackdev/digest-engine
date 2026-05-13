@@ -3,12 +3,6 @@
 @import "./theme.css";
 @import "./radix.css";
 
-/**
- * Tailwind v4 requires you to explicitly point to shared component libraries
- * so it can scan them for utility classes since 'content' is now automatic
- */
-@source "../../../packages/ui/src/**/*.tsx";
-
 @utility no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;

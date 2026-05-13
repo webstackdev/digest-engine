@@ -1,186 +1,472 @@
 /**
- * Font Face Declarations, modernized for Tailwind v4 compatibility
+ * Shared hosted font families.
  *
- * Displays a system font until font files load to improve FCP (First
- * Contentful Paint) with `font-display: swap`. This setup adjusts system
- * fonts to ensure that the web font doesn't render larger or smaller
- * than the system font fallback to avoid CLS (Cumulative Layout Shift) issues.
+ * Outfit drives display and heading typography, Public Sans handles body and
+ * UI copy, and JetBrains Mono covers code or structured text.
  *
- * System font mappings (font families available by default per platform):
- * Windows - Sans Serif: Arial, Serif: Times New Roman, Monospace: Courier New
- * MacOS - Sans Serif: Helvetica, Serif: Georgia, Monospace: Courier
- * Gnome/KDE - Sans Serif: DejaVu Sans, Serif: Liberation Serif, Monospace: DejaVu Sans Mono
- * iOS - Sans Serif: Helvetica, Serif: Georgia, Monospace: Courier
- * Android - Sans Serif: Roboto, Serif: Noto Serif, Monospace: Roboto Mono
+ * Metric-adjusted fallback faces reduce layout shift while the hosted fonts
+ * load by matching common Apple, Windows, and Android fallback fonts to the
+ * target font metrics.
  */
 @theme {
+  --font-heading:
+    "Outfit Variable",
+    "Outfit Variable Fallback: Helvetica Neue",
+    "Outfit Variable Fallback: Arial",
+    "Outfit Variable Fallback: Segoe UI",
+    "Outfit Variable Fallback: Roboto",
+    "Helvetica Neue",
+    Arial,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   --font-sans:
-    "Onest Regular",
-    "Onest Fallback Helvetica",
-    "Onest Fallback DejaVu Sans",
-    "Onest Fallback Arial",
-    "Onest Fallback Roboto",
+    "Public Sans Variable",
+    "Public Sans Variable Fallback: Helvetica Neue",
+    "Public Sans Variable Fallback: Arial",
+    "Public Sans Variable Fallback: Segoe UI",
+    "Public Sans Variable Fallback: Roboto",
+    "Helvetica Neue",
+    Arial,
+    "Segoe UI",
+    Roboto,
     sans-serif;
   --font-serif:
-    "Lora Regular",
-    "Lora Fallback Liberation Serif",
-    "Lora Fallback Times New Roman",
-    "Lora Fallback Georgia",
-    "Lora Fallback Noto Serif",
-    serif;
+    "Outfit Variable",
+    "Outfit Variable Fallback: Helvetica Neue",
+    "Outfit Variable Fallback: Arial",
+    "Outfit Variable Fallback: Segoe UI",
+    "Outfit Variable Fallback: Roboto",
+    "Helvetica Neue",
+    Arial,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
   --font-mono:
-    "IBM Plex Mono Regular",
-    "IBM Plex Mono Fallback Courier",
-    "IBM Plex Mono Fallback DejaVu Sans Mono",
-    "IBM Plex Mono Fallback Courier New",
-    "IBM Plex Mono Fallback Roboto Mono",
+    "JetBrains Mono Variable",
+    "JetBrains Mono Variable Fallback: Roboto Mono",
+    "JetBrains Mono Variable Fallback: Noto Sans Mono",
+    "JetBrains Mono Variable Fallback: Courier New",
+    "Roboto Mono",
+    "Noto Sans Mono",
+    "Courier New",
     monospace;
 }
 
 @font-face {
-  font-display: swap;
-  font-family: "Onest Regular";
+  font-family: "Outfit Variable Fallback: Helvetica Neue";
+  src: local('Helvetica Neue'), local('HelveticaNeue');
+  font-weight: 100 699;
   font-style: normal;
-  font-weight: normal;
-  src:
-    local("Onest Regular"),
-    local("OnestRegular1602-hint"),
-    url("/fonts/OnestRegular1602-hint.woff2") format("woff2");
+  ascent-override: 78.3972%;
+  descent-override: 20.3833%;
+  line-gap-override: 0%;
+  size-adjust: 127.5556%;
 }
 
 @font-face {
-  ascent-override: 97.00%;
-  descent-override: 30.50%;
-  font-family: "Onest Fallback Helvetica";
-  line-gap-override: 0.00%;
-  size-adjust: 103.70%;
-  src:
-    local("Helvetica"),
-    local("Helvetica LT Std"),
-    local("Helvetica World");
+  font-family: "Outfit Variable Fallback: Arial";
+  src: local('Arial'), local('ArialMT');
+  font-weight: 100 699;
+  font-style: normal;
+  ascent-override: 77.6656%;
+  descent-override: 20.1931%;
+  line-gap-override: 0%;
+  size-adjust: 128.7571%;
 }
 
 @font-face {
-  ascent-override: 97.00%;
-  descent-override: 30.50%;
-  font-family: "Onest Fallback DejaVu Sans";
-  line-gap-override: 0.00%;
-  size-adjust: 91.41%;
-  src: local("DejaVu Sans");
+  font-family: "Outfit Variable Fallback: Segoe UI";
+  src: local('Segoe UI'), local('SegoeUI');
+  font-weight: 100 699;
+  font-style: normal;
+  ascent-override: 77.2403%;
+  descent-override: 20.0825%;
+  size-adjust: 129.4661%;
 }
 
 @font-face {
-  ascent-override: 97.00%;
-  descent-override: 30.50%;
-  font-family: "Onest Fallback Arial";
-  line-gap-override: 0.00%;
-  size-adjust: 103.07%;
-  src: local("Arial");
+  font-family: "Outfit Variable Fallback: Roboto";
+  src: local('Roboto Regular'), local('Roboto-Regular');
+  font-weight: 100 699;
+  font-style: normal;
+  ascent-override: 77.4955%;
+  descent-override: 20.1488%;
+  size-adjust: 129.0397%;
 }
 
 @font-face {
-  ascent-override: 97.00%;
-  descent-override: 30.50%;
-  font-family: "Onest Fallback Roboto";
-  line-gap-override: 0.00%;
-  size-adjust: 105.30%;
-  src: local("Roboto");
+  font-family: "Outfit Variable Fallback: Helvetica Neue";
+  src: local('Helvetica Neue Bold'), local('HelveticaNeue-Bold');
+  font-weight: 700 900;
+  font-style: normal;
+  ascent-override: 80.402%;
+  descent-override: 20.9045%;
+  line-gap-override: 0%;
+  size-adjust: 124.375%;
+}
+
+@font-face {
+  font-family: "Outfit Variable Fallback: Arial";
+  src: local('Arial Bold'), local('Arial-BoldMT');
+  font-weight: 700 900;
+  font-style: normal;
+  ascent-override: 80.3987%;
+  descent-override: 20.9037%;
+  line-gap-override: 0%;
+  size-adjust: 124.3801%;
+}
+
+@font-face {
+  font-family: "Outfit Variable Fallback: Segoe UI";
+  src: local('Segoe UI Bold'), local('SegoeUI-Bold');
+  font-weight: 700 900;
+  font-style: normal;
+  ascent-override: 79.5808%;
+  descent-override: 20.691%;
+  size-adjust: 125.6584%;
+}
+
+@font-face {
+  font-family: "Outfit Variable Fallback: Roboto";
+  src: local('Roboto Bold'), local('Roboto-Bold');
+  font-weight: 700 900;
+  font-style: normal;
+  ascent-override: 75.7368%;
+  descent-override: 19.6916%;
+  size-adjust: 132.0363%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Helvetica Neue";
+  src: local('Helvetica Neue'), local('HelveticaNeue');
+  font-weight: 100 599;
+  font-style: normal;
+  ascent-override: 75.1979%;
+  descent-override: 17.81%;
+  line-gap-override: 0%;
+  size-adjust: 126.3333%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Arial";
+  src: local('Arial'), local('ArialMT');
+  font-weight: 100 599;
+  font-style: normal;
+  ascent-override: 74.4962%;
+  descent-override: 17.6438%;
+  line-gap-override: 0%;
+  size-adjust: 127.5233%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Segoe UI";
+  src: local('Segoe UI'), local('SegoeUI');
+  font-weight: 100 599;
+  font-style: normal;
+  ascent-override: 74.0882%;
+  descent-override: 17.5472%;
+  size-adjust: 128.2256%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Roboto";
+  src: local('Roboto Regular'), local('Roboto-Regular');
+  font-weight: 100 599;
+  font-style: normal;
+  descent-override: 17.6052%;
+  size-adjust: 127.8033%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Helvetica Neue";
+  src: local('Helvetica Neue Italic'), local('HelveticaNeue-Italic');
+  font-weight: 100 599;
+  font-style: italic;
+  ascent-override: 82.5606%;
+  descent-override: 19.5538%;
+  line-gap-override: 0%;
+  size-adjust: 115.067%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Arial";
+  src: local('Arial Italic'), local('Arial-ItalicMT');
+  font-weight: 100 599;
+  font-style: italic;
+  ascent-override: 82.1553%;
+  descent-override: 19.4578%;
+  line-gap-override: 0%;
+  size-adjust: 115.6346%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Segoe UI";
+  src: local('Segoe UI Italic'), local('SegoeUI-Italic');
+  font-weight: 100 599;
+  font-style: italic;
+  ascent-override: 79.9057%;
+  descent-override: 18.925%;
+  size-adjust: 118.8901%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Roboto";
+  src: local('Roboto Italic'), local('Roboto-Italic');
+  font-weight: 100 599;
+  font-style: italic;
+  descent-override: 18.8824%;
+  size-adjust: 119.1585%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Helvetica Neue";
+  src: local('Helvetica Neue Bold'), local('HelveticaNeue-Bold');
+  font-weight: 600 900;
+  font-style: normal;
+  ascent-override: 76.8971%;
+  descent-override: 18.2125%;
+  line-gap-override: 0%;
+  size-adjust: 123.5417%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Arial";
+  src: local('Arial Bold'), local('Arial-BoldMT');
+  font-weight: 600 900;
+  font-style: normal;
+  ascent-override: 76.894%;
+  descent-override: 18.2117%;
+  line-gap-override: 0%;
+  size-adjust: 123.5467%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Segoe UI";
+  src: local('Segoe UI Bold'), local('SegoeUI-Bold');
+  font-weight: 600 900;
+  font-style: normal;
+  ascent-override: 76.1118%;
+  descent-override: 18.0265%;
+  size-adjust: 124.8164%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Roboto";
+  src: local('Roboto Bold'), local('Roboto-Bold');
+  font-weight: 600 900;
+  font-style: normal;
+  descent-override: 17.1557%;
+  size-adjust: 131.1516%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Helvetica Neue";
+  src: local('Helvetica Neue Bold Italic'), local('HelveticaNeue-BoldItalic');
+  font-weight: 600 900;
+  font-style: italic;
+  ascent-override: 84.8561%;
+  descent-override: 20.0975%;
+  line-gap-override: 0%;
+  size-adjust: 111.9543%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Arial";
+  src: local('Arial Bold Italic'), local('Arial-BoldItalicMT');
+  font-weight: 600 900;
+  font-style: italic;
+  ascent-override: 84.6762%;
+  descent-override: 20.0549%;
+  line-gap-override: 0%;
+  size-adjust: 112.1921%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Segoe UI";
+  src: local('Segoe UI Bold Italic'), local('SegoeUI-BoldItalic');
+  font-weight: 600 900;
+  font-style: italic;
+  ascent-override: 83.4703%;
+  descent-override: 19.7693%;
+  size-adjust: 113.813%;
+}
+
+@font-face {
+  font-family: "Public Sans Variable Fallback: Roboto";
+  src: local('Roboto Bold Italic'), local('Roboto-BoldItalic');
+  font-weight: 600 900;
+  font-style: italic;
+  descent-override: 18.3616%;
+  size-adjust: 122.5387%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Roboto Mono";
+  src: local('Roboto Mono Regular'), local('RobotoMono-Regular');
+  font-weight: 100 599;
+  font-style: normal;
+  ascent-override: 101.6777%;
+  descent-override: 29.9052%;
+  size-adjust: 100.317%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Noto Sans Mono";
+  src: local('Noto Sans Mono Regular'), local('NotoSansMono-Regular');
+  font-weight: 100 599;
+  font-style: normal;
+  ascent-override: 101.6611%;
+  descent-override: 29.9003%;
+  size-adjust: 100.3333%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Courier New";
+  src: local('Courier New'), local('CourierNewPSMT');
+  font-weight: 100 599;
+  font-style: normal;
+  ascent-override: 101.6777%;
+  descent-override: 29.9052%;
+  size-adjust: 100.317%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Roboto Mono";
+  src: local('Roboto Mono Italic'), local('RobotoMono-Italic');
+  font-weight: 100 599;
+  font-style: italic;
+  ascent-override: 99.4439%;
+  descent-override: 29.2482%;
+  size-adjust: 102.5704%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Noto Sans Mono";
+  src: local('Noto Sans Mono Regular'), local('NotoSansMono-Regular');
+  font-weight: 100 599;
+  font-style: italic;
+  ascent-override: 101.6611%;
+  descent-override: 29.9003%;
+  size-adjust: 100.3333%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Courier New";
+  src: local('Courier New Italic'), local('CourierNewPS-ItalicMT');
+  font-weight: 100 599;
+  font-style: italic;
+  ascent-override: 101.6777%;
+  descent-override: 29.9052%;
+  size-adjust: 100.317%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Roboto Mono";
+  src: local('Roboto Mono Bold'), local('RobotoMono-Bold');
+  font-weight: 600 800;
+  font-style: normal;
+  ascent-override: 101.6777%;
+  descent-override: 29.9052%;
+  size-adjust: 100.317%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Noto Sans Mono";
+  src: local('Noto Sans Mono Bold'), local('NotoSansMono-Bold');
+  font-weight: 600 800;
+  font-style: normal;
+  ascent-override: 101.6611%;
+  descent-override: 29.9003%;
+  size-adjust: 100.3333%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Courier New";
+  src: local('Courier New Bold'), local('CourierNewPS-BoldMT');
+  font-weight: 600 800;
+  font-style: normal;
+  ascent-override: 101.6777%;
+  descent-override: 29.9052%;
+  size-adjust: 100.317%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Roboto Mono";
+  src: local('Roboto Mono Bold Italic'), local('RobotoMono-BoldItalic');
+  font-weight: 600 800;
+  font-style: italic;
+  ascent-override: 99.4439%;
+  descent-override: 29.2482%;
+  size-adjust: 102.5704%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Noto Sans Mono";
+  src: local('Noto Sans Mono Regular'), local('NotoSansMono-Regular');
+  font-weight: 600 800;
+  font-style: italic;
+  ascent-override: 101.6611%;
+  descent-override: 29.9003%;
+  size-adjust: 100.3333%;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable Fallback: Courier New";
+  src: local('Courier New Bold Italic'), local('CourierNewPS-BoldItalicMT');
+  font-weight: 600 800;
+  font-style: italic;
+  ascent-override: 101.6777%;
+  descent-override: 29.9052%;
+  size-adjust: 100.317%;
 }
 
 @font-face {
   font-display: swap;
-  font-family: "Lora Regular";
+  font-family: "Outfit Variable";
   font-style: normal;
-  font-weight: normal;
+  font-weight: 100 900;
   src:
-    local("Lora Regular"),
-    local("Lora-Regular"),
-    url("/fonts/Lora-Regular.woff2") format("woff2");
-}
-
-@font-face {
-  ascent-override: 100.60%;
-  descent-override: 27.40%;
-  font-family: "Lora Fallback Liberation Serif";
-  line-gap-override: 0.00%;
-  size-adjust: 108.56%;
-  src: local("Liberation Serif");
-}
-
-@font-face {
-  ascent-override: 100.60%;
-  descent-override: 27.40%;
-  font-family: "Lora Fallback Times New Roman";
-  line-gap-override: 0.00%;
-  size-adjust: 108.56%;
-  src: local("Times New Roman");
-}
-
-@font-face {
-  ascent-override: 100.60%;
-  descent-override: 27.40%;
-  font-family: "Lora Fallback Georgia";
-  line-gap-override: 0.00%;
-  size-adjust: 101.39%;
-  src: local("Georgia");
-}
-
-@font-face {
-  ascent-override: 100.60%;
-  descent-override: 27.40%;
-  font-family: "Lora Fallback Noto Serif";
-  line-gap-override: 0.00%;
-  size-adjust: 98.67%;
-  src: local("Noto Serif");
+    local("Outfit"),
+    url("/fonts/Outfit-VariableFont_wght.ttf") format("truetype");
 }
 
 @font-face {
   font-display: swap;
-  font-family: "IBM Plex Mono Regular";
+  font-family: "Public Sans Variable";
   font-style: normal;
-  font-weight: normal;
+  font-weight: 100 900;
   src:
-    local("IBM Plex Mono Regular"),
-    local("IBMPlexMono-Regular"),
-    url("/fonts/IBMPlexMono-Regular.woff2") format("woff2");
+    local("Public Sans"),
+    url("/fonts/PublicSans-VariableFont_wght.ttf") format("truetype");
 }
 
 @font-face {
-  ascent-override: 102.50%;
-  descent-override: 27.50%;
-  font-family: "IBM Plex Mono Fallback Courier";
-  line-gap-override: 0.00%;
-  size-adjust: 100.00%;
+  font-display: swap;
+  font-family: "Public Sans Variable";
+  font-style: italic;
+  font-weight: 100 900;
   src:
-    local("Courier"),
-    local("Nimbus Mono PS");
+    local("Public Sans Italic"),
+    url("/fonts/PublicSans-Italic-VariableFont_wght.ttf") format("truetype");
 }
 
 @font-face {
-  ascent-override: 102.50%;
-  descent-override: 27.50%;
-  font-family: "IBM Plex Mono Fallback DejaVu Sans Mono";
-  line-gap-override: 0.00%;
-  size-adjust: 99.66%;
-  src: local("DejaVu Sans Mono");
-}
-
-@font-face {
-  ascent-override: 102.50%;
-  descent-override: 27.50%;
-  font-family: "IBM Plex Mono Fallback Courier New";
-  line-gap-override: 0.00%;
-  size-adjust: 99.98%;
-  src: local("Courier New");
-}
-
-@font-face {
-  ascent-override: 102.50%;
-  descent-override: 27.50%;
-  font-family: "IBM Plex Mono Fallback Roboto Mono";
-  line-gap-override: 0.00%;
-  size-adjust: 99.98%;
+  font-display: swap;
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-weight: 100 800;
   src:
-    local("Roboto Mono"),
-    local("Roboto Mono for Powerline");
+    local("JetBrains Mono"),
+    url("/fonts/JetBrainsMono-VariableFont_wght.ttf") format("truetype");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "JetBrains Mono Variable";
+  font-style: italic;
+  font-weight: 100 800;
+  src:
+    local("JetBrains Mono Italic"),
+    url("/fonts/JetBrainsMono-Italic-VariableFont_wght.ttf") format("truetype");
 }

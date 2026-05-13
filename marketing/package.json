@@ -21,7 +21,6 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
-    "@digestengine/ui": "workspace:*",
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-slot": "^1.2.4",
     "class-variance-authority": "^0.7.1",

@@ -127,7 +127,7 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Open notifications"
-        className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/10 bg-card/85 p-0 shadow-sm transition hover:brightness-105 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/10 bg-card/85 p-0 shadow-sm transition hover:brightness-105"
       >
         <Bell className="size-5" />
         {unreadCount > 0 ? (
