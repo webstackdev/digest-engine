@@ -1,0 +1,100 @@
+/**
+ * CSS Reset Extensions
+ * Additional reset styles beyond Tailwind's Preflight
+ * Only includes custom enhancements not covered by Tailwind
+ */
+
+/**
+ * Allow percentage-based heights in the application
+ * (Not included in Tailwind Preflight)
+ */
+@layer reset {
+  html, body {
+    height: 100%;
+  }
+
+  html {
+    overflow: hidden;
+  }
+
+  body {
+    overflow: hidden;
+  }
+
+  /**
+   * Scroll viewport container — the only element that scrolls.
+   * Lives inside Container, below the fixed header.  Its scrollbar
+   * physically starts at the bottom of the header, preventing the
+   * scrollbar from being hidden behind the fixed-position header.
+   *
+   * On article pages the top margin equals the progress-bar height
+   * so the scrollbar sits below the progress bar too.
+   */
+  #scroll-viewport {
+    scrollbar-gutter: stable;
+  }
+
+  /**
+  * Abbreviations and acronyms
+  * (Enhancement not in Tailwind Preflight)
+  */
+  abbr[title] {
+    cursor: help;
+  }
+
+  /**
+  * Prevent modern browsers from displaying `audio` without controls.
+  * Remove excess height in iOS 5 devices.
+  * (Enhancement not in Tailwind Preflight)
+  */
+  audio:not([controls]) {
+    display: none;
+    height: 0;
+  }
+
+  /**
+  * Contain overflow in all browsers.
+  * (Enhancement not in Tailwind Preflight)
+  */
+  pre {
+    overflow: auto;
+  }
+
+  /**
+  * Normalize vertical alignment of `progress` in Chrome, Firefox, and Opera.
+  * (Enhancement not in Tailwind Preflight)
+  */
+  progress {
+    vertical-align: baseline;
+  }
+
+  /**
+  * Prevent `sub` and `sup` affecting `line-height` in all browsers.
+  * Font-size set to 75% and line-height to 0 in typography.
+  * (Positioning enhancement)
+  */
+  sup {
+    top: -0.5em;
+  }
+
+  sub {
+    bottom: -0.25em;
+  }
+
+  /**
+  * Resize textarea vertically so they don't break their horizontal containers.
+  * (Enhancement not in Tailwind Preflight)
+  */
+  textarea {
+    resize: vertical;
+  }
+
+  /**
+  * Table cell padding reset
+  * (Enhancement beyond Tailwind's border-collapse)
+  */
+  td,
+  th {
+    padding: 0;
+  }
+}

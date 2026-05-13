@@ -1,99 +1,63 @@
 # Home Page Copy
 
-> Working draft for the marketing landing page. More than we need, intentionally. Edit down per section. Tone: confident, technically credible, but written for a human editor — not an ML engineer.
-
-**Audience snapshot:** Editors and operators who run technical newsletters (dev tools, AI, infra, security, data, product). They're drowning in tabs. They care about being early, being right, and not sounding like an aggregator bot. They are not vector-database people and don't want to be.
-
-**Core positioning line:** *"The research desk for your newsletter. Digest Engine reads the internet so you can write the issue."*
-
-Alternate one-liners:
-
-- "Stop chasing tabs. Start writing the issue."
-- "Authority-aware content curation for newsletters that need to be right."
-- "A curation pipeline trained on your taste."
-- "Your newsletter has a point of view. Now your tooling does too."
-
----
-
-## **Value Proposition** (Hero)
-
-**Headline options (pick / remix):**
-
-- **The research desk for your newsletter.**
-  Digest Engine reads thousands of blogs, peer newsletters, and social feeds — and hands you a ranked shortlist that already sounds like *your* taste.
-
-- **Curation that learns who you trust.**
-  Track the people and companies that matter in your space. Rank every article against your own reference corpus. Ship the issue, not the research.
-
-- **One inbox, one ranked list, one draft.**
-  Plug in RSS, Reddit, Bluesky, Mastodon, LinkedIn, and inbound newsletter email. Get back a relevance-scored shortlist, summaries, and a draft outline.
-
-**Hero subhead options:**
-
-- An AI-powered content curation platform built for technically-oriented newsletters. Ingests dozens of sources, scores them against your editorial taste, and surfaces the articles, trends, and themes worth covering this week.
-- We ingest the open web on a schedule, score every item against your project's reference corpus, and route the ambiguous ones through an LLM that's been told what *your* newsletter cares about. You get a ranked shortlist with summaries — not a firehose.
-- Built for editors who are tired of "AI for newsletters" tools that just rewrite TechCrunch headlines.
-
-**Primary CTA candidates:**
-
-- Start your first project
-- See it score a real article
-- Watch a 90-second tour
-- Request access
-
-**Hero supporting bullets (use ~3):**
-
-- Project-scoped: every newsletter has its own tracked entities, taste model, and content pipeline.
-- Self-hostable. Bring your own models via Ollama, or use OpenRouter for ~$2.30/month in dev.
-- Human-in-the-loop by design. Nothing ships without you reading it.
-- Designed for editors who don't know what a vector database is — and shouldn't have to.
-
----
-
 ## The Problem / Stakes Section
 
-**Section eyebrow:** "If you run a technical newsletter, you already know this part."
+**The real struggle of putting together a great newsletter?**
 
-**Section headline candidates:**
+Spotting real news that's trustworthy, engaging, and not already flooding your subscribers' feeds.
 
-- The current workflow is 40 open tabs and a Notes.app dump.
-- Curation is the job. Nobody pays you for the 6 hours of scrolling.
-- Your competitive edge is taste. Your tooling treats you like a scraper.
+Existing curation tools (Feedly, UpContent, ContentStudio, generic "AI content discovery") solve about a third of this. They rank by global popularity. They don't know who *you* trust. They can't tell you that three peer newsletters in your niche already covered a topic this week and you're about to be late. They have no concept of authority. They have no concept of *your* point of view.
 
-**Body copy — long version (PAS-style):**
+So the work falls back on you. Which means:
 
-> Most newsletter tools assume the hard part is sending the email. It isn't. The hard part is the four hours every week spent in feed readers, group chats, GitHub trending pages, X/Bluesky/Mastodon, and peer newsletters — trying to figure out what's actually new, what's actually credible, and what your specific audience hasn't seen ten times already.
->
-> Existing curation tools (Feedly, UpContent, ContentStudio, generic "AI content discovery") solve about a third of this. They rank by global popularity. They don't know who *you* trust. They can't tell you that three peer newsletters in your niche already covered a topic this week and you're about to be late. They have no concept of authority. They have no concept of *your* point of view.
->
-> So the work falls back on you. Which means:
->
-> - You miss things because the right source posted it on Bluesky and not RSS.
-> - You publish things because a loud account hyped them, not because the people you respect endorsed them.
-> - You spend writing time on research, and research time wishing you were writing.
-> - You ship later than the people you're competing with for attention.
->
-> The cost of staying on the current workflow isn't "inefficiency." It's relevance. Newsletters that fall behind on signal lose subscribers quietly, then all at once.
+- You miss things because it was posted on Bluesky and not RSS.
+- You publish things because a loud account hyped them, not because the people you respect endorsed them.
+- You spend writing time on research, and research time wishing you were writing.
 
-**Shorter / punchier variants (for tighter hero-adjacent layouts):**
 
-- **The status quo:** 40 tabs, three Slacks, two feed readers, and a vibes-based shortlist on Sunday night.
-- **The cost of inaction:** Your competitors are reading the same firehose. The ones who rank it better, ship it faster, and trust the right people will win the next 1,000 subscribers.
-- **The "finally" headline:** Finally, curation tooling that knows the difference between *trending* and *credible*.
-
-**Optional callout / pull quote slot:**
-
-> "Trending ≠ credible. Popular ≠ relevant. Recent ≠ new to your readers."
-
-**Bullet list of agitations (good for a 3-up grid):**
-
-- **Volume isn't the problem. Ranking is.** You don't need more sources. You need the right 12 items out of 4,000.
-- **Authority signals are missing.** No tool today tells you "the five editors you actually respect all linked to this."
-- **No taste memory.** Every Monday, your tools forget what you cared about last Monday. You retrain them by hand.
-- **No competitive view.** You find out a peer newsletter covered something when a reader emails you about it.
-- **No long memory.** Curation tools treat everything older than 7 days as gone. Trends take longer than that to form.
+Don't worry about the minutes a clunky workflow wastes; worry about the readers it costs you. Newsletters that lose their spark don't get angry emails—they get silent unsubscribes and drift away quietly.
 
 ---
+
+1. The Core Tension (The "Before" State)
+
+Instead of a long paragraph, turn your first sentence into a bold, high-contrast headline that serves as the section header.
+
+> **The real struggle of curation isn't finding content.**
+> It’s spotting real news that’s trustworthy, engaging, and not already flooding your subscribers' feeds.
+
+2. The Failure of Current Tools (The "Villain")
+
+Use a **3-column horizontal grid** or a **split-screen layout** (Text on left, concrete visual example on the right) to contrast what current tools do versus what they *should* do.
+
+- **Global Popularity ≠ Niche Authority**
+  They rank content by generic clicks. They don't know who *you* trust.
+- **The Echo-Chamber Trap**
+  They can't tell you if three competitor newsletters in your niche already covered a topic this week.
+- **Blind to Perspective**
+  They have no concept of authority—and zero concept of *your* point of view.
+- The Personal Toll & Final Stakes (The "Cost")
+
+Present your bullet points as a horizontal row of **3 "Pain Point" Cards**, followed immediately by your high-stakes quote at the bottom as a standalone visual callout.
+
+- **Card 1: Blind Spots**
+  You miss breaking trends because they happened on Bluesky, not an RSS feed.
+- **Card 2: Hype Over Substance**
+  You publish a story because a loud account hyped it, not because experts endorsed it.
+- **Card 3: Stolen Creative Time**
+  You spend valuable writing time on research, and research time wishing you were writing.
+
+The Bottom-Line Callout (Full-width banner, dark background, or bold text):
+
+> **"Don't worry about the minutes a clunky workflow wastes; worry about the readers it costs you."**
+> Newsletters that lose their spark don't get angry emails—they get silent unsubscribes that compound into a sudden crash.
+
+Design Tips to Make This Work
+
+- **Use Visual Anchors:** Put small, distinct UI elements next to the text. For example, show a mock screenshot of a generic tool sorting by "🔥 Popularity" versus your tool showing a "Niche Saturation: 3 Competitors Covered This" alert.
+- **Micro-Copy Hierarchy:** Ensure your headers in the sections above use large, **bold font**, while the supporting sentences are 2-3 font sizes smaller and slightly muted (e.g., dark gray instead of pure black).
+
+**The "No Vector DB" Proof Point:** You can visually balance the deep tech engine by keeping the interface dead simple. In your Tailwind build, pair this features grid with a lightweight mockup of an "Upvote/Downvote" feed or an alert card that says: *"3 peer newsletters covered this yesterday."*
 
 ## The Solution / How It Works
 

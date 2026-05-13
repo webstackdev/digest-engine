@@ -1,0 +1,59 @@
+/** Theme colors - import first */
+@import "./theme.css";
+@import "./themes/dark.css";
+@import "./themes/light.css";
+
+/** Print theme override — unlayered so it beats the theme files above */
+@import "./themes/print.css";
+
+/**
+ * Explicit cascade layer order.
+ * Tailwind defines its layers (base/components/utilities) internally.
+ * We keep app overrides layered where possible and import them after Tailwind.
+ * Files that declare their own layers or need top-level directives like `@theme`
+ * stay unwrapped so their internal structure remains valid.
+ */
+@layer reset, base, components, utilities;
+
+/** Tailwind CSS base, components, and utilities */
+@import "tailwindcss";
+
+/**
+ * Global CSS overrides.
+ * These load after Tailwind so single-class selectors win predictably.
+ */
+@import "./reset.css" layer(reset);
+@import "./fonts.css" layer(base);
+/** Contains top-level `@theme` tokens plus its own `@layer base` rules. */
+@import "./typography.css";
+/** Self-layered as `base` inside the imported file. */
+@import "./focus.css";
+@import "./markdown.css" layer(components);
+@import "./print.css" layer(utilities);
+
+/** Replaces "content" key in Tailwind config */
+@source "../../frontend/src/**/*.{ts,tsx,md,mdx}";
+@source "../../marketing/src/**/*.{ts,tsx,md,mdx}";
+
+/**
+ * Allow-list any utility classes that are generated dynamically, and not otherwise
+ * used in static CSS so that Tailwind knows to add them in the final CSS bundle
+ */
+//@source inline("text-success");
+
+/** New CSS directive in v4 to import Tailwind plugins */
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  /** Breakpoints */
+  --breakpoint-xs: 28em; /** 416 px */
+  --breakpoint-sm: 40em; /** 640 px */
+  --breakpoint-md: 48em; /** 768 px */
+  --breakpoint-lg: 64em; /** 1024 px */
+  --breakpoint-xl: 80em; /** 1280 px */
+  --breakpoint-2xl: 96em; /** 1536 px */
+
+  /** Z-index layering system */
+  --z-modal: 999;
+}

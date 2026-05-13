@@ -1,0 +1,19 @@
+/**
+ * Default Focus styles
+ */
+@layer base {
+  :where(a, button):focus-visible,
+  :where(input, textarea):focus-visible,
+  :where(select):focus-visible {
+    outline: 2px solid var(--color-spotlight);
+    outline-offset: 2px;
+
+    /** Remove dotted-underline text decoration since it renders touching the outline bounding box */
+    text-decoration: none;
+  }
+
+  /** Allow programmatic focus without a visible ring */
+  [tabindex='-1']:focus:not(:focus-visible) {
+    outline: none;
+  }
+}

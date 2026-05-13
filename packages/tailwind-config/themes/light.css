@@ -1,0 +1,261 @@
+/**
+* =============================================================================
+*  LIGHT THEME DEFINITIONS
+* =============================================================================
+*/
+[data-theme="light"]  {
+  /**
+   * =============================================================================
+   *  Base colors
+   * =============================================================================
+   */
+
+  /** Primary color for theme */
+  --theme-color-primary: #3e4d6b;
+
+  /** A shade of the primary color for accent */
+  --theme-color-primary-offset: var(--theme-color-blue-700);
+
+  /** A shade of the primary color for accent */
+  --theme-color-primary-inverse: #FFF;
+
+  /** Secondary color for theme */
+  --theme-color-secondary: #86a68d;
+
+  /** A shade of the secondary color for accent */
+  --theme-color-secondary-offset: var(--theme-color-green-700);
+
+  /** A shade of the primary color for accent */
+  --theme-color-secondary-inverse: #FFF;
+
+  /** Accent color for theme */
+  --theme-color-accent: var(--theme-color-orange-500);
+
+  /** A shade of the accent color for accent */
+  --theme-color-accent-offset: var(--theme-color-orange-600);
+
+  /**
+   * =============================================================================
+   *  Page element colors
+   * =============================================================================
+   */
+
+  /** A solid fill color for page page elements */
+  --theme-color-page-base: var(--theme-color-blue-175); /** --color-bg */
+
+  /** Opposite of a solid fill color for page page elements */
+  --theme-color-page-inverse: var(--theme-color-blue-900);
+
+  /** A shade of the page color for hover and focus states */
+  --theme-color-page-offset: var(--theme-color-blue-100); /** --color-bg-page-offset */
+
+  /** A solid fill color for page page elements */
+  --theme-color-page-active: var(--theme-color-blue-200); /** --color-bg */
+
+  /**
+   * =============================================================================
+   *  Text colors
+   * =============================================================================
+   */
+
+  /** Main content text color */
+  --theme-color-content: var(--theme-color-gray-700); /** --color-content */
+
+  /** A shade of the text color for accent */
+  --theme-color-content-offset: var(--theme-color-gray-500); /** --color-content-offset */
+
+  /** A shade of the text color for hover and focus states */
+  --theme-color-content-active: var(--theme-color-blue-900); /** --color-content-active */
+
+  /** Main content text color opposite */
+  --theme-color-content-inverse: var(--theme-color-blue-50); /** --color-content */
+
+  /** A shade of the text color for hover and focus states */
+  --theme-color-content-inverse-active: var(--theme-color-blue-150); /** --color-content-inverse-active */
+
+  /**
+   * =============================================================================
+   *  Border colors
+   * =============================================================================
+   */
+
+   /** A color for use in page borders */
+  --theme-color-trim: var(--theme-color-gray-600);
+
+  /** A color for use in page borders on hover */
+  --theme-color-trim-offset: var(--theme-color-gray-400);
+
+  /** A color for use in primary page accent elements */
+  --theme-color-spotlight: var(--theme-color-yellow-400);
+
+  /** A shade of the accent color for hover and focus states */
+  --theme-color-spotlight-offset: var(--theme-color-yellow-600);
+
+  /**
+   * =============================================================================
+   *  Success colors
+   * =============================================================================
+   */
+
+  --theme-color-success: var(--theme-color-green-600);
+  --theme-color-success-offset: var(--theme-color-green-700);
+  --theme-color-success-inverse: var(--theme-color-green-50);
+
+  /**
+   * =============================================================================
+   *  Info colors
+   * =============================================================================
+   */
+
+  --theme-color-info: var(--theme-color-blue-500);
+  --theme-color-info-offset: var(--theme-color-blue-700);
+  --theme-color-info-inverse: var(--theme-color-blue-50);
+
+  /**
+   * =============================================================================
+   *  Note colors
+   * =============================================================================
+   */
+
+  --theme-color-note: var(--theme-color-gray-600);
+  --theme-color-note-offset: var(--theme-color-gray-700);
+  --theme-color-note-inverse: var(--theme-color-gray-100);
+
+  /**
+   * =============================================================================
+   *  Warning colors
+   * =============================================================================
+   */
+
+  --theme-color-warning: var(--theme-color-yellow-500);
+  --theme-color-warning-offset: var(--theme-color-yellow-700);
+  --theme-color-warning-inverse: var(--theme-color-yellow-100);
+
+  /**
+   * =============================================================================
+   *  Danger colors
+   * =============================================================================
+   */
+
+  --theme-color-danger: var(--theme-color-red-500);
+  --theme-color-danger-offset: var(--theme-color-red-600);
+  --theme-color-danger-inverse: var(--theme-color-red-100);
+
+  /**
+   * =============================================================================
+   *  Icon color
+   * =============================================================================
+   */
+
+    /** Main icon color */
+  --theme-color-icons: var(--theme-color-blue-700);
+
+  /** A shade of the icon color for hover and focus states */
+  --theme-color-icons-active: var(--theme-color-blue-400);
+
+  /**
+   * =============================================================================
+   *  Palette colors
+   * =============================================================================
+   */
+  --theme-color-black: #000;
+  --theme-color-white: #fff;
+
+  /** Blues */
+  --theme-color-blue-50: #f4f6f8;
+  --theme-color-blue-100: #e9edf1;
+  --theme-color-blue-150: #d4dae6;
+  --theme-color-blue-175: #eff2f7;
+  --theme-color-blue-200: #cfd8e3;
+  --theme-color-blue-300: #8fa2c1;
+  --theme-color-blue-400: #697c9f;
+  --theme-color-blue-500: #3e4d6b;
+  --theme-color-blue-600: #34425b;
+  --theme-color-blue-700: #2d384d;
+  --theme-color-blue-800: #232c3d;
+  --theme-color-blue-900: #1b222e;
+
+  /** Grays */
+  --theme-color-gray-50: #f9fafb;
+  --theme-color-gray-100: #f3f4f6;
+  --theme-color-gray-200: #e5e7eb;
+  --theme-color-gray-300: #d1d5db;
+  --theme-color-gray-400: #9ca3af;
+  --theme-color-gray-500: #6b7280;
+  --theme-color-gray-600: #4b5563;
+  --theme-color-gray-700: #374151;
+  --theme-color-gray-800: #1f2937;
+  --theme-color-gray-900: #111827;
+  --theme-color-gray-offset: #9ca3af;
+
+  /** Greens */
+  --theme-color-green-50: #f3f6f4;
+  --theme-color-green-100: #e7edea;
+  --theme-color-green-200: #d0ddd4;
+  --theme-color-green-300: #b2c9b8;
+  --theme-color-green-400: #9ab4a1;
+  --theme-color-green-500: #86a68d;
+  --theme-color-green-600: #738d79;
+  --theme-color-green-700: #5f7a65;
+  --theme-color-green-800: #4c6152;
+  --theme-color-green-900: #3d4f41;
+
+  /** Oranges */
+  --theme-color-orange-50: #fcf4f1;
+  --theme-color-orange-100: #f7e6df;
+  --theme-color-orange-200: #efcbbb;
+  --theme-color-orange-300: #e2a38d;
+  --theme-color-orange-400: #d58369;
+  --theme-color-orange-450: #d17e60;
+  --theme-color-orange-500: #c66b52;
+  --theme-color-orange-600: #ae563f;
+  --theme-color-orange-700: #8f4332;
+  --theme-color-orange-800: #72382c;
+  --theme-color-orange-900: #5d3027;
+
+  /** Purples */
+  --theme-color-purple-100: #ece7f3;
+  --theme-color-purple-600: #6a6486;
+
+  /** Reds */
+  --theme-color-red-100: #f6e7e3;
+  --theme-color-red-400: #cf7b6d;
+  --theme-color-red-500: #ac5d50;
+  --theme-color-red-600: #8d493d;
+
+  /** Yellows */
+  --theme-color-yellow-100: #f6f1dd;
+  --theme-color-yellow-200: #eee3bb;
+  --theme-color-yellow-300: #e2d08d;
+  --theme-color-yellow-400: #cfb466;
+  --theme-color-yellow-500: #b38f47;
+  --theme-color-yellow-600: #8f6d36;
+  --theme-color-yellow-700: #6d5129;
+
+  /**
+   * =============================================================================
+   *  Vendor colors
+   * =============================================================================
+   */
+
+  --theme-color-bluesky: #00A8E8;
+  --theme-color-bluesky-active: #0087bd;
+  --theme-color-codepen: #000;
+  --theme-color-codepen-active: #1a1a1a;
+  --theme-color-github: #211F1F;
+  --theme-color-github-active: #333131;
+  --theme-color-linkedin: #0a66c2;
+  --theme-color-linkedin-active: #084c9e;
+  --theme-color-mastodon: #6364FF;
+  --theme-color-mastodon-active: #5557e6;
+  --theme-color-google-red: #EA4335;
+  --theme-color-google-yellow: #FBBC04;
+  --theme-color-google-blue: #4285F4;
+  --theme-color-google-blue-dark: #1967D2;
+  --theme-color-google-green: #34A853;
+  --theme-color-google-green-dark: #188038;
+  --theme-color-reddit: #FF4500;
+  --theme-color-reddit-active: #e03d00;
+  --theme-color-x: #000;
+  --theme-color-x-active: #1a1a1a;
+}

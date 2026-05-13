@@ -1,4 +1,4 @@
-@import "@digestengine/tailwind-config/theme.css";
+@import "@digestengine/tailwind-config/index.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -52,47 +52,49 @@
 
 :root {
   color-scheme: light;
-  --bg-selected-menu: var(--brand-selected);
-  --border-color: var(--brand-border);
-  --bg-secondary: var(--brand-bg-subtle);
-  --bg-primary: var(--brand-bg-surface);
-  --font-secondary: var(--brand-text);
-  --brand-color: var(--brand-fill-primary);
-  --font-primary: var(--brand-text-strong);
-  --font-hint: var(--brand-text-soft);
-  --bg-scroll-bar: var(--brand-scrollbar);
+  --canvas-bg: var(--color-primary-150);
+  --grid-line-strong: color-mix(in srgb, var(--color-primary-500) 24%, transparent);
+  --bg-selected-menu: color-mix(in srgb, var(--color-primary-100) 78%, white);
+  --border-color: color-mix(in srgb, var(--color-primary-300) 42%, white);
+  --bg-secondary: color-mix(in srgb, var(--color-primary-175) 92%, white);
+  --bg-primary: var(--color-primary-175);
+  --font-secondary: var(--color-primary-700);
+  --accent-color: var(--color-primary-500);
+  --font-primary: var(--color-primary-900);
+  --font-hint: color-mix(in srgb, var(--color-primary-700) 68%, white);
+  --bg-scroll-bar: color-mix(in srgb, var(--color-primary-300) 64%, var(--color-sage-300));
   --radius: 0.625rem;
-  --background: var(--brand-bg-surface);
-  --foreground: var(--brand-text-strong);
-  --card: var(--brand-bg-surface);
-  --card-foreground: var(--brand-text-strong);
-  --popover: var(--brand-bg-surface);
-  --popover-foreground: var(--brand-text-strong);
-  --primary: var(--brand-fill-primary);
-  --primary-foreground: var(--brand-fill-primary-contrast);
-  --secondary: var(--brand-bg-subtle);
-  --secondary-foreground: var(--brand-text);
-  --muted: var(--brand-bg-subtle);
-  --muted-foreground: var(--brand-text-soft);
-  --accent: var(--brand-selected);
-  --accent-foreground: var(--brand-text-strong);
-  --destructive: var(--brand-fill-accent);
-  --border: var(--brand-border);
-  --input: var(--brand-input);
-  --ring: var(--brand-ring);
-  --chart-1: var(--brand-chart-1);
-  --chart-2: var(--brand-chart-2);
-  --chart-3: var(--brand-chart-3);
-  --chart-4: var(--brand-chart-4);
-  --chart-5: var(--brand-chart-5);
-  --sidebar: var(--brand-bg-subtle);
-  --sidebar-foreground: var(--brand-text-strong);
-  --sidebar-primary: var(--brand-fill-primary);
-  --sidebar-primary-foreground: var(--brand-fill-primary-contrast);
-  --sidebar-accent: var(--brand-selected);
-  --sidebar-accent-foreground: var(--brand-text-strong);
-  --sidebar-border: var(--brand-border);
-  --sidebar-ring: var(--brand-ring);
+  --background: var(--color-primary-175);
+  --foreground: var(--color-primary-900);
+  --card: var(--color-primary-175);
+  --card-foreground: var(--color-primary-900);
+  --popover: color-mix(in srgb, var(--color-primary-175) 86%, white);
+  --popover-foreground: var(--color-primary-900);
+  --primary: var(--color-primary-500);
+  --primary-foreground: var(--color-primary-50);
+  --secondary: color-mix(in srgb, var(--color-primary-175) 92%, white);
+  --secondary-foreground: var(--color-primary-700);
+  --muted: color-mix(in srgb, var(--color-primary-100) 72%, white);
+  --muted-foreground: color-mix(in srgb, var(--color-primary-700) 68%, white);
+  --accent: color-mix(in srgb, var(--color-primary-100) 78%, white);
+  --accent-foreground: var(--color-primary-900);
+  --destructive: var(--color-burnt-500);
+  --border: color-mix(in srgb, var(--color-primary-100) 72%, white);
+  --input: color-mix(in srgb, var(--color-primary-300) 28%, white);
+  --ring: color-mix(in srgb, var(--color-primary-500) 76%, white);
+  --chart-1: var(--color-primary-500);
+  --chart-2: var(--color-primary-300);
+  --chart-3: var(--color-sage-500);
+  --chart-4: var(--color-sage-300);
+  --chart-5: var(--color-burnt-500);
+  --sidebar: var(--color-primary-100);
+  --sidebar-foreground: var(--color-primary-900);
+  --sidebar-primary: var(--color-primary-500);
+  --sidebar-primary-foreground: var(--color-primary-50);
+  --sidebar-accent: color-mix(in srgb, var(--color-primary-100) 78%, white);
+  --sidebar-accent-foreground: var(--color-primary-900);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
 }
 
 .dark {

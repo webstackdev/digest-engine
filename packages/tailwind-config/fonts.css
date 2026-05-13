@@ -1,0 +1,186 @@
+/**
+ * Font Face Declarations, modernized for Tailwind v4 compatibility
+ *
+ * Displays a system font until font files load to improve FCP (First
+ * Contentful Paint) with `font-display: swap`. This setup adjusts system
+ * fonts to ensure that the web font doesn't render larger or smaller
+ * than the system font fallback to avoid CLS (Cumulative Layout Shift) issues.
+ *
+ * System font mappings (font families available by default per platform):
+ * Windows - Sans Serif: Arial, Serif: Times New Roman, Monospace: Courier New
+ * MacOS - Sans Serif: Helvetica, Serif: Georgia, Monospace: Courier
+ * Gnome/KDE - Sans Serif: DejaVu Sans, Serif: Liberation Serif, Monospace: DejaVu Sans Mono
+ * iOS - Sans Serif: Helvetica, Serif: Georgia, Monospace: Courier
+ * Android - Sans Serif: Roboto, Serif: Noto Serif, Monospace: Roboto Mono
+ */
+@theme {
+  --font-sans:
+    "Onest Regular",
+    "Onest Fallback Helvetica",
+    "Onest Fallback DejaVu Sans",
+    "Onest Fallback Arial",
+    "Onest Fallback Roboto",
+    sans-serif;
+  --font-serif:
+    "Lora Regular",
+    "Lora Fallback Liberation Serif",
+    "Lora Fallback Times New Roman",
+    "Lora Fallback Georgia",
+    "Lora Fallback Noto Serif",
+    serif;
+  --font-mono:
+    "IBM Plex Mono Regular",
+    "IBM Plex Mono Fallback Courier",
+    "IBM Plex Mono Fallback DejaVu Sans Mono",
+    "IBM Plex Mono Fallback Courier New",
+    "IBM Plex Mono Fallback Roboto Mono",
+    monospace;
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Onest Regular";
+  font-style: normal;
+  font-weight: normal;
+  src:
+    local("Onest Regular"),
+    local("OnestRegular1602-hint"),
+    url("/fonts/OnestRegular1602-hint.woff2") format("woff2");
+}
+
+@font-face {
+  ascent-override: 97.00%;
+  descent-override: 30.50%;
+  font-family: "Onest Fallback Helvetica";
+  line-gap-override: 0.00%;
+  size-adjust: 103.70%;
+  src:
+    local("Helvetica"),
+    local("Helvetica LT Std"),
+    local("Helvetica World");
+}
+
+@font-face {
+  ascent-override: 97.00%;
+  descent-override: 30.50%;
+  font-family: "Onest Fallback DejaVu Sans";
+  line-gap-override: 0.00%;
+  size-adjust: 91.41%;
+  src: local("DejaVu Sans");
+}
+
+@font-face {
+  ascent-override: 97.00%;
+  descent-override: 30.50%;
+  font-family: "Onest Fallback Arial";
+  line-gap-override: 0.00%;
+  size-adjust: 103.07%;
+  src: local("Arial");
+}
+
+@font-face {
+  ascent-override: 97.00%;
+  descent-override: 30.50%;
+  font-family: "Onest Fallback Roboto";
+  line-gap-override: 0.00%;
+  size-adjust: 105.30%;
+  src: local("Roboto");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "Lora Regular";
+  font-style: normal;
+  font-weight: normal;
+  src:
+    local("Lora Regular"),
+    local("Lora-Regular"),
+    url("/fonts/Lora-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  ascent-override: 100.60%;
+  descent-override: 27.40%;
+  font-family: "Lora Fallback Liberation Serif";
+  line-gap-override: 0.00%;
+  size-adjust: 108.56%;
+  src: local("Liberation Serif");
+}
+
+@font-face {
+  ascent-override: 100.60%;
+  descent-override: 27.40%;
+  font-family: "Lora Fallback Times New Roman";
+  line-gap-override: 0.00%;
+  size-adjust: 108.56%;
+  src: local("Times New Roman");
+}
+
+@font-face {
+  ascent-override: 100.60%;
+  descent-override: 27.40%;
+  font-family: "Lora Fallback Georgia";
+  line-gap-override: 0.00%;
+  size-adjust: 101.39%;
+  src: local("Georgia");
+}
+
+@font-face {
+  ascent-override: 100.60%;
+  descent-override: 27.40%;
+  font-family: "Lora Fallback Noto Serif";
+  line-gap-override: 0.00%;
+  size-adjust: 98.67%;
+  src: local("Noto Serif");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: "IBM Plex Mono Regular";
+  font-style: normal;
+  font-weight: normal;
+  src:
+    local("IBM Plex Mono Regular"),
+    local("IBMPlexMono-Regular"),
+    url("/fonts/IBMPlexMono-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  ascent-override: 102.50%;
+  descent-override: 27.50%;
+  font-family: "IBM Plex Mono Fallback Courier";
+  line-gap-override: 0.00%;
+  size-adjust: 100.00%;
+  src:
+    local("Courier"),
+    local("Nimbus Mono PS");
+}
+
+@font-face {
+  ascent-override: 102.50%;
+  descent-override: 27.50%;
+  font-family: "IBM Plex Mono Fallback DejaVu Sans Mono";
+  line-gap-override: 0.00%;
+  size-adjust: 99.66%;
+  src: local("DejaVu Sans Mono");
+}
+
+@font-face {
+  ascent-override: 102.50%;
+  descent-override: 27.50%;
+  font-family: "IBM Plex Mono Fallback Courier New";
+  line-gap-override: 0.00%;
+  size-adjust: 99.98%;
+  src: local("Courier New");
+}
+
+@font-face {
+  ascent-override: 102.50%;
+  descent-override: 27.50%;
+  font-family: "IBM Plex Mono Fallback Roboto Mono";
+  line-gap-override: 0.00%;
+  size-adjust: 99.98%;
+  src:
+    local("Roboto Mono"),
+    local("Roboto Mono for Powerline");
+}

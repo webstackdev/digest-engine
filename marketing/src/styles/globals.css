@@ -24,18 +24,22 @@
 
   html {
     scroll-behavior: smooth;
-    background-color: var(--brand-bg-canvas);
+    background-color: var(--canvas-bg);
   }
 
   body {
     @apply bg-background text-foreground;
     min-height: 100vh;
-    background-color: var(--brand-bg-canvas);
+    background-color: var(--canvas-bg);
     background-image:
-      linear-gradient(var(--brand-grid-line-strong) 1px, transparent 1px),
-      linear-gradient(90deg, var(--brand-grid-line-strong) 1px, transparent 1px);
-    background-position: 0 0, 0 0;
-    background-size: 48px 68px, 48px 68px;
+      linear-gradient(var(--grid-line-strong) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line-strong) 1px, transparent 1px);
+    background-position:
+      0 0,
+      0 0;
+    background-size:
+      48px 68px,
+      48px 68px;
     background-repeat: repeat, repeat;
     font-size: 16px;
   }
@@ -99,95 +103,8 @@ a {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--brand-fill-primary) 22%, white);
+  background: color-mix(in srgb, var(--primary) 22%, white);
   color: var(--font-primary);
-}
-
-.marketing-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.marketing-panel {
-  border: 1px solid var(--brand-border-bright);
-  background: var(--brand-bg-surface);
-  box-shadow: var(--brand-shadow-panel);
-  backdrop-filter: blur(18px);
-}
-
-.marketing-glass {
-  border: 1px solid var(--brand-border-bright);
-  background: var(--brand-surface-overlay);
-  box-shadow: var(--brand-shadow-soft);
-  backdrop-filter: blur(18px);
-}
-
-.marketing-glass-strong {
-  border: 1px solid var(--brand-border-bright);
-  background: var(--brand-surface-overlay-strong);
-  box-shadow: var(--brand-shadow-soft);
-  backdrop-filter: blur(18px);
-}
-
-.marketing-card {
-  border: 1px solid var(--brand-border-bright);
-  background: var(--brand-bg-surface);
-  box-shadow: var(--brand-shadow-card);
-}
-
-.marketing-card-strong {
-  border: 1px solid var(--brand-border-bright);
-  background: var(--brand-bg-surface);
-  box-shadow: var(--brand-shadow-card-strong);
-}
-
-.marketing-card-accent {
-  border: 1px solid var(--brand-accent-border);
-  background: var(--brand-surface-accent);
-  box-shadow: var(--brand-shadow-accent);
-}
-
-.marketing-icon-chip {
-  border: 1px solid var(--brand-border-bright);
-  background: var(--brand-surface-muted);
-  box-shadow: var(--brand-shadow-soft);
-}
-
-.marketing-accent-button {
-  background: var(--brand-fill-accent-soft);
-  color: var(--brand-fill-accent-contrast);
-  box-shadow: var(--brand-shadow-accent);
-}
-
-.marketing-accent-button:hover {
-  background: var(--brand-fill-accent);
-}
-
-.marketing-secondary-button {
-  border-color: var(--brand-border-bright);
-  background: var(--brand-surface-overlay);
-  color: var(--brand-text-strong);
-  box-shadow: var(--brand-shadow-soft);
-  backdrop-filter: blur(18px);
-}
-
-.marketing-secondary-button:hover {
-  background: var(--brand-bg-surface);
-}
-
-.marketing-nav-wrap {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-}
-
-.marketing-nav-shell {
-  pointer-events: none;
-}
-
-.marketing-nav {
-  pointer-events: auto;
 }
 
 .nextra-body-typesetting-article {
@@ -239,15 +156,5 @@ a {
   }
   h4 {
     font-size: 1.3rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .marketing-nav-wrap {
-    position: static;
-  }
-
-  .marketing-shell {
-    gap: 1.25rem;
   }
 }

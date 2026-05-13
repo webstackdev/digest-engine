@@ -1,161 +1,245 @@
-@import "tailwindcss";
+@theme inline {
+  /** Disable all Tailwind default palette colors */
+  --color-*: initial;
 
-@source "./";
+  /**
+   * =============================================================================
+   *  Base colors
+   * =============================================================================
+   */
 
-/**
- * Shared brand tokens for every Tailwind consumer in the workspace.
- *
- * Use the raw palette tokens from `@theme` for component-level utility classes such as
- * `bg-brand-primary-500`, `text-brand-sage-700`, or `border-brand-burnt-500`.
- * Use the semantic CSS variables below from app-level globals for themed surfaces,
- * foregrounds, borders, and focus states.
- *
- * Do not redefine palette values in app-local globals. Alias local semantic names to the
- * shared `--brand-*` variables instead so light and dark stay in sync.
- * Dark mode intentionally reuses the same palette with the scale reversed for surfaces,
- * fills, and text contrast.
- */
+  /** Primary color for theme */
+  --color-primary: var(--theme-color-primary); /* Light theme: #001A39 */
 
-@theme {
-  /* Brand Primary: Slate Blue */
-  --color-brand-primary-50: #f4f6f8;
-  --color-brand-primary-100: #e9edf1;
-  --color-brand-primary-150: #d4dae6;
-  --color-brand-primary-175: #eff2f7;
-  --color-brand-primary-200: #cfd8e3;
-  --color-brand-primary-300: #8fa2c1;
-  --color-brand-primary-400: #697c9f;
-  --color-brand-primary-500: #3e4d6b;
-  --color-brand-primary-600: #34425b;
-  --color-brand-primary-700: #2d384d;
-  --color-brand-primary-800: #232c3d;
-  --color-brand-primary-900: #1b222e;
+  /** A shade of the primary color for accent */
+  --color-primary-offset: var(--theme-color-primary-offset); /* Light theme: #003d86 */
 
-  /* Brand Secondary: Sage Green */
-  --color-brand-sage-50: #f3f6f4;
-  --color-brand-sage-100: #e7edea;
-  --color-brand-sage-200: #d0ddd4;
-  --color-brand-sage-300: #b2c9b8;
-  --color-brand-sage-400: #9ab4a1;
-  --color-brand-sage-500: #86a68d;
-  --color-brand-sage-600: #738d79;
-  --color-brand-sage-700: #5f7a65;
-  --color-brand-sage-800: #4c6152;
-  --color-brand-sage-900: #3d4f41;
+  /** A shade of the primary color for accent */
+  --color-primary-inverse: var(--theme-color-primary-inverse); /* Light theme: #FFF */
 
-  /* Brand Accent: Burnt Orange */
-  --color-brand-burnt-50: #fcf4f1;
-  --color-brand-burnt-100: #f7e6df;
-  --color-brand-burnt-200: #efcbbb;
-  --color-brand-burnt-300: #e2a38d;
-  --color-brand-burnt-400: #d58369;
-  --color-brand-burnt-450: #d17e60;
-  --color-brand-burnt-500: #c66b52;
-  --color-brand-burnt-600: #ae563f;
-  --color-brand-burnt-700: #8f4332;
-  --color-brand-burnt-800: #72382c;
-  --color-brand-burnt-900: #5d3027;
+  /** Secondary color for theme */
+  --color-secondary: var(--theme-color-secondary); /* Light theme: #006dca */
 
-  /* Shared Fonts */
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui;
-}
+  /** A shade of the secondary color for accent */
+  --color-secondary-offset: var(--theme-color-secondary-offset); /* Light theme: #1894ff */
 
-:root {
-  --brand-bg-canvas: var(--color-brand-primary-150);
-  --brand-bg-surface: var(--color-brand-primary-175);
-  --brand-bg-subtle: var(--color-brand-primary-100);
-  --brand-selected: color-mix(in srgb, var(--color-brand-primary-100) 78%, white);
-  --brand-text-strong: var(--color-brand-primary-900);
-  --brand-text: var(--color-brand-primary-700);
-  --brand-text-soft: color-mix(in srgb, var(--color-brand-primary-700) 68%, white);
-  --brand-fill-primary: var(--color-brand-primary-500);
-  --brand-fill-primary-strong: var(--color-brand-primary-700);
-  --brand-fill-primary-contrast: var(--color-brand-primary-50);
-  --brand-fill-secondary: var(--color-brand-sage-500);
-  --brand-fill-secondary-strong: var(--color-brand-sage-700);
-  --brand-fill-secondary-contrast: var(--color-brand-primary-50);
-  --brand-fill-accent: var(--color-brand-burnt-500);
-  --brand-fill-accent-soft: var(--color-brand-burnt-450);
-  --brand-fill-accent-strong: var(--color-brand-burnt-700);
-  --brand-fill-accent-contrast: var(--color-brand-primary-50);
-  --brand-border: color-mix(in srgb, var(--color-brand-primary-300) 42%, white);
-  --brand-border-bright: color-mix(in srgb, var(--color-brand-primary-100) 72%, white);
-  --brand-input: color-mix(in srgb, var(--color-brand-primary-300) 28%, white);
-  --brand-ring: color-mix(in srgb, var(--color-brand-primary-500) 76%, white);
-  --brand-scrollbar: color-mix(in srgb, var(--color-brand-primary-300) 64%, var(--color-brand-sage-300));
-  --brand-canvas-start: color-mix(in srgb, var(--color-brand-primary-50) 82%, white);
-  --brand-canvas-end: var(--color-brand-primary-100);
-  --brand-grid: color-mix(in srgb, var(--color-brand-primary-500) 8%, transparent);
-  --brand-grid-line-strong: color-mix(in srgb, var(--color-brand-primary-500) 24%, transparent);
-  --brand-spotlight-left: color-mix(in srgb, var(--color-brand-primary-300) 26%, transparent);
-  --brand-spotlight-right: color-mix(in srgb, var(--color-brand-sage-300) 20%, transparent);
-  --brand-surface-muted: color-mix(in srgb, var(--brand-bg-subtle) 72%, white);
-  --brand-surface-overlay: color-mix(in srgb, var(--brand-bg-surface) 86%, white);
-  --brand-surface-overlay-strong: color-mix(in srgb, var(--brand-bg-surface) 92%, white);
-  --brand-surface-accent: color-mix(in srgb, var(--brand-fill-accent-soft) 12%, var(--brand-bg-surface));
-  --brand-surface-secondary: color-mix(in srgb, var(--brand-fill-secondary) 18%, var(--brand-bg-surface));
-  --brand-accent-border: color-mix(in srgb, var(--brand-fill-accent-soft) 35%, transparent);
-  --brand-accent-wash: color-mix(in srgb, var(--brand-fill-accent-soft) 18%, transparent);
-  --brand-sage-wash: color-mix(in srgb, var(--brand-fill-secondary) 24%, transparent);
-  --brand-shadow-soft: 0 14px 34px color-mix(in srgb, var(--color-brand-primary-700) 10%, transparent);
-  --brand-shadow-card: 0 22px 44px color-mix(in srgb, var(--color-brand-primary-700) 8%, transparent);
-  --brand-shadow-card-strong: 0 34px 70px color-mix(in srgb, var(--color-brand-primary-700) 14%, transparent);
-  --brand-shadow-panel: 0 26px 60px color-mix(in srgb, var(--color-brand-primary-700) 12%, transparent), inset 0 1px 0 color-mix(in srgb, white 72%, transparent);
-  --brand-shadow-accent: 0 18px 38px color-mix(in srgb, var(--color-brand-burnt-450) 28%, transparent);
-  --brand-shadow-inset: inset 0 0 0 1px color-mix(in srgb, white 80%, transparent);
-  --brand-chart-1: var(--color-brand-primary-500);
-  --brand-chart-2: var(--color-brand-primary-300);
-  --brand-chart-3: var(--color-brand-sage-500);
-  --brand-chart-4: var(--color-brand-sage-300);
-  --brand-chart-5: var(--color-brand-burnt-500);
-}
+  /** A shade of the primary color for accent */
+  --color-secondary-inverse: var(--theme-color-secondary-inverse); /* Light theme: #FFF */
 
-:where(.dark, [data-theme="dark"]) {
-  --brand-bg-canvas: var(--color-brand-primary-900);
-  --brand-bg-surface: var(--color-brand-primary-800);
-  --brand-bg-subtle: var(--color-brand-primary-700);
-  --brand-selected: color-mix(in srgb, var(--color-brand-primary-800) 74%, black);
-  --brand-text-strong: var(--color-brand-primary-50);
-  --brand-text: var(--color-brand-primary-100);
-  --brand-text-soft: var(--color-brand-primary-200);
-  --brand-fill-primary: var(--color-brand-primary-300);
-  --brand-fill-primary-strong: var(--color-brand-primary-100);
-  --brand-fill-primary-contrast: var(--color-brand-primary-900);
-  --brand-fill-secondary: var(--color-brand-sage-300);
-  --brand-fill-secondary-strong: var(--color-brand-sage-100);
-  --brand-fill-secondary-contrast: var(--color-brand-primary-900);
-  --brand-fill-accent: var(--color-brand-burnt-300);
-  --brand-fill-accent-soft: var(--color-brand-burnt-450);
-  --brand-fill-accent-strong: var(--color-brand-burnt-100);
-  --brand-fill-accent-contrast: var(--color-brand-primary-900);
-  --brand-border: color-mix(in srgb, var(--color-brand-primary-500) 38%, black);
-  --brand-border-bright: color-mix(in srgb, var(--color-brand-primary-400) 50%, black);
-  --brand-input: color-mix(in srgb, var(--color-brand-primary-500) 52%, black);
-  --brand-ring: var(--color-brand-primary-300);
-  --brand-scrollbar: color-mix(in srgb, var(--color-brand-primary-500) 62%, var(--color-brand-sage-500));
-  --brand-canvas-start: var(--color-brand-primary-800);
-  --brand-canvas-end: color-mix(in srgb, var(--color-brand-primary-900) 84%, black);
-  --brand-grid: color-mix(in srgb, var(--color-brand-primary-200) 10%, transparent);
-  --brand-grid-line-strong: color-mix(in srgb, var(--color-brand-primary-200) 22%, transparent);
-  --brand-spotlight-left: color-mix(in srgb, var(--color-brand-primary-300) 24%, transparent);
-  --brand-spotlight-right: color-mix(in srgb, var(--color-brand-sage-300) 18%, transparent);
-  --brand-surface-muted: color-mix(in srgb, var(--brand-bg-subtle) 82%, black);
-  --brand-surface-overlay: color-mix(in srgb, var(--brand-bg-surface) 88%, black);
-  --brand-surface-overlay-strong: color-mix(in srgb, var(--brand-bg-surface) 94%, black);
-  --brand-surface-accent: color-mix(in srgb, var(--brand-fill-accent-soft) 14%, var(--brand-bg-surface));
-  --brand-surface-secondary: color-mix(in srgb, var(--brand-fill-secondary) 18%, var(--brand-bg-surface));
-  --brand-accent-border: color-mix(in srgb, var(--brand-fill-accent-soft) 42%, transparent);
-  --brand-accent-wash: color-mix(in srgb, var(--brand-fill-accent-soft) 20%, transparent);
-  --brand-sage-wash: color-mix(in srgb, var(--brand-fill-secondary) 24%, transparent);
-  --brand-shadow-soft: 0 14px 34px color-mix(in srgb, black 32%, transparent);
-  --brand-shadow-card: 0 22px 44px color-mix(in srgb, black 36%, transparent);
-  --brand-shadow-card-strong: 0 34px 70px color-mix(in srgb, black 40%, transparent);
-  --brand-shadow-panel: 0 26px 60px color-mix(in srgb, black 34%, transparent), inset 0 1px 0 color-mix(in srgb, var(--color-brand-primary-50) 8%, transparent);
-  --brand-shadow-accent: 0 18px 38px color-mix(in srgb, var(--brand-fill-accent-soft) 30%, transparent);
-  --brand-shadow-inset: inset 0 0 0 1px color-mix(in srgb, var(--color-brand-primary-50) 12%, transparent);
-  --brand-chart-1: var(--color-brand-primary-300);
-  --brand-chart-2: var(--color-brand-primary-100);
-  --brand-chart-3: var(--color-brand-sage-300);
-  --brand-chart-4: var(--color-brand-sage-100);
-  --brand-chart-5: var(--color-brand-burnt-300);
+  /** Accent color for theme */
+  --color-accent: var(--theme-color-accent); /* Light theme: #7c3aed */
+
+  /** A shade of the accent color for accent */
+  --color-accent-offset: var(--theme-color-accent-offset); /* Light theme: #d28fe0 */
+
+  /**
+   * =============================================================================
+   *  Page element colors
+   * =============================================================================
+   */
+
+  /** A solid fill color for page page elements */
+  --color-page-base: var(--theme-color-page-base); /* Light theme: #f3f4f6 */
+
+  /** A solid fill color for page page elements */
+  --color-page-active: var(--theme-color-page-active); /* Light theme: #001A39 */
+
+  /** Opposite of a solid fill color for page page elements */
+  --color-page-inverse: var(--theme-color-page-inverse); /* Light theme: #003d86 */
+
+  /** A shade of the page color for hover and focus states */
+  --color-page-offset: var(--theme-color-page-offset); /* Light theme: #e5e7eb */
+
+  /**
+   * =============================================================================
+   *  Text colors
+   * =============================================================================
+   */
+
+  /** Main content text color */
+  --color-content: var(--theme-color-content); /* Light theme: #374151 */
+
+  /** A shade of the text color for accent */
+  --color-content-offset: var(--theme-color-content-offset); /* Light theme: #6b7280 */
+
+  /** A shade of the text color for hover and focus states */
+  --color-content-active: var(--theme-color-content-active); /* Light theme: #001a39 */
+
+  /** Main content text color */
+  --color-content-inverse: var(--theme-color-content-inverse); /* Light theme: #f3f4f6 */
+
+  /** A shade of the text color for hover and focus states */
+  --color-content-inverse-active: var(--theme-color-content-inverse-active); /* Light theme: #bfdbfe */
+
+  /**
+   * =============================================================================
+   *  Border colors
+   * =============================================================================
+   */
+
+  /** A color for use in page borders */
+  --color-trim: var(--theme-color-trim); /* Light theme: #4b5563 */
+
+  /** A color for use in page borders on hover */
+  --color-trim-offset: var(--theme-color-trim-offset); /* Light theme: #9ca3af */
+
+  /** A color for use in primary page accent elements */
+  --color-spotlight: var(--theme-color-spotlight); /* Light theme: #facc15 */
+
+  /** A shade of the accent color for hover and focus states */
+  --color-spotlight-offset: var(--theme-color-spotlight-offset); /* Light theme: #ca8a04 */
+
+  /**
+   * =============================================================================
+   *  Success colors
+   * =============================================================================
+   */
+
+  --color-success: var(--theme-color-success); /* Light theme: #16a34a */
+  --color-success-offset: var(--theme-color-success-offset); /* Light theme: #22c55e */
+  --color-success-inverse: var(--theme-color-success-inverse); /* Light theme: #dcfce7 */
+
+  /**
+   * =============================================================================
+   *  Info colors
+   * =============================================================================
+   */
+
+  --color-info: var(--theme-color-info); /* Light theme: #0891b2 */
+  --color-info-offset: var(--theme-color-info-offset); /* Light theme: #38bdf8 */
+  --color-info-inverse: var(--theme-color-info-inverse); /* Light theme: #cffafe */
+
+  /**
+   * =============================================================================
+   *  Note colors
+   * =============================================================================
+   */
+
+  --color-note: var(--theme-color-note); /* Light theme: #374151 */
+  --color-note-offset: var(--theme-color-note-offset); /* Light theme: #6b7280 */
+  --color-note-inverse: var(--theme-color-note-inverse); /* Light theme: #d1d5db */
+
+  /**
+   * =============================================================================
+   *  Warning colors
+   * =============================================================================
+   */
+
+  --color-warning: var(--theme-color-warning); /* Light theme: #a16207 */
+  --color-warning-offset: var(--theme-color-warning-offset); /* Light theme: #ca8a04 */
+  --color-warning-inverse: var(--theme-color-warning-inverse); /* Light theme: #fef3c7 */
+
+  /**
+   * =============================================================================
+   *  Danger colors
+   * =============================================================================
+   */
+
+  --color-danger: var(--theme-color-danger); /* Light theme: #dc2626 */
+  --color-danger-offset: var(--theme-color-danger-offset); /* Light theme: #b91c1c */
+  --color-danger-inverse: var(--theme-color-danger-inverse); /* Light theme: #fecaca */
+
+  /**
+   * =============================================================================
+   *  Icon color
+   * =============================================================================
+   */
+
+  /** Main icon color */
+  --color-icons: var(--theme-color-icons); /* Light theme: #374151 */
+
+  /** A shade of the icon color for hover and focus states */
+  --color-icons-active: var(--theme-color-icons-active); /* Light theme: #9ca3af */
+
+  /**
+   * =============================================================================
+   *  Palette colors
+   * =============================================================================
+   */
+
+  /** Blues */
+  --color-blue-50: var(--theme-color-blue-50); /* Light theme: #eff6ff */
+  --color-blue-100: var(--theme-color-blue-100); /* Light theme: #dbeafe */
+  --color-blue-200: var(--theme-color-blue-200); /* Light theme: #bfdbfe */
+  --color-blue-300: var(--theme-color-blue-300); /* Light theme: #93c5fd */
+  --color-blue-400: var(--theme-color-blue-400); /* Light theme: #60a5fa */
+  --color-blue-500: var(--theme-color-blue-500); /* Light theme: #3b82f6 */
+  --color-blue-600: var(--theme-color-blue-600); /* Light theme: #2563eb */
+  --color-blue-800: var(--theme-color-blue-800); /* Light theme: #1e40af */
+  --color-blue-900: var(--theme-color-blue-900); /* Light theme: #1e3a8a */
+
+  /** Grays */
+  --color-gray-50: var(--theme-color-gray-50); /* Light theme: #f9fafb */
+  --color-gray-100: var(--theme-color-gray-100); /* Light theme: #f3f4f6 */
+  --color-gray-200: var(--theme-color-gray-200); /* Light theme: #e5e7eb */
+  --color-gray-300: var(--theme-color-gray-300); /* Light theme: #d1d5db */
+  --color-gray-400: var(--theme-color-gray-400); /* Light theme: #9ca3af */
+  --color-gray-500: var(--theme-color-gray-500); /* Light theme: #6b7280 */
+  --color-gray-600: var(--theme-color-gray-600); /* Light theme: #4b5563 */
+  --color-gray-700: var(--theme-color-gray-700); /* Light theme: #374151 */
+  --color-gray-800: var(--theme-color-gray-800); /* Light theme: #1f2937 */
+  --color-gray-900: var(--theme-color-gray-900); /* Light theme: #111827 */
+  --color-gray-offset: var(--theme-color-gray-offset); /* Light theme: #9ca3af */
+
+  /** Greens */
+  --color-green-100: var(--theme-color-green-100); /* Light theme: #d1fae5 */
+  --color-green-200: var(--theme-color-green-200); /* Light theme: #bbf7d0 */
+  --color-green-300: var(--theme-color-green-300); /* Light theme: #86efac */
+  --color-green-400: var(--theme-color-green-400); /* Light theme: #4ade80 */
+  --color-green-500: var(--theme-color-green-500); /* Light theme: #22c55e */
+  --color-green-600: var(--theme-color-green-600); /* Light theme: #16a34a */
+  --color-green-700: var(--theme-color-green-700); /* Light theme: #15803d */
+  --color-green-900: var(--theme-color-green-900); /* Light theme: #14532d */
+
+  /** Oranges */
+  --color-orange-100: var(--theme-color-orange-100); /* Light theme: #ffedd5 */
+  --color-orange-200: var(--theme-color-orange-200); /* Light theme: #fed7aa */
+  --color-orange-300: var(--theme-color-orange-300); /* Light theme: #fdba74 */
+  --color-orange-500: var(--theme-color-orange-500); /* Light theme: #f97316 */
+  --color-orange-600: var(--theme-color-orange-600); /* Light theme: #ea580c */
+  --color-orange-700: var(--theme-color-orange-700); /* Light theme: #c2410c */
+
+  /** Purples */
+  --color-purple-100: var(--theme-color-purple-100); /* Light theme: #f3e8ff */
+  --color-purple-600: var(--theme-color-purple-600); /* Light theme: #9333ea */
+
+  /** Reds */
+  --color-red-400: var(--theme-color-red-400); /* Light theme: #f87171 */
+  --color-red-500: var(--theme-color-red-500); /* Light theme: #ef4444 */
+
+  /** Yellows */
+  --color-yellow-100: var(--theme-color-yellow-100); /* Light theme: #fef9c3 */
+  --color-yellow-200: var(--theme-color-yellow-200); /* Light theme: #fef08a */
+  --color-yellow-300: var(--theme-color-yellow-300); /* Light theme: #fde047 */
+  --color-yellow-400: var(--theme-color-yellow-400); /* Light theme: #facc15 */
+  --color-yellow-500: var(--theme-color-yellow-500); /* Light theme: #eab308 */
+  --color-yellow-600: var(--theme-color-yellow-600); /* Light theme: #ca8a04 */
+  --color-yellow-700: var(--theme-color-yellow-700); /* Light theme: #a16207 */
+
+  /**
+   * =============================================================================
+   *  Vendor colors
+   * =============================================================================
+   */
+
+  --color-bluesky: var(--theme-color-bluesky); /* Light theme: #00A8E8 */
+  --color-bluesky-active: var(--theme-color-bluesky-active); /* Light theme: #0087bd */
+  --color-codepen: var(--theme-color-codepen); /* Light theme: #000 */
+  --color-codepen-active: var(--theme-color-codepen-active); /* Light theme: #1a1a1a */
+  --color-github: var(--theme-color-github); /* Light theme: #211F1F */
+  --color-github-active: var(--theme-color-github-active); /* Light theme: #333131 */
+  --color-linkedin: var(--theme-color-linkedin); /* Light theme: #0a66c2 */
+  --color-linkedin-active: var(--theme-color-linkedin-active); /* Light theme: #084c9e */
+  --color-mastodon: var(--theme-color-mastodon); /* Light theme: #6364FF */
+  --color-mastodon-active: var(--theme-color-mastodon-active); /* Light theme: #5557e6 */
+  --color-reddit: var(--theme-color-reddit); /* Light theme: #FF4500 */
+  --color-reddit-active: var(--theme-color-reddit-active); /* Light theme: #e03d00 */
+  --color-google-red: var(--theme-color-google-red); /* Light theme: #EA4335 */
+  --color-google-yellow: var(--theme-color-google-yellow); /* Light theme: #FBBC04 */
+  --color-google-blue: var(--theme-color-google-blue); /* Light theme: #4285F4 */
+  --color-google-blue-dark: var(--theme-color-google-blue-dark); /* Light theme: #1967D2 */
+  --color-google-green: var(--theme-color-google-green); /* Light theme: #34A853 */
+  --color-google-green-dark: var(--theme-color-google-green-dark); /* Light theme: #188038 */
+  --color-x: var(--theme-color-x); /* Light theme: #000 */
+  --color-x-active: var(--theme-color-x-active); /* Light theme: #1a1a1a */
 }

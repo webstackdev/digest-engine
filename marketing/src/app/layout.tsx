@@ -1,15 +1,18 @@
-// @ts-expect-error nextra-theme-docs 4.6.1 does not export these provider internals publicly.
-import { ThemeConfigProvider, ConfigProvider } from "../../node_modules/nextra-theme-docs/dist/stores/index.js";
+import {
+  ThemeConfigProvider,
+  ConfigProvider,
+} from "../../node_modules/nextra-theme-docs/dist/stores/index.js";
 // @ts-expect-error nextra-theme-docs 4.6.1 does not export this component publicly.
 import { MobileNav } from "../../node_modules/nextra-theme-docs/dist/components/sidebar.js";
 // @ts-expect-error nextra-theme-docs 4.6.1 does not export this schema publicly.
 import { LayoutPropsSchema } from "../../node_modules/nextra-theme-docs/dist/schemas.js";
+import { Metadata } from "next";
+import Link from "next/link";
 import { Head } from "nextra/components";
 import { SkipNavLink } from "nextra/components";
 import { getPageMap } from "nextra/page-map";
-import { Metadata } from "next";
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { Header } from "@/components/Header";
 import { brand } from "@/lib/props";
 
 import "../styles/globals.css";
@@ -56,15 +59,15 @@ function DocsLayout({ children, ...themeConfig }: DocsLayoutProps) {
   );
 }
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pageMap = await getPageMap();
 
   return (
-    <html
-      lang="en"
-      dir="ltr"
-      suppressHydrationWarning
-    >
+    <html lang="en" dir="ltr" suppressHydrationWarning>
       <Head>
         <script
           defer
@@ -74,42 +77,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         ></script>
       </Head>
       <body className="marketing-site">
-        <header className='marketing-nav-wrap'>
-          <div className='marketing-nav-shell mx-auto max-w-[1180px] px-4 pt-6 sm:px-6 lg:px-8'>
-            <div className='marketing-nav marketing-glass-strong flex items-center justify-between gap-4 rounded-[1.65rem] px-4 py-3 md:px-5'>
-              <Link href='/' className='flex items-center gap-3 text-(--font-primary) no-underline'>
-                <span className='marketing-icon-chip flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black tracking-[0.22em] text-(--brand-color)'>
-                  DE
-                </span>
-                <span className='text-lg font-semibold tracking-tight sm:text-xl'>{brand.name}</span>
-              </Link>
-
-              <nav className='hidden items-center gap-6 text-sm font-medium text-(--font-secondary) md:flex'>
-                <Link href='#features' className='transition-colors hover:text-(--font-primary)'>
-                  Features
-                </Link>
-                <Link href='#pricing' className='transition-colors hover:text-(--font-primary)'>
-                  Pricing
-                </Link>
-                <Link href='#about' className='transition-colors hover:text-(--font-primary)'>
-                  About
-                </Link>
-                <Link href='/docs' className='transition-colors hover:text-(--font-primary)'>
-                  Docs
-                </Link>
-              </nav>
-
-              <div className='flex items-center gap-2'>
-                <Link
-                  href='/docs'
-                  className='marketing-accent-button rounded-full px-5 py-3 text-sm font-semibold no-underline transition-colors'
-                >
-                  Read Docs
-                </Link>
-              </div>
-            </div>
-          </div>
-        </header>
+        <Header />
         <DocsLayout
           pageMap={pageMap}
           darkMode={false}
@@ -117,26 +85,37 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         >
           {children}
         </DocsLayout>
-        <footer className='marketing-footer mx-auto mt-6 max-w-[1180px] px-4 pb-12 pt-4 sm:px-6 lg:px-8'>
-          <div className='marketing-glass flex flex-col gap-5 rounded-[1.75rem] px-6 py-6 text-sm text-(--font-secondary) md:flex-row md:items-center md:justify-between'>
-            <div className='flex items-center gap-3'>
-              <span className='marketing-icon-chip flex h-10 w-10 items-center justify-center rounded-2xl text-xs font-black tracking-[0.22em] text-(--brand-color)'>
+        <footer className="marketing-footer mx-auto mt-6 max-w-marketing px-4 pb-12 pt-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-5 rounded-panel border border-brand-border-bright bg-brand-surface-overlay px-6 py-6 text-sm text-muted-foreground shadow-brand-soft backdrop-blur-[18px] md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-brand-border-bright bg-brand-surface-muted text-xs font-black tracking-logo text-primary shadow-brand-soft">
                 DE
               </span>
               <div>
-                <p className='m-0 text-sm font-semibold text-(--font-primary)'>{brand.name}</p>
-                <p className='m-0 text-sm'>{brand.tagline}</p>
+                <p className="m-0 text-sm font-semibold text-foreground">
+                  {brand.name}
+                </p>
+                <p className="m-0 text-sm">{brand.tagline}</p>
               </div>
             </div>
 
-            <div className='flex flex-wrap items-center gap-4'>
-              <Link href='/docs' className='no-underline transition-colors hover:text-(--font-primary)'>
+            <div className="flex flex-wrap items-center gap-4">
+              <Link
+                href="/docs"
+                className="no-underline transition-colors hover:text-foreground"
+              >
                 Docs
               </Link>
-              <Link href='#features' className='no-underline transition-colors hover:text-(--font-primary)'>
-                Features
+              <Link
+                href="#features"
+                className="no-underline transition-colors hover:text-foreground"
+              >
+                How It Works
               </Link>
-              <Link href='#pricing' className='no-underline transition-colors hover:text-(--font-primary)'>
+              <Link
+                href="#pricing"
+                className="no-underline transition-colors hover:text-foreground"
+              >
                 Pricing
               </Link>
               <span>AGPLv3</span>
