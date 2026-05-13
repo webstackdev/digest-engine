@@ -17,7 +17,7 @@ type CreateEntityCardProps = {
 /** Render the create-entity form for the selected project. */
 export function CreateEntityCard({ projectId }: CreateEntityCardProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardHeader className="space-y-1">
         <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Create entity</p>
         <CardTitle className="font-display text-title-sm font-bold text-foreground">

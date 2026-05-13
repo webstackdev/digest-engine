@@ -14,7 +14,7 @@ type LoginPageContentProps = {
 export default function LoginPageContent({ callbackUrl }: LoginPageContentProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <Card className="w-full max-w-md rounded-3xl border border-border/12 bg-card/90 shadow-panel backdrop-blur-xl">
+      <Card className="w-full max-w-md rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-8 pt-6">
           <div className="text-center">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-muted">

@@ -20,7 +20,7 @@ import {
 } from "../shared"
 
 const dashboardSelectTriggerClassName =
-  "w-full rounded-2xl border-border/45 bg-card/95 px-4 py-3 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-secondary/88"
+  "w-full rounded-2xl border-border bg-card px-4 py-3 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-secondary"
 
 type DashboardFilterToolbarProps = {
   projectId: number
@@ -45,7 +45,7 @@ export function DashboardFilterToolbar({
   duplicateStateFilter,
 }: DashboardFilterToolbarProps) {
   return (
-    <Card className="mb-4 rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="mb-4 rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="p-[1.1rem]">
         <form
           className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[repeat(auto-fit,minmax(180px,1fr))] xl:items-end"

@@ -60,7 +60,7 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
           <Label htmlFor="username">Username or email</Label>
           <Input
             autoComplete="username"
-            className="min-h-11 rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-foreground"
+            className="min-h-11 rounded-2xl border-border bg-muted px-4 py-3 text-foreground"
             id="username"
             name="username"
             placeholder="your_username"
@@ -72,7 +72,7 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
           <Label htmlFor="password">Password</Label>
           <Input
             autoComplete="current-password"
-            className="min-h-11 rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-foreground"
+            className="min-h-11 rounded-2xl border-border bg-muted px-4 py-3 text-foreground"
             id="password"
             name="password"
             placeholder="••••••••"
@@ -83,7 +83,7 @@ export default function LoginForm({ callbackUrl }: LoginFormProps) {
       </div>
 
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}

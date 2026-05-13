@@ -22,7 +22,7 @@ export function InvitationDetailsCard({
   const callbackUrl = `/invite/${token}`
 
   return (
-    <Card className="rounded-3xl border border-border/12 bg-muted/45 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-muted shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>

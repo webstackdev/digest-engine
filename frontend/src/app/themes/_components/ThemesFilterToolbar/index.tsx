@@ -25,7 +25,7 @@ export function ThemesFilterToolbar({
   statusFilter,
 }: ThemesFilterToolbarProps) {
   return (
-    <Card className="mb-4 rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="mb-4 rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="p-[1.1rem]">
         <form className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" method="GET">
           <input name="project" type="hidden" value={projectId} />
@@ -33,7 +33,7 @@ export function ThemesFilterToolbar({
             <Label htmlFor="theme-status-filter">Status</Label>
             <Select defaultValue={statusFilter} name="status">
               <SelectTrigger
-                className="w-full rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-foreground sm:max-w-xs"
+                className="w-full rounded-2xl border-border bg-muted px-4 py-3 text-foreground sm:max-w-xs"
                 id="theme-status-filter"
               >
                 <SelectValue placeholder="Status" />

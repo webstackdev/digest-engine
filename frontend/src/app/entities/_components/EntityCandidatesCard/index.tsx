@@ -31,7 +31,7 @@ export function EntityCandidatesCard({
   projectId,
 }: EntityCandidatesCardProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardHeader className="space-y-2">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Candidate queue</p>
@@ -56,14 +56,14 @@ export function EntityCandidatesCard({
       </CardHeader>
       <CardContent>
         {entityCandidates.length === 0 ? (
-          <Alert className="rounded-panel border-border/12 bg-muted/60">
+          <Alert className="rounded-panel border-border bg-muted">
             <AlertDescription>No pending entity candidates right now.</AlertDescription>
           </Alert>
         ) : (
           <div className="space-y-3">
             {entityCandidates.map((candidate) => (
               <article
-                className="space-y-3 rounded-2xl border border-border/10 bg-muted/50 p-4"
+                className="space-y-3 rounded-2xl border border-border bg-muted p-4"
                 key={candidate.id}
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">

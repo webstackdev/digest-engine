@@ -45,7 +45,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <Alert className="rounded-panel border-border/10 bg-muted/60">
+        <Alert className="rounded-panel border-border bg-muted">
           <AlertDescription>No projects are available for the configured API user.</AlertDescription>
         </Alert>
       </AppShell>

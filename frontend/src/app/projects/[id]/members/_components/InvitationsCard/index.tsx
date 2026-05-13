@@ -32,14 +32,14 @@ export function InvitationsCard({
   redirectTarget,
 }: InvitationsCardProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Pending access</p>
           <h3 className="m-0 font-display text-title-sm font-bold text-foreground">Invitations</h3>
         </div>
         {invitations.length === 0 ? (
-          <Alert className="rounded-panel border-border/10 bg-muted/60">
+          <Alert className="rounded-panel border-border bg-muted">
             <AlertDescription>No active or historical invitations yet.</AlertDescription>
           </Alert>
         ) : (
@@ -49,7 +49,7 @@ export function InvitationsCard({
 
               return (
                 <article
-                  className="grid gap-4 rounded-2xl border border-border/10 bg-muted/45 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+                  className="grid gap-4 rounded-2xl border border-border bg-muted p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
                   key={invitation.id}
                 >
                   <div className="space-y-2">

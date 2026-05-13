@@ -314,12 +314,12 @@ export function MessagesWorkspace({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <Card className="rounded-panel border-border/10 bg-card/90 py-0 shadow-none">
-        <CardHeader className="border-b border-border/60 py-4">
+      <Card className="rounded-panel border-border bg-card py-0 shadow-none">
+        <CardHeader className="border-b border-border py-4">
           <CardTitle>Threads</CardTitle>
         </CardHeader>
         <CardContent className="max-h-152 space-y-3 overflow-y-auto py-4">
-          <form className="space-y-3 rounded-2xl border border-border/60 bg-muted/15 p-4" onSubmit={(event) => void handleStartConversation(event)}>
+          <form className="space-y-3 rounded-2xl border border-border bg-muted p-4" onSubmit={(event) => void handleStartConversation(event)}>
             <div className="space-y-1">
               <p className="text-sm font-medium">Start a conversation</p>
               <p className="text-xs text-muted-foreground">
@@ -369,11 +369,11 @@ export function MessagesWorkspace({
           </form>
 
           {threadsQuery.isError ? (
-            <Alert className="rounded-xl border-destructive/20 bg-destructive/10" variant="destructive">
+            <Alert className="rounded-xl border-destructive bg-destructive" variant="destructive">
               <AlertDescription>Unable to load message threads.</AlertDescription>
             </Alert>
           ) : threads.length === 0 ? (
-            <Alert className="rounded-panel border-border/10 bg-muted/60">
+            <Alert className="rounded-panel border-border bg-muted">
               <AlertDescription>
                 No conversations yet. Start one from the project collaborators listed above.
               </AlertDescription>
@@ -388,8 +388,8 @@ export function MessagesWorkspace({
                 <button
                   className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
                     isSelected
-                      ? "border-primary/30 bg-primary/8"
-                      : "border-border/60 bg-muted/20 hover:border-border/90 hover:bg-muted/40"
+                      ? "border-primary bg-primary"
+                      : "border-border bg-muted hover:border-border hover:bg-muted"
                   }`}
                   data-active={isSelected ? "true" : "false"}
                   key={thread.id}
@@ -419,8 +419,8 @@ export function MessagesWorkspace({
         </CardContent>
       </Card>
 
-      <Card className="rounded-panel border-border/10 bg-card/90 py-0 shadow-none">
-        <CardHeader className="border-b border-border/60 py-4">
+      <Card className="rounded-panel border-border bg-card py-0 shadow-none">
+        <CardHeader className="border-b border-border py-4">
           <CardTitle>
             {selectedThread?.counterpart?.display_name ||
               selectedThread?.counterpart?.username ||
@@ -429,16 +429,16 @@ export function MessagesWorkspace({
         </CardHeader>
         <CardContent className="space-y-4 py-4">
           {selectedThread === null ? (
-            <Alert className="rounded-panel border-border/10 bg-muted/60">
+            <Alert className="rounded-panel border-border bg-muted">
               <AlertDescription>Select a thread to read and reply.</AlertDescription>
             </Alert>
           ) : messagesQuery.isError ? (
-            <Alert className="rounded-xl border-destructive/20 bg-destructive/10" variant="destructive">
+            <Alert className="rounded-xl border-destructive bg-destructive" variant="destructive">
               <AlertDescription>Unable to load this thread.</AlertDescription>
             </Alert>
           ) : (
             <>
-              <div className="max-h-120 space-y-3 overflow-y-auto rounded-2xl border border-border/60 bg-muted/15 p-4">
+              <div className="max-h-120 space-y-3 overflow-y-auto rounded-2xl border border-border bg-muted p-4">
                 {(messagesQuery.data ?? []).length === 0 ? (
                   <p className="text-sm text-muted-foreground">
                     No messages yet. Send the first reply to start the conversation.

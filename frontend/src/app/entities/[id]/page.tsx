@@ -47,7 +47,7 @@ export default async function EntityDetailPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <Alert className="rounded-panel border-border/12 bg-muted/60">
+        <Alert className="rounded-panel border-border bg-muted">
           <AlertDescription>Create a project first in Django admin.</AlertDescription>
         </Alert>
       </AppShell>

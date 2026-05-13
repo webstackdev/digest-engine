@@ -14,7 +14,7 @@ export default function SocialAuthButtons({ callbackUrl }: SocialAuthButtonsProp
   return (
     <div className="flex w-full flex-col space-y-3">
       <Button
-        className="min-h-11 w-full justify-center gap-3 rounded-2xl bg-foreground px-4 py-3 text-background hover:bg-foreground/85"
+        className="min-h-11 w-full justify-center gap-3 rounded-2xl bg-foreground px-4 py-3 text-background hover:bg-foreground"
         onClick={() => signIn("github", { callbackUrl })}
         size="lg"
         type="button"
@@ -31,7 +31,7 @@ export default function SocialAuthButtons({ callbackUrl }: SocialAuthButtonsProp
       </Button>
 
       <Button
-        className="min-h-11 w-full justify-center gap-3 rounded-2xl border-border/20 bg-muted px-4 py-3 text-foreground hover:bg-muted/80"
+        className="min-h-11 w-full justify-center gap-3 rounded-2xl border-border/20 bg-muted px-4 py-3 text-foreground hover:bg-muted"
         onClick={() => signIn("google", { callbackUrl })}
         size="lg"
         type="button"

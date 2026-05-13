@@ -92,7 +92,7 @@ function ContentDetailPagePreview({
     >
       {showError ? (
         <Alert
-          className="rounded-panel border-destructive/20 bg-destructive/14"
+          className="rounded-panel border-destructive bg-destructive"
           variant="destructive"
         >
           <AlertDescription className="text-destructive">
@@ -101,7 +101,7 @@ function ContentDetailPagePreview({
         </Alert>
       ) : null}
       {showMessage ? (
-        <Alert className="rounded-panel border-border/12 bg-muted/60">
+        <Alert className="rounded-panel border-border bg-muted">
           <AlertDescription>Feedback saved</AlertDescription>
         </Alert>
       ) : null}

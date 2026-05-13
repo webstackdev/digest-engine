@@ -8,7 +8,7 @@ const Clients: FC<{
   return (
     <section
       id="integrations"
-      className="rounded-display border border-brand-border-bright bg-card px-6 py-8 shadow-brand-panel backdrop-blur-[18px] sm:px-8 sm:py-10"
+      className="rounded-display border border-border bg-card px-6 py-8 shadow-panel backdrop-blur-[18px] sm:px-8 sm:py-10"
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="max-w-2xl">
@@ -22,7 +22,7 @@ const Clients: FC<{
             {description}
           </p>
         </div>
-        <div className="rounded-full border border-brand-border-bright bg-brand-surface-overlay px-4 py-2 text-sm font-medium text-muted-foreground shadow-brand-soft backdrop-blur-[18px]">
+        <div className="rounded-full border border-border bg-secondary px-4 py-2 text-sm font-medium text-muted-foreground shadow-soft backdrop-blur-[18px]">
           Project-scoped from ingest to draft
         </div>
       </div>
@@ -31,7 +31,7 @@ const Clients: FC<{
         {items.map((item) => (
           <div
             key={item.label}
-            className="rounded-tile border border-brand-border-bright bg-brand-surface-overlay px-4 py-4 shadow-brand-soft backdrop-blur-[18px] transition-transform duration-200 hover:-translate-y-0.5"
+            className="rounded-tile border border-border bg-card px-4 py-4 shadow-soft backdrop-blur-[18px] transition-transform duration-200 hover:-translate-y-0.5"
           >
             <p className="text-3xs font-semibold uppercase tracking-overline text-muted-foreground">
               {item.eyebrow}

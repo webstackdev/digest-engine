@@ -24,7 +24,7 @@ export function InvitePageContent({
 }: InvitePageContentProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <Card className="w-full max-w-2xl rounded-3xl border border-border/12 bg-card/90 shadow-panel backdrop-blur-xl">
+      <Card className="w-full max-w-2xl rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-6 pt-4 md:pt-6">
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-muted">
@@ -36,17 +36,17 @@ export function InvitePageContent({
           </div>
 
           {errorMessage ? (
-            <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+            <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
               <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           ) : null}
           {successMessage ? (
-            <Alert className="rounded-panel border-border/10 bg-muted/60">
+            <Alert className="rounded-panel border-border bg-muted">
               <AlertDescription>{successMessage}</AlertDescription>
             </Alert>
           ) : null}
           {invitationError ? (
-            <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+            <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
               <AlertDescription>{invitationError}</AlertDescription>
             </Alert>
           ) : null}

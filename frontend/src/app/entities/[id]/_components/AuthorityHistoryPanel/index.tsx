@@ -36,7 +36,7 @@ export function AuthorityHistoryPanel({
     : 0
 
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
@@ -51,7 +51,7 @@ export function AuthorityHistoryPanel({
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
-          <div className="space-y-4 rounded-2xl border border-border/10 bg-muted/45 p-4">
+          <div className="space-y-4 rounded-2xl border border-border bg-muted p-4">
             <div className="space-y-1">
               <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">Authority score</p>
               <p className="m-0 font-display text-4xl font-bold text-foreground">
@@ -72,7 +72,7 @@ export function AuthorityHistoryPanel({
                 </div>
                 <div
                   aria-label="Authority component mix"
-                  className="overflow-hidden rounded-full border border-border/10 bg-card/80"
+                  className="overflow-hidden rounded-full border border-border bg-card"
                   role="img"
                 >
                   <svg className="block h-4 w-full" preserveAspectRatio="none" viewBox="0 0 100 8">
@@ -132,7 +132,7 @@ export function AuthorityHistoryPanel({
             )}
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-border/10 bg-muted/45 p-4">
+          <div className="space-y-4 rounded-2xl border border-border bg-muted p-4">
             <div className="flex items-center justify-between gap-3">
               <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                 Latest components
@@ -188,7 +188,7 @@ export function AuthorityHistoryPanel({
         {authorityHistory.length > 0 ? (
           <ul className="m-0 grid list-none gap-3 p-0">
             {authorityHistory.slice(0, 5).map((snapshot) => (
-              <li className="rounded-2xl border border-border/10 bg-muted/45 p-4" key={snapshot.id}>
+              <li className="rounded-2xl border border-border bg-muted p-4" key={snapshot.id}>
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <div className="flex flex-wrap gap-2 text-sm text-muted">
                     <span>{formatDate(snapshot.computed_at)}</span>
@@ -290,7 +290,7 @@ function formatWeightLabel(label: string) {
 
 function AuthorityComponentCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-2xl border border-border/10 bg-card/80 p-4">
+    <div className="rounded-2xl border border-border bg-card p-4">
       <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">{label}</p>
       <p className="mb-0 mt-2 text-2xl font-bold text-foreground">
         {formatPercentScore(value)}

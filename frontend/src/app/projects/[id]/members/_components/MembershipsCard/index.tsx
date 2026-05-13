@@ -30,7 +30,7 @@ export function MembershipsCard({
   redirectTarget,
 }: MembershipsCardProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Current team</p>
@@ -39,7 +39,7 @@ export function MembershipsCard({
         <div className="space-y-3">
           {memberships.map((membership) => (
             <article
-              className="grid gap-4 rounded-2xl border border-border/10 bg-muted/45 p-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center"
+              className="grid gap-4 rounded-2xl border border-border bg-muted p-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center"
               key={membership.id}
             >
               <div>
@@ -64,7 +64,7 @@ export function MembershipsCard({
                   </Label>
                   <Select defaultValue={membership.role} name="role">
                     <SelectTrigger
-                      className="min-h-11 rounded-2xl border-border/12 bg-card px-4 py-3 text-sm text-foreground"
+                      className="min-h-11 rounded-2xl border-border bg-card px-4 py-3 text-sm text-foreground"
                       id={`membership-role-${membership.id}`}
                     >
                       <SelectValue placeholder="Role" />
@@ -85,7 +85,7 @@ export function MembershipsCard({
               <div className="flex flex-wrap items-center justify-end gap-3">
                 {membership.user !== currentUserId ? (
                   <Link
-                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-card px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted"
                     href={`/messages?project=${projectId}&recipient=${membership.user}`}
                   >
                     Message

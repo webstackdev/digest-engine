@@ -32,7 +32,7 @@ export function TopicClusterCard({
       <Card
         className={cn(
           "rounded-3xl border shadow-panel backdrop-blur-xl",
-          isSelected ? "border-primary/25 bg-primary/7" : "border-border/12 bg-card/85",
+          isSelected ? "border-primary bg-primary" : "border-border bg-card",
         )}
       >
         <CardContent className="p-5">

@@ -127,7 +127,7 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Open notifications"
-        className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/10 bg-card/85 p-0 shadow-sm transition hover:brightness-105"
+        className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-border bg-card p-0 shadow-sm transition hover:brightness-105"
       >
         <Bell className="size-5" />
         {unreadCount > 0 ? (
@@ -141,7 +141,7 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-88 overflow-hidden p-0">
-        <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
             <p className="text-sm font-semibold">Notification inbox</p>
             <p className="text-xs text-muted-foreground">

@@ -8,9 +8,9 @@ const FeatureCard: FC<{
   link: string;
 }> = ({ title, icon, description }) => {
   return (
-    <article className="group relative flex h-full flex-col gap-5 rounded-panel border border-brand-border-bright bg-card p-6 shadow-brand-card transition-transform duration-200 hover:-translate-y-1">
+    <article className="group relative flex h-full flex-col gap-5 rounded-panel border border-border bg-card p-6 shadow-card transition-transform duration-200 hover:-translate-y-1">
       <div className="flex items-start justify-between gap-4">
-        <div className="rounded-2xl border border-brand-border-bright bg-brand-surface-muted px-3 py-2 text-primary shadow-brand-soft">
+        <div className="rounded-2xl border border-border bg-secondary px-3 py-2 text-primary shadow-soft">
           {icon}
         </div>
         <span className="text-xs font-semibold uppercase tracking-overline text-muted-foreground">

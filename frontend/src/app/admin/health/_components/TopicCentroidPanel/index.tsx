@@ -56,7 +56,7 @@ export function TopicCentroidPanel({
 }: TopicCentroidPanelProps) {
   return (
     <>
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardHeader>
           <h2 className="font-heading text-base leading-snug font-medium">
             Topic centroid observability
@@ -71,7 +71,7 @@ export function TopicCentroidPanel({
 
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Centroid state
@@ -85,7 +85,7 @@ export function TopicCentroidPanel({
                 </p>
               </CardContent>
             </Card>
-            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Avg drift vs previous
@@ -95,7 +95,7 @@ export function TopicCentroidPanel({
                 </p>
               </CardContent>
             </Card>
-            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Avg drift vs 7d
@@ -105,7 +105,7 @@ export function TopicCentroidPanel({
                 </p>
               </CardContent>
             </Card>
-            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                   Latest snapshot
@@ -120,7 +120,7 @@ export function TopicCentroidPanel({
           {visibleSnapshots.length > 1 ? (
             <Link
               aria-label="Open centroid snapshot history"
-              className="block rounded-panel bg-muted/60 px-4 py-4 transition hover:bg-muted"
+              className="block rounded-panel bg-muted px-4 py-4 transition hover:bg-muted"
               href={historyHref}
             >
               <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
@@ -154,7 +154,7 @@ export function TopicCentroidPanel({
               <span>Downvotes {summary.latest_snapshot.downvote_count}</span>
             </div>
           ) : (
-            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
               <CardContent className="text-sm leading-6 text-muted-foreground">
                 No centroid snapshots exist for this project yet.
               </CardContent>
@@ -164,7 +164,7 @@ export function TopicCentroidPanel({
       </Card>
 
       <Card
-        className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl"
+        className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl"
         id="centroid-snapshot-history"
       >
         <CardHeader>
@@ -183,7 +183,7 @@ export function TopicCentroidPanel({
 
         <CardContent>
           {visibleSnapshots.length === 0 ? (
-            <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+            <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
               <CardContent className="text-sm leading-6 text-muted-foreground">
                 No centroid snapshot history exists for this project yet.
               </CardContent>
@@ -191,7 +191,7 @@ export function TopicCentroidPanel({
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-border/12 text-sm text-muted hover:bg-transparent">
+                <TableRow className="border-border text-sm text-muted hover:bg-transparent">
                   <TableHead className="px-3 py-4">Computed</TableHead>
                   <TableHead className="px-3 py-4">State</TableHead>
                   <TableHead className="px-3 py-4">Feedback</TableHead>
@@ -201,7 +201,7 @@ export function TopicCentroidPanel({
               </TableHeader>
               <TableBody>
                 {visibleSnapshots.map((snapshot) => (
-                  <TableRow key={snapshot.id} className="border-border/12 align-top">
+                  <TableRow key={snapshot.id} className="border-border align-top">
                     <TableCell className="px-3 py-4 text-sm text-foreground">
                       {formatDate(snapshot.computed_at)}
                     </TableCell>

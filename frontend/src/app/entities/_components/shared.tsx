@@ -13,13 +13,13 @@ export const entityTypeOptions = [
 ] as const
 
 export const inputClassName =
-  "h-11 rounded-2xl border-border/12 bg-muted/70 px-4"
+  "h-11 rounded-2xl border-border bg-muted px-4"
 
 export const textareaClassName =
-  "min-h-30 rounded-2xl border-border/12 bg-muted/70 px-4 py-3"
+  "min-h-30 rounded-2xl border-border bg-muted px-4 py-3"
 
 export const selectTriggerClassName =
-  "w-full rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-sm data-[size=default]:h-11"
+  "w-full rounded-2xl border-border bg-muted px-4 py-3 text-sm data-[size=default]:h-11"
 
 type EntityTypeSelectProps = {
   defaultValue?: "individual" | "vendor" | "organization"

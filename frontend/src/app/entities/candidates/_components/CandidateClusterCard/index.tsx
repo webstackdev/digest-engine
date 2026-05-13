@@ -32,7 +32,7 @@ export function CandidateClusterCard({
   selectedProjectId,
 }: CandidateClusterCardProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="pt-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
@@ -70,7 +70,7 @@ export function CandidateClusterCard({
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.95fr)]">
           <div className="space-y-3">
             {cluster.members.map((candidate) => (
-              <article className="rounded-2xl border border-border/10 bg-muted/45 p-4" key={candidate.id}>
+              <article className="rounded-2xl border border-border bg-muted p-4" key={candidate.id}>
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <h3 className="m-0 font-semibold text-foreground">{candidate.name}</h3>
@@ -94,7 +94,7 @@ export function CandidateClusterCard({
             ))}
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-border/10 bg-muted/45 p-4">
+          <div className="space-y-3 rounded-2xl border border-border bg-muted p-4">
             <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
               Bulk cluster actions
             </p>

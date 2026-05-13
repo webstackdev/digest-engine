@@ -35,7 +35,7 @@ export default async function MembersPage({ params, searchParams }: MembersPageP
         projects={projects}
         selectedProjectId={null}
       >
-        <Alert className="rounded-panel border-border/10 bg-muted/60">
+        <Alert className="rounded-panel border-border bg-muted">
           <AlertDescription>Select a visible project first.</AlertDescription>
         </Alert>
       </AppShell>
@@ -50,7 +50,7 @@ export default async function MembersPage({ params, searchParams }: MembersPageP
         projects={projects}
         selectedProjectId={selectedProject.id}
       >
-        <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
           <AlertDescription>You need the admin role on this project to manage members.</AlertDescription>
         </Alert>
       </AppShell>

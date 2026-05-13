@@ -13,7 +13,7 @@ type EntityMentionsPanelProps = {
 /** Render the extracted mention history linked to the current entity. */
 export function EntityMentionsPanel({ mentions, projectId }: EntityMentionsPanelProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
@@ -27,13 +27,13 @@ export function EntityMentionsPanel({ mentions, projectId }: EntityMentionsPanel
           </span>
         </div>
         {mentions.length === 0 ? (
-          <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted-foreground">
+          <div className="rounded-panel bg-muted px-4 py-4 text-sm leading-6 text-muted-foreground">
             No extracted mentions exist for this entity yet.
           </div>
         ) : (
           <ul className="m-0 grid list-none gap-3 p-0">
             {mentions.map((mention) => (
-              <li className="rounded-2xl border border-border/10 bg-muted/45 p-4" key={mention.id}>
+              <li className="rounded-2xl border border-border bg-muted p-4" key={mention.id}>
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div className="space-y-2">
                     <Link

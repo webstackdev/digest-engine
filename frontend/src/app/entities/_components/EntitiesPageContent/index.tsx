@@ -33,12 +33,12 @@ export function EntitiesPageContent({
     >
       <div className="space-y-4">
         {errorMessage ? (
-          <Alert className="rounded-panel border-destructive/25 bg-destructive/14" variant="destructive">
+          <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
         {successMessage ? (
-          <Alert className="rounded-panel border-border/12 bg-muted/60">
+          <Alert className="rounded-panel border-border bg-muted">
             <AlertDescription>{successMessage}</AlertDescription>
           </Alert>
         ) : null}
@@ -55,7 +55,7 @@ export function EntitiesPageContent({
 
           <div className="space-y-4">
             {entities.length === 0 ? (
-              <Alert className="rounded-panel border-border/12 bg-muted/60">
+              <Alert className="rounded-panel border-border bg-muted">
                 <AlertDescription>No entities exist for this project yet.</AlertDescription>
               </Alert>
             ) : null}

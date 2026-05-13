@@ -44,7 +44,7 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-panel bg-muted/60 px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-panel bg-muted px-4 py-4 text-sm leading-6 text-muted">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -118,14 +118,14 @@ export default async function SourcesPage({ searchParams }: SourcesPageProps) {
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive/20 bg-destructive/14" variant="destructive">
+        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
           <AlertDescription className="text-destructive">
             {errorMessage}
           </AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-panel border-border/12 bg-muted/60">
+        <Alert className="rounded-panel border-border bg-muted">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}

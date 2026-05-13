@@ -27,7 +27,7 @@ export function DraftsToolbar({
   currentPageHref,
 }: DraftsToolbarProps) {
   return (
-    <Card className="mb-4 rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="mb-4 rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="flex flex-col gap-4 pt-5 xl:flex-row xl:items-end xl:justify-between">
         <form className="grid gap-2" method="GET">
           <input type="hidden" name="project" value={selectedProjectId} />
@@ -42,7 +42,7 @@ export function DraftsToolbar({
             >
               <SelectTrigger
                 aria-label="Status"
-                className="min-w-40 rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-sm data-[size=default]:h-11"
+                className="min-w-40 rounded-2xl border-border bg-muted px-4 py-3 text-sm data-[size=default]:h-11"
               >
                 <SelectValue />
               </SelectTrigger>

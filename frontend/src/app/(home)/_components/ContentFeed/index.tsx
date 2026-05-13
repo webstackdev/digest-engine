@@ -30,7 +30,7 @@ export function ContentFeed({
   return (
     <div className="space-y-4">
       {filteredContents.length === 0 ? (
-        <Alert className="rounded-panel border-border/10 bg-muted/60">
+        <Alert className="rounded-panel border-border bg-muted">
           <AlertDescription>No content matched the current filters.</AlertDescription>
         </Alert>
       ) : null}
@@ -39,7 +39,7 @@ export function ContentFeed({
 
         return (
           <Card
-            className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl"
+            className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl"
             key={content.id}
           >
             <CardContent className="grid gap-4 p-5">
@@ -73,29 +73,29 @@ export function ContentFeed({
                   </Link>
                 ) : null}
                 {content.authority_adjusted_score !== null ? (
-                  <span className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-foreground">
+                  <span className="inline-flex items-center rounded-full border border-primary bg-primary px-3 py-1 text-sm text-foreground">
                     Base {formatPercentScore(content.relevance_score)}
                   </span>
                 ) : null}
-                <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">
+                <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">
                   {formatDisplayLabel(content.content_type || "unclassified")}
                 </span>
                 {content.duplicate_signal_count > 0 ? (
-                  <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">
+                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">
                     Also seen in {content.duplicate_signal_count} source
                     {content.duplicate_signal_count === 1 ? "" : "s"}
                   </span>
                 ) : null}
                 {content.duplicate_of ? (
-                  <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">
+                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">
                     Duplicate of #{content.duplicate_of}
                   </span>
                 ) : null}
                 {content.is_reference ? (
-                  <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">reference</span>
+                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">reference</span>
                 ) : null}
                 {!content.is_active ? (
-                  <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">archived</span>
+                  <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">archived</span>
                 ) : null}
                 {content.newsletter_promotion_at ? (
                   <Link

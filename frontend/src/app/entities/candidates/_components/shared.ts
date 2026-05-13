@@ -9,7 +9,7 @@ export type CandidateCluster = {
 }
 
 export const selectTriggerClassName =
-  "w-full rounded-2xl border-border/12 bg-card/80 px-4 py-3 text-sm data-[size=default]:h-11"
+  "w-full rounded-2xl border-border bg-card px-4 py-3 text-sm data-[size=default]:h-11"
 
 export function groupCandidateClusters(
   candidates: EntityCandidate[],

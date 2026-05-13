@@ -29,12 +29,12 @@ export function InviteMemberPageContent({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-panel border-border/10 bg-muted/60">
+        <Alert className="rounded-panel border-border bg-muted">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}

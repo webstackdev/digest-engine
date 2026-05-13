@@ -23,7 +23,7 @@ type DraftOverviewCardsProps = {
 export function DraftOverviewCards({ draft }: DraftOverviewCardsProps) {
   return (
     <section className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="pt-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Status</p>
           <div className="mt-2">
@@ -34,21 +34,21 @@ export function DraftOverviewCards({ draft }: DraftOverviewCardsProps) {
           </p>
         </CardContent>
       </Card>
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="pt-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Sections</p>
           <p className="mt-1 text-3xl font-bold">{draft.sections.length}</p>
           <p className="text-sm leading-6 text-muted-foreground">Theme-backed sections in this edition.</p>
         </CardContent>
       </Card>
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="pt-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Original pieces</p>
           <p className="mt-1 text-3xl font-bold">{draft.original_pieces.length}</p>
           <p className="text-sm leading-6 text-muted-foreground">Accepted original ideas carried into the draft.</p>
         </CardContent>
       </Card>
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="pt-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Target publish</p>
           <p className="mt-1 text-3xl font-bold">{draft.target_publish_date || "Unscheduled"}</p>

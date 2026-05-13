@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 /** Render the self-service project creation form. */
 export function NewProjectFormCard() {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardHeader>
         <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">
           Provision
@@ -32,7 +32,7 @@ export function NewProjectFormCard() {
           <div className="grid gap-2">
             <Label htmlFor="new-project-name">Name</Label>
             <Input
-              className="h-11 rounded-2xl border-border/12 bg-muted/70 px-4"
+              className="h-11 rounded-2xl border-border bg-muted px-4"
               id="new-project-name"
               name="name"
               required
@@ -42,7 +42,7 @@ export function NewProjectFormCard() {
           <div className="grid gap-2">
             <Label htmlFor="new-project-topic-description">Topic description</Label>
             <Textarea
-              className="min-h-32 resize-y rounded-2xl border-border/12 bg-muted/70 px-4 py-3"
+              className="min-h-32 resize-y rounded-2xl border-border bg-muted px-4 py-3"
               id="new-project-topic-description"
               name="topic_description"
               required
@@ -52,7 +52,7 @@ export function NewProjectFormCard() {
           <div className="grid gap-2 sm:max-w-xs">
             <Label htmlFor="new-project-retention-days">Content retention days</Label>
             <Input
-              className="h-11 rounded-2xl border-border/12 bg-muted/70 px-4"
+              className="h-11 rounded-2xl border-border bg-muted px-4"
               defaultValue="365"
               id="new-project-retention-days"
               min="1"

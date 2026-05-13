@@ -27,7 +27,7 @@ export function Header() {
           className="h-16 w-16 shrink-0"
           priority
         />
-        <span className="text-brand-sage-600 hover:text-brand-sage-700 text-xl tracking-tight sm:text-3xl font-semibold ml-2">
+        <span className="ml-2 text-xl font-semibold tracking-tight text-primary hover:text-foreground sm:text-3xl">
           {brand.name}
         </span>
       </Link>
@@ -38,7 +38,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-brand-sage-600 hover:text-brand-sage-800 text-base sm:text-lg font-medium tracking-tight transition-colors"
+              className="text-base font-medium tracking-tight text-primary transition-colors hover:text-foreground sm:text-lg"
             >
               {item.label}
             </Link>
@@ -47,7 +47,7 @@ export function Header() {
 
         <Link
           href="/login"
-          className="rounded-full bg-brand-fill-accent-soft px-5 py-3 text-sm font-semibold text-brand-fill-accent-contrast no-underline transition-colors hover:bg-brand-fill-accent"
+          className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary"
         >
           Login
         </Link>

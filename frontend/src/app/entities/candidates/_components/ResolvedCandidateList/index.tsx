@@ -15,7 +15,7 @@ export function ResolvedCandidateList({
 }: ResolvedCandidateListProps) {
   if (resolvedCandidates.length === 0) {
     return (
-      <Alert className="rounded-panel border-border/12 bg-muted/60">
+      <Alert className="rounded-panel border-border bg-muted">
         <AlertDescription>
           No auto-promotion or review history is available for this project yet.
         </AlertDescription>
@@ -26,7 +26,7 @@ export function ResolvedCandidateList({
   return (
     <section className="space-y-4">
       {resolvedCandidates.map((candidate) => (
-        <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl" key={candidate.id}>
+        <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl" key={candidate.id}>
           <CardContent className="pt-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">

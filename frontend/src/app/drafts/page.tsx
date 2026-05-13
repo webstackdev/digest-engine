@@ -39,7 +39,7 @@ export default async function DraftsPage({ searchParams }: DraftsPageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <Alert className="rounded-panel border-border/12 bg-muted/60">
+        <Alert className="rounded-panel border-border bg-muted">
           <AlertDescription>Create a project first in Django admin.</AlertDescription>
         </Alert>
       </AppShell>
@@ -64,12 +64,12 @@ export default async function DraftsPage({ searchParams }: DraftsPageProps) {
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive/20 bg-destructive/14" variant="destructive">
+        <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
           <AlertDescription className="text-destructive">{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-panel border-border/12 bg-muted/60">
+        <Alert className="rounded-panel border-border bg-muted">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}

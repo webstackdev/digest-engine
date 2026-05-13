@@ -51,7 +51,7 @@ export function ThemeSuggestionCard({
     <Card
       className={cn(
         "rounded-3xl border shadow-panel backdrop-blur-xl",
-        isHighlighted ? "border-primary/25 bg-primary/7" : "border-border/12 bg-card/85",
+        isHighlighted ? "border-primary bg-primary" : "border-border bg-card",
       )}
     >
       <CardContent className="p-5">
@@ -122,7 +122,7 @@ export function ThemeSuggestionCard({
             ) : null}
           </div>
 
-          <aside className="space-y-4 rounded-panel bg-muted/60 px-4 py-4">
+          <aside className="space-y-4 rounded-panel bg-muted px-4 py-4">
             <div>
               <p className="m-0 text-sm font-medium text-foreground">Cluster</p>
               {theme.cluster ? (
@@ -177,7 +177,7 @@ export function ThemeSuggestionCard({
                     </Label>
                     <Select defaultValue={dismissalReasons[0]} name="reason">
                       <SelectTrigger
-                        className="min-h-11 rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-sm text-foreground"
+                        className="min-h-11 rounded-2xl border-border bg-muted px-4 py-3 text-sm text-foreground"
                         id={`dismiss-reason-${theme.id}`}
                       >
                         <SelectValue placeholder="Dismissal reason" />

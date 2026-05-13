@@ -43,7 +43,7 @@ export function OriginalContentIdeaCard({
   dismissalReasons = DEFAULT_IDEA_DISMISSAL_REASONS,
 }: OriginalContentIdeaCardProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="pt-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -105,7 +105,7 @@ export function OriginalContentIdeaCard({
             </div>
           </div>
 
-          <aside className="space-y-4 rounded-2xl border border-border/10 bg-muted/45 p-4">
+          <aside className="space-y-4 rounded-2xl border border-border bg-muted p-4">
             <div>
               <p className="m-0 text-sm font-medium text-foreground">Workflow metadata</p>
               <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted-foreground">

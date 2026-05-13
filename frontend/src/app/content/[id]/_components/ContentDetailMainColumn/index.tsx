@@ -35,7 +35,7 @@ export function ContentDetailMainColumn({
 }: ContentDetailMainColumnProps) {
   return (
     <div className="space-y-4">
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-3">
@@ -96,23 +96,23 @@ export function ContentDetailMainColumn({
           </div>
 
           <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">
+            <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">
               Canonical URL {content.canonical_url || content.url}
             </span>
             {content.authority_adjusted_score !== null ? (
-              <span className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-foreground">
+              <span className="inline-flex items-center rounded-full border border-primary bg-primary px-3 py-1 text-sm text-foreground">
                 Base {formatPercentScore(content.relevance_score)}
               </span>
             ) : null}
             {content.duplicate_signal_count > 0 ? (
-              <span className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground">
+              <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground">
                 Also seen in {content.duplicate_signal_count} source
                 {content.duplicate_signal_count === 1 ? "" : "s"}
               </span>
             ) : null}
             {content.duplicate_of ? (
               <Link
-                className="inline-flex items-center rounded-full border border-border/12 bg-muted/55 px-3 py-1 text-sm text-foreground transition hover:bg-muted/80"
+                className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-sm text-foreground transition hover:bg-muted"
                 href={`/content/${content.duplicate_of}?project=${selectedProjectId}`}
               >
                 Duplicate of #{content.duplicate_of}
@@ -120,7 +120,7 @@ export function ContentDetailMainColumn({
             ) : null}
             {content.newsletter_promotion_at ? (
               <Link
-                className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-foreground transition hover:bg-primary/12"
+                className="inline-flex items-center rounded-full border border-primary bg-primary px-3 py-1 text-sm text-foreground transition hover:bg-primary"
                 href={
                   content.newsletter_promotion_theme
                     ? `/themes?project=${selectedProjectId}&theme=${content.newsletter_promotion_theme}`
@@ -138,7 +138,7 @@ export function ContentDetailMainColumn({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-4 p-5">
           <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">
             Skill action bar
@@ -174,7 +174,7 @@ export function ContentDetailMainColumn({
 
       {contentSkillResults.map((skillResult) => (
         <Card
-          className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl"
+          className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl"
           key={skillResult.id}
         >
           <CardContent className="space-y-4 p-5">
@@ -205,11 +205,11 @@ export function ContentDetailMainColumn({
               <span>Confidence {formatScore(skillResult.confidence)}</span>
             </div>
             {skillResult.error_message ? (
-              <div className="rounded-panel bg-destructive/14 px-4 py-4 text-sm leading-6 text-destructive">
+              <div className="rounded-panel bg-destructive px-4 py-4 text-sm leading-6 text-destructive">
                 {skillResult.error_message}
               </div>
             ) : null}
-            <pre className="overflow-auto rounded-2xl border border-border/12 bg-muted/60 p-4 text-sm text-foreground">
+            <pre className="overflow-auto rounded-2xl border border-border bg-muted p-4 text-sm text-foreground">
               {JSON.stringify(skillResult.result_data, null, 2)}
             </pre>
           </CardContent>

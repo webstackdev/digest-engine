@@ -84,9 +84,9 @@ export default async function RootLayout({
           {children}
         </DocsLayout>
         <footer className="marketing-footer mx-auto mt-6 max-w-marketing px-4 pb-12 pt-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-5 rounded-panel border border-brand-border-bright bg-brand-surface-overlay px-6 py-6 text-sm text-muted-foreground shadow-brand-soft backdrop-blur-[18px] md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-5 rounded-panel border border-border bg-card px-6 py-6 text-sm text-muted-foreground shadow-soft backdrop-blur-[18px] md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-brand-border-bright bg-brand-surface-muted text-xs font-black tracking-logo text-primary shadow-brand-soft">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-border bg-secondary text-xs font-black tracking-logo text-primary shadow-soft">
                 DE
               </span>
               <div>

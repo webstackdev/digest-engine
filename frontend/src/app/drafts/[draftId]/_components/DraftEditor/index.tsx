@@ -125,13 +125,13 @@ export function DraftEditor({
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.9fr)]">
       <div className="space-y-4">
         {statusMessage ? (
-          <Alert className="rounded-panel border-border/12 bg-muted/60" role="status">
+          <Alert className="rounded-panel border-border bg-muted" role="status">
             <AlertDescription>{statusMessage}</AlertDescription>
           </Alert>
         ) : null}
         {errorMessage ? (
           <Alert
-            className="rounded-panel border-destructive/20 bg-destructive/14"
+            className="rounded-panel border-destructive bg-destructive"
             role="alert"
             variant="destructive"
           >
@@ -141,7 +141,7 @@ export function DraftEditor({
           </Alert>
         ) : null}
 
-        <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+        <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
           <CardContent className="pt-5">
             <form
               action={draftRoute}
@@ -160,7 +160,7 @@ export function DraftEditor({
               <div className="grid gap-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
-                  className="h-11 rounded-2xl border-border/12 bg-muted/70 px-4"
+                  className="h-11 rounded-2xl border-border bg-muted px-4"
                   defaultValue={draft.title}
                   id="title"
                   name="title"
@@ -169,7 +169,7 @@ export function DraftEditor({
               <div className="grid gap-2">
                 <Label htmlFor="target_publish_date">Target publish date</Label>
                 <Input
-                  className="h-11 rounded-2xl border-border/12 bg-muted/70 px-4"
+                  className="h-11 rounded-2xl border-border bg-muted px-4"
                   defaultValue={draft.target_publish_date || ""}
                   id="target_publish_date"
                   name="target_publish_date"
@@ -179,7 +179,7 @@ export function DraftEditor({
               <div className="grid gap-2">
                 <Label htmlFor="intro">Intro</Label>
                 <Textarea
-                  className="min-h-36 rounded-2xl border-border/12 bg-muted/70 px-4 py-3"
+                  className="min-h-36 rounded-2xl border-border bg-muted px-4 py-3"
                   defaultValue={draft.intro}
                   id="intro"
                   name="intro"
@@ -188,7 +188,7 @@ export function DraftEditor({
               <div className="grid gap-2">
                 <Label htmlFor="outro">Outro</Label>
                 <Textarea
-                  className="min-h-28 rounded-2xl border-border/12 bg-muted/70 px-4 py-3"
+                  className="min-h-28 rounded-2xl border-border bg-muted px-4 py-3"
                   defaultValue={draft.outro}
                   id="outro"
                   name="outro"
@@ -214,7 +214,7 @@ export function DraftEditor({
           const nextSection = draft.sections[sectionIndex + 1]
 
           return (
-            <Card key={section.id} className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+            <Card key={section.id} className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
               <CardContent className="pt-5">
                 <form
                   action={sectionRoute}
@@ -238,7 +238,7 @@ export function DraftEditor({
                         </p>
                         <Label className="sr-only" htmlFor={`section-title-${section.id}`}>Section title</Label>
                         <Input
-                          className="h-11 rounded-2xl border-border/12 bg-muted/70 px-4 font-display text-title-md font-bold"
+                          className="h-11 rounded-2xl border-border bg-muted px-4 font-display text-title-md font-bold"
                           defaultValue={section.title}
                           id={`section-title-${section.id}`}
                           name="title"
@@ -247,7 +247,7 @@ export function DraftEditor({
                       <div className="grid gap-2">
                         <Label className="sr-only" htmlFor={`section-lede-${section.id}`}>Section lede</Label>
                         <Textarea
-                          className="min-h-28 rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-sm leading-6"
+                          className="min-h-28 rounded-2xl border-border bg-muted px-4 py-3 text-sm leading-6"
                           defaultValue={section.lede}
                           id={`section-lede-${section.id}`}
                           name="lede"
@@ -379,7 +379,7 @@ export function DraftEditor({
                     return (
                       <form
                         action={itemRoute}
-                        className="rounded-panel bg-muted/60 px-4 py-4"
+                        className="rounded-panel bg-muted px-4 py-4"
                         key={item.id}
                         method="POST"
                         onSubmit={(event) => {
@@ -401,7 +401,7 @@ export function DraftEditor({
                         <div className="mt-3 grid gap-2">
                           <Label htmlFor={`item-summary-${item.id}`}>Summary</Label>
                           <Textarea
-                            className="min-h-24 rounded-2xl border-border/12 bg-card/80 px-4 py-3 text-sm leading-6"
+                            className="min-h-24 rounded-2xl border-border bg-card px-4 py-3 text-sm leading-6"
                             defaultValue={item.summary_used}
                             id={`item-summary-${item.id}`}
                             name="summary_used"
@@ -410,7 +410,7 @@ export function DraftEditor({
                         <div className="mt-3 grid gap-2">
                           <Label htmlFor={`item-why-${item.id}`}>Why it matters</Label>
                           <Textarea
-                            className="min-h-24 rounded-2xl border-border/12 bg-card/80 px-4 py-3 text-sm leading-6"
+                            className="min-h-24 rounded-2xl border-border bg-card px-4 py-3 text-sm leading-6"
                             defaultValue={item.why_it_matters}
                             id={`item-why-${item.id}`}
                             name="why_it_matters"
@@ -506,7 +506,7 @@ export function DraftEditor({
       </div>
 
       <aside className="space-y-4">
-        <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+        <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
           <CardContent className="pt-5">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Original pieces</p>
             <p className="mt-3 text-sm leading-6 text-muted">
@@ -521,7 +521,7 @@ export function DraftEditor({
                 return (
                   <form
                     action={pieceRoute}
-                    className="rounded-panel bg-muted/60 px-4 py-4"
+                    className="rounded-panel bg-muted px-4 py-4"
                     key={piece.id}
                     method="POST"
                     onSubmit={(event) => {
@@ -537,7 +537,7 @@ export function DraftEditor({
                     <div className="grid gap-2">
                       <Label htmlFor={`piece-title-${piece.id}`}>Original piece title</Label>
                       <Input
-                        className="h-11 rounded-2xl border-border/12 bg-card/80 px-4 font-medium"
+                        className="h-11 rounded-2xl border-border bg-card px-4 font-medium"
                         defaultValue={piece.title}
                         id={`piece-title-${piece.id}`}
                         name="title"
@@ -546,7 +546,7 @@ export function DraftEditor({
                     <div className="mt-3 grid gap-2">
                       <Label htmlFor={`piece-pitch-${piece.id}`}>Pitch</Label>
                       <Textarea
-                        className="min-h-24 rounded-2xl border-border/12 bg-card/80 px-4 py-3 text-sm leading-6"
+                        className="min-h-24 rounded-2xl border-border bg-card px-4 py-3 text-sm leading-6"
                         defaultValue={piece.pitch}
                         id={`piece-pitch-${piece.id}`}
                         name="pitch"
@@ -555,7 +555,7 @@ export function DraftEditor({
                     <div className="mt-3 grid gap-2">
                       <Label htmlFor={`piece-outline-${piece.id}`}>Suggested outline</Label>
                       <Textarea
-                        className="min-h-28 rounded-2xl border-border/12 bg-card/80 px-4 py-3 text-sm leading-6"
+                        className="min-h-28 rounded-2xl border-border bg-card px-4 py-3 text-sm leading-6"
                         defaultValue={piece.suggested_outline}
                         id={`piece-outline-${piece.id}`}
                         name="suggested_outline"
@@ -648,7 +648,7 @@ export function DraftEditor({
         </Card>
 
         {draft.generation_metadata.error ? (
-          <Card className="rounded-3xl border border-destructive/20 bg-destructive/14 shadow-panel backdrop-blur-xl">
+          <Card className="rounded-3xl border border-destructive bg-destructive shadow-panel backdrop-blur-xl">
             <CardContent className="pt-5">
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-destructive">Generation error</p>
               <p className="mt-3 text-sm leading-6 text-destructive">{draft.generation_metadata.error}</p>
@@ -657,7 +657,7 @@ export function DraftEditor({
         ) : null}
 
         {draft.generation_metadata.models ? (
-          <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+          <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
             <CardContent className="pt-5">
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Models used</p>
               <div className="mt-4 space-y-2 text-sm leading-6 text-muted">

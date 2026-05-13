@@ -25,9 +25,9 @@ import { formatDate } from "@/lib/view-helpers"
 
 import type { VerificationState } from "../helpers"
 
-const inputClassName = "h-11 rounded-2xl border-border/12 bg-card px-4"
+const inputClassName = "h-11 rounded-2xl border-border bg-card px-4"
 const selectTriggerClassName =
-  "w-full rounded-2xl border-border/12 bg-card px-4 py-3 text-sm data-[size=default]:h-11"
+  "w-full rounded-2xl border-border bg-card px-4 py-3 text-sm data-[size=default]:h-11"
 
 type ProviderSetupPanelProps = {
   selectedProjectId: number
@@ -53,7 +53,7 @@ export function ProviderSetupPanel({
 }: ProviderSetupPanelProps) {
   return (
     <div className="space-y-4">
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -73,7 +73,7 @@ export function ProviderSetupPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="rounded-2xl border border-border/10 bg-muted/45 shadow-none ring-0">
+            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
               <CardContent className="space-y-2 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Stored credentials
@@ -95,7 +95,7 @@ export function ProviderSetupPanel({
                 ) : null}
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-border/10 bg-muted/45 shadow-none ring-0">
+            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
               <CardContent className="space-y-4 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Save credentials
@@ -164,7 +164,7 @@ export function ProviderSetupPanel({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -184,7 +184,7 @@ export function ProviderSetupPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="rounded-2xl border border-border/10 bg-muted/45 shadow-none ring-0">
+            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
               <CardContent className="space-y-2 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Stored authorization
@@ -211,7 +211,7 @@ export function ProviderSetupPanel({
                 ) : null}
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-border/10 bg-muted/45 shadow-none ring-0">
+            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
               <CardContent className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
@@ -243,7 +243,7 @@ export function ProviderSetupPanel({
           </form>
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <Card className="rounded-2xl border border-border/10 bg-muted/45 shadow-none ring-0">
+            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
               <CardContent className="space-y-4 pt-4">
                 <div className="space-y-1">
                   <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
@@ -298,7 +298,7 @@ export function ProviderSetupPanel({
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border border-border/10 bg-muted/45 shadow-none ring-0">
+            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
               <CardContent className="space-y-2 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Quick config shapes
@@ -317,7 +317,7 @@ export function ProviderSetupPanel({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardHeader>
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
@@ -337,7 +337,7 @@ export function ProviderSetupPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card className="rounded-2xl border border-border/10 bg-muted/45 shadow-none ring-0">
+            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
               <CardContent className="space-y-2 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Stored credentials
@@ -359,7 +359,7 @@ export function ProviderSetupPanel({
                 ) : null}
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-border/10 bg-muted/45 shadow-none ring-0">
+            <Card className="rounded-2xl border border-border bg-muted shadow-none ring-0">
               <CardContent className="space-y-4 pt-4">
                 <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
                   Save credentials
@@ -424,7 +424,7 @@ export function ProviderSetupPanel({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardHeader>
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Add source</p>
           <h2 className="font-display text-title-sm font-bold text-foreground">
@@ -452,7 +452,7 @@ export function ProviderSetupPanel({
             </div>
             <div className="grid gap-2">
               <Label htmlFor="create-source-config-json">Config JSON</Label>
-              <Textarea className="min-h-30 rounded-2xl border-border/12 bg-muted/70 px-4 py-3 font-mono text-sm" defaultValue={JSON.stringify({ feed_url: "https://example.com/feed.xml" }, null, 2)} id="create-source-config-json" name="config_json" />
+              <Textarea className="min-h-30 rounded-2xl border-border bg-muted px-4 py-3 font-mono text-sm" defaultValue={JSON.stringify({ feed_url: "https://example.com/feed.xml" }, null, 2)} id="create-source-config-json" name="config_json" />
             </div>
             <p className="m-0 text-sm leading-6 text-muted">
               Bluesky configs accept either an actor handle or a feed URI. Mastodon

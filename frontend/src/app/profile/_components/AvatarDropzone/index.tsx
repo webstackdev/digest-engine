@@ -49,7 +49,7 @@ export function AvatarDropzone({
   })
 
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Upload</p>
@@ -62,10 +62,10 @@ export function AvatarDropzone({
           {...getRootProps()}
           className={`rounded-3xl border border-dashed px-5 py-8 text-center transition ${
             isDragReject
-              ? "border-destructive/40 bg-destructive/10"
+              ? "border-destructive bg-destructive"
               : isDragActive
-                ? "border-primary/45 bg-primary/8"
-                : "border-border/16 bg-muted/45 hover:border-primary/28 hover:bg-muted/60"
+                ? "border-primary bg-primary"
+                : "border-border bg-muted hover:border-primary hover:bg-muted"
           } ${isUploading ? "cursor-wait opacity-70" : "cursor-pointer"}`}
         >
           <input {...getInputProps({ "aria-label": "Upload avatar image" })} />
@@ -78,7 +78,7 @@ export function AvatarDropzone({
         </div>
 
         {errorMessage ? (
-          <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+          <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}

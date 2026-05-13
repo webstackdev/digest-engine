@@ -22,7 +22,7 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
   ].filter((label): label is string => label !== null)
 
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-5 pt-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-3">
@@ -42,7 +42,7 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-3 rounded-2xl border border-border/10 bg-muted/45 p-4">
+          <div className="space-y-3 rounded-2xl border border-border bg-muted p-4">
             <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Description
             </h3>
@@ -50,7 +50,7 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
               {entity.description || "No description is set for this entity yet."}
             </p>
           </div>
-          <div className="space-y-3 rounded-2xl border border-border/10 bg-muted/45 p-4">
+          <div className="space-y-3 rounded-2xl border border-border bg-muted p-4">
             <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               Identity links
             </h3>

@@ -28,7 +28,7 @@ export function InviteMemberFormCard({
   backHref,
 }: InviteMemberFormCardProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Access</p>
@@ -47,7 +47,7 @@ export function InviteMemberFormCard({
             <Label htmlFor="invite-member-role">Role</Label>
             <Select defaultValue="member" name="role">
               <SelectTrigger
-                className="min-h-11 rounded-2xl border-border/12 bg-muted/70 px-4 py-3 text-sm text-foreground"
+                className="min-h-11 rounded-2xl border-border bg-muted px-4 py-3 text-sm text-foreground"
                 id="invite-member-role"
               >
                 <SelectValue placeholder="Role" />

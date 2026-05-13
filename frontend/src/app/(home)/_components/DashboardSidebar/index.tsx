@@ -15,7 +15,7 @@ export function DashboardSidebar({
 }: DashboardSidebarProps) {
   return (
     <aside className="space-y-4">
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="p-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Project focus</p>
           <h3 className="font-display text-title-md">{selectedProject.name}</h3>
@@ -23,7 +23,7 @@ export function DashboardSidebar({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="p-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Active sources</p>
           <p className="mt-1 text-3xl font-bold">
@@ -35,7 +35,7 @@ export function DashboardSidebar({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="p-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Editorial queue</p>
           <p className="mt-1 text-3xl font-bold">{pendingReviewCount}</p>

@@ -20,8 +20,8 @@ export const PageSection = <T extends SectionTag = "section">({
       className={cn(
         "mx-auto max-w-marketing px-4 sm:px-6",
         "rounded-display",
-        "border border-brand-border-bright",
-        "bg-brand-surface-overlay-strong shadow-brand-soft backdrop-blur-[18px]",
+        "border border-border",
+        "bg-card shadow-soft backdrop-blur-[18px]",
         classes,
       )}
       {...props}

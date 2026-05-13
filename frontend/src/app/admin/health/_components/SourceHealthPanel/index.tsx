@@ -43,7 +43,7 @@ export function SourceHealthPanel({
   statusTone = "neutral",
 }: SourceHealthPanelProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -60,7 +60,7 @@ export function SourceHealthPanel({
 
       <CardContent>
         {rows.length === 0 ? (
-          <Card className="rounded-panel bg-muted/60 shadow-none ring-0" size="sm">
+          <Card className="rounded-panel bg-muted shadow-none ring-0" size="sm">
             <CardContent className="text-sm leading-6 text-muted-foreground">
               No source configurations exist for this project yet.
             </CardContent>
@@ -68,7 +68,7 @@ export function SourceHealthPanel({
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="border-border/12 text-sm text-muted hover:bg-transparent">
+              <TableRow className="border-border text-sm text-muted hover:bg-transparent">
                 <TableHead className="px-3 py-4">Source</TableHead>
                 <TableHead className="px-3 py-4">Status</TableHead>
                 <TableHead className="px-3 py-4">Last fetch</TableHead>
@@ -79,7 +79,7 @@ export function SourceHealthPanel({
             </TableHeader>
             <TableBody>
               {rows.map(({ sourceConfig, latestRun, status }) => (
-                <TableRow key={sourceConfig.id} className="border-border/12 align-top">
+                <TableRow key={sourceConfig.id} className="border-border align-top">
                   <TableCell className="px-3 py-4 whitespace-normal">
                     <strong className="font-medium text-foreground">
                       {formatDisplayLabel(sourceConfig.plugin_name)}

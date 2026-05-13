@@ -85,12 +85,12 @@ function CandidateQueuePagePreview({
     >
       <div className="space-y-4">
         {showError ? (
-          <Alert className="rounded-panel border-destructive/20 bg-destructive/14" variant="destructive">
+          <Alert className="rounded-panel border-destructive bg-destructive" variant="destructive">
             <AlertDescription className="text-destructive">Could not resolve cluster</AlertDescription>
           </Alert>
         ) : null}
         {showMessage ? (
-          <Alert className="rounded-panel border-border/12 bg-muted/60">
+          <Alert className="rounded-panel border-border bg-muted">
             <AlertDescription>Cluster resolved</AlertDescription>
           </Alert>
         ) : null}

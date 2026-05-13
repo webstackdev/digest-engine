@@ -24,7 +24,7 @@ export function ReviewQueueTable({
   contentMap,
 }: ReviewQueueTableProps) {
   return (
-    <section className="overflow-hidden rounded-3xl border border-border/12 bg-card/85 p-5 shadow-panel backdrop-blur-xl">
+    <section className="overflow-hidden rounded-3xl border border-border bg-card p-5 shadow-panel backdrop-blur-xl">
       <Table>
         <TableHeader>
           <TableRow className="text-sm text-muted-foreground">
@@ -39,7 +39,7 @@ export function ReviewQueueTable({
           {pendingReviewItems.length === 0 ? (
             <TableRow>
               <TableCell className="px-3 py-4" colSpan={5}>
-                <Alert className="rounded-panel border-border/10 bg-muted/60">
+                <Alert className="rounded-panel border-border bg-muted">
                   <AlertDescription>
                     No unresolved review items for this project right now.
                   </AlertDescription>

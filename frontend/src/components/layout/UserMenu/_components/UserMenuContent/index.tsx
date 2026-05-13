@@ -26,13 +26,13 @@ export function UserMenuContent({
   return (
     <DropdownMenuContent
       align="end"
-      className="w-72 rounded-3xl border border-border/10 bg-card/95 p-4 shadow-panel backdrop-blur-xl"
+      className="w-72 rounded-3xl border border-border bg-card p-4 shadow-panel backdrop-blur-xl"
       sideOffset={12}
     >
       <div className="flex items-center gap-3">
         <UserAvatar
           avatarUrl={avatarUrl}
-          className="size-12 border border-border/10 shadow-sm after:hidden"
+          className="size-12 border border-border shadow-sm after:hidden"
           name={accountName}
         />
         <div className="min-w-0">
@@ -55,7 +55,7 @@ export function UserMenuContent({
         >
           View profile
         </Link>
-        <div className="rounded-2xl border border-border/10 bg-muted/45 px-4 py-3 text-sm leading-6 text-muted">
+        <div className="rounded-2xl border border-border bg-muted px-4 py-3 text-sm leading-6 text-muted">
           Update your avatar, display name, and timezone from the profile workspace.
         </div>
       </div>

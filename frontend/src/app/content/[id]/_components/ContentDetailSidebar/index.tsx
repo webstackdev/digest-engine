@@ -25,7 +25,7 @@ export function ContentDetailSidebar({
 }: ContentDetailSidebarProps) {
   return (
     <aside className="space-y-4">
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="p-5">
           <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">Feedback</p>
           <p className="mt-1 text-3xl font-bold">
@@ -37,7 +37,7 @@ export function ContentDetailSidebar({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-4 p-5">
           <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">Review state</p>
           {reviewItems.length === 0 ? (
@@ -63,7 +63,7 @@ export function ContentDetailSidebar({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-4 p-5">
           <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">Promotion state</p>
           {content.newsletter_promotion_at ? (
@@ -74,7 +74,7 @@ export function ContentDetailSidebar({
               ) : null}
               {content.newsletter_promotion_theme ? (
                 <Link
-                  className="inline-flex items-center rounded-full border border-primary/18 bg-primary/8 px-3 py-1 text-sm text-foreground transition hover:bg-primary/12"
+                  className="inline-flex items-center rounded-full border border-primary bg-primary px-3 py-1 text-sm text-foreground transition hover:bg-primary"
                   href={`/themes?project=${selectedProjectId}&theme=${content.newsletter_promotion_theme}`}
                 >
                   Open promoting theme #{content.newsletter_promotion_theme}
@@ -89,7 +89,7 @@ export function ContentDetailSidebar({
         </CardContent>
       </Card>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-border bg-card shadow-panel backdrop-blur-xl">
         <CardContent className="p-5">
           <p className="mb-3 text-eyebrow uppercase tracking-eyebrow opacity-70">Navigate</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
