@@ -3,9 +3,9 @@ import { PageSection } from "../ui/page-section";
 
 const FeatureCard: FC<{ title: string; icon: ReactNode; description: string; link: string }> = ({ title, icon, description }) => {
   return (
-    <article className='group relative flex h-full flex-col gap-5 rounded-[1.75rem] border border-white/72 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(243,246,244,0.84))] p-6 shadow-[0_22px_44px_rgba(62,77,107,0.08)] transition-transform duration-200 hover:-translate-y-1'>
+    <article className='marketing-card group relative flex h-full flex-col gap-5 rounded-[1.75rem] p-6 transition-transform duration-200 hover:-translate-y-1'>
       <div className='flex items-start justify-between gap-4'>
-        <div className='rounded-2xl border border-white/80 bg-white/84 px-3 py-2 text-(--brand-color) shadow-[0_10px_20px_rgba(62,77,107,0.06)]'>
+        <div className='marketing-icon-chip rounded-2xl px-3 py-2 text-(--brand-color)'>
           {icon}
         </div>
         <span className='text-xs font-semibold uppercase tracking-[0.24em] text-(--font-secondary)'>Feature</span>

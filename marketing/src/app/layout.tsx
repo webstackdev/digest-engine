@@ -76,9 +76,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="marketing-site">
         <header className='marketing-nav-wrap'>
           <div className='marketing-nav-shell mx-auto max-w-[1180px] px-4 pt-6 sm:px-6 lg:px-8'>
-            <div className='marketing-nav flex items-center justify-between gap-4 rounded-[1.65rem] border border-white/70 bg-white/82 px-4 py-3 shadow-[0_20px_44px_rgba(62,77,107,0.12)] backdrop-blur md:px-5'>
+            <div className='marketing-nav marketing-glass-strong flex items-center justify-between gap-4 rounded-[1.65rem] px-4 py-3 md:px-5'>
               <Link href='/' className='flex items-center gap-3 text-(--font-primary) no-underline'>
-                <span className='flex h-11 w-11 items-center justify-center rounded-2xl border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(231,237,234,0.86))] text-sm font-black tracking-[0.22em] text-(--brand-color) shadow-[0_10px_20px_rgba(62,77,107,0.08)]'>
+                <span className='marketing-icon-chip flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black tracking-[0.22em] text-(--brand-color)'>
                   DE
                 </span>
                 <span className='text-lg font-semibold tracking-tight sm:text-xl'>{brand.name}</span>
@@ -102,7 +102,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <div className='flex items-center gap-2'>
                 <Link
                   href='/docs'
-                  className='rounded-full bg-[linear-gradient(135deg,var(--brand-fill-accent),#d17e60)] px-5 py-3 text-sm font-semibold text-white no-underline shadow-[0_18px_34px_rgba(198,107,82,0.26)] transition hover:brightness-105'
+                  className='marketing-accent-button rounded-full px-5 py-3 text-sm font-semibold no-underline transition-colors'
                 >
                   Read Docs
                 </Link>
@@ -118,9 +118,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </DocsLayout>
         <footer className='marketing-footer mx-auto mt-6 max-w-[1180px] px-4 pb-12 pt-4 sm:px-6 lg:px-8'>
-          <div className='flex flex-col gap-5 rounded-[1.75rem] border border-white/70 bg-white/76 px-6 py-6 text-sm text-(--font-secondary) shadow-[0_18px_40px_rgba(62,77,107,0.08)] backdrop-blur md:flex-row md:items-center md:justify-between'>
+          <div className='marketing-glass flex flex-col gap-5 rounded-[1.75rem] px-6 py-6 text-sm text-(--font-secondary) md:flex-row md:items-center md:justify-between'>
             <div className='flex items-center gap-3'>
-              <span className='flex h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(231,237,234,0.86))] text-xs font-black tracking-[0.22em] text-(--brand-color) shadow-[0_10px_20px_rgba(62,77,107,0.08)]'>
+              <span className='marketing-icon-chip flex h-10 w-10 items-center justify-center rounded-2xl text-xs font-black tracking-[0.22em] text-(--brand-color)'>
                 DE
               </span>
               <div>

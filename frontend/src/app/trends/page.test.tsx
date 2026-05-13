@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import type { ReactNode } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { Content, Project, TopicCluster, TopicClusterDetail } from "@/lib/types"
 
@@ -187,6 +187,9 @@ async function renderTrendsPage(
 
 describe("TrendsPage", () => {
   beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-04-29T12:00:00Z"))
+
     const project = createProject()
 
     getProjectsMock.mockReset()
@@ -201,6 +204,10 @@ describe("TrendsPage", () => {
     getProjectTopicClusterMock.mockResolvedValue(createTopicClusterDetail())
     trendsPageContentMock.mockClear()
     selectProjectMock.mockReturnValue(project)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it("renders the missing-project guard when no project is available", async () => {

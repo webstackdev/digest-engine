@@ -20,6 +20,8 @@
   /* Brand Primary: Slate Blue */
   --color-brand-primary-50: #f4f6f8;
   --color-brand-primary-100: #e9edf1;
+  --color-brand-primary-150: #d4dae6;
+  --color-brand-primary-175: #eff2f7;
   --color-brand-primary-200: #cfd8e3;
   --color-brand-primary-300: #8fa2c1;
   --color-brand-primary-400: #697c9f;
@@ -47,6 +49,7 @@
   --color-brand-burnt-200: #efcbbb;
   --color-brand-burnt-300: #e2a38d;
   --color-brand-burnt-400: #d58369;
+  --color-brand-burnt-450: #d17e60;
   --color-brand-burnt-500: #c66b52;
   --color-brand-burnt-600: #ae563f;
   --color-brand-burnt-700: #8f4332;
@@ -58,8 +61,8 @@
 }
 
 :root {
-  --brand-bg-canvas: var(--color-brand-primary-50);
-  --brand-bg-surface: #ffffff;
+  --brand-bg-canvas: var(--color-brand-primary-150);
+  --brand-bg-surface: var(--color-brand-primary-175);
   --brand-bg-subtle: var(--color-brand-primary-100);
   --brand-selected: color-mix(in srgb, var(--color-brand-primary-100) 78%, white);
   --brand-text-strong: var(--color-brand-primary-900);
@@ -72,17 +75,34 @@
   --brand-fill-secondary-strong: var(--color-brand-sage-700);
   --brand-fill-secondary-contrast: var(--color-brand-primary-50);
   --brand-fill-accent: var(--color-brand-burnt-500);
+  --brand-fill-accent-soft: var(--color-brand-burnt-450);
   --brand-fill-accent-strong: var(--color-brand-burnt-700);
   --brand-fill-accent-contrast: var(--color-brand-primary-50);
   --brand-border: color-mix(in srgb, var(--color-brand-primary-300) 42%, white);
+  --brand-border-bright: color-mix(in srgb, var(--color-brand-primary-100) 72%, white);
   --brand-input: color-mix(in srgb, var(--color-brand-primary-300) 28%, white);
   --brand-ring: color-mix(in srgb, var(--color-brand-primary-500) 76%, white);
   --brand-scrollbar: color-mix(in srgb, var(--color-brand-primary-300) 64%, var(--color-brand-sage-300));
   --brand-canvas-start: color-mix(in srgb, var(--color-brand-primary-50) 82%, white);
   --brand-canvas-end: var(--color-brand-primary-100);
   --brand-grid: color-mix(in srgb, var(--color-brand-primary-500) 8%, transparent);
+  --brand-grid-line-strong: color-mix(in srgb, var(--color-brand-primary-500) 24%, transparent);
   --brand-spotlight-left: color-mix(in srgb, var(--color-brand-primary-300) 26%, transparent);
   --brand-spotlight-right: color-mix(in srgb, var(--color-brand-sage-300) 20%, transparent);
+  --brand-surface-muted: color-mix(in srgb, var(--brand-bg-subtle) 72%, white);
+  --brand-surface-overlay: color-mix(in srgb, var(--brand-bg-surface) 86%, white);
+  --brand-surface-overlay-strong: color-mix(in srgb, var(--brand-bg-surface) 92%, white);
+  --brand-surface-accent: color-mix(in srgb, var(--brand-fill-accent-soft) 12%, var(--brand-bg-surface));
+  --brand-surface-secondary: color-mix(in srgb, var(--brand-fill-secondary) 18%, var(--brand-bg-surface));
+  --brand-accent-border: color-mix(in srgb, var(--brand-fill-accent-soft) 35%, transparent);
+  --brand-accent-wash: color-mix(in srgb, var(--brand-fill-accent-soft) 18%, transparent);
+  --brand-sage-wash: color-mix(in srgb, var(--brand-fill-secondary) 24%, transparent);
+  --brand-shadow-soft: 0 14px 34px color-mix(in srgb, var(--color-brand-primary-700) 10%, transparent);
+  --brand-shadow-card: 0 22px 44px color-mix(in srgb, var(--color-brand-primary-700) 8%, transparent);
+  --brand-shadow-card-strong: 0 34px 70px color-mix(in srgb, var(--color-brand-primary-700) 14%, transparent);
+  --brand-shadow-panel: 0 26px 60px color-mix(in srgb, var(--color-brand-primary-700) 12%, transparent), inset 0 1px 0 color-mix(in srgb, white 72%, transparent);
+  --brand-shadow-accent: 0 18px 38px color-mix(in srgb, var(--color-brand-burnt-450) 28%, transparent);
+  --brand-shadow-inset: inset 0 0 0 1px color-mix(in srgb, white 80%, transparent);
   --brand-chart-1: var(--color-brand-primary-500);
   --brand-chart-2: var(--color-brand-primary-300);
   --brand-chart-3: var(--color-brand-sage-500);
@@ -105,17 +125,34 @@
   --brand-fill-secondary-strong: var(--color-brand-sage-100);
   --brand-fill-secondary-contrast: var(--color-brand-primary-900);
   --brand-fill-accent: var(--color-brand-burnt-300);
+  --brand-fill-accent-soft: var(--color-brand-burnt-450);
   --brand-fill-accent-strong: var(--color-brand-burnt-100);
   --brand-fill-accent-contrast: var(--color-brand-primary-900);
   --brand-border: color-mix(in srgb, var(--color-brand-primary-500) 38%, black);
+  --brand-border-bright: color-mix(in srgb, var(--color-brand-primary-400) 50%, black);
   --brand-input: color-mix(in srgb, var(--color-brand-primary-500) 52%, black);
   --brand-ring: var(--color-brand-primary-300);
   --brand-scrollbar: color-mix(in srgb, var(--color-brand-primary-500) 62%, var(--color-brand-sage-500));
   --brand-canvas-start: var(--color-brand-primary-800);
   --brand-canvas-end: color-mix(in srgb, var(--color-brand-primary-900) 84%, black);
   --brand-grid: color-mix(in srgb, var(--color-brand-primary-200) 10%, transparent);
+  --brand-grid-line-strong: color-mix(in srgb, var(--color-brand-primary-200) 22%, transparent);
   --brand-spotlight-left: color-mix(in srgb, var(--color-brand-primary-300) 24%, transparent);
   --brand-spotlight-right: color-mix(in srgb, var(--color-brand-sage-300) 18%, transparent);
+  --brand-surface-muted: color-mix(in srgb, var(--brand-bg-subtle) 82%, black);
+  --brand-surface-overlay: color-mix(in srgb, var(--brand-bg-surface) 88%, black);
+  --brand-surface-overlay-strong: color-mix(in srgb, var(--brand-bg-surface) 94%, black);
+  --brand-surface-accent: color-mix(in srgb, var(--brand-fill-accent-soft) 14%, var(--brand-bg-surface));
+  --brand-surface-secondary: color-mix(in srgb, var(--brand-fill-secondary) 18%, var(--brand-bg-surface));
+  --brand-accent-border: color-mix(in srgb, var(--brand-fill-accent-soft) 42%, transparent);
+  --brand-accent-wash: color-mix(in srgb, var(--brand-fill-accent-soft) 20%, transparent);
+  --brand-sage-wash: color-mix(in srgb, var(--brand-fill-secondary) 24%, transparent);
+  --brand-shadow-soft: 0 14px 34px color-mix(in srgb, black 32%, transparent);
+  --brand-shadow-card: 0 22px 44px color-mix(in srgb, black 36%, transparent);
+  --brand-shadow-card-strong: 0 34px 70px color-mix(in srgb, black 40%, transparent);
+  --brand-shadow-panel: 0 26px 60px color-mix(in srgb, black 34%, transparent), inset 0 1px 0 color-mix(in srgb, var(--color-brand-primary-50) 8%, transparent);
+  --brand-shadow-accent: 0 18px 38px color-mix(in srgb, var(--brand-fill-accent-soft) 30%, transparent);
+  --brand-shadow-inset: inset 0 0 0 1px color-mix(in srgb, var(--color-brand-primary-50) 12%, transparent);
   --brand-chart-1: var(--color-brand-primary-300);
   --brand-chart-2: var(--color-brand-primary-100);
   --brand-chart-3: var(--color-brand-sage-300);

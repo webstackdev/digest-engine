@@ -10,7 +10,7 @@ export const PageSection: React.FC<{ name?: string; description?: string; isLast
     <section className={cn("space-y-6 sm:space-y-8")}>
       {name && description && (
         <div className='mx-auto flex max-w-3xl flex-col items-center gap-3 px-4 text-center sm:px-6'>
-          <span className='rounded-full border border-white/70 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-(--font-secondary) shadow-[0_12px_26px_rgba(62,77,107,0.08)] backdrop-blur'>
+          <span className='marketing-glass-strong rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.28em] text-(--font-secondary)'>
             Overview
           </span>
           <h2 className='text-3xl font-semibold tracking-tight text-foreground sm:text-4xl'>{name}</h2>

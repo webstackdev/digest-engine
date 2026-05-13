@@ -18,9 +18,7 @@ const Pricing: React.FC<{ title: string; description: string; plans: PricingPlan
         <div className='flex w-full justify-center px-4'>
           <div
             className={cn(
-              "relative flex items-center gap-3 rounded-full border px-2 py-2 backdrop-blur-sm",
-              "border-white/70 bg-white/76",
-              "shadow-[0_18px_34px_rgba(62,77,107,0.08)]"
+              "marketing-glass relative flex items-center gap-3 rounded-full px-2 py-2"
             )}>
             <button
               type='button'
@@ -30,7 +28,7 @@ const Pricing: React.FC<{ title: string; description: string; plans: PricingPlan
               )}
               onClick={() => setIsYearly(true)}>
               {isYearly && (
-                <span className='absolute inset-0 -z-10 rounded-full bg-white shadow-[0_10px_24px_rgba(62,77,107,0.12)]' />
+                <span className='marketing-glass-strong absolute inset-0 -z-10 rounded-full' />
               )}
               Yearly
               <span className='text-(--brand-fill-secondary-strong)'>Save {annualDiscount}%</span>
@@ -43,7 +41,7 @@ const Pricing: React.FC<{ title: string; description: string; plans: PricingPlan
               )}
               onClick={() => setIsYearly(false)}>
               {!isYearly && (
-                <span className='absolute inset-0 -z-10 rounded-full bg-white shadow-[0_10px_24px_rgba(62,77,107,0.12)]' />
+                <span className='marketing-glass-strong absolute inset-0 -z-10 rounded-full' />
               )}
               Monthly
             </button>
@@ -51,10 +49,10 @@ const Pricing: React.FC<{ title: string; description: string; plans: PricingPlan
         </div>
 
         <div className='grid grid-cols-1 gap-4 lg:grid-cols-4'>
-            {plans.map((plan, index) => {
+            {plans.map((plan) => {
               const buttonClass = plan.isPopular
-                ? "bg-[linear-gradient(135deg,var(--brand-fill-accent),#d17e60)] text-white hover:brightness-105"
-                : "bg-white/80 text-primary hover:bg-white";
+                ? "marketing-accent-button text-[var(--brand-fill-accent-contrast)]"
+                : "marketing-secondary-button text-primary";
 
               return (
                 <div
@@ -62,15 +60,15 @@ const Pricing: React.FC<{ title: string; description: string; plans: PricingPlan
                   className={cn(
                     "flex h-full flex-col gap-8 rounded-[1.9rem] border p-7 transition-transform duration-200 hover:-translate-y-1 sm:p-8",
                     plan.isPopular
-                      ? "border-[rgba(198,107,82,0.35)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(252,244,241,0.94))] shadow-[0_26px_54px_rgba(198,107,82,0.14)]"
-                      : "border-white/72 bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,246,244,0.84))] shadow-[0_22px_44px_rgba(62,77,107,0.08)]"
+                      ? "marketing-card-accent"
+                      : "marketing-card"
                   )}>
                   <div className='space-y-6'>
                     <div className='space-y-2'>
                       <div className='flex items-center justify-between'>
                         <p className='text-sm font-semibold uppercase tracking-[0.24em] text-(--font-secondary)'>{plan.name}</p>
                         {plan.isPopular && (
-                          <span className='rounded-full bg-[rgba(198,107,82,0.12)] px-2.5 py-1 text-xs font-semibold text-(--brand-fill-accent-strong)'>
+                          <span className='rounded-full bg-(--brand-surface-accent) px-2.5 py-1 text-xs font-semibold text-(--brand-fill-accent-strong)'>
                             Popular
                           </span>
                         )}
@@ -91,7 +89,11 @@ const Pricing: React.FC<{ title: string; description: string; plans: PricingPlan
                           const [value, ...rest] = feature.split(" ");
                           return (
                             <li key={feature} className='flex items-start gap-3'>
-                              <svg className='mt-1 h-4 w-4 flex-shrink-0 text-(--brand-fill-secondary-strong)' viewBox='0 0 20 20' fill='currentColor'>
+                              <svg
+                                className='mt-1 h-4 w-4 shrink-0 text-(--brand-fill-secondary-strong)'
+                                viewBox='0 0 20 20'
+                                fill='currentColor'
+                              >
                                 <path
                                   fillRule='evenodd'
                                   d='M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3.25-3.25a1 1 0 111.414-1.414L8.75 11.586l6.543-6.543a1 1 0 011.414 0z'
@@ -111,7 +113,7 @@ const Pricing: React.FC<{ title: string; description: string; plans: PricingPlan
                   <Button
                     variant={plan.buttonVariant}
                     className={cn(
-                      "mt-auto h-12 w-full rounded-full border-transparent text-base font-semibold shadow-[0_16px_34px_rgba(62,77,107,0.08)]",
+                      "mt-auto h-12 w-full rounded-full border-transparent text-base font-semibold transition-colors",
                       buttonClass
                     )}
                   >
