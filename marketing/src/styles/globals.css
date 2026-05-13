@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "nextra-theme-docs/style.css";
 @import "tw-animate-css";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
 @import "@digestengine/tailwind-config/index.css";
 
 @theme inline {

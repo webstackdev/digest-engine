@@ -37,10 +37,6 @@
 @source "../../frontend/src/**/*.{ts,tsx,md,mdx}";
 @source "../../marketing/src/**/*.{ts,tsx,md,mdx}";
 
-/** New CSS directive in v4 to import Tailwind plugins */
-@plugin "@tailwindcss/forms";
-@plugin "@tailwindcss/typography";
-
 @theme {
   /** Breakpoints */
   --breakpoint-xs: 28em; /** 416 px */

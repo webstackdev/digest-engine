@@ -13,14 +13,6 @@
     height: 100%;
   }
 
-  html {
-    overflow: hidden;
-  }
-
-  body {
-    overflow: hidden;
-  }
-
   /**
    * Scroll viewport container — the only element that scrolls.
    * Lives inside Container, below the fixed header.  Its scrollbar
