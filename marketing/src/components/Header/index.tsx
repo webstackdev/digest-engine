@@ -47,7 +47,7 @@ export function Header() {
 
         <Link
           href="/login"
-          className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground no-underline transition-colors hover:bg-primary"
+          className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-inverse no-underline transition-colors hover:bg-primary"
         >
           Login
         </Link>

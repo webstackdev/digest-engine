@@ -131,12 +131,12 @@ function DraftDetailPagePreview({
       selectedProjectId={selectedProject.id}
     >
       {showError ? (
-        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
-          <AlertDescription className="text-destructive">Unable to save draft section.</AlertDescription>
+        <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
+          <AlertDescription className="text-danger">Unable to save draft section.</AlertDescription>
         </Alert>
       ) : null}
       {showMessage ? (
-        <Alert className="rounded-3xl border-trim-offset bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>Draft updated.</AlertDescription>
         </Alert>
       ) : null}

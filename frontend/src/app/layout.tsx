@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <body
         suppressHydrationWarning
-        className={cn("min-h-screen font-sans antialiased bg-background text-content-active")}
+        className={cn("min-h-screen font-sans antialiased bg-page-base text-content-active")}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <QueryProvider>{children}</QueryProvider>

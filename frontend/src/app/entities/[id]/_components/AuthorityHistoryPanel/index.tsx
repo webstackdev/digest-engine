@@ -45,19 +45,19 @@ export function AuthorityHistoryPanel({
               Current score and history
             </h3>
           </div>
-          <span className="text-sm text-muted">
+          <span className="text-sm text-content-offset">
             {authorityHistory.length} snapshot{authorityHistory.length === 1 ? "" : "s"}
           </span>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.2fr)]">
-          <div className="space-y-4 rounded-2xl border border-trim-offset bg-muted p-4">
+          <div className="space-y-4 rounded-2xl border border-trim-offset bg-page-offset p-4">
             <div className="space-y-1">
-              <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">Authority score</p>
+              <p className="m-0 text-sm uppercase tracking-[0.18em] text-content-offset">Authority score</p>
               <p className="m-0 font-display text-4xl font-bold text-content-active">
                 {formatPercentScore(entity.authority_score)}
               </p>
-              <p className="m-0 text-sm leading-6 text-muted">
+              <p className="m-0 text-sm leading-6 text-content-offset">
                 This reflects the latest blend of mention frequency, engagement, recency,
                 source quality, cross-newsletter corroboration, editorial feedback,
                 duplicate corroboration, and carry-forward history.
@@ -66,7 +66,7 @@ export function AuthorityHistoryPanel({
 
             {latestSnapshot ? (
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm text-muted">
+                <div className="flex items-center justify-between text-sm text-content-offset">
                   <span>Current component mix</span>
                   <span>Carry-forward {formatPercentScore(carryForwardWeight)}</span>
                 </div>
@@ -94,7 +94,7 @@ export function AuthorityHistoryPanel({
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {componentMix.map((component) => (
-                    <div className="flex items-center gap-2 text-sm text-muted" key={component.label}>
+                    <div className="flex items-center gap-2 text-sm text-content-offset" key={component.label}>
                       <span className={`h-3 w-3 rounded-full ${component.className}`} />
                       <span>{component.label}</span>
                     </div>
@@ -105,7 +105,7 @@ export function AuthorityHistoryPanel({
 
             {authorityHistory.length > 1 ? (
               <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm text-muted">
+                <div className="flex items-center justify-between text-sm text-content-offset">
                   <span>Recent trend</span>
                   <span>Latest {formatDate(authorityHistory[0]?.computed_at ?? null)}</span>
                 </div>
@@ -126,19 +126,19 @@ export function AuthorityHistoryPanel({
                 </svg>
               </div>
             ) : (
-              <p className="m-0 text-sm leading-6 text-muted">
+              <p className="m-0 text-sm leading-6 text-content-offset">
                 More recomputations will draw the trend line here.
               </p>
             )}
           </div>
 
-          <div className="space-y-4 rounded-2xl border border-trim-offset bg-muted p-4">
+          <div className="space-y-4 rounded-2xl border border-trim-offset bg-page-offset p-4">
             <div className="flex items-center justify-between gap-3">
-              <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+              <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-content-offset">
                 Latest components
               </h4>
               {latestSnapshot ? (
-                <span className="text-sm text-muted">
+                <span className="text-sm text-content-offset">
                   Updated {formatDate(latestSnapshot.computed_at)}
                 </span>
               ) : null}
@@ -155,17 +155,17 @@ export function AuthorityHistoryPanel({
                 <AuthorityComponentCard label="Carry-forward" value={latestSnapshot.decayed_prior} />
               </div>
             ) : (
-              <p className="m-0 text-sm leading-6 text-muted">
+              <p className="m-0 text-sm leading-6 text-content-offset">
                 Authority history has not been recomputed for this entity yet.
               </p>
             )}
 
             {latestSnapshot?.weights_at_compute ? (
               <div className="space-y-2">
-                <h5 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+                <h5 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-content-offset">
                   Weights at compute
                 </h5>
-                <div className="flex flex-wrap gap-2 text-sm text-muted">
+                <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                   {Object.entries(latestSnapshot.weights_at_compute).map(([key, value]) => (
                     <Badge className="rounded-full px-3 py-1 text-sm" key={key} variant="outline">
                       {formatWeightLabel(key)} {formatPercentScore(value)}
@@ -188,13 +188,13 @@ export function AuthorityHistoryPanel({
         {authorityHistory.length > 0 ? (
           <ul className="m-0 grid list-none gap-3 p-0">
             {authorityHistory.slice(0, 5).map((snapshot) => (
-              <li className="rounded-2xl border border-trim-offset bg-muted p-4" key={snapshot.id}>
+              <li className="rounded-2xl border border-trim-offset bg-page-offset p-4" key={snapshot.id}>
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <div className="flex flex-wrap gap-2 text-sm text-muted">
+                  <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                     <span>{formatDate(snapshot.computed_at)}</span>
                     <span>Final {formatPercentScore(snapshot.final_score)}</span>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-sm text-muted">
+                  <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                     <span>M {formatPercentScore(snapshot.mention_component)}</span>
                     <span>E {formatPercentScore(snapshot.engagement_component)}</span>
                     <span>R {formatPercentScore(snapshot.recency_component)}</span>
@@ -291,7 +291,7 @@ function formatWeightLabel(label: string) {
 function AuthorityComponentCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-2xl border border-trim-offset bg-page-base p-4">
-      <p className="m-0 text-sm uppercase tracking-[0.18em] text-muted">{label}</p>
+      <p className="m-0 text-sm uppercase tracking-[0.18em] text-content-offset">{label}</p>
       <p className="mb-0 mt-2 text-2xl font-bold text-content-active">
         {formatPercentScore(value)}
       </p>

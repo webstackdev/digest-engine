@@ -42,7 +42,7 @@ export function DraftsToolbar({
             >
               <SelectTrigger
                 aria-label="Status"
-                className="min-w-40 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-sm data-[size=default]:h-11"
+                className="min-w-40 rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-sm data-[size=default]:h-11"
               >
                 <SelectValue />
               </SelectTrigger>

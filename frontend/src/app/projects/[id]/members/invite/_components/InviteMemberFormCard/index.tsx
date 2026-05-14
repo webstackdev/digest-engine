@@ -47,7 +47,7 @@ export function InviteMemberFormCard({
             <Label htmlFor="invite-member-role">Role</Label>
             <Select defaultValue="member" name="role">
               <SelectTrigger
-                className="min-h-11 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-sm text-content-active"
+                className="min-h-11 rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-sm text-content-active"
                 id="invite-member-role"
               >
                 <SelectValue placeholder="Role" />

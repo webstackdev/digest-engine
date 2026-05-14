@@ -33,7 +33,7 @@ export function ThemesFilterToolbar({
             <Label htmlFor="theme-status-filter">Status</Label>
             <Select defaultValue={statusFilter} name="status">
               <SelectTrigger
-                className="w-full rounded-2xl border-trim-offset bg-muted px-4 py-3 text-content-active sm:max-w-xs"
+                className="w-full rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-content-active sm:max-w-xs"
                 id="theme-status-filter"
               >
                 <SelectValue placeholder="Status" />

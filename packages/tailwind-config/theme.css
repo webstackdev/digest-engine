@@ -41,16 +41,16 @@
    */
 
   /** A solid fill color for page page elements */
-  --color-page-base: var(--theme-color-page-base); /* Light theme: #eff2f7 */
-
-  /** A solid fill color for page page elements */
-  --color-page-active: var(--theme-color-page-active); /* Light theme: #1b222e */
+  --color-page-base: var(--theme-color-page-base); /* Light theme: #d3dbe6 */
 
   /** Opposite of a solid fill color for page page elements */
-  --color-page-inverse: var(--theme-color-page-inverse); /* Light theme: #e9edf1 */
+  --color-page-inverse: var(--theme-color-page-inverse); /* Light theme: #1b222e */
 
   /** A shade of the page color for hover and focus states */
-  --color-page-offset: var(--theme-color-page-offset); /* Light theme: #cfd8e3 */
+  --color-page-offset: var(--theme-color-page-offset); /* Light theme: #eff2f7 */
+
+  /** A solid fill color for page page elements */
+  --color-page-active: var(--theme-color-page-active); /* Light theme: #d3dbe6 */
 
   /**
    * =============================================================================
@@ -62,13 +62,13 @@
   --color-content: var(--theme-color-content); /* Light theme: #374151 */
 
   /** A shade of the text color for accent */
-  --color-content-offset: var(--theme-color-content-offset); /* Light theme: #6b7280 */
+  --color-content-offset: var(--theme-color-content-offset); /* Light theme: #63718e */
 
   /** A shade of the text color for hover and focus states */
   --color-content-active: var(--theme-color-content-active); /* Light theme: #1b222e */
 
   /** Main content text color */
-  --color-content-inverse: var(--theme-color-content-inverse); /* Light theme: #f3f4f6 */
+  --color-content-inverse: var(--theme-color-content-inverse); /* Light theme: #f4f6f8 */
 
   /** A shade of the text color for hover and focus states */
   --color-content-inverse-active: var(--theme-color-content-inverse-active); /* Light theme: #d4dae6 */

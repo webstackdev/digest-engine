@@ -54,7 +54,7 @@ export function AppShellHeader({
           </Link>
           <NotificationMenu websocketUrl={buildNotificationsWebsocketUrl()} />
           <ThemeToggle />
-          <Separator className="hidden h-6 bg-border/70 md:block" orientation="vertical" />
+          <Separator className="hidden h-6 bg-trim-offset/70 md:block" orientation="vertical" />
           <UserMenu />
         </div>
       </div>

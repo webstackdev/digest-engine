@@ -4,19 +4,19 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 aria-invalid:ring-destructive aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 aria-invalid:ring-danger aria-invalid:border-danger",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary",
+        default: "bg-primary text-primary-inverse hover:bg-primary",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive",
+          "bg-danger text-danger-inverse hover:bg-danger",
         outline:
-          "border border-trim-offset bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
+          "border border-trim-offset bg-page-base shadow-xs hover:bg-accent hover:text-page-inverse",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary",
+          "bg-secondary text-secondary-inverse hover:bg-secondary",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground",
+          "hover:bg-accent hover:text-page-inverse",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

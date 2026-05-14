@@ -15,7 +15,7 @@ export function ResolvedCandidateList({
 }: ResolvedCandidateListProps) {
   if (resolvedCandidates.length === 0) {
     return (
-      <Alert className="rounded-3xl border-trim-offset bg-muted">
+      <Alert className="rounded-3xl border-trim-offset bg-page-offset">
         <AlertDescription>
           No auto-promotion or review history is available for this project yet.
         </AlertDescription>
@@ -33,7 +33,7 @@ export function ResolvedCandidateList({
                 <h2 className="m-0 font-display text-title-sm font-bold text-content-active">
                   {candidate.name}
                 </h2>
-                <div className="flex flex-wrap gap-2 text-sm text-muted">
+                <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                   <span>{candidate.occurrence_count} occurrences</span>
                   <span>{candidate.source_plugin_count} sources</span>
                   <span>Resolved {formatDate(candidate.updated_at)}</span>
@@ -46,7 +46,7 @@ export function ResolvedCandidateList({
                 {formatDisplayLabel(candidate.status)}
               </StatusBadge>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
+            <div className="mt-4 flex flex-wrap gap-2 text-sm text-content-offset">
               {candidate.source_plugins.map((plugin) => (
                 <Badge className="rounded-full px-3 py-1 text-sm" key={`${candidate.id}:${plugin}`} variant="secondary">
                   {formatDisplayLabel(plugin)}

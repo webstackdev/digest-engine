@@ -3,7 +3,7 @@
 *  LIGHT THEME DEFINITIONS
 * =============================================================================
 */
-[data-theme="light"]  {
+:where(.light, [data-theme="light"]) {
   /**
    * =============================================================================
    *  Base colors
@@ -41,13 +41,13 @@
    */
 
   /** A solid fill color for page page elements */
-  --theme-color-page-base: #eff2f7; /** --color-bg */
+  --theme-color-page-base: #d3dbe6; /** --color-bg */
 
   /** Opposite of a solid fill color for page page elements */
   --theme-color-page-inverse: #1b222e;
 
   /** A shade of the page color for hover and focus states */
-  --theme-color-page-offset: #e9edf1; /** --color-bg-page-offset */
+  --theme-color-page-offset: #eff2f7; /** --color-bg-page-offset */
 
   /** A solid fill color for page page elements */
   --theme-color-page-active: #cfd8e3; /** --color-bg */
@@ -62,7 +62,7 @@
   --theme-color-content: #374151; /** --color-content */
 
   /** A shade of the text color for accent */
-  --theme-color-content-offset: #6b7280; /** --color-content-offset */
+  --theme-color-content-offset: #63718e; /** --color-content-offset */
 
   /** A shade of the text color for hover and focus states */
   --theme-color-content-active: #1b222e; /** --color-content-active */

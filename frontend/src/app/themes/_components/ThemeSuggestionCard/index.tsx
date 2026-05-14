@@ -122,7 +122,7 @@ export function ThemeSuggestionCard({
             ) : null}
           </div>
 
-          <aside className="space-y-4 rounded-3xl bg-muted px-4 py-4">
+          <aside className="space-y-4 rounded-3xl bg-page-offset px-4 py-4">
             <div>
               <p className="m-0 text-sm font-medium text-content-active">Cluster</p>
               {theme.cluster ? (
@@ -177,7 +177,7 @@ export function ThemeSuggestionCard({
                     </Label>
                     <Select defaultValue={dismissalReasons[0]} name="reason">
                       <SelectTrigger
-                        className="min-h-11 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-sm text-content-active"
+                        className="min-h-11 rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-sm text-content-active"
                         id={`dismiss-reason-${theme.id}`}
                       >
                         <SelectValue placeholder="Dismissal reason" />

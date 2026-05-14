@@ -15,8 +15,8 @@ export function ProjectFlashNotice({ tone, children }: ProjectFlashNoticeProps) 
     <Alert
       className={
         tone === "success"
-          ? "rounded-3xl border-trim-offset bg-muted text-content-active"
-          : "rounded-3xl border-destructive bg-destructive"
+          ? "rounded-3xl border-trim-offset bg-page-offset text-content-active"
+          : "rounded-3xl border-danger bg-danger"
       }
       variant={tone === "error" ? "destructive" : "default"}
     >

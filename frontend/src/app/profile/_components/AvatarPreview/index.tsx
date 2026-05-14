@@ -36,11 +36,11 @@ export function AvatarPreview({
           <UserAvatar
             avatarUrl={avatarUrl}
             className="size-24 border border-trim-offset shadow-sm after:hidden"
-            fallbackClassName="bg-primary text-2xl font-semibold text-primary-foreground"
+            fallbackClassName="bg-primary text-2xl font-semibold text-primary-inverse"
             name={profile.display_name || profile.email || profile.username}
             size="lg"
           />
-          <div className="space-y-2 text-sm leading-6 text-muted">
+          <div className="space-y-2 text-sm leading-6 text-content-offset">
             <p className="m-0">
               Drop in a square image to personalize the editor cockpit and header menu.
             </p>

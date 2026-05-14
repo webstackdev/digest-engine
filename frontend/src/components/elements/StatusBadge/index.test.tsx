@@ -15,8 +15,8 @@ describe("StatusBadge", () => {
   it.each([
     ["positive", "Healthy", "bg-primary"],
     ["warning", "Queued", "bg-secondary"],
-    ["negative", "Failed", "bg-destructive"],
-    ["neutral", "Idle", "bg-muted"],
+    ["negative", "Failed", "bg-danger"],
+    ["neutral", "Idle", "bg-page-offset"],
   ] as const)("applies the %s tone styles", (tone, label, expectedClass) => {
     render(<StatusBadge tone={tone}>{label}</StatusBadge>)
 

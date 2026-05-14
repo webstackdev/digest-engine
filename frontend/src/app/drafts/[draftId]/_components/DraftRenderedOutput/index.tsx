@@ -15,7 +15,7 @@ export function DraftRenderedOutput({ draft, view }: DraftRenderedOutputProps) {
       <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="pt-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Rendered markdown</p>
-          <pre className="mt-4 overflow-auto rounded-2xl bg-sidebar p-4 text-sm text-sidebar-foreground">
+          <pre className="mt-4 overflow-auto rounded-2xl bg-page-offset p-4 text-sm text-content-active">
             {draft.rendered_markdown}
           </pre>
         </CardContent>

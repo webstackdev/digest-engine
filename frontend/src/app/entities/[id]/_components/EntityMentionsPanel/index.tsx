@@ -27,13 +27,13 @@ export function EntityMentionsPanel({ mentions, projectId }: EntityMentionsPanel
           </span>
         </div>
         {mentions.length === 0 ? (
-          <div className="rounded-3xl bg-muted px-4 py-4 text-sm leading-6 text-content-offset">
+          <div className="rounded-3xl bg-page-offset px-4 py-4 text-sm leading-6 text-content-offset">
             No extracted mentions exist for this entity yet.
           </div>
         ) : (
           <ul className="m-0 grid list-none gap-3 p-0">
             {mentions.map((mention) => (
-              <li className="rounded-2xl border border-trim-offset bg-muted p-4" key={mention.id}>
+              <li className="rounded-2xl border border-trim-offset bg-page-offset p-4" key={mention.id}>
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div className="space-y-2">
                     <Link

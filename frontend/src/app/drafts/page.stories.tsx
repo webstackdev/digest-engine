@@ -107,14 +107,14 @@ function DraftsPagePreview({
       selectedProjectId={selectedProject.id}
     >
       {showError ? (
-        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
-          <AlertDescription className="text-destructive">
+        <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
+          <AlertDescription className="text-danger">
             Unable to generate a new draft.
           </AlertDescription>
         </Alert>
       ) : null}
       {showMessage ? (
-        <Alert className="rounded-3xl border-trim-offset bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>Draft queued successfully.</AlertDescription>
         </Alert>
       ) : null}

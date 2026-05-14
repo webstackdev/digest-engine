@@ -15,7 +15,7 @@ import type { IngestionRun, SourceConfig } from "@/lib/types"
 import { formatDate } from "@/lib/view-helpers"
 
 const selectTriggerClassName =
-  "w-full rounded-2xl border-trim-offset bg-muted px-4 py-3 text-sm data-[size=default]:h-11"
+  "w-full rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-sm data-[size=default]:h-11"
 
 type SourceConfigListProps = {
   selectedProjectId: number
@@ -33,7 +33,7 @@ export function SourceConfigList({
   return (
     <div className="space-y-4">
       {rows.length === 0 ? (
-        <div className="rounded-3xl bg-muted px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-3xl bg-page-offset px-4 py-4 text-sm leading-6 text-content-offset">
           No source configurations exist for this project yet.
         </div>
       ) : null}
@@ -48,7 +48,7 @@ export function SourceConfigList({
                 <h3 className="font-display text-title-md font-bold">
                   {sourceConfig.plugin_name}
                 </h3>
-                <div className="flex flex-wrap gap-2 text-sm text-muted">
+                <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                   <span>Config #{sourceConfig.id}</span>
                   <span>Last fetch {formatDate(sourceConfig.last_fetched_at)}</span>
                 </div>
@@ -64,7 +64,7 @@ export function SourceConfigList({
               <div className="grid gap-2">
                 <Label htmlFor={`source-plugin-${sourceConfig.id}`}>Plugin</Label>
                 <Input
-                  className="h-11 rounded-2xl border-trim-offset bg-muted px-4"
+                  className="h-11 rounded-2xl border-trim-offset bg-page-offset px-4"
                   defaultValue={sourceConfig.plugin_name}
                   id={`source-plugin-${sourceConfig.id}`}
                   name="plugin_name"
@@ -74,7 +74,7 @@ export function SourceConfigList({
               <div className="grid gap-2">
                 <Label htmlFor={`source-config-json-${sourceConfig.id}`}>Config JSON</Label>
                 <Textarea
-                  className="min-h-30 rounded-2xl border-trim-offset bg-muted px-4 py-3 font-mono text-sm"
+                  className="min-h-30 rounded-2xl border-trim-offset bg-page-offset px-4 py-3 font-mono text-sm"
                   defaultValue={JSON.stringify(sourceConfig.config, null, 2)}
                   id={`source-config-json-${sourceConfig.id}`}
                   name="config_json"
@@ -92,7 +92,7 @@ export function SourceConfigList({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-wrap gap-2 text-sm text-muted">
+              <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                 <span>Latest run: {latestRun ? latestRun.status : "none"}</span>
                 <span>{latestRun?.error_message || "No recent error"}</span>
               </div>

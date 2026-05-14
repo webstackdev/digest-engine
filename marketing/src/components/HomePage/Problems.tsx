@@ -8,19 +8,19 @@ const Problems: FC<{
 
   return (
     <PageSection>
-      <section className="border-t border-trim-offset bg-primary px-6 py-20 text-center text-primary-foreground">
+      <section className="border-t border-trim-offset bg-primary px-6 py-20 text-center text-primary-inverse">
         <div className="mx-auto max-w-3xl">
-          <span className="mb-3 block text-sm font-semibold uppercase tracking-wider text-primary-foreground">Introducing Digest Engine</span>
+          <span className="mb-3 block text-sm font-semibold uppercase tracking-wider text-primary-inverse">Introducing Digest Engine</span>
           <h2 className="mb-6 text-4xl font-extrabold tracking-tight sm:text-5xl">
             {title}
           </h2>
-          <p className="text-lg leading-relaxed text-primary-foreground">
+          <p className="text-lg leading-relaxed text-primary-inverse">
             {description}
           </p>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl bg-background px-6 py-24 text-content-active">
+      <section className="mx-auto max-w-7xl bg-page-base px-6 py-24 text-content-active">
         <div className="mb-16 text-center">
           <h3 className="text-3xl font-bold tracking-tight text-content-active sm:text-4xl">
             Engineered for deep domain authority

@@ -162,7 +162,7 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
 
         <div className="max-h-96 overflow-y-auto p-1">
           {notificationsQuery.isError ? (
-            <div className="px-3 py-4 text-sm text-destructive">
+            <div className="px-3 py-4 text-sm text-danger">
               Unable to load notifications.
             </div>
           ) : notifications.length === 0 ? (
@@ -180,7 +180,7 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
               >
                 <span
                   className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                    notification.is_read ? "bg-border" : "bg-primary"
+                    notification.is_read ? "bg-trim-offset" : "bg-primary"
                   }`}
                 />
                 <div className="min-w-0 flex-1 space-y-1">

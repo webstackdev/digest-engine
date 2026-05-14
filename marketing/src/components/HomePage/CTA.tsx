@@ -19,7 +19,7 @@ export const CTA = () => {
             editorial taste, and let the next issue begin from a ranked
             shortlist instead of a blank page.
           </p>
-          <Button className="mt-2 h-12 rounded-full bg-primary px-7 text-base font-semibold text-primary-foreground transition-colors hover:bg-primary">
+          <Button className="mt-2 h-12 rounded-full bg-primary px-7 text-base font-semibold text-primary-inverse transition-colors hover:bg-primary">
             Explore Digest Engine
           </Button>
           <p className="text-sm text-content-offset">

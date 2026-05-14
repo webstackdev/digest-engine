@@ -31,7 +31,7 @@ export function DraftsList({ drafts, selectedProjectId }: DraftsListProps) {
   return (
     <section className="space-y-4">
       {drafts.length === 0 ? (
-        <Card className="rounded-3xl border-0 bg-muted shadow-none">
+        <Card className="rounded-3xl border-0 bg-page-offset shadow-none">
           <CardContent className="px-4 py-4 text-sm leading-6 text-content-offset">
             No newsletter drafts matched the current filter.
           </CardContent>
@@ -73,7 +73,7 @@ export function DraftsList({ drafts, selectedProjectId }: DraftsListProps) {
                 Open draft
               </Link>
               {draft.generation_metadata.models ? (
-                <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">
+                <span className="inline-flex items-center rounded-full border border-trim-offset bg-page-offset px-3 py-1 text-sm text-content-active">
                   Composer {draft.generation_metadata.models.section_composer || "pending"}
                 </span>
               ) : null}

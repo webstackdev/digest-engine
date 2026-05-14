@@ -41,7 +41,7 @@ export function CandidateClusterCard({
               Cluster of {cluster.members.length} candidate
               {cluster.members.length === 1 ? "" : "s"}
             </h2>
-            <div className="flex flex-wrap gap-2 text-sm text-muted">
+            <div className="flex flex-wrap gap-2 text-sm text-content-offset">
               <span>{cluster.totalOccurrences} total occurrences</span>
               <span>{cluster.sourcePlugins.length} source families</span>
               {cluster.identitySurfaces.length > 0 ? (
@@ -54,7 +54,7 @@ export function CandidateClusterCard({
           </Badge>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
+        <div className="mt-4 flex flex-wrap gap-2 text-sm text-content-offset">
           {cluster.sourcePlugins.map((plugin) => (
             <Badge className="rounded-full px-3 py-1 text-sm" key={`${cluster.clusterKey}:${plugin}`} variant="secondary">
               {formatDisplayLabel(plugin)}
@@ -70,11 +70,11 @@ export function CandidateClusterCard({
         <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1.25fr)_minmax(300px,0.95fr)]">
           <div className="space-y-3">
             {cluster.members.map((candidate) => (
-              <article className="rounded-2xl border border-trim-offset bg-muted p-4" key={candidate.id}>
+              <article className="rounded-2xl border border-trim-offset bg-page-offset p-4" key={candidate.id}>
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                   <div>
                     <h3 className="m-0 font-semibold text-content-active">{candidate.name}</h3>
-                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
+                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-content-offset">
                       <span>{formatDisplayLabel(candidate.suggested_type)}</span>
                       <span>{candidate.occurrence_count} occurrences</span>
                       <span>{candidate.evidence_count} evidence rows</span>
@@ -86,7 +86,7 @@ export function CandidateClusterCard({
                   <StatusBadge tone="warning">{formatDisplayLabel(candidate.status)}</StatusBadge>
                 </div>
                 {candidate.auto_promotion_blocked_reason ? (
-                  <p className="mb-0 mt-3 text-sm leading-6 text-muted">
+                  <p className="mb-0 mt-3 text-sm leading-6 text-content-offset">
                     Auto-promotion blocked: {formatBlockedReason(candidate.auto_promotion_blocked_reason)}
                   </p>
                 ) : null}
@@ -94,8 +94,8 @@ export function CandidateClusterCard({
             ))}
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-trim-offset bg-muted p-4">
-            <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+          <div className="space-y-3 rounded-2xl border border-trim-offset bg-page-offset p-4">
+            <p className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-content-offset">
               Bulk cluster actions
             </p>
             <form action={`/api/projects/${selectedProjectId}/entity-candidate-bulk`} className="flex flex-wrap gap-3" method="POST">

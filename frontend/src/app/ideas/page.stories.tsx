@@ -85,7 +85,7 @@ function IdeasPagePreview({ ideas = populatedIdeas }: IdeasPreviewProps) {
 
       <section className="space-y-4">
         {ideas.length === 0 ? (
-          <Alert className="rounded-3xl border-trim-offset bg-muted">
+          <Alert className="rounded-3xl border-trim-offset bg-page-offset">
             <AlertDescription>No original-content ideas matched the current filter.</AlertDescription>
           </Alert>
         ) : null}

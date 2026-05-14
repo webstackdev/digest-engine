@@ -47,7 +47,7 @@ export function IdeasQueueOverview({
           <CardContent className="pt-4">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">{metric.label}</p>
             <p className="mt-1 text-3xl font-bold">{metric.value}</p>
-            <p className="text-sm leading-6 text-muted">{metric.description}</p>
+            <p className="text-sm leading-6 text-content-offset">{metric.description}</p>
           </CardContent>
         </Card>
       ))}

@@ -33,7 +33,7 @@ export function EntityCard({ entity, projectId }: EntityCardProps) {
                 {entity.name}
               </Link>
             </h3>
-            <div className="flex flex-wrap gap-2 text-sm text-muted">
+            <div className="flex flex-wrap gap-2 text-sm text-content-offset">
               <span>{formatDate(entity.created_at)}</span>
               <span>Authority {entity.authority_score.toFixed(2)}</span>
               <span>
@@ -44,12 +44,12 @@ export function EntityCard({ entity, projectId }: EntityCardProps) {
           <StatusBadge tone="neutral">{entity.type}</StatusBadge>
         </div>
 
-        <section className="space-y-3 rounded-2xl border border-trim-offset bg-muted p-4">
+        <section className="space-y-3 rounded-2xl border border-trim-offset bg-page-offset p-4">
           <div className="flex items-center justify-between gap-3">
-            <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+            <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-content-offset">
               Recent mentions
             </h4>
-            <span className="text-sm text-muted">{entity.mention_count} total</span>
+            <span className="text-sm text-content-offset">{entity.mention_count} total</span>
           </div>
           {entity.latest_mentions.length === 0 ? (
             <Alert className="rounded-3xl border-trim-offset bg-page-base">
@@ -59,7 +59,7 @@ export function EntityCard({ entity, projectId }: EntityCardProps) {
             <ul className="m-0 grid list-none gap-3 p-0">
               {entity.latest_mentions.map((mention) => (
                 <li className="rounded-2xl border border-trim-offset bg-page-base p-3" key={mention.id}>
-                  <div className="flex flex-wrap gap-2 text-sm text-muted">
+                  <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                     <span>{mention.content_title}</span>
                     <span>{mention.role}</span>
                     {mention.sentiment ? <span>{mention.sentiment}</span> : null}

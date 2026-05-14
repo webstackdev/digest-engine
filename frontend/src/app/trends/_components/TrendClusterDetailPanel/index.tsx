@@ -30,7 +30,7 @@ export function TrendClusterDetailPanel({
 }: TrendClusterDetailPanelProps) {
   if (!selectedCluster) {
     return (
-      <Alert className="rounded-3xl border-trim-offset bg-muted">
+      <Alert className="rounded-3xl border-trim-offset bg-page-offset">
         <AlertDescription>
           Select a cluster to inspect its member content and velocity history.
         </AlertDescription>
@@ -59,7 +59,7 @@ export function TrendClusterDetailPanel({
         </div>
 
         {selectedCluster.velocity_history.length > 1 ? (
-          <div className="mt-4 rounded-3xl bg-muted px-4 py-4">
+          <div className="mt-4 rounded-3xl bg-page-offset px-4 py-4">
             <div className="flex items-center justify-between gap-3 text-sm text-content-offset">
               <span>Velocity history</span>
               <span>{selectedCluster.velocity_history.length} snapshots</span>
@@ -88,7 +88,7 @@ export function TrendClusterDetailPanel({
 
             return (
               <article
-                className="rounded-3xl border border-trim-offset bg-muted p-4"
+                className="rounded-3xl border border-trim-offset bg-page-offset p-4"
                 key={membership.id}
               >
                 <div className="flex flex-wrap items-center gap-2 text-sm text-content-offset">

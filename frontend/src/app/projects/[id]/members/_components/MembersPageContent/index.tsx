@@ -40,12 +40,12 @@ export function MembersPageContent({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
+        <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-3xl border-trim-offset bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}

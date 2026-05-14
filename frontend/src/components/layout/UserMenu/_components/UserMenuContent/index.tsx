@@ -37,7 +37,7 @@ export function UserMenuContent({
         />
         <div className="min-w-0">
           <p className="m-0 truncate text-sm font-semibold text-content-active">{accountName}</p>
-          <p className="m-0 truncate text-sm font-normal text-muted">
+          <p className="m-0 truncate text-sm font-normal text-content-offset">
             {accountEmail || "Signed in account"}
           </p>
         </div>
@@ -55,7 +55,7 @@ export function UserMenuContent({
         >
           View profile
         </Link>
-        <div className="rounded-2xl border border-trim-offset bg-muted px-4 py-3 text-sm leading-6 text-muted">
+        <div className="rounded-2xl border border-trim-offset bg-page-offset px-4 py-3 text-sm leading-6 text-content-offset">
           Update your avatar, display name, and timezone from the profile workspace.
         </div>
       </div>
@@ -71,7 +71,7 @@ export function UserMenuContent({
           Log out
         </Button>
       ) : (
-        <p className="mt-4 mb-0 text-sm leading-6 text-muted">
+        <p className="mt-4 mb-0 text-sm leading-6 text-content-offset">
           No active NextAuth session was found for this browser.
         </p>
       )}

@@ -3,7 +3,7 @@
 *  DARK THEME DEFINITIONS
 * =============================================================================
 */
-[data-theme="dark"]  {
+:where(.dark, [data-theme="dark"]) {
   /**
    * =============================================================================
    *  Base colors
@@ -43,14 +43,14 @@
   /** A solid fill color for page page elements */
   --theme-color-page-base: #1b222e; /** --color-bg */
 
-  /** A solid fill color for page page elements */
-  --theme-color-page-active: #2d384d; /** --color-bg */
-
   /** Opposite of a solid fill color for page page elements */
   --theme-color-page-inverse: #f4f6f8;
 
   /** A shade of the page color for hover and focus states */
   --theme-color-page-offset: #232c3d; /** --color-bg-page-offset */
+
+  /** A solid fill color for page page elements */
+  --theme-color-page-active: #2d384d; /** --color-bg */
 
   /**
    * =============================================================================

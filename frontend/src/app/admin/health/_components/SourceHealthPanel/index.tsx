@@ -60,7 +60,7 @@ export function SourceHealthPanel({
 
       <CardContent>
         {rows.length === 0 ? (
-          <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
+          <Card className="rounded-3xl bg-page-offset shadow-none ring-0" size="sm">
             <CardContent className="text-sm leading-6 text-content-offset">
               No source configurations exist for this project yet.
             </CardContent>
@@ -68,7 +68,7 @@ export function SourceHealthPanel({
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="border-trim-offset text-sm text-muted hover:bg-transparent">
+              <TableRow className="border-trim-offset text-sm text-content-offset hover:bg-transparent">
                 <TableHead className="px-3 py-4">Source</TableHead>
                 <TableHead className="px-3 py-4">Status</TableHead>
                 <TableHead className="px-3 py-4">Last fetch</TableHead>

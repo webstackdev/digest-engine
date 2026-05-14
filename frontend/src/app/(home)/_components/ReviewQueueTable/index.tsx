@@ -39,7 +39,7 @@ export function ReviewQueueTable({
           {pendingReviewItems.length === 0 ? (
             <TableRow>
               <TableCell className="px-3 py-4" colSpan={5}>
-                <Alert className="rounded-3xl border-trim-offset bg-muted">
+                <Alert className="rounded-3xl border-trim-offset bg-page-offset">
                   <AlertDescription>
                     No unresolved review items for this project right now.
                   </AlertDescription>

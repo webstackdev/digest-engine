@@ -96,7 +96,7 @@ export function ContentDetailMainColumn({
           </div>
 
           <div className="flex flex-wrap gap-2 text-sm text-content-offset">
-            <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">
+            <span className="inline-flex items-center rounded-full border border-trim-offset bg-page-offset px-3 py-1 text-sm text-content-active">
               Canonical URL {content.canonical_url || content.url}
             </span>
             {content.authority_adjusted_score !== null ? (
@@ -105,14 +105,14 @@ export function ContentDetailMainColumn({
               </span>
             ) : null}
             {content.duplicate_signal_count > 0 ? (
-              <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">
+              <span className="inline-flex items-center rounded-full border border-trim-offset bg-page-offset px-3 py-1 text-sm text-content-active">
                 Also seen in {content.duplicate_signal_count} source
                 {content.duplicate_signal_count === 1 ? "" : "s"}
               </span>
             ) : null}
             {content.duplicate_of ? (
               <Link
-                className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active transition hover:bg-muted"
+                className="inline-flex items-center rounded-full border border-trim-offset bg-page-offset px-3 py-1 text-sm text-content-active transition hover:bg-page-offset"
                 href={`/content/${content.duplicate_of}?project=${selectedProjectId}`}
               >
                 Duplicate of #{content.duplicate_of}
@@ -205,11 +205,11 @@ export function ContentDetailMainColumn({
               <span>Confidence {formatScore(skillResult.confidence)}</span>
             </div>
             {skillResult.error_message ? (
-              <div className="rounded-3xl bg-destructive px-4 py-4 text-sm leading-6 text-destructive">
+              <div className="rounded-3xl bg-danger px-4 py-4 text-sm leading-6 text-danger">
                 {skillResult.error_message}
               </div>
             ) : null}
-            <pre className="overflow-auto rounded-2xl border border-trim-offset bg-muted p-4 text-sm text-content-active">
+            <pre className="overflow-auto rounded-2xl border border-trim-offset bg-page-offset p-4 text-sm text-content-active">
               {JSON.stringify(skillResult.result_data, null, 2)}
             </pre>
           </CardContent>

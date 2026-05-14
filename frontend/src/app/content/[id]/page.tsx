@@ -46,7 +46,7 @@ export default async function ContentDetailPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <div className="rounded-3xl bg-muted px-4 py-4 text-sm leading-6 text-muted">
+        <div className="rounded-3xl bg-page-offset px-4 py-4 text-sm leading-6 text-content-offset">
           Create a project first in Django admin.
         </div>
       </AppShell>
@@ -89,16 +89,16 @@ export default async function ContentDetailPage({
     >
       {errorMessage ? (
         <Alert
-          className="rounded-3xl border-destructive bg-destructive"
+          className="rounded-3xl border-danger bg-danger"
           variant="destructive"
         >
-          <AlertDescription className="text-destructive">
+          <AlertDescription className="text-danger">
             {errorMessage}
           </AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-3xl border-trim-offset bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}

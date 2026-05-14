@@ -39,7 +39,7 @@ export function InvitationsCard({
           <h3 className="m-0 font-display text-title-sm font-bold text-content-active">Invitations</h3>
         </div>
         {invitations.length === 0 ? (
-          <Alert className="rounded-3xl border-trim-offset bg-muted">
+          <Alert className="rounded-3xl border-trim-offset bg-page-offset">
             <AlertDescription>No active or historical invitations yet.</AlertDescription>
           </Alert>
         ) : (
@@ -49,7 +49,7 @@ export function InvitationsCard({
 
               return (
                 <article
-                  className="grid gap-4 rounded-2xl border border-trim-offset bg-muted p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
+                  className="grid gap-4 rounded-2xl border border-trim-offset bg-page-offset p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
                   key={invitation.id}
                 >
                   <div className="space-y-2">
@@ -63,11 +63,11 @@ export function InvitationsCard({
                           {status.label}
                         </Badge>
                       </div>
-                      <p className="m-0 mt-2 text-sm text-muted">
+                      <p className="m-0 mt-2 text-sm text-content-offset">
                         Invited by {invitation.invited_by_email || "system"}
                       </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-eyebrow text-muted">
+                    <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-eyebrow text-content-offset">
                       <span>Created {formatDate(invitation.created_at)}</span>
                       {invitation.accepted_at ? <span>Accepted {formatDate(invitation.accepted_at)}</span> : null}
                       {invitation.revoked_at ? <span>Revoked {formatDate(invitation.revoked_at)}</span> : null}

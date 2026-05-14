@@ -28,7 +28,7 @@ export const Default: Story = {}
 export const CompactToolbar: Story = {
   render: (args: ComponentProps<typeof CopyButton>) => (
     <div className="flex items-center gap-3 rounded-2xl border border-trim-offset bg-page-base p-3 shadow-panel backdrop-blur-xl">
-      <span className="text-sm text-muted">Share</span>
+      <span className="text-sm text-content-offset">Share</span>
       <CopyButton {...args} />
     </div>
   ),

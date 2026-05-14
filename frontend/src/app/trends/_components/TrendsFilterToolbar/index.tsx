@@ -40,7 +40,7 @@ export function TrendsFilterToolbar({
             <Label htmlFor="trends-source-filter">Source plugin</Label>
             <Select defaultValue={sourceFilter} name="source">
               <SelectTrigger
-                className="w-full rounded-2xl border-trim-offset bg-muted px-4 py-3 text-content-active"
+                className="w-full rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-content-active"
                 id="trends-source-filter"
               >
                 <SelectValue placeholder="All sources" />
@@ -59,7 +59,7 @@ export function TrendsFilterToolbar({
             <Label htmlFor="trends-days-filter">Published within</Label>
             <Select defaultValue={String(daysFilter)} name="days">
               <SelectTrigger
-                className="w-full rounded-2xl border-trim-offset bg-muted px-4 py-3 text-content-active"
+                className="w-full rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-content-active"
                 id="trends-days-filter"
               >
                 <SelectValue placeholder="Published within" />

@@ -30,7 +30,7 @@ export function ContentFeed({
   return (
     <div className="space-y-4">
       {filteredContents.length === 0 ? (
-        <Alert className="rounded-3xl border-trim-offset bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>No content matched the current filters.</AlertDescription>
         </Alert>
       ) : null}
@@ -77,25 +77,25 @@ export function ContentFeed({
                     Base {formatPercentScore(content.relevance_score)}
                   </span>
                 ) : null}
-                <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">
+                <span className="inline-flex items-center rounded-full border border-trim-offset bg-page-offset px-3 py-1 text-sm text-content-active">
                   {formatDisplayLabel(content.content_type || "unclassified")}
                 </span>
                 {content.duplicate_signal_count > 0 ? (
-                  <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">
+                  <span className="inline-flex items-center rounded-full border border-trim-offset bg-page-offset px-3 py-1 text-sm text-content-active">
                     Also seen in {content.duplicate_signal_count} source
                     {content.duplicate_signal_count === 1 ? "" : "s"}
                   </span>
                 ) : null}
                 {content.duplicate_of ? (
-                  <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">
+                  <span className="inline-flex items-center rounded-full border border-trim-offset bg-page-offset px-3 py-1 text-sm text-content-active">
                     Duplicate of #{content.duplicate_of}
                   </span>
                 ) : null}
                 {content.is_reference ? (
-                  <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">reference</span>
+                  <span className="inline-flex items-center rounded-full border border-trim-offset bg-page-offset px-3 py-1 text-sm text-content-active">reference</span>
                 ) : null}
                 {!content.is_active ? (
-                  <span className="inline-flex items-center rounded-full border border-trim-offset bg-muted px-3 py-1 text-sm text-content-active">archived</span>
+                  <span className="inline-flex items-center rounded-full border border-trim-offset bg-page-offset px-3 py-1 text-sm text-content-active">archived</span>
                 ) : null}
                 {content.newsletter_promotion_at ? (
                   <Link

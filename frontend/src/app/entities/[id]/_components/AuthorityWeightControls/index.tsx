@@ -57,7 +57,7 @@ const DEFAULT_CONFIG_VALUES = {
 } satisfies Omit<ProjectConfig, "id" | "project">
 
 const inputClassName =
-  "h-11 rounded-2xl border-trim-offset bg-muted px-4"
+  "h-11 rounded-2xl border-trim-offset bg-page-offset px-4"
 
 /**
  * Render admin-only sliders for project authority weights.
@@ -139,13 +139,13 @@ export function AuthorityWeightControls({
               Authority weights
             </CardTitle>
           </div>
-          <span className="text-sm text-muted">
+          <span className="text-sm text-content-offset">
             Configured total {Math.round(totalWeight * 100)}%
           </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="m-0 text-sm leading-6 text-muted">
+        <p className="m-0 text-sm leading-6 text-content-offset">
           These sliders are normalized to 100% at recompute time, so you can emphasize one signal without manually balancing every field.
         </p>
 
@@ -154,7 +154,7 @@ export function AuthorityWeightControls({
             <div className="grid gap-2" key={field.key}>
               <div className="flex items-center justify-between gap-3 text-sm">
                 <Label htmlFor={field.key}>{field.label}</Label>
-                <span className="text-muted">{Math.round(weights[field.key] * 100)}%</span>
+                <span className="text-content-offset">{Math.round(weights[field.key] * 100)}%</span>
               </div>
               <Slider
                 aria-label={field.label}
@@ -239,13 +239,13 @@ export function AuthorityWeightControls({
         </div>
 
         {statusMessage ? (
-          <Alert className="rounded-3xl border-trim-offset bg-muted" role="status">
+          <Alert className="rounded-3xl border-trim-offset bg-page-offset" role="status">
             <AlertDescription>{statusMessage}</AlertDescription>
           </Alert>
         ) : null}
         {errorMessage ? (
-          <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
-            <AlertDescription className="text-destructive">{errorMessage}</AlertDescription>
+          <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
+            <AlertDescription className="text-danger">{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
       </CardContent>

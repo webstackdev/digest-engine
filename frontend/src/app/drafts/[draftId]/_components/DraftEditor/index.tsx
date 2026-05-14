@@ -125,17 +125,17 @@ export function DraftEditor({
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.9fr)]">
       <div className="space-y-4">
         {statusMessage ? (
-          <Alert className="rounded-3xl border-trim-offset bg-muted" role="status">
+          <Alert className="rounded-3xl border-trim-offset bg-page-offset" role="status">
             <AlertDescription>{statusMessage}</AlertDescription>
           </Alert>
         ) : null}
         {errorMessage ? (
           <Alert
-            className="rounded-3xl border-destructive bg-destructive"
+            className="rounded-3xl border-danger bg-danger"
             role="alert"
             variant="destructive"
           >
-            <AlertDescription className="text-destructive">
+            <AlertDescription className="text-danger">
               {errorMessage}
             </AlertDescription>
           </Alert>
@@ -160,7 +160,7 @@ export function DraftEditor({
               <div className="grid gap-2">
                 <Label htmlFor="title">Title</Label>
                 <Input
-                  className="h-11 rounded-2xl border-trim-offset bg-muted px-4"
+                  className="h-11 rounded-2xl border-trim-offset bg-page-offset px-4"
                   defaultValue={draft.title}
                   id="title"
                   name="title"
@@ -169,7 +169,7 @@ export function DraftEditor({
               <div className="grid gap-2">
                 <Label htmlFor="target_publish_date">Target publish date</Label>
                 <Input
-                  className="h-11 rounded-2xl border-trim-offset bg-muted px-4"
+                  className="h-11 rounded-2xl border-trim-offset bg-page-offset px-4"
                   defaultValue={draft.target_publish_date || ""}
                   id="target_publish_date"
                   name="target_publish_date"
@@ -179,7 +179,7 @@ export function DraftEditor({
               <div className="grid gap-2">
                 <Label htmlFor="intro">Intro</Label>
                 <Textarea
-                  className="min-h-36 rounded-2xl border-trim-offset bg-muted px-4 py-3"
+                  className="min-h-36 rounded-2xl border-trim-offset bg-page-offset px-4 py-3"
                   defaultValue={draft.intro}
                   id="intro"
                   name="intro"
@@ -188,7 +188,7 @@ export function DraftEditor({
               <div className="grid gap-2">
                 <Label htmlFor="outro">Outro</Label>
                 <Textarea
-                  className="min-h-28 rounded-2xl border-trim-offset bg-muted px-4 py-3"
+                  className="min-h-28 rounded-2xl border-trim-offset bg-page-offset px-4 py-3"
                   defaultValue={draft.outro}
                   id="outro"
                   name="outro"
@@ -200,7 +200,7 @@ export function DraftEditor({
                     ? "Saving framing..."
                     : "Save draft framing"}
                 </Button>
-                <span className="text-sm leading-6 text-muted">
+                <span className="text-sm leading-6 text-content-offset">
                   Coherence suggestions: {draft.generation_metadata.coherence_suggestions?.length || 0}
                 </span>
               </div>
@@ -238,7 +238,7 @@ export function DraftEditor({
                         </p>
                         <Label className="sr-only" htmlFor={`section-title-${section.id}`}>Section title</Label>
                         <Input
-                          className="h-11 rounded-2xl border-trim-offset bg-muted px-4 font-display text-title-md font-bold"
+                          className="h-11 rounded-2xl border-trim-offset bg-page-offset px-4 font-display text-title-md font-bold"
                           defaultValue={section.title}
                           id={`section-title-${section.id}`}
                           name="title"
@@ -247,7 +247,7 @@ export function DraftEditor({
                       <div className="grid gap-2">
                         <Label className="sr-only" htmlFor={`section-lede-${section.id}`}>Section lede</Label>
                         <Textarea
-                          className="min-h-28 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-sm leading-6"
+                          className="min-h-28 rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-sm leading-6"
                           defaultValue={section.lede}
                           id={`section-lede-${section.id}`}
                           name="lede"
@@ -359,7 +359,7 @@ export function DraftEditor({
                 </form>
 
                 {section.theme_suggestion_detail ? (
-                  <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
+                  <div className="mt-4 flex flex-wrap gap-2 text-sm text-content-offset">
                     <Link
                       className={cn(buttonVariants({ size: "sm", variant: "outline" }), "rounded-full")}
                       href={`/themes?project=${projectId}`}
@@ -379,7 +379,7 @@ export function DraftEditor({
                     return (
                       <form
                         action={itemRoute}
-                        className="rounded-3xl bg-muted px-4 py-4"
+                        className="rounded-3xl bg-page-offset px-4 py-4"
                         key={item.id}
                         method="POST"
                         onSubmit={(event) => {
@@ -396,7 +396,7 @@ export function DraftEditor({
                           <Link className="font-medium text-content-active underline-offset-4 hover:underline" href={`/content/${item.content_detail.id}?project=${projectId}`}>
                             {item.content_detail.title}
                           </Link>
-                          <span className="text-sm text-muted">{item.content_detail.source_plugin}</span>
+                          <span className="text-sm text-content-offset">{item.content_detail.source_plugin}</span>
                         </div>
                         <div className="mt-3 grid gap-2">
                           <Label htmlFor={`item-summary-${item.id}`}>Summary</Label>
@@ -509,7 +509,7 @@ export function DraftEditor({
         <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
           <CardContent className="pt-5">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Original pieces</p>
-            <p className="mt-3 text-sm leading-6 text-muted">
+            <p className="mt-3 text-sm leading-6 text-content-offset">
               Use the move buttons with keyboard focus to reorder sections, items, and original pieces without leaving the page.
             </p>
             <div className="mt-4 space-y-4">
@@ -521,7 +521,7 @@ export function DraftEditor({
                 return (
                   <form
                     action={pieceRoute}
-                    className="rounded-3xl bg-muted px-4 py-4"
+                    className="rounded-3xl bg-page-offset px-4 py-4"
                     key={piece.id}
                     method="POST"
                     onSubmit={(event) => {
@@ -648,10 +648,10 @@ export function DraftEditor({
         </Card>
 
         {draft.generation_metadata.error ? (
-          <Card className="rounded-3xl border border-destructive bg-destructive shadow-panel backdrop-blur-xl">
+          <Card className="rounded-3xl border border-danger bg-danger shadow-panel backdrop-blur-xl">
             <CardContent className="pt-5">
-              <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-destructive">Generation error</p>
-              <p className="mt-3 text-sm leading-6 text-destructive">{draft.generation_metadata.error}</p>
+              <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-danger">Generation error</p>
+              <p className="mt-3 text-sm leading-6 text-danger">{draft.generation_metadata.error}</p>
             </CardContent>
           </Card>
         ) : null}
@@ -660,7 +660,7 @@ export function DraftEditor({
           <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
             <CardContent className="pt-5">
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Models used</p>
-              <div className="mt-4 space-y-2 text-sm leading-6 text-muted">
+              <div className="mt-4 space-y-2 text-sm leading-6 text-content-offset">
                 {Object.entries(draft.generation_metadata.models).map(([key, value]) => (
                   <p className="m-0" key={key}>
                     <span className="font-medium text-content-active">{key}</span>: {value}

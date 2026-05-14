@@ -5,131 +5,6 @@
 @import "@digestengine/tailwind-config/index.css";
 @import "./radix.css";
 
-@theme inline {
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
-  --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-}
-
-:root {
-  color-scheme: light;
-  --background: var(--color-primary-150);
-  --foreground: var(--color-primary-900);
-  --card: var(--color-primary-175);
-  --card-foreground: var(--foreground);
-  --popover: var(--color-primary-175);
-  --popover-foreground: var(--foreground);
-  --primary: var(--color-primary-500);
-  --primary-foreground: var(--color-primary-50);
-  --secondary: var(--color-primary-100);
-  --secondary-foreground: var(--color-primary-700);
-  --muted: var(--color-primary-100);
-  --muted-foreground: color-mix(in srgb, var(--color-primary-700) 68%, white);
-  --accent: color-mix(in srgb, var(--color-primary-100) 78%, white);
-  --accent-foreground: var(--color-primary-900);
-  --destructive: var(--color-burnt-500);
-  --destructive-foreground: var(--color-primary-50);
-  --border: color-mix(in srgb, var(--color-primary-300) 42%, white);
-  --input: color-mix(in srgb, var(--color-primary-300) 28%, white);
-  --ring: color-mix(in srgb, var(--color-primary-500) 76%, white);
-  --color-canvas-start: color-mix(in srgb, var(--color-primary-50) 82%, white);
-  --color-canvas-end: var(--color-primary-100);
-  --color-grid: color-mix(in srgb, var(--color-primary-500) 8%, transparent);
-  --color-spotlight-left: color-mix(in srgb, var(--color-primary-300) 26%, transparent);
-  --color-spotlight-right: color-mix(in srgb, var(--color-sage-300) 20%, transparent);
-  --chart-1: var(--color-primary-500);
-  --chart-2: var(--color-primary-300);
-  --chart-3: var(--color-sage-500);
-  --chart-4: var(--color-sage-300);
-  --chart-5: var(--color-burnt-500);
-  --radius: 0.9rem;
-  --sidebar: var(--color-primary-100);
-  --sidebar-foreground: var(--foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--color-primary-700);
-  --sidebar-accent-foreground: var(--color-primary-50);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
-}
-
-.dark {
-  color-scheme: dark;
-  --background: var(--color-primary-900);
-  --foreground: var(--color-primary-50);
-  --card: var(--color-primary-800);
-  --card-foreground: var(--foreground);
-  --popover: var(--color-primary-800);
-  --popover-foreground: var(--foreground);
-  --primary: var(--color-primary-300);
-  --primary-foreground: var(--color-primary-900);
-  --secondary: var(--color-primary-700);
-  --secondary-foreground: var(--color-primary-100);
-  --muted: var(--color-primary-700);
-  --muted-foreground: var(--color-primary-200);
-  --accent: color-mix(in srgb, var(--color-primary-800) 74%, black);
-  --accent-foreground: var(--color-primary-50);
-  --destructive: var(--color-burnt-300);
-  --destructive-foreground: var(--color-primary-900);
-  --border: color-mix(in srgb, var(--color-primary-500) 38%, black);
-  --input: color-mix(in srgb, var(--color-primary-500) 52%, black);
-  --ring: var(--color-primary-300);
-  --color-canvas-start: var(--color-primary-800);
-  --color-canvas-end: color-mix(in srgb, var(--color-primary-900) 84%, black);
-  --color-grid: color-mix(in srgb, var(--color-primary-200) 10%, transparent);
-  --color-spotlight-left: color-mix(in srgb, var(--color-primary-300) 24%, transparent);
-  --color-spotlight-right: color-mix(in srgb, var(--color-sage-300) 18%, transparent);
-  --chart-1: var(--color-primary-300);
-  --chart-2: var(--color-primary-100);
-  --chart-3: var(--color-sage-300);
-  --chart-4: var(--color-sage-100);
-  --chart-5: var(--color-burnt-300);
-  --sidebar: var(--color-primary-700);
-  --sidebar-foreground: var(--foreground);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: var(--color-primary-100);
-  --sidebar-accent-foreground: var(--color-primary-900);
-  --sidebar-border: var(--border);
-  --sidebar-ring: var(--ring);
-}
-
 @utility no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -141,44 +16,52 @@
 
 @layer base {
   * {
-    @apply border-trim-offset outline-ring;
+    @apply border-trim-offset outline-primary;
   }
 
   html {
     @apply font-sans;
   }
 
+  :where(.light, [data-theme="light"]) {
+    color-scheme: light;
+  }
+
+  :where(.dark, [data-theme="dark"]) {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-background text-content-active;
+    @apply bg-page-base text-content-active;
     background-image:
-      radial-gradient(circle at top left, var(--color-spotlight-left), transparent 34%),
-      radial-gradient(circle at top right, var(--color-spotlight-right), transparent 30%),
-      linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-      linear-gradient(180deg, var(--color-canvas-start) 0%, var(--color-canvas-end) 100%);
+      radial-gradient(circle at top left, color-mix(in srgb, var(--theme-color-primary) 26%, transparent), transparent 34%),
+      radial-gradient(circle at top right, color-mix(in srgb, var(--theme-color-secondary) 20%, transparent), transparent 30%),
+      linear-gradient(color-mix(in srgb, var(--theme-color-page-inverse) 2%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--theme-color-page-inverse) 2%, transparent) 1px, transparent 1px),
+      linear-gradient(180deg, color-mix(in srgb, var(--theme-color-page-offset) 72%, white) 0%, var(--theme-color-page-base) 100%);
     background-position: center, center, center, center, center;
     background-size: auto, auto, 32px 32px, 32px 32px, auto;
     min-height: 100vh;
   }
 
   ::selection {
-    background: color-mix(in oklab, var(--primary) 24%, transparent);
-    color: var(--foreground);
+    background: color-mix(in oklab, var(--theme-color-primary) 24%, transparent);
+    color: var(--theme-color-page-inverse);
   }
 
-  [data-slot="card"] .text-muted,
-  .rounded-3xl.text-muted,
-  .rounded-3xl .text-muted {
-    color: var(--color-muted-foreground);
+  [data-slot="card"] .text-content-offset,
+  .rounded-3xl.text-content-offset,
+  .rounded-3xl .text-content-offset {
+    color: var(--theme-color-content-offset);
   }
 
-  .dark body {
+  :where(.dark, [data-theme="dark"]) body {
     background-image:
-      radial-gradient(circle at top left, var(--color-spotlight-left), transparent 36%),
-      radial-gradient(circle at top right, var(--color-spotlight-right), transparent 28%),
-      linear-gradient(var(--color-grid) 1px, transparent 1px),
-      linear-gradient(90deg, var(--color-grid) 1px, transparent 1px),
-      linear-gradient(180deg, var(--color-canvas-start) 0%, var(--color-canvas-end) 100%);
+      radial-gradient(circle at top left, color-mix(in srgb, var(--theme-color-primary) 24%, transparent), transparent 36%),
+      radial-gradient(circle at top right, color-mix(in srgb, var(--theme-color-secondary) 18%, transparent), transparent 28%),
+      linear-gradient(color-mix(in srgb, var(--theme-color-page-inverse) 10%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--theme-color-page-inverse) 10%, transparent) 1px, transparent 1px),
+      linear-gradient(180deg, var(--theme-color-page-offset) 0%, color-mix(in srgb, var(--theme-color-page-base) 84%, black) 100%);
   }
 }
 

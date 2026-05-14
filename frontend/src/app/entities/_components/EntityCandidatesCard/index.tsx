@@ -38,7 +38,7 @@ export function EntityCandidatesCard({
           <CardTitle className="font-display text-title-sm font-bold text-content-active">
             Pending entity candidates
           </CardTitle>
-          <p className="m-0 text-sm leading-6 text-muted">
+          <p className="m-0 text-sm leading-6 text-content-offset">
             Need cluster-level review instead of one-off actions? Open the grouped queue.
           </p>
         </div>
@@ -56,14 +56,14 @@ export function EntityCandidatesCard({
       </CardHeader>
       <CardContent>
         {entityCandidates.length === 0 ? (
-          <Alert className="rounded-3xl border-trim-offset bg-muted">
+          <Alert className="rounded-3xl border-trim-offset bg-page-offset">
             <AlertDescription>No pending entity candidates right now.</AlertDescription>
           </Alert>
         ) : (
           <div className="space-y-3">
             {entityCandidates.map((candidate) => (
               <article
-                className="space-y-3 rounded-2xl border border-trim-offset bg-muted p-4"
+                className="space-y-3 rounded-2xl border border-trim-offset bg-page-offset p-4"
                 key={candidate.id}
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -71,7 +71,7 @@ export function EntityCandidatesCard({
                     <h3 className="m-0 font-display text-lg font-bold text-content-active">
                       {candidate.name}
                     </h3>
-                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
+                    <div className="mt-2 flex flex-wrap gap-2 text-sm text-content-offset">
                       <span>{formatDisplayLabel(candidate.suggested_type)}</span>
                       <span>
                         {candidate.occurrence_count} occurrence

@@ -23,11 +23,11 @@ export function InvitePageContent({
   isAuthenticated,
 }: InvitePageContentProps) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <div className="flex min-h-screen items-center justify-center bg-page-base px-4 py-10">
       <Card className="w-full max-w-2xl rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-6 pt-4 md:pt-6">
           <div>
-            <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-muted">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-content-offset">
               Digest Engine
             </p>
             <h1 className="mt-2 font-display text-display-page font-bold text-content-active">
@@ -36,17 +36,17 @@ export function InvitePageContent({
           </div>
 
           {errorMessage ? (
-            <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
+            <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
               <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           ) : null}
           {successMessage ? (
-            <Alert className="rounded-3xl border-trim-offset bg-muted">
+            <Alert className="rounded-3xl border-trim-offset bg-page-offset">
               <AlertDescription>{successMessage}</AlertDescription>
             </Alert>
           ) : null}
           {invitationError ? (
-            <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
+            <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
               <AlertDescription>{invitationError}</AlertDescription>
             </Alert>
           ) : null}

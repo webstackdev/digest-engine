@@ -39,7 +39,7 @@ export default async function CandidateQueuePage({
         projects={[]}
         selectedProjectId={null}
       >
-        <Alert className="rounded-3xl border-trim-offset bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>Create a project first in Django admin.</AlertDescription>
         </Alert>
       </AppShell>
@@ -69,12 +69,12 @@ export default async function CandidateQueuePage({
     >
       <div className="space-y-4">
         {errorMessage ? (
-          <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
-            <AlertDescription className="text-destructive">{errorMessage}</AlertDescription>
+          <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
+            <AlertDescription className="text-danger">{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
         {successMessage ? (
-          <Alert className="rounded-3xl border-trim-offset bg-muted">
+          <Alert className="rounded-3xl border-trim-offset bg-page-offset">
             <AlertDescription>{successMessage}</AlertDescription>
           </Alert>
         ) : null}
@@ -92,7 +92,7 @@ export default async function CandidateQueuePage({
         ) : (
           <section className="space-y-4">
             {candidateClusters.length === 0 ? (
-              <Alert className="rounded-3xl border-trim-offset bg-muted">
+              <Alert className="rounded-3xl border-trim-offset bg-page-offset">
                 <AlertDescription>
                   No pending candidate clusters need review right now.
                 </AlertDescription>

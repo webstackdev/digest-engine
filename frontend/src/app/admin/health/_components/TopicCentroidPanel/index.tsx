@@ -71,7 +71,7 @@ export function TopicCentroidPanel({
 
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-page-offset shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-content-offset">
                   Centroid state
@@ -85,7 +85,7 @@ export function TopicCentroidPanel({
                 </p>
               </CardContent>
             </Card>
-            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-page-offset shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-content-offset">
                   Avg drift vs previous
@@ -95,7 +95,7 @@ export function TopicCentroidPanel({
                 </p>
               </CardContent>
             </Card>
-            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-page-offset shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-content-offset">
                   Avg drift vs 7d
@@ -105,7 +105,7 @@ export function TopicCentroidPanel({
                 </p>
               </CardContent>
             </Card>
-            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-page-offset shadow-none ring-0" size="sm">
               <CardContent>
                 <p className="text-xs font-medium uppercase tracking-[0.18em] text-content-offset">
                   Latest snapshot
@@ -120,7 +120,7 @@ export function TopicCentroidPanel({
           {visibleSnapshots.length > 1 ? (
             <Link
               aria-label="Open centroid snapshot history"
-              className="block rounded-3xl bg-muted px-4 py-4 transition hover:bg-muted"
+              className="block rounded-3xl bg-page-offset px-4 py-4 transition hover:bg-page-offset"
               href={historyHref}
             >
               <div className="flex items-center justify-between gap-3 text-sm text-content-offset">
@@ -154,7 +154,7 @@ export function TopicCentroidPanel({
               <span>Downvotes {summary.latest_snapshot.downvote_count}</span>
             </div>
           ) : (
-            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-page-offset shadow-none ring-0" size="sm">
               <CardContent className="text-sm leading-6 text-content-offset">
                 No centroid snapshots exist for this project yet.
               </CardContent>
@@ -183,7 +183,7 @@ export function TopicCentroidPanel({
 
         <CardContent>
           {visibleSnapshots.length === 0 ? (
-            <Card className="rounded-3xl bg-muted shadow-none ring-0" size="sm">
+            <Card className="rounded-3xl bg-page-offset shadow-none ring-0" size="sm">
               <CardContent className="text-sm leading-6 text-content-offset">
                 No centroid snapshot history exists for this project yet.
               </CardContent>
@@ -191,7 +191,7 @@ export function TopicCentroidPanel({
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-trim-offset text-sm text-muted hover:bg-transparent">
+                <TableRow className="border-trim-offset text-sm text-content-offset hover:bg-transparent">
                   <TableHead className="px-3 py-4">Computed</TableHead>
                   <TableHead className="px-3 py-4">State</TableHead>
                   <TableHead className="px-3 py-4">Feedback</TableHead>

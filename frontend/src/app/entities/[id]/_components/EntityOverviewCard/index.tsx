@@ -42,7 +42,7 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-3 rounded-2xl border border-trim-offset bg-muted p-4">
+          <div className="space-y-3 rounded-2xl border border-trim-offset bg-page-offset p-4">
             <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-content-offset">
               Description
             </h3>
@@ -50,7 +50,7 @@ export function EntityOverviewCard({ entity }: EntityOverviewCardProps) {
               {entity.description || "No description is set for this entity yet."}
             </p>
           </div>
-          <div className="space-y-3 rounded-2xl border border-trim-offset bg-muted p-4">
+          <div className="space-y-3 rounded-2xl border border-trim-offset bg-page-offset p-4">
             <h3 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-content-offset">
               Identity links
             </h3>

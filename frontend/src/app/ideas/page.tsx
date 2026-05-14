@@ -37,7 +37,7 @@ export default async function IdeasPage({ searchParams }: IdeasPageProps) {
         projects={[]}
         selectedProjectId={null}
       >
-        <Alert className="rounded-3xl border-trim-offset bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>Create a project first in Django admin.</AlertDescription>
         </Alert>
       </AppShell>
@@ -66,12 +66,12 @@ export default async function IdeasPage({ searchParams }: IdeasPageProps) {
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
+        <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-3xl border-trim-offset bg-muted">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}
@@ -91,7 +91,7 @@ export default async function IdeasPage({ searchParams }: IdeasPageProps) {
 
       <section className="space-y-4">
         {filteredIdeas.length === 0 ? (
-          <Alert className="rounded-3xl border-trim-offset bg-muted">
+          <Alert className="rounded-3xl border-trim-offset bg-page-offset">
             <AlertDescription>No original-content ideas matched the current filter.</AlertDescription>
           </Alert>
         ) : null}

@@ -43,20 +43,20 @@ export function EntitySidebar({
             </h3>
           </div>
           {siblingEntities.length === 0 ? (
-            <p className="m-0 text-sm leading-6 text-muted">
+            <p className="m-0 text-sm leading-6 text-content-offset">
               No other entities exist in this project yet.
             </p>
           ) : (
             <ul className="m-0 grid list-none gap-3 p-0">
               {siblingEntities.slice(0, 6).map((siblingEntity) => (
-                <li className="rounded-2xl border border-trim-offset bg-muted p-4" key={siblingEntity.id}>
+                <li className="rounded-2xl border border-trim-offset bg-page-offset p-4" key={siblingEntity.id}>
                   <Link
                     className="font-medium text-content-active transition hover:text-primary"
                     href={`/entities/${siblingEntity.id}?project=${selectedProjectId}`}
                   >
                     {siblingEntity.name}
                   </Link>
-                  <div className="mt-2 flex flex-wrap gap-2 text-sm text-muted">
+                  <div className="mt-2 flex flex-wrap gap-2 text-sm text-content-offset">
                     <span>{siblingEntity.type}</span>
                     <span>
                       {siblingEntity.mention_count} mention

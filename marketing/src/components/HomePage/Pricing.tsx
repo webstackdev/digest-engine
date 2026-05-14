@@ -68,7 +68,7 @@ const Pricing: React.FC<IPricingProps> = ({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
           {plans.map((plan) => {
             const buttonClass = plan.isPopular
-              ? "bg-primary text-primary-foreground hover:bg-primary"
+              ? "bg-primary text-primary-inverse hover:bg-primary"
               : "border-trim-offset bg-secondary text-primary shadow-soft backdrop-blur-[18px] hover:bg-page-base";
 
             return (

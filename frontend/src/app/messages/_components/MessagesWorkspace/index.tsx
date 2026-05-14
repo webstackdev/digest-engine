@@ -319,7 +319,7 @@ export function MessagesWorkspace({
           <CardTitle>Threads</CardTitle>
         </CardHeader>
         <CardContent className="max-h-152 space-y-3 overflow-y-auto py-4">
-          <form className="space-y-3 rounded-2xl border border-trim-offset bg-muted p-4" onSubmit={(event) => void handleStartConversation(event)}>
+          <form className="space-y-3 rounded-2xl border border-trim-offset bg-page-offset p-4" onSubmit={(event) => void handleStartConversation(event)}>
             <div className="space-y-1">
               <p className="text-sm font-medium">Start a conversation</p>
               <p className="text-xs text-content-offset">
@@ -331,7 +331,7 @@ export function MessagesWorkspace({
               <span>Recipient</span>
               <select
                 aria-label="Recipient"
-                className="h-10 rounded-lg border border-input bg-transparent px-3 text-sm transition"
+                className="h-10 rounded-lg border border-trim-offset bg-transparent px-3 text-sm transition"
                 disabled={availableRecipients.length === 0 || openThreadMutation.isPending}
                 value={activeRecipientId ?? ""}
                 onChange={(event) => {
@@ -369,11 +369,11 @@ export function MessagesWorkspace({
           </form>
 
           {threadsQuery.isError ? (
-            <Alert className="rounded-xl border-destructive bg-destructive" variant="destructive">
+            <Alert className="rounded-xl border-danger bg-danger" variant="destructive">
               <AlertDescription>Unable to load message threads.</AlertDescription>
             </Alert>
           ) : threads.length === 0 ? (
-            <Alert className="rounded-3xl border-trim-offset bg-muted">
+            <Alert className="rounded-3xl border-trim-offset bg-page-offset">
               <AlertDescription>
                 No conversations yet. Start one from the project collaborators listed above.
               </AlertDescription>
@@ -389,7 +389,7 @@ export function MessagesWorkspace({
                   className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
                     isSelected
                       ? "border-primary bg-primary"
-                      : "border-trim-offset bg-muted hover:border-trim-offset hover:bg-muted"
+                      : "border-trim-offset bg-page-offset hover:border-trim-offset hover:bg-page-offset"
                   }`}
                   data-active={isSelected ? "true" : "false"}
                   key={thread.id}
@@ -429,16 +429,16 @@ export function MessagesWorkspace({
         </CardHeader>
         <CardContent className="space-y-4 py-4">
           {selectedThread === null ? (
-            <Alert className="rounded-3xl border-trim-offset bg-muted">
+            <Alert className="rounded-3xl border-trim-offset bg-page-offset">
               <AlertDescription>Select a thread to read and reply.</AlertDescription>
             </Alert>
           ) : messagesQuery.isError ? (
-            <Alert className="rounded-xl border-destructive bg-destructive" variant="destructive">
+            <Alert className="rounded-xl border-danger bg-danger" variant="destructive">
               <AlertDescription>Unable to load this thread.</AlertDescription>
             </Alert>
           ) : (
             <>
-              <div className="max-h-120 space-y-3 overflow-y-auto rounded-2xl border border-trim-offset bg-muted p-4">
+              <div className="max-h-120 space-y-3 overflow-y-auto rounded-2xl border border-trim-offset bg-page-offset p-4">
                 {(messagesQuery.data ?? []).length === 0 ? (
                   <p className="text-sm text-content-offset">
                     No messages yet. Send the first reply to start the conversation.
@@ -455,8 +455,8 @@ export function MessagesWorkspace({
                         <div
                           className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
                             isCurrentUser
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-page-base ring-1 ring-border/70"
+                              ? "bg-primary text-primary-inverse"
+                              : "bg-page-base ring-1 ring-trim-offset"
                           }`}
                         >
                           {!isCurrentUser ? (
@@ -468,7 +468,7 @@ export function MessagesWorkspace({
                           <p
                             className={`mt-2 text-[11px] ${
                               isCurrentUser
-                                ? "text-primary-foreground/70"
+                                ? "text-content-inverse-active"
                                 : "text-content-offset"
                             }`}
                           >

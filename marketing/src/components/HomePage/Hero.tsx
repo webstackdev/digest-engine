@@ -13,7 +13,7 @@ const Hero = ({ description, title, btnGetStarted }: IHeroProps) => {
       id="about"
       className="relative overflow-hidden rounded-4xl border border-trim-offset bg-page-base px-6 py-8 shadow-panel backdrop-blur-[18px] sm:px-8 sm:py-10 lg:px-12 lg:py-14"
     >
-      <div className="absolute inset-0 bg-background" />
+      <div className="absolute inset-0 bg-page-base" />
       <div className="relative grid items-center gap-10 lg:grid-cols-2">
         <div className="flex max-w-2xl flex-col items-start gap-6">
           <div className="space-y-5">
@@ -30,7 +30,7 @@ const Hero = ({ description, title, btnGetStarted }: IHeroProps) => {
               asChild
               variant="default"
               size="lg"
-              className="h-12 rounded-full bg-primary px-6 text-primary-foreground text-sm font-semibold transition-colors hover:bg-primary"
+              className="h-12 rounded-full bg-primary px-6 text-primary-inverse text-sm font-semibold transition-colors hover:bg-primary"
             >
               <Link href={btnGetStarted.link}>{btnGetStarted.text}</Link>
             </Button>

@@ -105,7 +105,7 @@ export function OriginalContentIdeaCard({
             </div>
           </div>
 
-          <aside className="space-y-4 rounded-2xl border border-trim-offset bg-muted p-4">
+          <aside className="space-y-4 rounded-2xl border border-trim-offset bg-page-offset p-4">
             <div>
               <p className="m-0 text-sm font-medium text-content-active">Workflow metadata</p>
               <div className="mt-2 flex flex-wrap gap-2 text-sm text-content-offset">

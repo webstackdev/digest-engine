@@ -42,7 +42,7 @@ export function ProfileForm({
           </h2>
         </div>
 
-        <div className="grid gap-2 rounded-2xl border border-trim-offset bg-muted px-4 py-4 text-sm text-muted sm:grid-cols-2">
+        <div className="grid gap-2 rounded-2xl border border-trim-offset bg-page-offset px-4 py-4 text-sm text-content-offset sm:grid-cols-2">
           <div>
             <span className="block text-xs uppercase tracking-eyebrow opacity-70">Username</span>
             <span>{profile.username}</span>
@@ -67,7 +67,7 @@ export function ProfileForm({
           <div className="grid gap-2">
             <Label htmlFor="profile-display-name">Display name</Label>
             <Input
-              className="min-h-11 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-content-active"
+              className="min-h-11 rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-content-active"
               id="profile-display-name"
               onChange={(event) => setDisplayName(event.target.value)}
               value={displayName}
@@ -76,7 +76,7 @@ export function ProfileForm({
           <div className="grid gap-2">
             <Label htmlFor="profile-bio">Bio</Label>
             <Textarea
-              className="min-h-32 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-content-active"
+              className="min-h-32 rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-content-active"
               id="profile-bio"
               onChange={(event) => setBio(event.target.value)}
               value={bio}
@@ -85,7 +85,7 @@ export function ProfileForm({
           <div className="grid gap-2">
             <Label htmlFor="profile-timezone">Timezone</Label>
             <Input
-              className="min-h-11 rounded-2xl border-trim-offset bg-muted px-4 py-3 text-content-active"
+              className="min-h-11 rounded-2xl border-trim-offset bg-page-offset px-4 py-3 text-content-active"
               id="profile-timezone"
               onChange={(event) => setTimezone(event.target.value)}
               placeholder="UTC"

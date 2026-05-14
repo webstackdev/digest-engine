@@ -5,19 +5,19 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-destructive aria-invalid:ring-destructive [&>svg]:pointer-events-none [&>svg]:size-3!",
+  "group/badge inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 text-xs font-medium whitespace-nowrap transition-all has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 aria-invalid:border-danger aria-invalid:ring-danger [&>svg]:pointer-events-none [&>svg]:size-3!",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary",
+        default: "bg-primary text-primary-inverse [a]:hover:bg-primary",
         secondary:
-          "bg-secondary text-secondary-foreground [a]:hover:bg-secondary",
+          "bg-secondary text-secondary-inverse [a]:hover:bg-secondary",
         destructive:
-          "bg-destructive text-destructive-foreground [a]:hover:bg-destructive",
+          "bg-danger text-danger-inverse [a]:hover:bg-danger",
         outline:
-          "border-trim-offset text-content-active [a]:hover:bg-muted [a]:hover:text-content-offset",
+          "border-trim-offset text-content-active [a]:hover:bg-page-offset [a]:hover:text-content-offset",
         ghost:
-          "hover:bg-muted hover:text-content-offset",
+          "hover:bg-page-offset hover:text-content-offset",
         link: "text-primary underline-offset-4 hover:underline",
       },
     },

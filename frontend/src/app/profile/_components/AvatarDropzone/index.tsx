@@ -62,23 +62,23 @@ export function AvatarDropzone({
           {...getRootProps()}
           className={`rounded-3xl border border-dashed px-5 py-8 text-center transition ${
             isDragReject
-              ? "border-destructive bg-destructive"
+              ? "border-danger bg-danger"
               : isDragActive
                 ? "border-primary bg-primary"
-                : "border-trim-offset bg-muted hover:border-primary hover:bg-muted"
+                : "border-trim-offset bg-page-offset hover:border-primary hover:bg-page-offset"
           } ${isUploading ? "cursor-wait opacity-70" : "cursor-pointer"}`}
         >
           <input {...getInputProps({ "aria-label": "Upload avatar image" })} />
           <p className="m-0 text-base font-medium text-content-active">
             {isUploading ? "Uploading avatar..." : "Drop an image here or click to browse."}
           </p>
-          <p className="mb-0 mt-2 text-sm leading-6 text-muted">
+          <p className="mb-0 mt-2 text-sm leading-6 text-content-offset">
             PNG, JPEG, and WebP files up to 2 MB.
           </p>
         </div>
 
         {errorMessage ? (
-          <Alert className="rounded-3xl border-destructive bg-destructive" variant="destructive">
+          <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}

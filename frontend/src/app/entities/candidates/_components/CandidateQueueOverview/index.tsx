@@ -27,7 +27,7 @@ export function CandidateQueueOverview({
           <CardContent className="pt-4">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Clusters</p>
             <p className="mt-1 text-3xl font-bold">{clusterCount}</p>
-            <p className="text-sm leading-6 text-muted">
+            <p className="text-sm leading-6 text-content-offset">
               Grouped review cards for pending candidates.
             </p>
           </CardContent>
@@ -36,7 +36,7 @@ export function CandidateQueueOverview({
           <CardContent className="pt-4">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Pending</p>
             <p className="mt-1 text-3xl font-bold">{pendingCount}</p>
-            <p className="text-sm leading-6 text-muted">
+            <p className="text-sm leading-6 text-content-offset">
               Candidates still waiting for editorial action or auto-promotion.
             </p>
           </CardContent>
@@ -45,7 +45,7 @@ export function CandidateQueueOverview({
           <CardContent className="pt-4">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Auto-promotion log</p>
             <p className="mt-1 text-3xl font-bold">{resolvedCount}</p>
-            <p className="text-sm leading-6 text-muted">
+            <p className="text-sm leading-6 text-content-offset">
               Accepted, rejected, or merged candidates already resolved.
             </p>
           </CardContent>
