@@ -16,7 +16,12 @@ const navigationItems = [
  */
 export function Header() {
   return (
-    <PageSection as="header" id="marketing-nav" classes="flex items-center gap-6 mt-6 sm:mt-8">
+    <PageSection
+      as="header"
+      id="marketing-nav"
+      shadowClass="shadow-card-strong"
+      classes="fixed inset-x-0 top-2 z-50 flex items-center gap-6"
+    >
       <Link
         href="/"
         className="flex shrink-0 items-center gap-3 text-content-active no-underline"
@@ -27,7 +32,7 @@ export function Header() {
           className="h-16 w-16 shrink-0"
           priority
         />
-        <span className="ml-2 text-xl font-semibold tracking-tight text-primary hover:text-content-active sm:text-3xl">
+        <span className="ml-2 text-xl font-semibold tracking-tight text-secondary hover:text-secondary-offset sm:text-3xl">
           {brand.name}
         </span>
       </Link>
@@ -38,7 +43,7 @@ export function Header() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-base font-medium tracking-tight text-primary transition-colors hover:text-content-active sm:text-lg"
+              className="text-base sm:text-lg font-medium tracking-tight transition-colors text-secondary hover:text-secondary-offset"
             >
               {item.label}
             </Link>
@@ -47,7 +52,7 @@ export function Header() {
 
         <Link
           href="/login"
-          className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-inverse no-underline transition-colors hover:bg-primary"
+          className="rounded-full bg-accent hover:bg-accent-offset text-sm font-semibold text-primary-inverse no-underline transition-colors px-5 py-3"
         >
           Login
         </Link>

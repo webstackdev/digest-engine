@@ -6,6 +6,7 @@ export interface IPageSectionProps<T extends SectionTag> {
   as?: T;
   id?: string;
   classes?: string;
+  shadowClass?: string;
   children: ReactNode;
 }
 

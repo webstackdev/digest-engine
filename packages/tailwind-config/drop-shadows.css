@@ -13,16 +13,16 @@
 
  :root {
   --shadow-soft-value: 0 14px 34px
-    color-mix(in srgb, var(--color-primary-700) 10%, transparent);
+    color-mix(in srgb, var(--color-primary-offset) 10%, transparent);
   --shadow-card-value: 0 22px 44px
-    color-mix(in srgb, var(--color-primary-700) 8%, transparent);
+    color-mix(in srgb, var(--color-primary-offset) 8%, transparent);
   --shadow-card-strong-value: 0 34px 70px
-    color-mix(in srgb, var(--color-primary-700) 14%, transparent);
+    color-mix(in srgb, var(--color-primary-offset) 14%, transparent);
   --shadow-panel-value:
-    0 26px 60px color-mix(in srgb, var(--color-primary-700) 12%, transparent),
+    0 26px 60px color-mix(in srgb, var(--color-primary-offset) 12%, transparent),
     inset 0 1px 0 color-mix(in srgb, white 72%, transparent);
   --shadow-accent-value: 0 18px 38px
-    color-mix(in srgb, var(--color-burnt-450) 28%, transparent);
+    color-mix(in srgb, var(--color-accent) 28%, transparent);
   --shadow-inset-value: inset 0 0 0 1px
     color-mix(in srgb, white 80%, transparent);
 }
@@ -34,9 +34,9 @@
     color-mix(in srgb, black 40%, transparent);
   --shadow-panel-value:
     0 26px 60px color-mix(in srgb, black 34%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--color-primary-50) 8%, transparent);
+    inset 0 1px 0 color-mix(in srgb, var(--color-white) 8%, transparent);
   --shadow-accent-value: 0 18px 38px
-    color-mix(in srgb, var(--color-burnt-450) 30%, transparent);
+    color-mix(in srgb, var(--color-accent) 30%, transparent);
   --shadow-inset-value: inset 0 0 0 1px
-    color-mix(in srgb, var(--color-primary-50) 12%, transparent);
+    color-mix(in srgb, var(--color-white) 12%, transparent);
 }

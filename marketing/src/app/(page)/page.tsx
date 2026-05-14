@@ -16,15 +16,13 @@ import {
 
 export default function Home() {
   return (
-    <section className="marketing-page relative w-full">
-      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-16 pt-4 sm:px-6 md:gap-6 lg:px-8">
-        <Hero {...HeroProps} />
-        <Problems {...ProblemsProps} />
-        <Clients {...ClientsProps} />
-        <Features {...FeatureItems} />
-        <Pricing {...PricingProps} />
-        <CTA />
-      </div>
-    </section>
+    <main className="relative mx-auto flex w-full max-w-6xl flex-col gap-5 pt-24 md:gap-6">
+      <Hero {...HeroProps} />
+      <Problems {...ProblemsProps} />
+      <Clients {...ClientsProps} />
+      <Features {...FeatureItems} />
+      <Pricing {...PricingProps} />
+      <CTA />
+    </main>
   );
 }

@@ -7,6 +7,7 @@ describe("Marketing home page", () => {
   it("renders the Digest Engine landing page sections", () => {
     const markup = renderToStaticMarkup(<Home />);
 
+    expect(markup).toContain("pt-24");
     expect(markup).toContain("The research desk for your newsletter");
     expect(markup).toContain("Monitors the channels that actually move your issue");
     expect(markup).toContain("Why Digest Engine feels different");

@@ -1,9 +1,9 @@
 @import "tailwindcss";
 @import "nextra-theme-docs/style.css";
 @import "tw-animate-css";
+@import "@digestengine/tailwind-config/index.css";
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
-@import "@digestengine/tailwind-config/index.css";
 
 @theme inline {
   @keyframes gradient {
@@ -20,14 +20,107 @@
 
   html {
     scroll-behavior: smooth;
-    background-color: var(--theme-color-page-base);
+    background-color: var(--color-page-base);
     color-scheme: light;
   }
 
   body {
     @apply bg-page-base text-content-active;
+    display: flow-root;
+    margin: 0;
     min-height: 100vh;
     font-size: 16px;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  p {
+    font-size: 1rem;
+    color: var(--color-content);
+    line-height: 1.5;
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-secondary);
+  }
+
+  h5,
+  h6 {
+    color: var(--color-content);
+  }
+
+  a {
+    text-decoration: none;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-primary) 22%, white);
+    color: var(--color-page-inverse);
+  }
+
+  .nextra-body-typesetting-article {
+    max-width: none !important;
+  }
+
+  .nextra-content {
+    width: 100%;
+  }
+
+  .nextra-body-typesetting-article > * {
+    max-width: none !important;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--color-page-offset);
+  }
+
+  .sub-heading {
+    font-size: 0.9rem;
+    color: var(--color-content-offset);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-primary) 64%, var(--color-secondary));
+    border-radius: 30px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-content);
+  }
+
+  @media only screen and (max-width: 435px) {
+    body {
+      overflow-x: hidden;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+    }
+
+    h4 {
+      font-size: 1.3rem;
+    }
+  }
+
+  .page-background {
+    background-color: var(--color-page-base);
+    background-image:
+      linear-gradient(var(--color-content-offset) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-content-offset) 1px, transparent 1px);
+    background-position: 0 0, 0 0;
+    background-repeat: repeat, repeat;
+    background-size: 96px 96px, 96px 96px;
   }
 }
 
@@ -62,94 +155,3 @@
   }
 }
 
-button {
-  cursor: pointer;
-}
-
-p {
-  font-size: 1rem;
-  color: var(--theme-color-content);
-  line-height: 1.5;
-  font-family: var(--font-sans);
-}
-
-h1,
-h2,
-h3,
-h4 {
-  color: var(--theme-color-content-active);
-}
-
-h5,
-h6 {
-  color: var(--theme-color-content);
-}
-a {
-  text-decoration: none;
-}
-
-::selection {
-  background: color-mix(in srgb, var(--theme-color-primary) 22%, white);
-  color: var(--theme-color-page-inverse);
-}
-
-.nextra-body-typesetting-article {
-  max-width: none !important;
-}
-
-.nextra-content {
-  width: 100%;
-}
-
-.nextra-body-typesetting-article > * {
-  max-width: none !important;
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 4px;
-}
-
-/* Track */
-::-webkit-scrollbar-track {
-  background: var(--theme-color-page-offset);
-}
-.sub-heading {
-  font-size: 0.9rem;
-  color: var(--theme-color-content-offset);
-}
-
-/* Handle */
-::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--theme-color-primary) 64%, var(--theme-color-secondary));
-
-  border-radius: 30px;
-}
-
-/* Handle on hover */
-::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-color-content);
-}
-
-@media only screen and (max-width: 435px) {
-  body {
-    overflow-x: hidden;
-  }
-
-  h1 {
-    font-size: 1.8rem;
-  }
-  h4 {
-    font-size: 1.3rem;
-  }
-}
-
-.page-background {
-  background-color: var(--color-page-base);
-  background-image:
-    linear-gradient(var(--color-content-offset) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-content-offset) 1px, transparent 1px);
-  background-position: 0 0, 0 0;
-  background-repeat: repeat, repeat;
-  background-size: 96px 96px, 96px 96px;
-}

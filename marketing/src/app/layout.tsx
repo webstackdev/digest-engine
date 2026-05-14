@@ -18,10 +18,7 @@ export default async function RootLayout({
 }) {
   return (
     <html lang="en" dir="ltr" data-theme="light" suppressHydrationWarning>
-      <body
-        className="bg-page-base page-background"
-        suppressHydrationWarning
-      >
+      <body className="bg-page-base page-background" suppressHydrationWarning>
         <Header />
         {children}
         <Footer />

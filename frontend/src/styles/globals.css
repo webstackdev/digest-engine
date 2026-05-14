@@ -1,9 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@plugin "@tailwindcss/forms";
-@plugin "@tailwindcss/typography";
 @import "@digestengine/tailwind-config/index.css";
 @import "./radix.css";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
 
 @utility no-scrollbar {
   -ms-overflow-style: none;
