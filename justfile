@@ -5,6 +5,7 @@ backend_env := "if [ ! -f .env ]; then cp .env.example .env; fi"
 backend_venv := "uv sync --frozen"
 backend_python := ".venv/bin/python"
 backend_pants := "pants"
+backend_test_pants := "pants --process-execution-local-parallelism=4"
 backend_pants_targets := "::"
 backend_python_targets := "conftest.py manage.py content core digest_engine entities ingestion messaging newsletters notifications pipeline projects trends users tests"
 frontend_env := "if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi"
@@ -219,15 +220,15 @@ frontend-test-all:
 
 # Run the backend test suite
 backend-test:
-    @{{host_backend_test_env}} {{backend_pants}} test {{backend_pants_targets}}
+    @{{host_backend_test_env}} {{backend_test_pants}} test {{backend_pants_targets}}
 
 # Run backend tests with terminal coverage output
 backend-test-coverage:
-    @{{host_backend_test_env}} {{backend_pants}} test --use-coverage {{backend_pants_targets}}
+    @{{host_backend_test_env}} {{backend_test_pants}} test --use-coverage {{backend_pants_targets}}
 
 # Generate backend HTML coverage output
 backend-test-coverage-html:
-    @{{host_backend_test_env}} {{backend_pants}} --coverage-py-report='["console", "html"]' test --use-coverage {{backend_pants_targets}}
+    @{{host_backend_test_env}} {{backend_test_pants}} --coverage-py-report='["console", "html"]' test --use-coverage {{backend_pants_targets}}
 
 # Run the main backend and frontend test suites
 test: backend-test frontend-test marketing-test

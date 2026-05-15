@@ -714,6 +714,7 @@ name = "digest-engine"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "asgiref" },
     { name = "atproto" },
     { name = "autobahn" },
     { name = "automat" },
@@ -829,6 +830,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "asgiref", specifier = "==3.11.1" },
     { name = "atproto", specifier = "==0.0.65" },
     { name = "autobahn", specifier = "==25.12.2" },
     { name = "automat", specifier = "==25.4.16" },

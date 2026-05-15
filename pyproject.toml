@@ -3,6 +3,7 @@ name = "digest-engine"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+	"asgiref==3.11.1",
 	"atproto==0.0.65",
 	"autobahn==25.12.2",
 	"automat==25.4.16",

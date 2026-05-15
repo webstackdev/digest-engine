@@ -27,6 +27,7 @@ applyTo:
 - Add or update a colocated `*.test.ts` or `*.test.tsx` file in the same change when introducing or modifying a route handler, page, or component. If the file is only a framework passthrough, document why dedicated coverage is omitted.
 - Do not assert Tailwind or other presentational style classes in tests just to verify visual styling. Prefer behavior, accessible output, text, attributes, and state.
 - Class assertions are acceptable only when the class itself carries semantic or functional meaning, such as `hidden`, stateful visibility, or another class-based contract consumed by behavior rather than presentation.
+- Do not assert spacing, sizing, positioning, color, typography, radius, or shadow classes in tests. Avoid checks for classes such as `px-4`, `gap-4`, `top-4`, `inset-x-4`, `rounded-full`, or `shadow-card-strong` unless the class is part of a functional contract.
 - Prefer strong explicit types over loose `Record<string, unknown>` shapes when the contract is known.
 - Add JSDoc for exported utilities, route handlers, hooks, and non-trivial components when behavior is not obvious from the signature.
 - For React components, providers, and App Router pages, keep the component JSDoc to a short summary paragraph and put prop descriptions on the props type or interface fields. Avoid `@param` and `@returns` tags on React components because Storybook Autodocs flattens them into a single block.
