@@ -193,10 +193,3 @@ Start at the [Documentation Root](docs/README.md) to navigate to the specific se
 ## License
 
 This repository is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE).
-
-## TODO
-
-One caveat remains: Pants still emits non-failing dependency-inference warnings for direct asgiref imports in messaging/signals.py, notifications/signals.py, and notifications/tests/test_consumer.py, because asgiref is only present transitively today.
-
-Add asgiref as an explicit direct dependency if you want Pants runs to be warning-free.
-Run the full just test path next if you want me to finish validating the complete backend suite under Pants.
