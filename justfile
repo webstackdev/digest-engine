@@ -2,8 +2,8 @@ set dotenv-load := false
 
 compose := "docker compose"
 backend_env := "if [ ! -f .env ]; then cp .env.example .env; fi"
-backend_venv := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi"
-backend_python := ".venv/bin/python3"
+backend_venv := "uv sync --frozen"
+backend_python := ".venv/bin/python"
 backend_python_targets := "conftest.py manage.py content core digest_engine entities ingestion messaging newsletters notifications pipeline projects trends users tests"
 frontend_env := "if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi"
 pnpm_setup := "corepack enable && corepack prepare pnpm@11.1.0 --activate"
@@ -13,7 +13,7 @@ frontend_filter := "--filter=@digestengine/frontend"
 marketing_filter := "--filter=@digestengine/marketing"
 tailwind_filter := "--filter=@digestengine/tailwind-config"
 django_manage := "docker compose exec django python manage.py"
-host_backend_test_env := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi && set -a && . ./.env.test && set +a &&"
+host_backend_test_env := "uv sync --frozen && set -a && . ./.env.test && set +a &&"
 
 # -----------------------------------------------------------------------------
 # Setup
@@ -22,8 +22,12 @@ host_backend_test_env := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .v
 # Install backend Python dependencies and initialize the root env file
 backend-install:
     @{{backend_env}}
-    @{{backend_venv}}
-    @{{backend_python}} -m pip install -r requirements.txt
+    @uv python install 3.13
+    @uv sync --frozen
+
+# Bootstrap a fresh clone with uv, pnpm, env files, and git hooks
+bootstrap:
+    @bash scripts/bootstrap_dev.sh
 
 # Ensure pnpm is enabled, then install JavaScript workspace dependencies
 frontend-install:
@@ -47,7 +51,7 @@ install: backend-install frontend-install marketing-install install-hooks
 clean:
     @find . \
         \( -path './.git' -o -path './.venv' -o -path './node_modules' -o -path './frontend/node_modules' -o -path './marketing/node_modules' \) -prune -o \
-        -type d \( -name '__pycache__' -o -name '.pytest_cache' -o -name '.mypy_cache' -o -name '.ruff_cache' \) -exec rm -rf {} +
+        -type d \( -name '__pycache__' -o -name '.pytest_cache' -o -name '.ruff_cache' \) -exec rm -rf {} +
     @rm -rf .coverage .turbo htmlcov frontend/.next frontend/coverage frontend/storybook-static frontend/node_modules/.cache marketing/.next marketing/node_modules/.cache
 
 # -----------------------------------------------------------------------------
@@ -130,7 +134,7 @@ backend-lint:
     @{{backend_venv}}
     @{{backend_python}} -m ruff check {{backend_python_targets}}
     @{{backend_python}} -m djlint core/templates --check
-    @{{host_backend_test_env}} {{backend_python}} -m mypy --check-untyped-defs
+    @{{host_backend_test_env}} {{backend_python}} -m pyright
     @{{backend_python}} -m pre_commit run --all-files check-yaml
     @{{host_backend_test_env}} {{backend_python}} manage.py check
 

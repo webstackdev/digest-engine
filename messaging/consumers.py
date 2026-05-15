@@ -26,7 +26,9 @@ class ThreadConsumer(AsyncJsonWebsocketConsumer):
             await self.close(code=4401)
             return
 
-        thread_id = self.scope["url_route"]["kwargs"].get("thread_id")
+        url_route = self.scope.get("url_route")
+        kwargs = url_route.get("kwargs") if isinstance(url_route, dict) else None
+        thread_id = kwargs.get("thread_id") if isinstance(kwargs, dict) else None
         if thread_id is None:
             await self.close(code=4404)
             return

@@ -9,20 +9,24 @@ The system is organized into projects: each newsletter project has its own track
 ## Local Development
 
 > [!IMPORTANT]
-> To run this project locally, you will need Docker Compose installed to manage the backend services.
+> To run this project locally, you will need Docker Compose installed to manage the backend services. Fresh clones should also use `uv` for the backend environment and `just` for repo tasks.
+
+### Fresh Clone Bootstrap
+
+- Linux and macOS: run `./scripts/bootstrap_dev.sh` from the repo root. The script installs `uv` if it is missing, syncs the locked Python environment, installs the frontend workspaces, and sets up git hooks.
+- Windows: install `uv` and `just`, then run `just install` from the repo root.
 
 **Linux:**
 
 ```bash
+# After cloning
+./scripts/bootstrap_dev.sh
+
 # Terminal 1
-python3 -m venv .venv
-source .venv/bin/activate
-just install
 just build
 just dev
 
 # Terminal 2
-source .venv/bin/activate
 just seed
 xdg-open http://localhost:8080/
 ```
@@ -30,15 +34,14 @@ xdg-open http://localhost:8080/
 **macOS:**
 
 ```bash
+# After cloning
+./scripts/bootstrap_dev.sh
+
 # Terminal 1
-python3 -m venv .venv
-source .venv/bin/activate
-just install
 just build
 just dev
 
 # Terminal 2
-source .venv/bin/activate
 just seed
 open http://localhost:8080/
 ```
@@ -46,15 +49,15 @@ open http://localhost:8080/
 **Windows PowerShell:**
 
 ```powershell
-# Terminal 1
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
+# After cloning
+uv python install 3.13
 just install
+
+# Terminal 1
 just build
 just dev
 
 # Terminal 2
-.\.venv\Scripts\Activate.ps1
 just seed
 Start-Process http://localhost:8080/
 ```
@@ -95,7 +98,7 @@ kubectl port-forward svc/digest-engine-digest-engine-nginx 8080:80
 - `just k8s-build-minikube`: Builds the app image and loads it into Minikube.
 - `just k8s-install-minikube`: Installs or upgrades the local Helm release in Minikube.
 
-For full workflows and troubleshooting, see [docs/developer-guide/local-development.md](docs/developer-guide/local-development.md).
+For full workflows and troubleshooting, see [marketing/src/content/docs/developer-guide/local-development.md](marketing/src/content/docs/developer-guide/local-development.md).
 
 ## What This Does That Existing Tools Don't
 

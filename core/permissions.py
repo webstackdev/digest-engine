@@ -10,14 +10,12 @@ from projects.models import Project, ProjectMembership, ProjectRole
 
 if TYPE_CHECKING:
 
-    class PermissionBase:
+    class PermissionBase(permissions.BasePermission):
         """Typed shim for DRF permissions whose default methods return bool."""
 
-        def has_permission(self, request, view) -> bool:
-            pass
+        def has_permission(self, request, view) -> bool: ...
 
-        def has_object_permission(self, request, view, obj) -> bool:
-            pass
+        def has_object_permission(self, request, view, obj) -> bool: ...
 
 else:
     PermissionBase = permissions.BasePermission
