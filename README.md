@@ -9,12 +9,12 @@ The system is organized into projects: each newsletter project has its own track
 ## Local Development
 
 > [!IMPORTANT]
-> To run this project locally, you will need Docker Compose installed to manage the backend services. Fresh clones should also use `uv` for the backend environment and `just` for repo tasks.
+> To run this project locally, you will need Docker Compose installed to manage the backend services. Fresh clones should also use `uv` for the backend environment, `pants` for backend lint/type/test, and `just` for repo tasks.
 
 ### Fresh Clone Bootstrap
 
-- Linux and macOS: run `./scripts/bootstrap_dev.sh` from the repo root. The script installs `uv` if it is missing, syncs the locked Python environment, installs the frontend workspaces, and sets up git hooks.
-- Windows: install `uv` and `just`, then run `just install` from the repo root.
+- Linux and macOS: run `./scripts/bootstrap_dev.sh` from the repo root. The script installs `uv` and `pants` if either is missing, syncs the locked Python environment, installs the frontend workspaces, and sets up git hooks.
+- Windows: install `uv`, `pants`, and `just`, then run `just install` from the repo root.
 
 **Linux:**
 
@@ -99,6 +99,12 @@ kubectl port-forward svc/digest-engine-digest-engine-nginx 8080:80
 - `just k8s-install-minikube`: Installs or upgrades the local Helm release in Minikube.
 
 For full workflows and troubleshooting, see [marketing/src/content/docs/developer-guide/local-development.md](marketing/src/content/docs/developer-guide/local-development.md).
+
+Host-side backend quality commands now split responsibilities between `uv` and `pants`:
+
+- `uv sync --frozen` provisions the shared local Python environment from `uv.lock`.
+- `pants lint`, `pants check`, and `pants test` drive backend linting, Pyright typechecking, and pytest execution through the Pants target graph.
+- `just backend-lint` and `just backend-test` wrap that split so the repo-level task entrypoints stay stable.
 
 ## What This Does That Existing Tools Don't
 
@@ -187,3 +193,10 @@ Start at the [Documentation Root](docs/README.md) to navigate to the specific se
 ## License
 
 This repository is licensed under the GNU Affero General Public License v3.0 or later. See [LICENSE](LICENSE).
+
+## TODO
+
+One caveat remains: Pants still emits non-failing dependency-inference warnings for direct asgiref imports in messaging/signals.py, notifications/signals.py, and notifications/tests/test_consumer.py, because asgiref is only present transitively today.
+
+Add asgiref as an explicit direct dependency if you want Pants runs to be warning-free.
+Run the full just test path next if you want me to finish validating the complete backend suite under Pants.

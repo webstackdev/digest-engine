@@ -150,6 +150,7 @@ django_settings_module = "digest_engine.settings"
 
 [tool.coverage.run]
 branch = true
+relative_files = true
 source = ["content", "core", "digest_engine", "entities", "ingestion", "messaging", "newsletters", "notifications", "pipeline", "projects", "trends", "users"]
 omit = ["*/tests/*", "*/migrations/*"]
 

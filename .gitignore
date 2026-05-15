@@ -6,6 +6,7 @@ __pycache__/
 .ruff_cache/
 .turbo/
 .venv/
+.pants.d/
 
 *.py[cod]
 **/.turbo/
@@ -23,6 +24,7 @@ frontend/node_modules/
 frontend/out/
 
 htmlcov/
+dist/
 
 marketing/.next/
 marketing/coverage/

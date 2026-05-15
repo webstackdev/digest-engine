@@ -1,0 +1,53 @@
+[GLOBAL]
+pants_version = "2.30.2"
+backend_packages = [
+	"pants.backend.python",
+	"pants.backend.experimental.python.lint.ruff.check",
+	"pants.backend.experimental.python.typecheck.pyright",
+]
+
+[python]
+interpreter_constraints = ["==3.13.*"]
+enable_resolves = true
+
+[source]
+root_patterns = ["/"]
+
+[python.resolves]
+python-default = "3rdparty/python/default.lock"
+
+[coverage-py]
+config = "pyproject.toml"
+install_from_resolve = "python-default"
+requirements = ["//:python#coverage"]
+
+[pyright]
+version = "pyright@1.1.409"
+
+[pytest]
+install_from_resolve = "python-default"
+requirements = [
+	"//:python#pytest",
+	"//:python#pytest-django",
+	"//:python#pytest-mock",
+]
+
+[ruff]
+version = "0.13.0"
+
+[test]
+extra_env_vars = [
+	"ALLOWED_HOSTS",
+	"CELERY_BROKER_URL",
+	"CELERY_RESULT_BACKEND",
+	"DATABASE_URL",
+	"NEWSLETTER_API_INTERNAL_URL",
+	"NEWSLETTER_PUBLIC_URL",
+	"OLLAMA_URL",
+	"OPENROUTER_API_BASE",
+	"OPENROUTER_API_KEY",
+	"OPENROUTER_APP_NAME",
+	"REDDIT_CLIENT_ID",
+	"REDDIT_CLIENT_SECRET",
+	"REDDIT_USER_AGENT",
+]

@@ -14,8 +14,15 @@ When you run commands on your local OS (e.g., `just lint`, `just test`, `just fr
 - Django reads from `.env.test`.
 - `DATABASE_URL` defaults to `sqlite:///:memory:` for instantaneous migrations/tests.
 - No Redis or Qdrant is required for basic unit test stubs.
+- `uv` manages the shared local Python environment, while `pants` runs backend linting, Pyright typechecking, and pytest.
 
-Bootstrap a fresh clone with `./scripts/bootstrap_dev.sh` on Linux or macOS. On other platforms, install `uv` first and then run `just install` from the repo root.
+Bootstrap a fresh clone with `./scripts/bootstrap_dev.sh` on Linux or macOS. On other platforms, install `uv` and `pants` first and then run `just install` from the repo root.
+
+Backend command split:
+
+- `just backend-lint` runs `pants lint` for Ruff, `pants check` for Pyright, then keeps the existing template, YAML, and `manage.py check` validation steps.
+- `just backend-test` runs `pants test` with the `.env.test` variables forwarded into the hermetic test processes.
+- `just backend-test-coverage` runs `pants test --use-coverage` and writes coverage reports under `dist/coverage/python/`.
 
 ## Docker Track
 

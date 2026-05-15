@@ -9,6 +9,12 @@ if ! command -v uv >/dev/null 2>&1; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
+if ! command -v pants >/dev/null 2>&1; then
+  echo "Installing Pants..."
+  curl --proto '=https' --tlsv1.2 -fsSL https://static.pantsbuild.org/setup/get-pants.sh | bash
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
 if [ ! -f .env ]; then
   cp .env.example .env
 fi

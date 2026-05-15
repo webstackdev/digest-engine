@@ -4,6 +4,8 @@ compose := "docker compose"
 backend_env := "if [ ! -f .env ]; then cp .env.example .env; fi"
 backend_venv := "uv sync --frozen"
 backend_python := ".venv/bin/python"
+backend_pants := "pants"
+backend_pants_targets := "::"
 backend_python_targets := "conftest.py manage.py content core digest_engine entities ingestion messaging newsletters notifications pipeline projects trends users tests"
 frontend_env := "if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi"
 pnpm_setup := "corepack enable && corepack prepare pnpm@11.1.0 --activate"
@@ -22,6 +24,7 @@ host_backend_test_env := "uv sync --frozen && set -a && . ./.env.test && set +a 
 # Install backend Python dependencies and initialize the root env file
 backend-install:
     @{{backend_env}}
+    @command -v pants >/dev/null 2>&1 || { echo "Pants is required. Install it from https://www.pantsbuild.org/stable/docs/getting-started/installing-pants"; exit 1; }
     @uv python install 3.13
     @uv sync --frozen
 
@@ -132,9 +135,9 @@ frontend-typecheck:
 # Lint and validate the backend Python and template code
 backend-lint:
     @{{backend_venv}}
-    @{{backend_python}} -m ruff check {{backend_python_targets}}
+    @{{backend_pants}} lint {{backend_pants_targets}}
     @{{backend_python}} -m djlint core/templates --check
-    @{{host_backend_test_env}} {{backend_python}} -m pyright
+    @{{host_backend_test_env}} {{backend_pants}} check {{backend_pants_targets}}
     @{{backend_python}} -m pre_commit run --all-files check-yaml
     @{{host_backend_test_env}} {{backend_python}} manage.py check
 
@@ -216,18 +219,15 @@ frontend-test-all:
 
 # Run the backend test suite
 backend-test:
-    @{{host_backend_test_env}} {{backend_python}} -m pytest
+    @{{host_backend_test_env}} {{backend_pants}} test {{backend_pants_targets}}
 
 # Run backend tests with terminal coverage output
 backend-test-coverage:
-    @{{backend_venv}}
-    @{{backend_python}} -m coverage erase
-    @{{host_backend_test_env}} {{backend_python}} -m coverage run -m pytest
-    @{{backend_python}} -m coverage report -m
+    @{{host_backend_test_env}} {{backend_pants}} test --use-coverage {{backend_pants_targets}}
 
 # Generate backend HTML coverage output
-backend-test-coverage-html: backend-test-coverage
-    @{{backend_python}} -m coverage html
+backend-test-coverage-html:
+    @{{host_backend_test_env}} {{backend_pants}} --coverage-py-report='["console", "html"]' test --use-coverage {{backend_pants_targets}}
 
 # Run the main backend and frontend test suites
 test: backend-test frontend-test marketing-test
