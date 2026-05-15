@@ -2,7 +2,7 @@ import nextra from "nextra";
 
 // Set up Nextra with its configuration
 const withNextra = nextra({
-  contentDirBasePath: "/docs",
+  contentDirBasePath: "/",
 });
 
 // Export the final Next.js config with Nextra included
@@ -23,5 +23,4 @@ export default withNextra({
       { protocol: "https", hostname: "cdn.torqbit.com" },
     ],
   },
-  // ... Add regular Next.js options here
 });

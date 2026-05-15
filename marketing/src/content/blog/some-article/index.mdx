@@ -1,0 +1,21 @@
+export const metadata = {
+  title: "A Sample Blog Article",
+  description: "A starter post that proves the shared-root Nextra blog route can render colocated hero and preview imagery.",
+  publishedAt: "May 15, 2026",
+  asIndexPage: true,
+};
+
+# A Sample Blog Article
+
+This sample post exists to prove the shared-root layout. The article route loads MDX from `src/content/blog`, the blog index reads article metadata from the page map, and the blog route files pull in images that still live beside the article content.
+
+## Why this structure works
+
+- Each article lives inside its own folder.
+- The item route resolves `index.mdx` at `/blog/some-article`.
+- The root blog page can read article copy from the normalized Nextra page map.
+- The blog route files can still import hero and preview imagery from the article folder.
+
+## What to customize next
+
+Swap the solid SVGs for real editorial artwork, replace this copy with launch notes or product essays, and continue adding article folders under `src/content/blog` as the blog grows.

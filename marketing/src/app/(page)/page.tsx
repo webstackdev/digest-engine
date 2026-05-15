@@ -3,7 +3,7 @@
 import Clients from "@/components/HomePage/Clients";
 import Features from "@/components/HomePage/Features";
 import Hero from "@/components/HomePage/Hero";
-import Pricing from "@/components/HomePage/Pricing";
+import Pricing from "@/components/Pricing";
 import Problems from "@/components/HomePage/Problems";
 import { CTA } from "@/components/HomePage/CTA";
 import {

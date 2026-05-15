@@ -1,0 +1,19 @@
+{
+  "index": "Welcome",
+  "user-guide": {
+    "title": "User Guide",
+    "type": "page"
+  },
+  "developer-guide": {
+    "title": "Developer Guide",
+    "type": "page"
+  },
+  "admin-guide": {
+    "title": "Admin Guide",
+    "type": "page"
+  },
+  "reference": {
+    "title": "API Reference",
+    "type": "page"
+  }
+}

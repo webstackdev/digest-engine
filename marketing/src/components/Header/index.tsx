@@ -6,6 +6,7 @@ import { brand } from "@/lib/props";
 
 const navigationItems = [
   { href: "/features", label: "How It Works" },
+  { href: "/blog", label: "Blog" },
   { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },
   { href: "/signup", label: "Sign Up" },
@@ -20,7 +21,7 @@ export function Header() {
       as="header"
       id="marketing-nav"
       shadowClass="shadow-card-strong"
-      classes="fixed inset-x-0 top-2 z-50 flex items-center gap-6"
+      classes="fixed inset-x-0 top-2 z-50 flex justify-between items-center gap-6 px-3"
     >
       <Link
         href="/"
@@ -52,7 +53,7 @@ export function Header() {
 
         <Link
           href="/login"
-          className="rounded-full bg-accent hover:bg-accent-offset text-sm font-semibold text-primary-inverse no-underline transition-colors px-5 py-3"
+          className="rounded-full bg-accent hover:bg-accent-offset text-base sm:text-lg font-semibold text-primary-inverse no-underline transition-colors px-4 py-2"
         >
           Login
         </Link>

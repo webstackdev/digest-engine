@@ -1,19 +1,10 @@
 {
-  "index": "Welcome",
-  "user-guide": {
-    "title": "User Guide",
+  "docs": {
+    "title": "Documentation",
     "type": "page"
   },
-  "developer-guide": {
-    "title": "Developer Guide",
-    "type": "page"
-  },
-  "admin-guide": {
-    "title": "Admin Guide",
-    "type": "page"
-  },
-  "reference": {
-    "title": "API Reference",
+  "blog": {
+    "title": "Blog",
     "type": "page"
   }
 }
