@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState } from "react";
 import { Button } from "@/components/shared/button";
 import { cn } from "@/lib/utils";
@@ -145,13 +146,14 @@ const Pricing: React.FC<IPricingProps> = ({
                 </div>
 
                 <Button
+                  asChild
                   variant={plan.buttonVariant}
                   className={cn(
                     "mt-auto h-12 w-full rounded-full border-transparent text-base font-semibold transition-colors",
                     buttonClass,
                   )}
                 >
-                  {plan.buttonLabel}
+                  <Link href="/signup">{plan.buttonLabel}</Link>
                 </Button>
               </div>
             );

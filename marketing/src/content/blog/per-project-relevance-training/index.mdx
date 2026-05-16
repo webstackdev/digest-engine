@@ -1,0 +1,85 @@
+export const metadata = {
+  title: "Per-project relevance training",
+  description: "An outline for a non-technical article explaining how Digest Engine learns each project's editorial taste through simple feedback from marketers and newsletter authors.",
+  publishedAt: "May 15, 2026",
+  asIndexPage: true,
+};
+# Per-project relevance training
+
+## Working angle
+
+- Core promise: explain that Digest Engine gets better at picking relevant material as the editor uses it, without requiring complicated setup or prompt-writing.
+- Audience lens: marketers and newsletter authors who want the system to reflect their judgment, not a generic idea of what is popular.
+- Tone: practical, user-friendly, and empowering. This should feel like a feature that adapts to the reader, not one they have to manage constantly.
+- Suggested headline direction: *A curation model that remembers what you liked last week.*
+
+## 1. Open with the real frustration
+
+- Start with the mismatch readers already know: most content tools keep serving a mix of obvious stories, loosely related stories, and outright junk.
+- Explain that even strong discovery tools often feel generic because they do not truly learn one editor’s definition of relevance.
+- Frame the problem in editorial terms: what counts as “worth covering” is different for every newsletter.
+
+## 2. Define per-project relevance training in plain language
+
+- Explain that each Digest Engine project gradually learns what belongs in that specific newsletter.
+- Make it simple: when the editor signals “more like this” or “less like this,” the system changes what rises in the shortlist next time.
+- Clarify that this learning is scoped to one project, so different newsletters can have different tastes even inside the same organization.
+- Avoid technical phrasing like centroids, embeddings, or retraining in the main outline.
+
+## 3. Explain how the feedback loop works
+
+- Introduce the reader-facing mechanism: thumbs up and thumbs down on content.
+- Emphasize how lightweight this is: no prompt engineering, no long configuration forms, no need to “teach” the system in a complicated way.
+- Show that feedback is a natural extension of the editorial process: the same judgment the writer is already making becomes signal for the next issue.
+
+## 4. Show what changes over time
+
+- Explain that the shortlist gets sharper after a few rounds of use.
+- Mention that weak-fit content appears less often, while the kinds of stories the editor consistently values rise faster.
+- Make this concrete: after a week or two, the feed should feel more like an editorial assistant and less like a generic discovery engine.
+- This section should highlight the cumulative benefit of steady use.
+
+## 5. Give a realistic example
+
+- Walk through a simple example relevant to marketers or newsletter authors.
+- Example shape: two newsletters both cover "AI," but one cares about enterprise buying signals and the other cares about model releases and research.
+- Show how the same incoming story can be more relevant to one project than the other.
+- Use that contrast to explain why project-specific learning matters.
+
+## 6. Explain why this matters for marketers and newsletter authors specifically
+
+- Marketers often need the tool to understand what is useful for their audience, not just what is broadly discussed.
+- Newsletter authors need relevance to become more precise over time so they can spend less energy filtering and more energy deciding what to do with the best material.
+- Emphasize that the product is learning editorial preference, not just topic keywords.
+
+## 7. Address the likely objection
+
+- Question to address: "Do I need to constantly train this thing for it to work?"
+- Answer: no. You start with a reference set and then improve it through normal editorial feedback.
+- Explain that routine use is enough to refine the shortlist over time.
+- Keep the tone reassuring and practical.
+
+## 8. Make the project-isolation point explicit
+
+- Explain that every project has its own relevance model.
+- This matters because one team’s idea of a perfect source list may be another team’s noise.
+- Use this section to reinforce that Digest Engine is not trying to force one global content taste across every newsletter.
+
+## 9. Connect the feature to trust and explainability
+
+- Explain that the system is not just guessing blindly. There is a visible reason why certain content rises.
+- In user-facing language, point out that the editor can understand that the ranking is shaped by reference content and past feedback.
+- Keep this simple and confidence-building rather than technical.
+
+## 10. Close with the takeaway
+
+- Re-state the practical benefit: the more a reader uses Digest Engine, the more the shortlist starts to reflect that project’s editorial instincts.
+- Tie this back to outcomes: less filtering, better picks, faster issue planning.
+- End with a bridge to adjacent features like authority-aware ranking or draft assembly.
+
+## Notes to preserve from source material
+
+- The key source idea to preserve is that feedback changes what the system sees as a good match over time.
+- The promise of "no prompt engineering, just vote" is strong and should remain in some form.
+- The project-specific isolation is an important differentiator and should stay prominent.
+- The final article should translate explainability into user language rather than low-level relevance math.
