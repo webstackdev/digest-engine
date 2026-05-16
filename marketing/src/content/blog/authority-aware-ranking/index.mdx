@@ -1,76 +1,103 @@
 export const metadata = {
   title: "Authority-aware ranking",
-  description: "An outline for a non-technical article explaining how authority-aware ranking helps marketers and newsletter authors find better sources.",
+  description: "Why authority-aware ranking helps marketers and newsletter authors find better sources than popularity-based discovery tools.",
   publishedAt: "May 15, 2026",
   asIndexPage: true,
 };
 
 # Authority-aware ranking
 
-## Working angle
+Most discovery tools are built to answer the wrong question.
 
-- Core promise: help readers understand why "authority" is more useful than raw popularity when they are choosing what to cover.
-- Audience lens: marketers and newsletter authors who need better judgment, not more noise.
-- Tone: practical, editorial, and confident without sounding technical.
-- Suggested headline direction: *Trust the editors you already trust.*
+They are good at telling you what is loud, what is getting clicked, or what is already ricocheting around every social feed in your category. That can be useful if your job is to monitor attention. It is much less useful if your job is to publish something worth opening.
 
-## 1. Open with the real problem
+Marketers and newsletter authors rarely struggle because they cannot find enough content. They struggle because they have too much of the wrong kind of content. A story can be widely shared and still be a poor fit for your issue. It can be noisy, shallow, or already exhausted by the time you get to it.
 
-- Start with the everyday frustration: most discovery tools reward whatever is loud, viral, or already everywhere.
-- Frame the cost in editorial terms: readers do not care that a story was popular, they care that it was worth their time.
-- Set up the contrast: popularity measures attention, but authority measures who credible people in your niche are paying attention to.
+That is the gap authority-aware ranking is meant to close.
 
-## 2. Define authority-aware ranking in plain English
+## Popularity is not the same thing as authority
 
-- Explain that Digest Engine looks at the people, companies, and topics trusted editors keep linking to.
-- Clarify that this is not a generic influencer score or a follower count.
-- Emphasize that the system is project-scoped, so authority is based on your niche, not the whole internet.
-- Keep the explanation non-technical: the product learns who consistently earns attention from the newsletters and sources you already respect.
+Popularity tells you where attention is piling up. Authority tells you who credible people in your niche are actually paying attention to.
 
-## 3. Explain where the signal comes from
+That difference matters.
 
-- Introduce the key differentiator: you can forward peer newsletters into Digest Engine using a dedicated intake address.
-- Explain that Digest Engine parses those newsletters and looks at who is being cited, linked to, and mentioned repeatedly.
-- Make the point that this is valuable because peer newsletters reflect actual editorial judgment, not algorithmic hype.
-- Avoid implementation detail beyond the user-facing idea that repeated trusted mentions strengthen authority over time.
+If three respected editors keep linking to the same researcher, startup, or product team, that is a stronger signal than one huge account posting a hot take that gets thousands of reactions in a day. The first pattern suggests durable relevance. The second may just reflect distribution.
 
-## 4. Show what changes for the reader in day-to-day work
+Digest Engine is built to treat those two things differently. Instead of assuming that the most visible source deserves the most weight, it looks for people, companies, and themes that keep earning attention from sources you already trust.
 
-- Cover how authority-aware ranking helps surface quieter experts before they become mainstream.
-- Explain how it helps readers avoid overweighting loud accounts that generate attention without offering substance.
-- Show how it improves prioritization: when several strong sources keep pointing to the same person, company, or theme, that signal should affect what rises in the shortlist.
-- Mention practical outcomes such as seeing that multiple trusted editors have covered a source recently, or using authority as an extra filter when reviewing content.
+This is not a generic influencer score, and it is not a follower-count contest. It is project-scoped. The authority signals that matter for a B2B SaaS newsletter should not be the same signals that matter for a cybersecurity round-up or a climate-tech briefing. Digest Engine learns authority inside the editorial lane you actually work in.
 
-## 5. Give a concrete editorial scenario
+## What authority-aware ranking means in plain English
 
-- Walk through a simple example relevant to marketers or newsletter writers.
-- Example shape: two stories arrive on the same day, one from a loud social account and one tied to a company several trusted niche newsletters have referenced lately.
-- Show how authority-aware ranking helps the editor spend time on the second story first.
-- End the scenario by tying it back to reader trust: better prioritization leads to better issues, not just a cleaner queue.
+Authority-aware ranking means Digest Engine pays attention to who keeps showing up in the sources that already pass your editorial bar.
 
-## 6. Explain why this matters specifically for marketers and newsletter authors
+If a person, company, or topic is repeatedly mentioned in strong, relevant material, its authority signal strengthens over time. When new content comes in that references that entity, Digest Engine can use that context as part of the ranking process.
 
-- Marketers need to spot which voices are shaping the conversation before everyone else repeats the same talking points.
-- Newsletter authors need a better way to decide what deserves limited space in an issue.
-- Emphasize that the feature supports stronger editorial judgment, not automated decision-making.
-- Position Digest Engine as a tool that helps readers make sharper calls faster.
+The important point is that this helps the system make a better guess about what deserves your attention first. It does not replace editorial judgment. It gives your judgment better raw material.
 
-## 7. Address the likely objection
+In practice, that means a quieter expert can rise in your queue because trusted editors keep citing them, even if they are not dominating the broader social conversation. It also means a loud account with weak substance does not automatically win just because it is easier for generic tools to detect volume than credibility.
 
-- Question to address: "Does this just reinforce the same established names?"
-- Answer: no, because the goal is not to freeze the ranking around famous people, but to notice who is being endorsed by trusted editors right now.
-- Mention that authority can shift over time, which helps rising voices surface when credible sources begin paying attention to them.
-- Keep this section short and reassuring.
+## Where the signal comes from
 
-## 8. Close with the practical takeaway
+One of the most useful parts of Digest Engine is that peer newsletters can be ingested as a first-class source.
 
-- Re-state the core benefit: authority-aware ranking helps readers find signal earlier and with more confidence.
-- Tie back to the editorial job: less time spent sorting hype, more time spent choosing stories that actually matter.
-- End with a forward-looking bridge to adjacent features, such as unified entity profiles or competitive intelligence.
+You can forward newsletters into the system using a dedicated intake address. From there, Digest Engine can parse what those editors are linking to, citing, and mentioning repeatedly. Over time, those repeated trusted mentions strengthen authority signals around the people and companies that keep earning real editorial attention.
 
-## Notes to preserve from source material
+That matters because peer newsletters are not just another feed. They are an expression of judgment. When an editor decides a source is worth including in an issue, that choice carries more meaning than a random spike in platform engagement.
 
-- Digest Engine can ingest peer newsletters as a first-class source.
-- The system uses repeated trusted mentions to strengthen authority signals over time.
-- Quiet experts should not lose to loud accounts just because they generate more noise.
-- Useful user-facing outcomes include filtering by authority and spotting rising voices early.
+This is what makes authority-aware ranking especially useful for newsletter workflows. You are not just asking, "What is trending?" You are asking, "Who are the trusted editors in my space already treating as worth readers' time?"
+
+## What changes in day-to-day editorial work
+
+The benefit is not abstract. It changes how you sort, scan, and prioritize your queue.
+
+Instead of treating every incoming story as if it starts from zero, you get more context around whether the entities inside it have been building credibility in your niche. That can help you:
+
+- spot quieter experts before they become obvious to everyone else
+- avoid overweighting loud but low-substance sources
+- prioritize stories connected to people or companies that trusted editors keep returning to
+- use authority as another filter when several possible stories are competing for limited space
+
+This does not mean authority becomes the only thing that matters. Relevance still matters. Timing still matters. Novelty still matters. But authority gives you an additional layer of judgment that most discovery tools simply do not provide.
+
+For editors, that usually translates into one practical improvement: less time wasted on hype, and more time spent on stories with a stronger chance of holding up once you actually read them.
+
+## A simple editorial example
+
+Imagine two stories land in your shortlist on the same morning.
+
+The first comes from a loud social account that is excellent at generating reactions. It looks urgent because everyone is quoting it, but the substance is thin and the angle is already starting to feel recycled.
+
+The second is tied to a company that has quietly appeared in several niche newsletters you respect over the past two weeks. Different editors have linked to its work for different reasons. Nobody is turning it into a viral spectacle, but the signal is consistent.
+
+A popularity-based system will often push the first story higher because the volume is obvious. An authority-aware system gives the second story a fairer chance because it understands that repeated trusted mentions mean something.
+
+That does not force you to cover the second story. It helps you spend your attention in the right order. And that usually leads to a better issue: one that feels sharper, earlier, and more considered.
+
+## Why this matters for marketers and newsletter authors
+
+If you publish for a specific audience, you are not trying to win the whole internet. You are trying to earn trust from a narrower group of readers who expect discernment.
+
+Marketers need to spot which voices are shaping the conversation before the same talking points become category wallpaper. Newsletter authors need a better way to decide what deserves precious space in the next issue. Both jobs depend on judgment, and judgment improves when the signal reflects the standards of your niche instead of the behavior of the entire web.
+
+That is why authority-aware ranking is useful. It supports sharper calls without pretending to automate the whole editorial process. You still decide what matters. Digest Engine just helps the right candidates reach your attention sooner.
+
+## Does this only reinforce the usual names?
+
+It is a fair question, and the answer is no.
+
+The point is not to freeze your shortlist around whoever is already famous. The point is to notice who trusted editors are endorsing now.
+
+Authority can shift. A rising analyst, a founder with a strong original perspective, or a smaller company doing important work can gain ground as credible sources start mentioning them repeatedly. In that way, authority-aware ranking can actually help surface emerging voices earlier than popularity-driven systems do.
+
+It rewards earned attention, not just existing scale.
+
+## The practical takeaway
+
+Authority-aware ranking helps you find signal earlier and with more confidence.
+
+Instead of sorting your queue based mostly on volume, it gives extra weight to the people and companies that keep showing up in the sources you already trust. That leads to better prioritization, stronger editorial choices, and less time burned on hype that will not survive a second read.
+
+For marketers and newsletter authors, that is the real value: not more content, but better judgment at the moment of selection.
+
+And once you start seeing which names keep earning attention from trusted editors, the next natural step is to understand them in more depth. That is where adjacent features like unified entity profiles and competitive intelligence become even more useful.

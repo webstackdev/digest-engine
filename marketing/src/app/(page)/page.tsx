@@ -1,6 +1,7 @@
 "use client";
 
 import Clients from "@/components/HomePage/Clients";
+import FAQ from "@/components/HomePage/FAQ";
 import Features from "@/components/HomePage/Features";
 import Hero from "@/components/HomePage/Hero";
 import Solution from "@/components/HomePage/Solution";
@@ -10,6 +11,7 @@ import { CTA } from "@/components/HomePage/CTA";
 import {
   ClientsProps,
   FeatureItems,
+  HomePageFaqProps,
   HeroProps,
   PricingProps,
   ProblemsProps,
@@ -23,8 +25,9 @@ export default function Home() {
       <Problems {...ProblemsProps} />
       <Solution {...SolutionProps} />
       <Features {...FeatureItems} />
-      <Pricing {...PricingProps} />
       <Clients {...ClientsProps} />
+      <Pricing {...PricingProps} />
+      <FAQ {...HomePageFaqProps} />
       <CTA />
     </main>
   );

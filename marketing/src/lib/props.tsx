@@ -14,6 +14,8 @@ import solutionImage04 from "@/assets/images/solutions-04.jpg";
 
 import {
   IFeaturesProps,
+  IClientsProps,
+  IHomePageFaqProps,
   IPricingProps,
   IPricingPageProps,
   IHeroProps,
@@ -97,20 +99,39 @@ export const SolutionProps: ISolutionProps = {
   ],
 };
 
-export const ClientsProps = {
-  title: "Monitors the channels that actually move your issue",
-  description: "Use one project-scoped pipeline across open-web sources, peer newsletters, and the models you already trust.",
+export const ClientsProps: IClientsProps = {
+  title: "Plug into the feeds you already trust.",
+  description:
+    "Each source plugin implements a common interface (`fetch_new_content`, `get_entity_profile`, `health_check`) and handles its own auth and rate limiting. The core system just calls the interface, which means adding a new source is a contained piece of work, not a refactor.",
+  badge: "Six sources today. Plugin architecture for the rest.",
   items: [
-    { label: "RSS", eyebrow: "Source" },
-    { label: "Reddit", eyebrow: "Signal" },
-    { label: "Bluesky", eyebrow: "Source" },
-    { label: "Mastodon", eyebrow: "Source" },
-    { label: "LinkedIn", eyebrow: "Source" },
-    { label: "Newsletters", eyebrow: "Authority" },
-    { label: "Qdrant", eyebrow: "Vector" },
-    { label: "LangGraph", eyebrow: "Workflow" },
-    { label: "OpenRouter", eyebrow: "Gateway" },
-    { label: "Ollama", eyebrow: "Self-hosted" },
+    {
+      label: "RSS",
+      description:
+        "Tracks blogs and sites of every entity you follow. Still the backbone of the open web.",
+    },
+    {
+      label: "Reddit",
+      description:
+        "Trend detection and community sentiment across subreddits you choose.",
+    },
+    {
+      label: "Resend Inbound (Email)",
+      description:
+        "Newsletter ingestion. Forward peer newsletters to a project address, get authority signals back.",
+    },
+    {
+      label: "Bluesky",
+      description: "Entity content tracking via the open AT Protocol.",
+    },
+    {
+      label: "Mastodon",
+      description: "Entity content tracking via ActivityPub.",
+    },
+    {
+      label: "LinkedIn",
+      description: "Entity enrichment and article discovery.",
+    },
   ],
 };
 
@@ -216,6 +237,125 @@ export const PricingProps: IPricingProps = {
       buttonLabel: "Contact Sales",
       buttonVariant: "outline",
       isPopular: false,
+    },
+  ],
+};
+
+export const HomePageFaqProps: IHomePageFaqProps = {
+  eyebrow: "FAQ",
+  title: "Questions teams ask before they trust this with their workflow",
+  description:
+    "Straight answers about models, hosting, hallucinations, plugins, and what the system is actually doing under the hood.",
+  items: [
+    {
+      question: "Is this just ChatGPT wrapped in a UI?",
+      answer: (
+        <>
+          <p>
+            No. The core curation logic is deterministic vector similarity against your project's reference corpus. LLMs are only used to break ties in an explicit confidence band, to summarize, to extract entities, and to detect themes, each as a swappable, model-agnostic skill.
+          </p>
+          <p className="mt-3">
+            If every LLM API went dark tomorrow, you'd still get ranked shortlists.
+          </p>
+        </>
+      ),
+    },
+    {
+      question: "How is this different from Feedly / UpContent / ContentStudio?",
+      answer: (
+        <>
+          <p>Three things they don't do:</p>
+          <ol className="mt-3 list-decimal space-y-3 pl-5">
+            <li>
+              <strong>Authority scoring from peer newsletters.</strong> We ingest other newsletters as a first-class source and build a trust graph from who real editors link to.
+            </li>
+            <li>
+              <strong>Per-project taste training via explicit feedback.</strong> Your thumbs-up/thumbs-down drifts a per-project reference centroid. Your shortlist genuinely changes over time. Theirs doesn't.
+            </li>
+            <li>
+              <strong>A unified entity model.</strong> One person, all their channels, one profile, one authority score.
+            </li>
+          </ol>
+          <p className="mt-3">
+            We also retain content indefinitely for long-term trend analysis, where most tools time out after a week.
+          </p>
+        </>
+      ),
+    },
+    {
+      question: "Do I need to know what a vector database is?",
+      answer:
+        "No. You connect sources, flag reference articles, thumbs-up things you like. The vector database, the embedding pipeline, and the LangGraph orchestration are implementation details. The UI is built for editors, not ML engineers.",
+    },
+    {
+      question: "What about hallucinations?",
+      answer: (
+        <>
+          <p>
+            Summarization is grounded in the article text and the article text only. Relevance scoring is deterministic vector math, with LLMs only used in an explicit ambiguity band, and every score traces back to specific reference articles you flagged.
+          </p>
+          <p className="mt-3">
+            Entity extraction surfaces low-confidence matches to a human review queue rather than silently writing bad data. Every skill invocation is logged with model, latency, and confidence.
+          </p>
+        </>
+      ),
+    },
+    {
+      question: "Which LLM do you use?",
+      answer:
+        "Whichever you want. Skills are model-agnostic and tested across Claude, GPT, Qwen, Llama, DeepSeek, Gemma, and Command R+. We recommend specific models per skill based on quality and cost, but you can override per skill. In production you can run everything locally via Ollama for zero marginal LLM cost.",
+    },
+    {
+      question: "Can I self-host?",
+      answer:
+        "Yes. Docker Compose for the MVP path, Kubernetes-ready (Helm + ArgoCD) for scale. The license is AGPLv3.",
+    },
+    {
+      question: "How much does it cost to run in development?",
+      answer:
+        "If you use OpenRouter as a unified gateway across the recommended dev models, you'll spend roughly $2.30/month for a single active project. Self-hosted with Ollama, the marginal LLM cost is $0.",
+    },
+    {
+      question: "Does my content get sent to OpenAI / Anthropic / etc.?",
+      answer:
+        "Only if you configure it to. The default development setup uses OpenRouter. The default production-recommended setup uses Ollama on your own infrastructure. No data flows to a third party unless you point a skill at a third-party model.",
+    },
+    {
+      question: "I don't run a newsletter. I just want to curate a Slack channel / internal digest / research feed. Does this work?",
+      answer:
+        "Yes. A \"newsletter project\" is just a project-scoped curation pipeline. The draft assembly step is optional. You can use Digest Engine as a pure ranked-shortlist tool and ignore the email side entirely.",
+    },
+    {
+      question: "How does this handle paywalled or private content?",
+      answer:
+        "Source plugins handle their own auth, including authenticated RSS, OAuth flows (Bluesky, LinkedIn, Mastodon), and email-based ingestion (newsletters). Anything you can read, the system can read on your behalf. Anything you can't, it can't.",
+    },
+    {
+      question: "How do I add a new source?",
+      answer: (
+        <>
+          <p>
+            Implement three methods on the source plugin interface: <code>fetch_new_content</code>, <code>get_entity_profile</code>, <code>health_check</code>.
+          </p>
+          <p className="mt-3">
+            The core system handles scheduling, retry, error routing, and Qdrant writes. Adding a source is bounded work, not a refactor.
+          </p>
+        </>
+      ),
+    },
+    {
+      question: "What if a skill fails mid-pipeline?",
+      answer:
+        "The pipeline is a LangGraph state machine with checkpoints. A failed step records its failure status, the graph either gracefully degrades or routes the item to the review queue. Nothing silently corrupts. Re-runs resume from the failed checkpoint.",
+    },
+    {
+      question: "Is there a hosted version?",
+      answer:
+        "Soon. Join the waitlist if you want to hear when hosted access opens.",
+    },
+    {
+      question: "License?",
+      answer: "GNU AGPLv3 or later. Source is on GitHub.",
     },
   ],
 };

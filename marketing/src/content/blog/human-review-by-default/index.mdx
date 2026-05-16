@@ -1,90 +1,104 @@
 export const metadata = {
   title: "Human review by default",
-  description: "An outline for a non-technical article explaining how Digest Engine routes low-confidence cases to human review instead of silently making bad editorial decisions.",
+  description: "How Digest Engine routes low-confidence cases to human review instead of silently making bad editorial decisions.",
   publishedAt: "May 15, 2026",
   asIndexPage: true,
 };
 
 # Human review by default
 
-## Working angle
+The biggest risk with AI in publishing is not that it makes mistakes.
 
-- Core promise: show that Digest Engine is built to escalate uncertainty to a human instead of pretending the AI is always right.
-- Audience lens: marketers and newsletter authors who want help from AI, but do not want embarrassing mistakes or invisible failures.
-- Tone: reassuring, practical, and trust-building. This article should make the reader feel safer using the product.
-- Suggested headline direction: *Nothing ships without you reading it.*
+Every workflow makes mistakes. The real risk is when a system makes them confidently, invisibly, and too early for you to catch them.
 
-## 1. Open with the trust problem
+That is how a weak recommendation slips into a shortlist, how a company name gets matched to the wrong thing, or how a forwarded newsletter gets parsed badly and quietly distorts the rest of the workflow. The problem is not just that the system was wrong. The problem is that nobody was asked to look.
 
-- Start with the fear many readers already have about AI in publishing: the worst mistakes often happen when a system acts confident while being wrong.
-- Frame the specific editorial risk: misclassified content, bad entity matches, broken newsletter parsing, or weak recommendations can quietly damage the quality of an issue.
-- Set up the core principle: Digest Engine is designed to surface uncertainty instead of hiding it.
+Digest Engine is built around a different principle: when the system is uncertain, it should say so.
 
-## 2. Define "human review by default" in plain language
+## What "human review by default" means
 
-- Explain that when Digest Engine is not confident, it does not silently push the item through and it does not quietly discard it.
-- Instead, it sends the item to a review queue where the editor can confirm, reject, or correct it.
-- Keep the explanation simple: the system knows when to ask for help.
-- Emphasize that this is a product design choice, not an afterthought.
+Human review by default means Digest Engine does not silently push uncertain cases through the pipeline, and it does not quietly drop them either.
 
-## 3. Explain what kinds of things go to review
+Instead, those items are routed to a review queue where an editor can confirm, reject, or correct them.
 
-- Low-confidence classifications.
-- Borderline relevance decisions.
-- Ambiguous entity matches.
-- Unclear or unparseable newsletter inputs.
-- Possibly duplicated content that needs a human call.
-- Make each example sound familiar and editorial, not technical.
+That sounds simple, but it reflects an important product decision. The system is designed to ask for help at the right moments instead of pretending everything can be resolved automatically. In an editorial workflow, that is often the difference between a useful assistant and an unreliable one.
 
-## 4. Show why this matters for newsletter and marketing workflows
+The goal is not to force editors to inspect every step. The goal is to surface the few cases where judgment actually matters.
 
-- Marketers and newsletter authors are not just collecting data; they are publishing judgment.
-- A silent mistake can lead to irrelevant stories, wrong attributions, or low-quality sections making it into the issue.
-- Human review protects the editorial bar by making the uncertain cases visible before they become output.
-- Tie this section to trust in the final issue, not just trust in the software.
+## What kinds of things go to review
 
-## 5. Walk through a realistic scenario
+Review is most valuable at the edges, where ambiguity is real.
 
-- Example shape: a forwarded newsletter is parsed incorrectly, or an article mentions a company name that could refer to two different things.
-- Show what many AI tools would do: guess, proceed, and never tell you there was ambiguity.
-- Show what Digest Engine does instead: flag the item, route it to review, and let the editor make the call.
-- End the example by highlighting that this saves the editor from cleaning up hidden errors later.
+That can include low-confidence classifications, borderline relevance decisions, ambiguous entity matches, unclear newsletter inputs, or possible duplicates that need a human call.
 
-## 6. Explain the feedback loop in user-friendly terms
+For example, when the system sees a proper noun it does not confidently recognize, it can create an entity candidate for human triage rather than auto-promoting it into your tracked entity set. In the review flow, you can approve it, reject it, or merge it into something you already track.
 
-- When the editor confirms, rejects, or corrects something, that action becomes useful signal for future runs.
-- Present this simply: every review makes the system more aligned with the project over time.
-- Keep the focus on practical improvement rather than training mechanics.
-- Position the review queue as part of how the product learns responsibly.
+That is a much safer pattern than letting the system make a hidden guess that then affects authority signals, ranking, or draft assembly downstream.
 
-## 7. Contrast this with typical AI automation
+## Why this matters in editorial work
 
-- Many tools optimize for appearing fast and seamless, even if that means burying uncertain cases.
-- Digest Engine optimizes for reliability in an editorial workflow, which means making ambiguity visible.
-- Explain that this is slower in the right places and faster overall because it prevents downstream cleanup.
+Marketers and newsletter authors are not just moving data through a pipe. They are publishing judgment.
 
-## 8. Expand on the operational confidence angle
+A silent mistake can change what gets prioritized, how a source is interpreted, or which ideas make it into a draft. It can create irrelevant recommendations, incorrect attributions, or sections that feel off without immediately revealing why.
 
-- Mention that review is not just about content quality. It is also about being able to see what happened when something goes wrong.
-- You can describe this in user-facing language: the system is auditable, visible, and correctable.
-- Keep technical logging/checkpoint details out of the main body unless they are translated into simple benefits like "you can see what happened" or "you can retry the stuck step without starting over."
+Human review protects the editorial bar by making uncertainty visible before it becomes output.
 
-## 9. Address the likely objection
+That matters not only for trust in the software, but for trust in the issue itself. Readers do not care whether an internal step failed elegantly. They care whether what you published was thoughtful, accurate, and worth their attention.
 
-- Question to address: "Doesn't review just create more work?"
-- Answer: only for the cases that actually need judgment.
-- Explain that the goal is not to force editors to check everything, but to pull forward the uncertain edge cases so they do not cause bigger problems later.
-- Keep this section focused on time saved and confidence gained.
+## A realistic example
 
-## 10. Close with the takeaway
+Imagine a forwarded newsletter comes into the system with messy formatting, broken spacing, or ambiguous links. Many AI-heavy products would simply guess at the structure, continue processing, and never tell you there was a problem.
 
-- Re-state the practical benefit: Digest Engine helps automate the busywork while keeping humans in charge of the decisions that matter.
-- Tie this back to reader trust and editorial quality.
-- End with a bridge to related features like relevance training, authority-aware ranking, or composable AI skills.
+Or imagine an article mentions a company name that could refer to two different organizations. A generic system might choose one, attach the wrong identity, and move on.
 
-## Notes to preserve from source material
+Digest Engine takes a different path. When the signal is weak or ambiguous, it can flag the item and route it to review. The editor can then decide what the content actually means before the mistake spreads deeper into the workflow.
 
-- Low-confidence classifications, ambiguous entity matches, and unparseable newsletters are strong concrete examples and should remain.
-- The core phrase to preserve is that uncertain items are routed to a review queue rather than silently dropped or silently promoted.
-- The final article can lightly mention explainability and retryability, but those ideas should be translated into editorial benefits rather than implementation detail.
-- The system learning from review decisions is worth keeping as part of the closing value story.
+That saves time in the place that matters most: before hidden errors become cleanup work.
+
+## Review is also how the system gets better
+
+The review queue is not only a safety net. It is also part of how the project gets more aligned over time.
+
+When you approve an entity candidate, dismiss something irrelevant, or give clear positive or negative feedback on content, that action becomes a durable signal attached to the project. Over time, those decisions help shape the system's sense of what belongs, what does not, and where the boundaries of the project really are.
+
+You do not need to think about this as "training" in a technical sense. The practical takeaway is simpler: every review helps the system make better calls on future runs.
+
+That makes human review feel less like rework and more like responsible tuning.
+
+## Why this is better than seamless automation
+
+Many AI tools optimize for feeling fast and frictionless. They want the workflow to look seamless, even if that means burying uncertainty and hoping the user never notices.
+
+Digest Engine makes a different tradeoff. It is willing to be slower in the right places so the workflow is more reliable overall.
+
+That usually ends up faster where it counts. Editors spend less time untangling downstream confusion because the uncertain edge cases were pulled forward instead of hidden.
+
+In a publishing workflow, that is the right kind of speed: less cleanup, fewer surprises, and more confidence that the issue is built on solid decisions.
+
+## Visibility matters too
+
+There is another benefit here that is easy to underestimate. Review makes the workflow more visible.
+
+When something goes wrong, you can see that it happened. You can inspect the questionable step, correct it, and move on. The system is more auditable, more understandable, and more correctable than a workflow that simply outputs a result and hides all its uncertainty.
+
+For editors, that translates into a simple feeling: you are not trapped inside the machine's guess.
+
+## Doesn't this just create more work?
+
+Only for the cases that actually need judgment.
+
+That is the whole point. Human review is not there to make you re-check everything. It is there to isolate the ambiguous cases so they do not turn into bigger problems later.
+
+In practice, that often saves time. A quick decision in a review queue is usually much cheaper than discovering a hidden mistake after it has already distorted rankings, entity tracking, or a draft section.
+
+The work does not disappear. It just shows up where it can still be handled cleanly.
+
+## The takeaway
+
+Digest Engine automates the busywork while keeping humans in charge of the decisions that matter.
+
+By routing uncertain items to a review queue instead of silently promoting or discarding them, the product protects editorial quality without pretending the AI is infallible. That leads to better rankings, cleaner drafts, stronger entity data, and more confidence in what finally gets published.
+
+For marketers and newsletter authors, that is the real value: fewer invisible errors, more trustworthy workflow behavior, and a system that gets sharper as your review decisions accumulate.
+
+And once those human corrections are feeding back into the project, related features like relevance training, authority-aware ranking, and composable AI skills become much more useful because they are grounded in explicit editorial judgment.

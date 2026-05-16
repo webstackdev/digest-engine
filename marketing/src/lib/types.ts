@@ -59,6 +59,30 @@ export interface IFeaturesProps {
   items: IFeatureItem[];
 }
 
+export interface IIntegrationItem {
+  label: string;
+  description: string;
+}
+
+export interface IClientsProps {
+  title: string;
+  description: string;
+  badge: string;
+  items: IIntegrationItem[];
+}
+
+export interface IHomePageFaqItem {
+  question: string;
+  answer: ReactNode;
+}
+
+export interface IHomePageFaqProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+  items: IHomePageFaqItem[];
+}
+
 export interface IPricingFeatureMatrixRow {
   feature: string;
   values: string[];
