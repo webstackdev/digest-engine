@@ -3,58 +3,70 @@
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { IClientsProps } from "@/lib/types";
 
 import Clients from "./Clients";
 
+vi.mock("next/image", () => ({
+  default: ({ alt, className, src }: { alt: string; className?: string; src: string }) =>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img alt={alt} className={className} src={src} />,
+}));
+
 const clientsProps: IClientsProps = {
-  title: "Plug into the feeds you already trust.",
-  description: "A short integration section lede.",
-  badge: "Six sources today. Plugin architecture for the rest.",
+  title: "Recognizable brands. Real research pressure.",
+  description: "A short social proof section lede.",
+  badge: "Social proof across retail, media, and agencies.",
   items: [
     {
-      label: "RSS",
-      description: "Tracks blogs and sites of every entity you follow.",
+      label: "Canva",
+      description: "Design and content teams moving at product-launch speed.",
     },
     {
-      label: "Reddit",
-      description: "Trend detection and community sentiment.",
+      label: "Carrefour",
+      description: "Retail teams watching category shifts in real time.",
     },
     {
-      label: "Resend Inbound (Email)",
-      description: "Newsletter ingestion.",
+      label: "Coca-Cola",
+      description: "Brand teams following how narratives spread across channels.",
     },
     {
-      label: "Bluesky",
-      description: "Entity content tracking.",
+      label: "Holt",
+      description: "Publishing groups tightening editorial research loops.",
     },
     {
-      label: "Mastodon",
-      description: "ActivityPub tracking.",
+      label: "Lionsgate",
+      description: "Entertainment teams tracking cultural momentum.",
     },
     {
-      label: "LinkedIn",
-      description: "Entity enrichment and discovery.",
+      label: "Universal",
+      description: "Media organizations balancing releases and market attention.",
+    },
+    {
+      label: "Vistra",
+      description: "Infrastructure teams monitoring noisy regulated markets.",
+    },
+    {
+      label: "VML",
+      description: "Agency strategists turning fragmented inputs into clearer briefs.",
     },
   ],
 };
 
 describe("Clients", () => {
-  it("renders an integrations section with source cards and descriptions", () => {
+  it("renders a text-free logo marquee for client social proof", () => {
     render(<Clients {...clientsProps} />);
 
-    const sectionHeading = screen.getByRole("heading", {
-      level: 2,
-      name: clientsProps.title,
-    });
-    const sourceHeadings = screen.getAllByRole("heading", { level: 3 });
+    const logoList = screen.getByRole("list", { name: "Client logos" });
+    const logos = within(logoList).getAllByRole("img");
 
-    expect(sectionHeading).toBeInTheDocument();
-    expect(screen.getByText(clientsProps.badge)).toBeInTheDocument();
-    expect(sourceHeadings).toHaveLength(clientsProps.items.length);
-    expect(within(sourceHeadings[0].closest("div") as HTMLElement).getByText(clientsProps.items[0].description)).toBeInTheDocument();
-    expect(within(sourceHeadings[2].closest("div") as HTMLElement).getByText(clientsProps.items[2].description)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2, name: clientsProps.title })).not.toBeInTheDocument();
+    expect(screen.queryByText(clientsProps.badge)).not.toBeInTheDocument();
+    expect(screen.queryByText(clientsProps.items[0].description)).not.toBeInTheDocument();
+    expect(logos).toHaveLength(clientsProps.items.length);
+    expect(screen.getByRole("img", { name: "Canva logo" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "VML logo" })).toBeInTheDocument();
   });
 });

@@ -8,7 +8,7 @@ import { PageSection } from "../Section";
 const FAQ: FC<IHomePageFaqProps> = ({ eyebrow, title, description, items }) => {
   return (
     <PageSection id="faq" classes="px-6 py-8 sm:px-8 sm:py-10">
-      <div className="max-w-3xl">
+      <div className="w-full">
         <p className="text-xs font-semibold uppercase tracking-widest text-content-offset">
           {eyebrow}
         </p>
@@ -20,11 +20,11 @@ const FAQ: FC<IHomePageFaqProps> = ({ eyebrow, title, description, items }) => {
         </p>
       </div>
 
-      <div className="mt-8 space-y-3">
+      <div className="mt-8 w-full space-y-3">
         {items.map((item) => (
           <details
             key={item.question}
-            className="group rounded-3xl border border-trim-offset bg-page-base px-5 py-4 shadow-card transition-colors open:bg-secondary"
+            className="group block w-full rounded-3xl border border-trim-offset bg-page-base px-5 py-4 shadow-card transition-colors open:bg-secondary"
           >
             <summary className="flex cursor-pointer list-none items-start justify-between gap-4 text-left [&::-webkit-details-marker]:hidden">
               <span className="text-lg font-semibold tracking-tight text-content-active">

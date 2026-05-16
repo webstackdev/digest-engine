@@ -1,0 +1,53 @@
+.viewport {
+  overflow: hidden;
+  width: 100%;
+}
+
+.track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  animation: clients-marquee 32s linear infinite;
+  will-change: transform;
+}
+
+.group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1rem;
+  padding-inline-end: 1rem;
+}
+
+.clone {
+  display: flex;
+}
+
+@keyframes clients-marquee {
+  from {
+    transform: translate3d(calc(-50% - 0.5rem), 0, 0);
+  }
+
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track {
+    width: 100%;
+    animation: none;
+    justify-content: center;
+  }
+
+  .group {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-inline-end: 0;
+  }
+
+  .clone {
+    display: none;
+  }
+}

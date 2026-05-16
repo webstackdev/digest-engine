@@ -7,7 +7,7 @@ import { brand } from "@/lib/props";
  */
 export function Footer() {
   return (
-    <PageSection as="footer" id="marketing-footer" classes="flex items-center gap-6 pb-6 sm:mb-8">
+    <PageSection as="footer" id="marketing-footer" classes="flex items-center gap-6 py-4 sm:my-6">
       <div className="flex flex-col gap-5 rounded-3xl border border-trim-offset bg-page-base px-6 py-6 text-sm text-content-offset shadow-soft backdrop-blur-[18px] md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-trim-offset bg-secondary text-xs font-black tracking-widest text-primary shadow-soft">

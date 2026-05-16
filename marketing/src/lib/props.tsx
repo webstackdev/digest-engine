@@ -100,37 +100,42 @@ export const SolutionProps: ISolutionProps = {
 };
 
 export const ClientsProps: IClientsProps = {
-  title: "Plug into the feeds you already trust.",
+  title: "Recognizable brands. Real research pressure.",
   description:
-    "Each source plugin implements a common interface (`fetch_new_content`, `get_entity_profile`, `health_check`) and handles its own auth and rate limiting. The core system just calls the interface, which means adding a new source is a contained piece of work, not a refactor.",
-  badge: "Six sources today. Plugin architecture for the rest.",
+    "Digest Engine is built for editorial, strategy, and research teams that have to keep pace with noisy markets, fragmented sources, and fast-moving narratives without losing the thread.",
+  badge: "Social proof across retail, media, CPG, utilities, and agency networks.",
   items: [
     {
-      label: "RSS",
-      description:
-        "Tracks blogs and sites of every entity you follow. Still the backbone of the open web.",
+      label: "Canva",
+      description: "Design and content teams that need cleaner signal across fast-moving product stories.",
     },
     {
-      label: "Reddit",
-      description:
-        "Trend detection and community sentiment across subreddits you choose.",
+      label: "Carrefour",
+      description: "Retail operators tracking competitive movement, launches, and category conversation at scale.",
     },
     {
-      label: "Resend Inbound (Email)",
-      description:
-        "Newsletter ingestion. Forward peer newsletters to a project address, get authority signals back.",
+      label: "Coca-Cola",
+      description: "Global brand teams watching how narratives spread across media, creators, and communities.",
     },
     {
-      label: "Bluesky",
-      description: "Entity content tracking via the open AT Protocol.",
+      label: "Holt",
+      description: "Publishing organizations that need better research workflows without heavier editorial overhead.",
     },
     {
-      label: "Mastodon",
-      description: "Entity content tracking via ActivityPub.",
+      label: "Lionsgate",
+      description: "Entertainment teams monitoring cultural momentum before it turns into a programming decision.",
     },
     {
-      label: "LinkedIn",
-      description: "Entity enrichment and article discovery.",
+      label: "Universal",
+      description: "Media groups balancing release calendars, market shifts, and audience attention across channels.",
+    },
+    {
+      label: "Vistra",
+      description: "Utility and infrastructure teams that need disciplined monitoring in heavily regulated spaces.",
+    },
+    {
+      label: "VML",
+      description: "Agency strategists synthesizing fragmented source material into sharper client recommendations.",
     },
   ],
 };
@@ -252,10 +257,10 @@ export const HomePageFaqProps: IHomePageFaqProps = {
       answer: (
         <>
           <p>
-            No. The core curation logic is deterministic vector similarity against your project's reference corpus. LLMs are only used to break ties in an explicit confidence band, to summarize, to extract entities, and to detect themes, each as a swappable, model-agnostic skill.
+            No. The core curation logic is deterministic vector similarity against your project&apos;s reference corpus. LLMs are only used to break ties in an explicit confidence band, to summarize, to extract entities, and to detect themes, each as a swappable, model-agnostic skill.
           </p>
           <p className="mt-3">
-            If every LLM API went dark tomorrow, you'd still get ranked shortlists.
+            If every LLM API went dark tomorrow, you&apos;d still get ranked shortlists.
           </p>
         </>
       ),
@@ -264,13 +269,13 @@ export const HomePageFaqProps: IHomePageFaqProps = {
       question: "How is this different from Feedly / UpContent / ContentStudio?",
       answer: (
         <>
-          <p>Three things they don't do:</p>
+          <p>Three things they don&apos;t do:</p>
           <ol className="mt-3 list-decimal space-y-3 pl-5">
             <li>
               <strong>Authority scoring from peer newsletters.</strong> We ingest other newsletters as a first-class source and build a trust graph from who real editors link to.
             </li>
             <li>
-              <strong>Per-project taste training via explicit feedback.</strong> Your thumbs-up/thumbs-down drifts a per-project reference centroid. Your shortlist genuinely changes over time. Theirs doesn't.
+              <strong>Per-project taste training via explicit feedback.</strong> Your thumbs-up/thumbs-down drifts a per-project reference centroid. Your shortlist genuinely changes over time. Theirs doesn&apos;t.
             </li>
             <li>
               <strong>A unified entity model.</strong> One person, all their channels, one profile, one authority score.

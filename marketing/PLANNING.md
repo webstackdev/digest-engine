@@ -344,3 +344,85 @@ Given your setup with separate marketing and app frontends:
 
 - **On the Marketing Frontend:** You may want **GA4** if you plan on running paid ads to track specific conversion funnels deeply.
 - **On the App Frontend:** Use **Vercel Analytics** to monitor app health and usage without the performance tax or privacy overhead of Google's script.
+
+## Integrations
+
+ **Ghost, Beehiiv, and Kit (formerly ConvertKit) all possess APIs capable of accepting HTML markup to create and distribute newsletters, but they handle, sanitize, and alter that HTML differently.** 
+
+While all three platforms support programmatically injecting content, they enforce varying structural guardrails. These restrictions can impact how closely your final delivered newsletter matches your raw source markup.
+
+------
+
+Platform Breakdown
+
+### Ghost Admin API
+
+Ghost offers the most developer-friendly flexibility for custom HTML injection.
+
+- **The Endpoint**: You can use the [Ghost Admin API Posts Endpoint](https://docs.ghost.org/admin-api/posts/creating-a-post) to generate a post. By adding the query parameter `?source=html`, you can send raw HTML strings directly in the JSON payload `{"posts": [{"title": "...", "html": "<p>Content</p>"}]}`.
+- **How it Handles HTML**: Internally, Ghost converts your HTML into its native **Lexical** editor format. This native conversion is lossy, meaning complex semantic styling might render differently.
+- **Lossless Hack**: If you need completely untouched, 100% exact HTML, you can wrap your code in a special Ghost HTML card block wrapper `<!-- kg-card-begin: html --> Your HTML <!-- kg-card-end: html -->`. This bypasses the parser entirely.
+- **Distribution**: Setting the post status to `published` or `scheduled` triggers delivery to your newsletter subscribers based on your default tier routing.
+
+### Beehiiv API
+
+Beehiiv features an API structured entirely around safety and mobile responsiveness, imposing strict guardrails.
+
+- **The Endpoint**: You can use the [Beehiiv Create Post Endpoint](https://developers.beehiiv.com/api-reference/posts/create) or request enterprise access to their specialized **Send API**. You pass your HTML as a string inside the `body_content` parameter.
+- **How it Handles HTML**: Beehiiv actively strips out all global `<style>` and `<link>` tags through a sanitization pipeline to prevent rendering breaking on email clients. Inline CSS rules (`style="..."`) are preserved.
+- **The Caveat**: You **cannot send a 100% custom HTML email** layout. The markup string you send is automatically nested within Beehiiv's own structural grid layout, master theme config, and mandatory footer compliance blocks. 
+
+### Kit (ConvertKit) API
+
+Kit relies on a highly flexible paradigm combining custom markup with preset template frames.
+
+- **The Endpoint**: You can interact with the [Kit Broadcasts API](https://developers.kit.com/api-reference/broadcasts/update-a-broadcast) to programmatically handle email distributions. By issuing a `POST` or `PUT` request, you pass your newsletter markup into the `"content"` JSON string parameter.
+- **How it Handles HTML**: Kit acts as an injector. The HTML you feed into the `"content"` string populates the body area of the message.
+- **The Caveat**: By default, it will inject your custom HTML directly into your account's chosen default master email layout template. To gain exact design control, you should supply an explicit `"email_template_id"` parameter referencing a structural raw HTML template you built directly in the Kit UI.
+
+------
+
+Direct Comparison Matrix
+
+| Platform Feature              | Ghost                                        | Beehiiv                                | Kit (ConvertKit)                            |
+| ----------------------------- | -------------------------------------------- | -------------------------------------- | ------------------------------------------- |
+| **API Endpoint**              | `/admin/posts/?source=html`                  | `/v2/publications/.../posts`           | `/v4/broadcasts`                            |
+| **Accepts Raw HTML?**         | Yes (Lossless via comments)                  | Yes (Sanitized via `body_content`)     | Yes (Via `"content"` variable)              |
+| **Strips Global `<style>`?**  | No                                           | Yes (Only inline CSS allowed)          | Restricts inside body string                |
+| **Enforces Platform Layout?** | Optional                                     | Yes (Fixed system shell & footer)      | Yes (Injects into a template ID)            |
+| **Primary Limitation**        | Auto-converts to Lexical format if unescaped | High sanitation; removes external tags | Content string is framed by layout wrappers |
+
+A self-hosted instance of **Ghost** **operates by separating transactional emails from bulk newsletter deliveries**, meaning it requires two entirely different mail setups to function.
+
+While Ghost handles content management, member databases, and web rendering on your own server, it cannot directly broadcast newsletters to thousands of subscribers on its own.
+
+------
+
+How the Architecture Works
+
+When running a self-hosted Ghost newsletter, the application relies on an external split-email architecture:
+
+- **The Self-Hosted Core**: You install Ghost on your own virtual private server (like DigitalOcean or Linode). This server runs Node.js and a MySQL database to store your posts, member lists, and analytical data.
+- **Transactional Email (SMTP)**: Standard automated triggers (like welcome emails, password resets, and login magic links) are routed through a basic SMTP server configured in your `config.production.json` file.
+- **Bulk Newsletter Email (Mailgun API)**: Mass newsletter broadcasts completely bypass standard SMTP. Because web servers lack the reputation to deliver thousands of emails without hitting spam folders, Ghost hardcoded a native API integration exclusively with **Mailgun** for all newsletter deliveries.
+
+------
+
+The Email Servers You Connect To
+
+To run a fully functional newsletter, you must connect your self-hosted instance to the following services:
+
+1. Bulk Newsletter Delivery: Mailgun (Mandatory)
+
+For sending newsletter blasts to your subscribers, **Ghost requires a Mailgun account**.
+
+- **Why Mailgun?** Ghost's source code relies on the Mailgun bulk API to batch-send emails, track open rates, and handle unsubscribe webhooks seamlessly.
+- **Can you use other bulk providers?** Out of the box, **no**. You cannot native-connect Amazon SES, Brevo, or Postmark for bulk newsletter blasts through the standard dashboard. Using a non-Mailgun provider for newsletters requires altering the open-source code, using third-party developer forks, or handling delivery via Zapier automations.
+- Transactional Email: Any SMTP Provider (Flexible)
+
+For single-recipient system emails (magic login links and signup confirmations), you must configure a standard SMTP server. You can use almost any major provider by editing your system config file, including:
+
+- **Mailgun SMTP** (Most common, keeping everything under one roof)
+- **Amazon SES** (Highly cost-effective option for system alerts)
+- **Postmark** (Renowned for instant magic-link delivery speeds)
+- **Brevo** or **SendGrid**

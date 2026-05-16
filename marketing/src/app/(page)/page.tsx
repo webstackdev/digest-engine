@@ -23,9 +23,9 @@ export default function Home() {
     <main className="relative mx-auto flex w-full max-w-6xl flex-col gap-5 pt-24 md:gap-6">
       <Hero {...HeroProps} />
       <Problems {...ProblemsProps} />
+      <Clients {...ClientsProps} />
       <Solution {...SolutionProps} />
       <Features {...FeatureItems} />
-      <Clients {...ClientsProps} />
       <Pricing {...PricingProps} />
       <FAQ {...HomePageFaqProps} />
       <CTA />
