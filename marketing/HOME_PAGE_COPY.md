@@ -1,71 +1,10 @@
 # Home Page Copy
 
-## The Problem / Stakes Section
-
-**The real struggle of putting together a great newsletter?**
-
-Spotting real news that's trustworthy, engaging, and not already flooding your subscribers' feeds.
-
-Existing curation tools (Feedly, UpContent, ContentStudio, generic "AI content discovery") solve about a third of this. They rank by global popularity. They don't know who *you* trust. They can't tell you that three peer newsletters in your niche already covered a topic this week and you're about to be late. They have no concept of authority. They have no concept of *your* point of view.
-
-So the work falls back on you. Which means:
-
-- You miss things because it was posted on Bluesky and not RSS.
-- You publish things because a loud account hyped them, not because the people you respect endorsed them.
-- You spend writing time on research, and research time wishing you were writing.
-
-
-Don't worry about the minutes a clunky workflow wastes; worry about the readers it costs you. Newsletters that lose their spark don't get angry emails—they get silent unsubscribes and drift away quietly.
-
----
-
-1. The Core Tension (The "Before" State)
-
-Instead of a long paragraph, turn your first sentence into a bold, high-contrast headline that serves as the section header.
-
-> **The real struggle of curation isn't finding content.**
-> It’s spotting real news that’s trustworthy, engaging, and not already flooding your subscribers' feeds.
-
-2. The Failure of Current Tools (The "Villain")
-
-Use a **3-column horizontal grid** or a **split-screen layout** (Text on left, concrete visual example on the right) to contrast what current tools do versus what they *should* do.
-
-- **Global Popularity ≠ Niche Authority**
-  They rank content by generic clicks. They don't know who *you* trust.
-- **The Echo-Chamber Trap**
-  They can't tell you if three competitor newsletters in your niche already covered a topic this week.
-- **Blind to Perspective**
-  They have no concept of authority—and zero concept of *your* point of view.
-- The Personal Toll & Final Stakes (The "Cost")
-
-Present your bullet points as a horizontal row of **3 "Pain Point" Cards**, followed immediately by your high-stakes quote at the bottom as a standalone visual callout.
-
-- **Card 1: Blind Spots**
-  You miss breaking trends because they happened on Bluesky, not an RSS feed.
-- **Card 2: Hype Over Substance**
-  You publish a story because a loud account hyped it, not because experts endorsed it.
-- **Card 3: Stolen Creative Time**
-  You spend valuable writing time on research, and research time wishing you were writing.
-
-The Bottom-Line Callout (Full-width banner, dark background, or bold text):
-
-> **"Don't worry about the minutes a clunky workflow wastes; worry about the readers it costs you."**
-> Newsletters that lose their spark don't get angry emails—they get silent unsubscribes that compound into a sudden crash.
-
-Design Tips to Make This Work
-
-- **Use Visual Anchors:** Put small, distinct UI elements next to the text. For example, show a mock screenshot of a generic tool sorting by "🔥 Popularity" versus your tool showing a "Niche Saturation: 3 Competitors Covered This" alert.
-- **Micro-Copy Hierarchy:** Ensure your headers in the sections above use large, **bold font**, while the supporting sentences are 2-3 font sizes smaller and slightly muted (e.g., dark gray instead of pure black).
-
-**The "No Vector DB" Proof Point:** You can visually balance the deep tech engine by keeping the interface dead simple. In your Tailwind build, pair this features grid with a lightweight mockup of an "Upvote/Downvote" feed or an alert card that says: *"3 peer newsletters covered this yesterday."*
-
 ## The Solution / How It Works
 
-**Section headline candidates:**
+**Section headline:**
 
-- A curation pipeline trained on your taste.
-- One ranked shortlist, every morning, scored against what *your* readers care about.
-- From firehose to first draft.
+- A system designed to learn what you favor
 
 **Lede paragraph:**
 
@@ -77,15 +16,6 @@ Design Tips to Make This Work
 2. **Define your taste.** Flag a starter set of articles as reference content. Add tracked entities — the people and companies whose work matters in your space. Optional: feed in a few peer newsletters to bootstrap authority signals.
 3. **Let the pipeline run.** Every new item is embedded into a per-project vector space, scored against your reference corpus, deduped against everything ingested so far, classified, and summarized. Ambiguous items get routed through an LLM that knows your project's brief.
 4. **Curate, don't research.** Open the review queue. Skim a ranked shortlist with summaries, authority signals, and dedupe context already attached. Thumbs-up the keepers; thumbs-down the misses. The model retrains itself on every signal you give it.
-
-**Supporting "what's happening under the hood" sentence (for the curious-but-not-engineers):**
-
-> Under the hood, it's a LangGraph state machine running per-content: cosine-similarity relevance against your reference vectors, a configurable confidence band that triggers LLM tie-breaking, $L_2$-distance deduplication, structured entity extraction, and a centroid feedback loop that drifts your project's "taste vector" every time you vote. You don't need to know any of that to use it. We just want you to know it exists.
-
-**One-liner versions for compact layouts:**
-
-- Ingest → embed → rank → dedupe → summarize → review. Repeat hourly.
-- A taste model per project. A vector per article. A draft on your desk by Monday.
 
 ---
 

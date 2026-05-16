@@ -1,5 +1,14 @@
 # Marketing Site for Digest Engine
 
+## Newsletter Platforms
+
+Probably should just integrate with these platforms instead of providing newsletter services directly, or maybe include Ghost in the platform:
+
+- Ghost, an open-source platform for blogs and newsletters, starts at $15 per month with 1,000 members for website creation, email newsletter capabilities, and a custom domain.
+- Beehiiv, a creator platform with tools for launching a newsletter, website, and podcast, is free for up to 2,500 subscribers with limited access to certain features, like a built-in ad network, while its other plans vary in price based on subscriber count. A person with 10,000 subscribers, for example, will pay $96 per month for Beehiiv's "Scale" plan.
+- Kit, a newsletter platform that offers a tiered pricing model similar to Beehiiv, costing $116 per month with 10,000 subscribers on its "Creator" plan.
+- Substack
+
 ## Third-Party Services
 
 - Vercel

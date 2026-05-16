@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+
 import heroImage from "@/assets/images/hero.png";
+import { IHeroProps } from "@/lib/types";
+
 import { PageSection } from "../Section";
 import { Button } from "../shared/button";
-import { IHeroProps } from "@/lib/types";
 
 /**
  * Marketing landing page hero.
@@ -23,18 +25,26 @@ const Hero = ({ description, title, btnGetStarted }: IHeroProps) => {
           </div>
 
           {btnGetStarted && btnGetStarted.text.trim() !== "" ? (
-            <Button
-              asChild
-              variant="default"
-              size="lg"
-              className="h-12 rounded-full bg-accent text-primary-inverse hover:bg-accent-offset text-lg font-semibold transition-colors px-6"
+            <div
+              data-testid="hero-cta-container"
+              className="flex w-full justify-center md:justify-start"
             >
-              <Link href={btnGetStarted.link}>{btnGetStarted.text}</Link>
-            </Button>
+              <Button
+                asChild
+                variant="default"
+                size="lg"
+                className="h-12 rounded-full bg-accent px-6 text-lg font-semibold text-primary-inverse transition-colors hover:bg-accent-offset mb-4 sm:mb-0"
+              >
+                <Link href={btnGetStarted.link}>{btnGetStarted.text}</Link>
+              </Button>
+            </div>
           ) : null}
         </div>
 
-        <div className="relative mx-auto w-full max-w-2xl lg:pl-6">
+        <div
+          data-testid="hero-image-container"
+          className="relative mx-auto hidden w-full max-w-2xl md:block lg:pl-6"
+        >
           <div className="relative">
             <Image
               src={heroImage}

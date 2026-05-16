@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { StaticImageData } from "next/image";
 
 export type SectionTag = "section" | "header" | "footer";
 
@@ -17,6 +18,32 @@ export interface IHeroProps {
     text: string;
     link: string;
   };
+}
+
+export interface IProblemsCard {
+  title: string;
+  description: string;
+}
+
+export interface IProblemsProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+  toolsHeading: string;
+  toolsDescription: string;
+  toolFailures: IProblemsCard[];
+}
+
+export interface ISolutionStep {
+  title: string;
+  description: string;
+  image: StaticImageData;
+}
+
+export interface ISolutionProps {
+  title: string;
+  description: string;
+  steps: ISolutionStep[];
 }
 
 export interface IPricingPlan {

@@ -4,21 +4,9 @@ import Script from "next/script";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { brand } from "@/lib/props";
+import { themeInitScript } from "@/lib/themeInit";
 
 import "../styles/globals.css";
-
-const themeInitScript = `
-  (() => {
-    try {
-      const storedTheme = window.localStorage.getItem("marketing-theme");
-
-      if (storedTheme === "light" || storedTheme === "dark") {
-        document.documentElement.dataset.theme = storedTheme;
-        document.documentElement.style.colorScheme = storedTheme;
-      }
-    } catch {}
-  })();
-`;
 
 export const metadata: Metadata = {
   title: brand.name,
@@ -31,10 +19,16 @@ export default async function RootLayout({
   children: ReactNode;
 }) {
   return (
-    <html lang="en" dir="ltr" data-theme="light" suppressHydrationWarning>
-      <body className="bg-page-base page-background px-4" suppressHydrationWarning>
+    <html
+      lang="en"
+      dir="ltr"
+      data-theme="light"
+      className="page-background"
+      suppressHydrationWarning
+    >
+      <body className="px-4" suppressHydrationWarning>
         <Script id="marketing-theme-init" strategy="beforeInteractive">
-          {themeInitScript}
+          {`(${themeInitScript.toString()})();`}
         </Script>
         <Header />
         {children}
