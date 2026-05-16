@@ -22,9 +22,9 @@ export default function Home() {
       <Hero {...HeroProps} />
       <Problems {...ProblemsProps} />
       <Solution {...SolutionProps} />
-      <Clients {...ClientsProps} />
       <Features {...FeatureItems} />
       <Pricing {...PricingProps} />
+      <Clients {...ClientsProps} />
       <CTA />
     </main>
   );

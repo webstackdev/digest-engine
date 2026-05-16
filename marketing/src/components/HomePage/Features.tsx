@@ -1,18 +1,21 @@
-import { FC, ReactNode } from "react";
+import Image from "next/image";
+import { FC } from "react";
+
+import type { IFeatureItem, IFeaturesProps } from "@/lib/types";
+
 import { PageSection } from "../Section";
 
-const FeatureCard: FC<{
-  title: string;
-  icon: ReactNode;
-  description: string;
-  link: string;
-}> = ({ title, icon, description }) => {
+const FeatureCard: FC<IFeatureItem> = ({ title, image, description }) => {
   return (
     <article className="group relative flex h-full flex-col gap-5 rounded-3xl border border-trim-offset bg-page-base p-6 shadow-card transition-transform duration-200 hover:-translate-y-1">
       <div className="flex items-start justify-between gap-4">
-        <div className="rounded-2xl border border-trim-offset bg-secondary px-3 py-2 text-primary shadow-soft">
-          {icon}
-        </div>
+        <Image
+          src={image}
+          alt="Feature illustration"
+          width={90}
+          height={90}
+          className="h-[90px] w-[90px] rounded-2xl border border-trim-offset object-cover shadow-soft"
+        />
         <span className="text-xs font-semibold uppercase tracking-widest text-content-offset">
           Feature
         </span>
@@ -33,16 +36,8 @@ const FeatureCard: FC<{
     </article>
   );
 };
-const Features: FC<{
-  title: string;
-  description: string;
-  items: {
-    title: string;
-    icon: ReactNode;
-    description: string;
-    link: string;
-  }[];
-}> = ({ title, description, items }) => {
+
+const Features: FC<IFeaturesProps> = ({ title, description, items }) => {
   return (
     <PageSection id="features" classes="px-6 py-8 sm:px-8 sm:py-10">
       <div className="max-w-2xl">

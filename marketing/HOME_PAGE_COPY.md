@@ -1,24 +1,5 @@
 # Home Page Copy
 
-## The Solution / How It Works
-
-**Section headline:**
-
-- A system designed to learn what you favor
-
-**Lede paragraph:**
-
-> Digest Engine is a project-scoped content pipeline. You point it at the sources you already use (RSS, Reddit communities, Bluesky/Mastodon accounts, LinkedIn, peer newsletters via inbound email), tell it which people and companies matter in your space, and seed it with a handful of articles that represent the kind of thing you'd cover. From there, every new piece of content gets embedded, scored, deduped, summarized, and ranked — and the borderline ones are routed through an LLM that's been briefed on your project specifically.
-
-**The 4-step "How it works" (use as a numbered visual):**
-
-1. **Connect your sources.** RSS, Reddit, Bluesky, Mastodon, LinkedIn, and inbound newsletter email via a dedicated address. Each plugin handles its own auth, rate limiting, and health checks.
-2. **Define your taste.** Flag a starter set of articles as reference content. Add tracked entities — the people and companies whose work matters in your space. Optional: feed in a few peer newsletters to bootstrap authority signals.
-3. **Let the pipeline run.** Every new item is embedded into a per-project vector space, scored against your reference corpus, deduped against everything ingested so far, classified, and summarized. Ambiguous items get routed through an LLM that knows your project's brief.
-4. **Curate, don't research.** Open the review queue. Skim a ranked shortlist with summaries, authority signals, and dedupe context already attached. Thumbs-up the keepers; thumbs-down the misses. The model retrains itself on every signal you give it.
-
----
-
 ## Feature / Benefit Blocks
 
 Each block has a feature name, a benefit-led headline, body copy, and a "for the technical reader" footnote you can include or strip per layout.
@@ -127,21 +108,7 @@ Low-confidence classifications, ambiguous entity matches, and unparseable newsle
 
 ---
 
-### Block 8 — Self-Hostable, Bring Your Own Models
-
-**Headline:** *Your content, your models, your infra.*
-
-Run Digest Engine on your own hardware, against your own models via Ollama, with zero marginal LLM cost. Or use OpenRouter as a unified API gateway and pay roughly $2.30/month in development. The model is a configuration parameter, not a hard dependency — swap it per skill.
-
-**Benefit bullets:**
-
-- 12-factor configuration, Docker Compose for MVP, Kubernetes-ready (Helm + ArgoCD) for scale.
-- Per-skill recommended models tuned for cost and quality.
-- No data leaves your stack if you don't want it to.
-
----
-
-### Block 9 — Draft Assembly (Not Just Curation)
+### Block 8 — Draft Assembly (Not Just Curation)
 
 **Headline:** *From ranked shortlist to outlined draft.*
 
@@ -152,6 +119,20 @@ Once you've curated your shortlist, Digest Engine assembles a draft outline orga
 - Theme detection groups related items into proposed newsletter sections.
 - Per-section regenerate, with full control over tone and length.
 - Idea suggestions for next week's issue, generated from this week's leftover content.
+
+---
+
+### Block 9 — Self-Hostable, Bring Your Own Models
+
+**Headline:** *Your content, your models, your infra.*
+
+Run Digest Engine on your own hardware, against your own models via Ollama, with zero marginal LLM cost. Or use OpenRouter as a unified API gateway and pay roughly $2.30/month in development. The model is a configuration parameter, not a hard dependency — swap it per skill.
+
+**Benefit bullets:**
+
+- 12-factor configuration, Docker Compose for MVP, Kubernetes-ready (Helm + ArgoCD) for scale.
+- Per-skill recommended models tuned for cost and quality.
+- No data leaves your stack if you don't want it to.
 
 ---
 

@@ -46,6 +46,43 @@ export interface ISolutionProps {
   steps: ISolutionStep[];
 }
 
+export interface IFeatureItem {
+  title: string;
+  description: string;
+  image: StaticImageData;
+  link: string;
+}
+
+export interface IFeaturesProps {
+  title: string;
+  description: string;
+  items: IFeatureItem[];
+}
+
+export interface IPricingFeatureMatrixRow {
+  feature: string;
+  values: string[];
+}
+
+export interface IPricingFaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface IPricingPageProps {
+  eyebrow: string;
+  title: string;
+  description: string;
+  highlights: string[];
+  matrixHeading: string;
+  matrixDescription: string;
+  matrixColumns: string[];
+  matrixRows: IPricingFeatureMatrixRow[];
+  faqHeading: string;
+  faqDescription: string;
+  faqs: IPricingFaqItem[];
+}
+
 export interface IPricingPlan {
   name: string;
   monthlyPrice: number;
