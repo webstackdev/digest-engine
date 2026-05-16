@@ -39,7 +39,7 @@ describe("Header", () => {
     const markup = renderToStaticMarkup(<Header />);
 
     expect(markup).toContain('id="marketing-nav"');
-    expect(markup).toContain('href="/features"');
+    expect(markup).toContain('href="/tour"');
     expect(markup).toContain('href="/pricing"');
     expect(markup).toContain('href="/docs"');
     expect(markup).toContain('href="/login"');

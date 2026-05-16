@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { brand } from "@/lib/props";
 
 const navigationItems = [
-  { href: "/features", label: "How It Works" },
+  { href: "/tour", label: "How It Works" },
   { href: "/blog", label: "Blog" },
   { href: "/pricing", label: "Pricing" },
   { href: "/docs", label: "Docs" },

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Image, { type StaticImageData } from "next/image";
+import Image from "next/image";
 import { generateStaticParamsFor, importPage } from "nextra/pages";
 
-import someArticleHeroImage from "@/content/blog/some-article/hero.svg";
+import { blogHeroImages } from "@/content/blog/images";
 
 type BlogRouteParams = {
   mdxPath: string[];
@@ -16,10 +16,6 @@ type BlogMetadata = Metadata & {
   title: string;
   description?: string;
   publishedAt?: string;
-};
-
-const blogHeroImages: Record<string, StaticImageData> = {
-  "some-article": someArticleHeroImage,
 };
 
 const generateNextraStaticParams = generateStaticParamsFor("mdxPath");

@@ -34,9 +34,5 @@
   "self-hostable-bring-your-own-models": {
     "title": "Self-hostable, bring your own models",
     "type": "page"
-  },
-  "some-article": {
-    "title": "A Sample Blog Article",
-    "type": "page"
   }
 }

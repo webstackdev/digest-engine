@@ -25,11 +25,11 @@ describe("Blog home page", () => {
         },
       },
       {
-        name: "some-article",
-        route: "/blog/some-article",
+        name: "authority-aware-ranking",
+        route: "/blog/authority-aware-ranking",
         frontMatter: {
-          title: "A Sample Blog Article",
-          description: "A starter post.",
+          title: "Authority-Aware Ranking",
+          description: "A real post.",
           publishedAt: "May 15, 2026",
         },
       },
@@ -39,8 +39,8 @@ describe("Blog home page", () => {
     const markup = renderToStaticMarkup(await BlogHomePage());
 
     expect(mockGetPageMap).toHaveBeenCalledWith("/blog");
-    expect(markup).toContain("A Sample Blog Article");
-    expect(markup).toContain('href="/blog/some-article"');
+    expect(markup).toContain("Authority-Aware Ranking");
+    expect(markup).toContain('href="/blog/authority-aware-ranking"');
     expect(markup).toContain("Read article");
   });
 });

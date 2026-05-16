@@ -40,6 +40,30 @@ export function Footer() {
           >
             Pricing
           </Link>
+          <Link
+            href="/privacy"
+            className="no-underline transition-colors hover:text-content-active"
+          >
+            Privacy
+          </Link>
+          <Link
+            href="/terms"
+            className="no-underline transition-colors hover:text-content-active"
+          >
+            Terms
+          </Link>
+          <Link
+            href="/cookies"
+            className="no-underline transition-colors hover:text-content-active"
+          >
+            Cookies
+          </Link>
+          <Link
+            href="/compliance"
+            className="no-underline transition-colors hover:text-content-active"
+          >
+            Compliance
+          </Link>
           <span>AGPLv3</span>
         </div>
       </div>

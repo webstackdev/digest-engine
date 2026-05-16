@@ -5,7 +5,7 @@ import type { PageMapItem } from "nextra";
 import { getPageMap } from "nextra/page-map";
 import { ArrowRight, Newspaper } from "lucide-react";
 
-import someArticlePreviewImage from "@/content/blog/some-article/preview.svg";
+import { blogPreviewImages } from "@/content/blog/images";
 
 import { brand } from "@/lib/props";
 
@@ -21,10 +21,6 @@ type BlogFrontMatter = {
   title?: string;
   description?: string;
   publishedAt?: string;
-};
-
-const blogPreviewImages: Record<string, StaticImageData> = {
-  "some-article": someArticlePreviewImage,
 };
 
 export const metadata: Metadata = {
@@ -107,7 +103,7 @@ export default async function BlogHomePage() {
             className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_70px_-44px_rgba(15,23,42,0.45)] transition-transform duration-200 hover:-translate-y-1"
           >
             <article className="flex h-full flex-col">
-              <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+              <div className="relative aspect-4/3 overflow-hidden bg-slate-100">
                 <Image
                   src={post.previewImage}
                   alt={post.title}

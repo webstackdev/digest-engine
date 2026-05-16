@@ -23,13 +23,15 @@ describe("Blog catch-all page", () => {
       vi.fn().mockResolvedValue([
         { mdxPath: ["docs", "reference", "overview"] },
         { mdxPath: ["blog"] },
-        { mdxPath: ["blog", "some-article"] },
+        { mdxPath: ["blog", "authority-aware-ranking"] },
       ]),
     );
 
     const { generateStaticParams } = await import("./page");
 
-    await expect(generateStaticParams()).resolves.toEqual([{ mdxPath: ["some-article"] }]);
+    await expect(generateStaticParams()).resolves.toEqual([
+      { mdxPath: ["authority-aware-ranking"] },
+    ]);
   });
 
   it("loads the requested blog article", async () => {
@@ -37,8 +39,8 @@ describe("Blog catch-all page", () => {
     mockImportPage.mockResolvedValue({
       default: () => <div>Sample blog body</div>,
       metadata: {
-        title: "A Sample Blog Article",
-        description: "A starter post.",
+        title: "Authority-Aware Ranking",
+        description: "A real post.",
         heroImage: "/hero.svg",
         publishedAt: "May 15, 2026",
       },
@@ -46,11 +48,11 @@ describe("Blog catch-all page", () => {
 
     const { default: BlogArticlePage } = await import("./page");
     const markup = renderToStaticMarkup(
-      await BlogArticlePage({ params: Promise.resolve({ mdxPath: ["some-article"] }) }),
+      await BlogArticlePage({ params: Promise.resolve({ mdxPath: ["authority-aware-ranking"] }) }),
     );
 
-    expect(mockImportPage).toHaveBeenCalledWith(["blog", "some-article"]);
-    expect(markup).toContain("A Sample Blog Article");
+    expect(mockImportPage).toHaveBeenCalledWith(["blog", "authority-aware-ranking"]);
+    expect(markup).toContain("Authority-Aware Ranking");
     expect(markup).toContain("Sample blog body");
     expect(markup).toContain("May 15, 2026");
   });
