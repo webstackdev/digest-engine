@@ -113,3 +113,13 @@ To manage this in your **Django** backend, your deletion logic should check for 
 | **User Choice** | In your **Next.js** frontend, ask the user if they want an immediate refund (and instant loss of access) or to keep access until the period ends. |
 | **Webhook Logic** | Use a Stripe Webhook for `customer.subscription.deleted`. When it fires, trigger your anonymization/erasure function. |
 | **Third-Party Cleanup** | Notify third-party processors like **Stripe** or **Mailchimp** to delete the user's data on their end. |
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-X94GR3Z3QR"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-X94GR3Z3QR');
+</script>
