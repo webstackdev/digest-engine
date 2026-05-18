@@ -10,7 +10,7 @@
         "app/**",
         "../../packages/**",
         "tsconfig.json",
-        "next.config.mjs",
+        "next.config.ts",
         "tailwind.config.ts"
       ]
     },

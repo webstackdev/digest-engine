@@ -53,7 +53,7 @@ export default function SignupForm() {
         </p>
       </div>
 
-      <form className="mt-8 grid gap-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form id="signup-form" className="mt-8 grid gap-5" onSubmit={handleSubmit(onSubmit)} noValidate>
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium text-content-active">
             Full name
