@@ -2,49 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  CONSENT_STORAGE_KEY,
+  readConsentPreferences,
+  writeConsentPreferences,
+} from "@/lib/marketingConsent";
 
-export const CONSENT_STORAGE_KEY = "marketing-consent";
-
-type ConsentPreferences = {
-  essential: true;
-  marketing: boolean;
-};
-
-function isConsentPreferences(value: unknown): value is { marketing: boolean } {
-  return typeof value === "object" && value !== null && "marketing" in value;
-}
-
-function readConsentPreferences(): ConsentPreferences | null {
-  const storedValue = window.localStorage.getItem(CONSENT_STORAGE_KEY);
-
-  if (!storedValue) {
-    return null;
-  }
-
-  try {
-    const parsedValue = JSON.parse(storedValue) as unknown;
-
-    if (!isConsentPreferences(parsedValue) || typeof parsedValue.marketing !== "boolean") {
-      return null;
-    }
-
-    return {
-      essential: true,
-      marketing: parsedValue.marketing,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeConsentPreferences(marketing: boolean) {
-  const consentPreferences: ConsentPreferences = {
-    essential: true,
-    marketing,
-  };
-
-  window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(consentPreferences));
-}
+export { CONSENT_STORAGE_KEY };
 
 function getInitialIsOpen() {
   if (typeof window === "undefined") {

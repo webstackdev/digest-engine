@@ -35,6 +35,7 @@
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
+    "logrocket": "^12.1.1",
     "lucide-react": "^1.16.0",
     "next": "16.2.6",
     "nextra": "^4.6.1",

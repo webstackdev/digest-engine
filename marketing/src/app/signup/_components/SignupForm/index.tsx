@@ -1,18 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import ClaritySDK from "@microsoft/clarity";
+import { useState, useSyncExternalStore } from "react";
 import { useForm } from "react-hook-form";
 
 import { Button } from "@/components/shared/button";
+import {
+  readMarketingAttribution,
+  type MarketingAttribution,
+} from "@/lib/marketingAttribution";
+import {
+  buildSignupSubmissionPayload,
+  buildSignupSubmittedDataLayerEvent,
+  getSignupHiddenAttributionFields,
+  type SignupDataLayerEvent,
+  type SignupFormValues,
+} from "@/lib/marketingConversion";
+import { readConsentPreferences } from "@/lib/marketingConsent";
 
-type SignupFormValues = {
-  fullName: string;
-  workEmail: string;
-  newsletterName: string;
-  planInterest: string;
-  teamSize: string;
-  notes: string;
-};
+function subscribeToStaticSnapshot() {
+  return () => {};
+}
+
+function pushSignupSubmittedDataLayerEvent(event: SignupDataLayerEvent) {
+  const dataLayerWindow = window as Window & { dataLayer?: object[] };
+
+  dataLayerWindow.dataLayer = dataLayerWindow.dataLayer ?? [];
+  dataLayerWindow.dataLayer.push(event);
+}
+
+function trackSignupSubmitted(
+  values: SignupFormValues,
+  attribution: MarketingAttribution | null,
+  pagePath: string,
+) {
+  if (!readConsentPreferences()?.marketing) {
+    return;
+  }
+
+  const event = buildSignupSubmittedDataLayerEvent(values, attribution, pagePath);
+
+  ClaritySDK.event("signup_request_submitted");
+  ClaritySDK.identify(values.workEmail, undefined, "marketing-signup");
+  ClaritySDK.setTag("signup_form", "marketing");
+  ClaritySDK.setTag("signup_plan_interest", values.planInterest);
+  ClaritySDK.setTag("signup_team_size", values.teamSize);
+  ClaritySDK.setTag("signup_attribution_source", event.attribution_source);
+  ClaritySDK.setTag("signup_attribution_medium", event.attribution_medium);
+
+  if (event.attribution_campaign) {
+    ClaritySDK.setTag("signup_attribution_campaign", event.attribution_campaign);
+  }
+
+  if (event.attribution_referrer_host) {
+    ClaritySDK.setTag("signup_referrer_host", event.attribution_referrer_host);
+  }
+
+  if (event.gclid) {
+    ClaritySDK.setTag("signup_gclid", event.gclid);
+  }
+
+  if (event.fbclid) {
+    ClaritySDK.setTag("signup_fbclid", event.fbclid);
+  }
+
+  if (event.msclkid) {
+    ClaritySDK.setTag("signup_msclkid", event.msclkid);
+  }
+
+  pushSignupSubmittedDataLayerEvent(event);
+}
 
 /**
  * Route-local signup form for the marketing signup page.
@@ -35,12 +92,27 @@ export default function SignupForm() {
     },
   });
 
+  const isClient = useSyncExternalStore(
+    subscribeToStaticSnapshot,
+    () => true,
+    () => false,
+  );
+  const attribution: MarketingAttribution | null = isClient ? readMarketingAttribution() : null;
+  const pagePath = isClient ? window.location.pathname : "";
+
   const onSubmit = async (values: SignupFormValues) => {
     setIsSubmitted(false);
-    await Promise.resolve(values);
+    const currentAttribution = readMarketingAttribution();
+    const currentPagePath = window.location.pathname;
+    const submissionPayload = buildSignupSubmissionPayload(values, currentAttribution, currentPagePath);
+
+    await Promise.resolve(submissionPayload);
+    trackSignupSubmitted(values, currentAttribution, currentPagePath);
     reset();
     setIsSubmitted(true);
   };
+
+  const hiddenAttributionFields = getSignupHiddenAttributionFields(attribution, pagePath);
 
   return (
     <div className="rounded-4xl border border-trim-offset bg-page-base p-6 shadow-panel backdrop-blur-[18px] sm:p-8">
@@ -54,6 +126,10 @@ export default function SignupForm() {
       </div>
 
       <form id="signup-form" className="mt-8 grid gap-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+        {hiddenAttributionFields.map((field) => (
+          <input key={field.name} type="hidden" name={field.name} value={field.value} readOnly />
+        ))}
+
         <div className="grid gap-5 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium text-content-active">
             Full name
