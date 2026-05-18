@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@digestengine/tailwind-config/index.css";
+@import "./index.css";
 @import "./radix.css";
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";

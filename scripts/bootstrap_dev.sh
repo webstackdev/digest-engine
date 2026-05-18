@@ -29,7 +29,6 @@ uv sync --frozen
 corepack enable
 corepack prepare pnpm@11.1.0 --activate
 pnpm install --filter=@digestengine/frontend
-pnpm install --filter=@digestengine/marketing
 
 if git rev-parse --git-dir >/dev/null 2>&1; then
   .venv/bin/pre-commit install --install-hooks

@@ -35,7 +35,6 @@
 
 /** Replaces "content" key in Tailwind config */
 @source "../../frontend/src/**/*.{ts,tsx,md,mdx}";
-@source "../../marketing/src/**/*.{ts,tsx,md,mdx}";
 
 @theme {
   /** Breakpoints */

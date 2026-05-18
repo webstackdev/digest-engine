@@ -1,7 +1,5 @@
 packages:
   - 'frontend'
-  - 'marketing'
-  - 'packages/*'
 
 allowBuilds:
   '@sentry/cli': true

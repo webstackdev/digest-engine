@@ -9,10 +9,8 @@
   "scripts": {
     "build": "turbo run build",
     "build:frontend": "turbo run build --filter=@digestengine/frontend",
-    "build:marketing": "turbo run build --filter=@digestengine/marketing",
     "dev": "turbo run dev",
     "dev:frontend": "turbo run dev --filter=@digestengine/frontend",
-    "dev:marketing": "turbo run dev --filter=@digestengine/marketing",
     "lint": "turbo run lint",
     "lint:style": "turbo run lint:style",
     "lint:style:fix": "turbo run lint:style:fix",

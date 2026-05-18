@@ -13,8 +13,6 @@ pnpm_setup := "corepack enable && corepack prepare pnpm@11.1.0 --activate"
 pnpm_exec := "pnpm"
 turbo_exec := "pnpm turbo"
 frontend_filter := "--filter=@digestengine/frontend"
-marketing_filter := "--filter=@digestengine/marketing"
-tailwind_filter := "--filter=@digestengine/tailwind-config"
 django_manage := "docker compose exec django python manage.py"
 host_backend_test_env := "uv sync --frozen && set -a && . ./.env.test && set +a &&"
 
@@ -33,38 +31,31 @@ backend-install:
 bootstrap:
     @bash scripts/bootstrap_dev.sh
 
-# Ensure pnpm is enabled, then install JavaScript workspace dependencies
+# Ensure pnpm is enabled, then install frontend dependencies
 frontend-install:
     @{{frontend_env}}
     @{{pnpm_setup}}
     @{{pnpm_exec}} install {{frontend_filter}}
-
-# Ensure pnpm is enabled, then install marketing site dependencies
-marketing-install:
-    @{{pnpm_setup}}
-    @{{pnpm_exec}} install {{marketing_filter}}
 
 # Install pre-commit hooks when running inside a git checkout
 install-hooks:
     @if git rev-parse --git-dir >/dev/null 2>&1; then {{backend_venv}} && {{backend_python}} -m pre_commit install --install-hooks; fi
 
 # Install backend, frontend, and git hook dependencies
-install: backend-install frontend-install marketing-install install-hooks
+install: backend-install frontend-install install-hooks
 
 # Remove generated caches, coverage output, and frontend build artifacts
 clean:
     @find . \
-        \( -path './.git' -o -path './.venv' -o -path './node_modules' -o -path './frontend/node_modules' -o -path './marketing/node_modules' \) -prune -o \
+        \( -path './.git' -o -path './.venv' -o -path './node_modules' -o -path './frontend/node_modules' \) -prune -o \
         -type d \( -name '__pycache__' -o -name '.pytest_cache' -o -name '.ruff_cache' \) -exec rm -rf {} +
-    @rm -rf .coverage .turbo htmlcov frontend/.next frontend/coverage frontend/storybook-static frontend/node_modules/.cache marketing/.next marketing/node_modules/.cache
+    @rm -rf .coverage .turbo htmlcov frontend/.next frontend/coverage frontend/storybook-static frontend/node_modules/.cache
 
 # -----------------------------------------------------------------------------
 # Development And Builds
 # -----------------------------------------------------------------------------
 
-# App development tasks stay separate from the standalone marketing site.
-# Use `backend-dev` with `frontend-dev` when working on the product app,
-# and use `marketing-dev` on its own when working only on the marketing site.
+# App development tasks stay separate between the backend stack and the product frontend.
 
 # Start the backend development stack with Django, workers, and dependencies
 backend-dev:
@@ -76,11 +67,6 @@ frontend-dev:
     @{{frontend_env}}
     @{{pnpm_setup}}
     @{{turbo_exec}} run dev {{frontend_filter}}
-
-# Start the standalone marketing site development server
-marketing-dev:
-    @{{pnpm_setup}}
-    @{{turbo_exec}} run dev {{marketing_filter}}
 
 # Start Storybook for local frontend component development
 storybook-dev:
@@ -109,12 +95,7 @@ frontend-build:
     @{{pnpm_setup}}
     @{{turbo_exec}} run build {{frontend_filter}}
 
-# Build the marketing production bundle
-marketing-build:
-    @{{pnpm_setup}}
-    @{{turbo_exec}} run build {{marketing_filter}}
-
-# Build all TypeScript workspace applications through Turbo
+# Build the frontend TypeScript application through Turbo
 typescript-build:
     @{{frontend_env}}
     @{{pnpm_setup}}
@@ -142,21 +123,14 @@ backend-lint:
     @{{backend_python}} -m pre_commit run --all-files check-yaml
     @{{host_backend_test_env}} {{backend_python}} manage.py check
 
-# Lint and typecheck the TypeScript workspace
+# Lint and typecheck the frontend TypeScript app
 frontend-lint:
     @{{frontend_env}}
     @{{pnpm_setup}}
     @{{turbo_exec}} run typecheck lint lint:style {{frontend_filter}}
-    @{{turbo_exec}} run lint:style {{tailwind_filter}}
-
-# Lint and typecheck the standalone marketing site
-marketing-lint:
-    @{{pnpm_setup}}
-    @{{turbo_exec}} run typecheck lint lint:style {{marketing_filter}}
-    @{{turbo_exec}} run lint:style {{tailwind_filter}}
 
 # Run all lint and validation tasks
-lint: backend-lint frontend-lint marketing-lint helm-lint
+lint: backend-lint frontend-lint helm-lint
 
 # Auto-fix backend lint issues where supported, then re-run backend validation
 backend-lint-fix:
@@ -172,16 +146,9 @@ frontend-lint-fix:
     @{{frontend_env}}
     @{{pnpm_setup}}
     @{{turbo_exec}} run lint:fix lint:style:fix {{frontend_filter}}
-    @{{turbo_exec}} run lint:style:fix {{tailwind_filter}}
-
-# Auto-fix marketing lint issues where supported
-marketing-lint-fix:
-    @{{pnpm_setup}}
-    @{{turbo_exec}} run lint:fix lint:style:fix {{marketing_filter}}
-    @{{turbo_exec}} run lint:style:fix {{tailwind_filter}}
 
 # Run all available lint auto-fixes
-lint-fix: backend-lint-fix frontend-lint-fix marketing-lint-fix
+lint-fix: backend-lint-fix frontend-lint-fix
 
 # Format frontend source files with Prettier
 frontend-format:
@@ -200,11 +167,6 @@ frontend-test:
     @{{frontend_env}}
     @{{pnpm_setup}}
     @{{turbo_exec}} run test:run {{frontend_filter}}
-
-# Run the marketing site test suite
-marketing-test:
-    @{{pnpm_setup}}
-    @{{turbo_exec}} run test:run {{marketing_filter}}
 
 # Run Storybook browser tests for frontend components
 frontend-storybook-test:
@@ -231,7 +193,7 @@ backend-test-coverage-html:
     @{{host_backend_test_env}} {{backend_test_pants}} --coverage-py-report='["console", "html"]' test --use-coverage {{backend_pants_targets}}
 
 # Run the main backend and frontend test suites
-test: backend-test frontend-test marketing-test
+test: backend-test frontend-test
 
 # -----------------------------------------------------------------------------
 # Compose Runtime

@@ -27,7 +27,6 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@digestengine/tailwind-config": "workspace:*",
     "@base-ui/react": "^1.4.1",
     "@eslint/js": "9.39.4",
     "@tailwindcss/postcss": "^4.3.0",

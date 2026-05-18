@@ -13,7 +13,7 @@ The system is organized into projects: each newsletter project has its own track
 
 ### Fresh Clone Bootstrap
 
-- Linux and macOS: run `./scripts/bootstrap_dev.sh` from the repo root. The script installs `uv` and `pants` if either is missing, syncs the locked Python environment, installs the frontend workspaces, and sets up git hooks.
+- Linux and macOS: run `./scripts/bootstrap_dev.sh` from the repo root. The script installs `uv` and `pants` if either is missing, syncs the locked Python environment, installs the frontend dependencies, and sets up git hooks.
 - Windows: install `uv`, `pants`, and `just`, then run `just install` from the repo root.
 
 **Linux:**
@@ -97,8 +97,6 @@ kubectl port-forward svc/digest-engine-digest-engine-nginx 8080:80
 - `just seed`: Loads demo data from a second terminal while `just dev` is still running.
 - `just k8s-build-minikube`: Builds the app image and loads it into Minikube.
 - `just k8s-install-minikube`: Installs or upgrades the local Helm release in Minikube.
-
-For full workflows and troubleshooting, see [marketing/src/content/docs/developer-guide/local-development.md](marketing/src/content/docs/developer-guide/local-development.md).
 
 Host-side backend quality commands now split responsibilities between `uv` and `pants`:
 

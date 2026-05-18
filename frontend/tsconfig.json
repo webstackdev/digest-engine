@@ -1,13 +1,43 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "extends": "../packages/typescript-config/nextjs.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["vitest/globals", "@testing-library/jest-dom"],
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "allowJs": true,
+    "incremental": true,
+    "types": [
+      "vitest/globals",
+      "@testing-library/jest-dom"
+    ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/components/layout/*": ["./src/components/layout/*"],
-      "@/components/elements/*": ["./src/components/elements/*"],
+      "@/*": [
+        "./src/*"
+      ],
+      "@/components/layout/*": [
+        "./src/components/layout/*"
+      ],
+      "@/components/elements/*": [
+        "./src/components/elements/*"
+      ],
       "@/components/ui/*": [
         "./src/components/ui/*",
         "./src/components/elements/*"
@@ -15,11 +45,14 @@
     }
   },
   "include": [
-    "next-env.d.ts", 
-    "**/*.d.ts", 
-    "**/*.ts", 
-    "**/*.tsx", 
-    ".next/types/**/*.ts"
+    "next-env.d.ts",
+    "**/*.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

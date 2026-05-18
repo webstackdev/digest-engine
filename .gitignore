@@ -26,16 +26,7 @@ frontend/out/
 htmlcov/
 dist/
 
-marketing/.next/
-marketing/coverage/
-marketing/node_modules/
-marketing/out/
-
 node_modules/
-
-packages/*/.next/
-packages/*/coverage/
-packages/*/node_modules/
 
 staticfiles/
 storybook-static
