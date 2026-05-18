@@ -1,6 +1,7 @@
 import type { PageMapItem } from "nextra";
 import { getPageMap } from "nextra/page-map";
 import { generateStaticParamsFor, importPage } from "nextra/pages";
+import { cache } from "react";
 import { isValidElement, type ReactNode } from "react";
 
 import { PageSection } from "@/components/Section";
@@ -18,6 +19,13 @@ type DocsRouteParams = {
 const docsBasePath = "/docs";
 
 const generateNextraStaticParams = generateStaticParamsFor("mdxPath");
+const getDocsStaticParams = cache(async (): Promise<DocsRouteParams[]> => {
+  return (await generateNextraStaticParams()) as DocsRouteParams[];
+});
+const getDocsPageMap = cache(async () => getPageMap(docsBasePath));
+const importDocsPage = cache(async (slug: string) => {
+  return importPage(["docs", ...slug.split("/").filter(Boolean)]);
+});
 
 function getItemTitle(item: PageMapItem): string {
   const fallbackTitle = "name" in item ? item.name : "Documentation";
@@ -86,7 +94,7 @@ function getHeadingText(value: ReactNode): string {
 }
 
 export async function generateStaticParams(): Promise<DocsRouteParams[]> {
-  const params = (await generateNextraStaticParams()) as DocsRouteParams[];
+  const params = await getDocsStaticParams();
 
   return params
     .map(({ mdxPath }) => mdxPath.filter(Boolean))
@@ -96,9 +104,10 @@ export async function generateStaticParams(): Promise<DocsRouteParams[]> {
 
 export default async function Page(props: { params: Promise<DocsRouteParams> }) {
   const params = await props.params;
+  const slug = params.mdxPath.join("/");
   const [{ default: MDXPage, metadata, toc }, pageMap] = await Promise.all([
-    importPage(["docs", ...params.mdxPath]),
-    getPageMap(docsBasePath),
+    importDocsPage(slug),
+    getDocsPageMap(),
   ]);
   const currentPath = `${docsBasePath}/${params.mdxPath.join("/")}`;
   const sidebarSections = buildSidebarSections(pageMap);

@@ -30,24 +30,30 @@ const clientLogos: Record<string, StaticImageData> = {
 
 const Clients: FC<IClientsProps> = ({ items }) => {
   const renderLogoGroup = (keyPrefix: string) =>
-    items.map((item) => (
-      <li
-        key={`${keyPrefix}-${item.label}`}
-        className="flex h-24 w-40 shrink-0 items-center justify-center rounded-3xl border border-trim-offset bg-page-base px-6 shadow-soft backdrop-blur-[18px] sm:h-28 sm:w-48 sm:px-8"
-      >
-        {clientLogos[item.label] ? (
-          <Image
-            src={clientLogos[item.label]}
-            alt={`${item.label} logo`}
-            width={160}
-            height={40}
-            className="h-10 w-auto max-w-full object-contain"
-          />
-        ) : (
-          <span className="sr-only">{item.label}</span>
-        )}
-      </li>
-    ));
+    items.map((item) => {
+      const logo = clientLogos[item.label];
+
+      return (
+        <li
+          key={`${keyPrefix}-${item.label}`}
+          className="flex h-24 w-40 shrink-0 items-center justify-center rounded-3xl border border-trim-offset bg-page-base px-6 shadow-soft backdrop-blur-[18px] sm:h-28 sm:w-48 sm:px-8"
+        >
+          {logo ? (
+            <div className="relative h-10 w-full">
+              <Image
+                src={logo}
+                alt={`${item.label} logo`}
+                fill
+                sizes="(min-width: 640px) 192px, 160px"
+                className="object-contain"
+              />
+            </div>
+          ) : (
+            <span className="sr-only">{item.label}</span>
+          )}
+        </li>
+      );
+    });
 
   return (
     <section

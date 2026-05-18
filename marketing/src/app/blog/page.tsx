@@ -3,6 +3,7 @@ import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
 import type { PageMapItem } from "nextra";
 import { getPageMap } from "nextra/page-map";
+import { cache } from "react";
 import { ArrowRight, Newspaper } from "lucide-react";
 
 import { blogPreviewImages } from "@/content/blog/images";
@@ -27,6 +28,8 @@ export const metadata: Metadata = {
   title: `${brand.name} Blog`,
   description: "Product notes, release write-ups, and editorial articles from the Digest Engine team.",
 };
+
+const getBlogPageMap = cache(async () => getPageMap("/blog"));
 
 function getFolderTitle(item: PageMapItem): string {
   if ("frontMatter" in item && item.frontMatter?.title) {
@@ -75,7 +78,7 @@ function buildBlogCards(items: PageMapItem[]): BlogCard[] {
 }
 
 export default async function BlogHomePage() {
-  const pageMap = await getPageMap("/blog");
+  const pageMap = await getBlogPageMap();
   const posts = buildBlogCards(pageMap);
 
   return (

@@ -1,6 +1,8 @@
 import nextra from "nextra";
 import { withSentryConfig } from "@sentry/nextjs";
 
+const telemetryEnabled = process.env.NODE_ENV !== "development";
+
 // Set up Nextra with its configuration
 const withNextra = nextra({
   contentDirBasePath: "/",
@@ -9,11 +11,6 @@ const withNextra = nextra({
 // Export the final Next.js config with Nextra included
 const nextConfigWithNextra = withNextra({
   output: "export",
-  turbopack: {
-    resolveAlias: {
-      "next-mdx-import-source-file": "./mdx-components.js",
-    },
-  },
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -26,13 +23,15 @@ const nextConfigWithNextra = withNextra({
   },
 });
 
-export default withSentryConfig(nextConfigWithNextra, {
-  org: "webstack-builders",
-  project: "digestengine-marketing",
-  // Only print logs for uploading source maps in CI
-  silent: !process.env.CI,
-  // Pass the auth token
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  // Upload a larger set of source maps for prettier stack traces
-  widenClientFileUpload: true,
-});
+export default telemetryEnabled
+  ? withSentryConfig(nextConfigWithNextra, {
+      org: "webstack-builders",
+      project: "digestengine-marketing",
+      // Only print logs for uploading source maps in CI
+      silent: !process.env.CI,
+      // Pass the auth token
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      // Upload a larger set of source maps for prettier stack traces
+      widenClientFileUpload: true,
+    })
+  : nextConfigWithNextra;

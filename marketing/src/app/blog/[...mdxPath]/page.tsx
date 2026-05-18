@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { generateStaticParamsFor, importPage } from "nextra/pages";
+import { cache } from "react";
 
 import { blogHeroImages } from "@/content/blog/images";
 
@@ -19,9 +20,15 @@ type BlogMetadata = Metadata & {
 };
 
 const generateNextraStaticParams = generateStaticParamsFor("mdxPath");
+const getBlogStaticParams = cache(async (): Promise<BlogRouteParams[]> => {
+  return (await generateNextraStaticParams()) as BlogRouteParams[];
+});
+const importBlogPage = cache(async (slug: string) => {
+  return importPage(["blog", ...slug.split("/").filter(Boolean)]);
+});
 
 export async function generateStaticParams(): Promise<BlogRouteParams[]> {
-  const params = (await generateNextraStaticParams()) as BlogRouteParams[];
+  const params = await getBlogStaticParams();
 
   return params
     .map(({ mdxPath }) => mdxPath.filter(Boolean))
@@ -33,7 +40,7 @@ export async function generateMetadata(props: {
   params: Promise<BlogRouteParams>;
 }): Promise<Metadata> {
   const params = await props.params;
-  const { metadata } = await importPage(["blog", ...params.mdxPath]);
+  const { metadata } = await importBlogPage(params.mdxPath.join("/"));
 
   return metadata;
 }
@@ -42,10 +49,7 @@ export default async function BlogArticlePage(props: { params: Promise<BlogRoute
   const params = await props.params;
   const slug = params.mdxPath.join("/");
   const heroImage = blogHeroImages[slug];
-  const { default: MDXPage, metadata } = (await importPage([
-    "blog",
-    ...params.mdxPath,
-  ])) as {
+  const { default: MDXPage, metadata } = (await importBlogPage(slug)) as {
     default: React.ComponentType<BlogPageComponentProps>;
     metadata: BlogMetadata;
   };

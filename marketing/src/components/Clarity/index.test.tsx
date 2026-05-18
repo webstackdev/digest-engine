@@ -24,9 +24,23 @@ afterEach(() => {
   localStorage.clear();
   clarityMocks.init.mockReset();
   clarityMocks.consent.mockReset();
+  vi.unstubAllEnvs();
 });
 
 describe("Clarity", () => {
+  it("stays disabled in development even when marketing consent is granted", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    localStorage.setItem(
+      CONSENT_STORAGE_KEY,
+      JSON.stringify({ essential: true, marketing: true }),
+    );
+
+    render(<Clarity clarityId="wssam5li17" />);
+
+    expect(clarityMocks.init).not.toHaveBeenCalled();
+    expect(clarityMocks.consent).not.toHaveBeenCalled();
+  });
+
   it("does not initialize when no consent is stored", () => {
     render(<Clarity clarityId="wssam5li17" />);
 

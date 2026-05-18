@@ -20,6 +20,10 @@ export function Clarity({ clarityId }: ClarityProps) {
   const hasInitializedRef = useRef(false);
 
   useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      return;
+    }
+
     const syncConsent = (marketing: boolean | null) => {
       if (!marketing) {
         if (hasInitializedRef.current) {
