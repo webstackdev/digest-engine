@@ -43,7 +43,7 @@ export default async function DraftDetailPage({
         projects={[]}
         selectedProjectId={null}
       >
-        <Alert className="rounded-panel border-border/12 bg-muted/60">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>Create a project first in Django admin.</AlertDescription>
         </Alert>
       </AppShell>
@@ -65,12 +65,12 @@ export default async function DraftDetailPage({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive/20 bg-destructive/14" variant="destructive">
-          <AlertDescription className="text-destructive">{errorMessage}</AlertDescription>
+        <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
+          <AlertDescription className="text-danger">{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-panel border-border/12 bg-muted/60">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}

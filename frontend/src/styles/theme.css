@@ -1,0 +1,262 @@
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  /** Disable all Tailwind default palette colors */
+  --color-*: initial;
+
+  /**
+   * =============================================================================
+   *  Base colors
+   * =============================================================================
+   */
+
+  /** Primary color for theme */
+  --color-primary: var(--theme-color-primary); /* Light theme: #3e4d6b */
+
+  /** A shade of the primary color for accent */
+  --color-primary-offset: var(--theme-color-primary-offset); /* Light theme: #2d384d */
+
+  /** A shade of the primary color for accent */
+  --color-primary-inverse: var(--theme-color-primary-inverse); /* Light theme: #FFF */
+
+  /** Secondary color for theme */
+  --color-secondary: var(--theme-color-secondary); /* Light theme: #86a68d */
+
+  /** A shade of the secondary color for accent */
+  --color-secondary-offset: var(--theme-color-secondary-offset); /* Light theme: #5f7a65 */
+
+  /** A shade of the primary color for accent */
+  --color-secondary-inverse: var(--theme-color-secondary-inverse); /* Light theme: #FFF */
+
+  /** Accent color for theme */
+  --color-accent: var(--theme-color-accent); /* Light theme: #c66b52 */
+
+  /** A shade of the accent color for accent */
+  --color-accent-offset: var(--theme-color-accent-offset); /* Light theme: #ae563f */
+
+  /**
+   * =============================================================================
+   *  Page element colors
+   * =============================================================================
+   */
+
+  /** A solid fill color for page page elements */
+  --color-page-base: var(--theme-color-page-base); /* Light theme: #d3dbe6 */
+
+  /** Opposite of a solid fill color for page page elements */
+  --color-page-inverse: var(--theme-color-page-inverse); /* Light theme: #1b222e */
+
+  /** A shade of the page color for hover and focus states */
+  --color-page-offset: var(--theme-color-page-offset); /* Light theme: #eff2f7 */
+
+  /** A solid fill color for page page elements */
+  --color-page-active: var(--theme-color-page-active); /* Light theme: #d3dbe6 */
+
+  /**
+   * =============================================================================
+   *  Text colors
+   * =============================================================================
+   */
+
+  /** Main content text color */
+  --color-content: var(--theme-color-content); /* Light theme: #374151 */
+
+  /** A shade of the text color for accent */
+  --color-content-offset: var(--theme-color-content-offset); /* Light theme: #63718e */
+
+  /** A shade of the text color for hover and focus states */
+  --color-content-active: var(--theme-color-content-active); /* Light theme: #1b222e */
+
+  /** Main content text color */
+  --color-content-inverse: var(--theme-color-content-inverse); /* Light theme: #f4f6f8 */
+
+  /** A shade of the text color for hover and focus states */
+  --color-content-inverse-active: var(--theme-color-content-inverse-active); /* Light theme: #d4dae6 */
+
+  /**
+   * =============================================================================
+   *  Border colors
+   * =============================================================================
+   */
+
+  /** A color for use in page borders */
+  --color-trim: var(--theme-color-trim); /* Light theme: #4b5563 */
+
+  /** A color for use in page borders on hover */
+  --color-trim-offset: var(--theme-color-trim-offset); /* Light theme: #9ca3af */
+
+  /** A color for use in primary page accent elements */
+  --color-spotlight: var(--theme-color-spotlight); /* Light theme: #cfb466 */
+
+  /** A shade of the accent color for hover and focus states */
+  --color-spotlight-offset: var(--theme-color-spotlight-offset); /* Light theme: #8f6d36 */
+
+  /**
+   * =============================================================================
+   *  Success colors
+   * =============================================================================
+   */
+
+  --color-success: var(--theme-color-success); /* Light theme: #738d79 */
+  --color-success-offset: var(--theme-color-success-offset); /* Light theme: #5f7a65 */
+  --color-success-inverse: var(--theme-color-success-inverse); /* Light theme: #f3f6f4 */
+
+  /**
+   * =============================================================================
+   *  Info colors
+   * =============================================================================
+   */
+
+  --color-info: var(--theme-color-info); /* Light theme: #3e4d6b */
+  --color-info-offset: var(--theme-color-info-offset); /* Light theme: #2d384d */
+  --color-info-inverse: var(--theme-color-info-inverse); /* Light theme: #f4f6f8 */
+
+  /**
+   * =============================================================================
+   *  Note colors
+   * =============================================================================
+   */
+
+  --color-note: var(--theme-color-note); /* Light theme: #374151 */
+  --color-note-offset: var(--theme-color-note-offset); /* Light theme: #6b7280 */
+  --color-note-inverse: var(--theme-color-note-inverse); /* Light theme: #d1d5db */
+
+  /**
+   * =============================================================================
+   *  Warning colors
+   * =============================================================================
+   */
+
+  --color-warning: var(--theme-color-warning); /* Light theme: #b38f47 */
+  --color-warning-offset: var(--theme-color-warning-offset); /* Light theme: #6d5129 */
+  --color-warning-inverse: var(--theme-color-warning-inverse); /* Light theme: #f6f1dd */
+
+  /**
+   * =============================================================================
+   *  Danger colors
+   * =============================================================================
+   */
+
+  --color-danger: var(--theme-color-danger); /* Light theme: #ac5d50 */
+  --color-danger-offset: var(--theme-color-danger-offset); /* Light theme: #8d493d */
+  --color-danger-inverse: var(--theme-color-danger-inverse); /* Light theme: #f6e7e3 */
+
+  /**
+   * =============================================================================
+   *  Icon color
+   * =============================================================================
+   */
+
+  /** Main icon color */
+  --color-icons: var(--theme-color-icons); /* Light theme: #2d384d */
+
+  /** A shade of the icon color for hover and focus states */
+  --color-icons-active: var(--theme-color-icons-active); /* Light theme: #3e4d6b */
+
+  /**
+   * =============================================================================
+   *  Palette colors
+   * =============================================================================
+   */
+
+  --color-black: #000;
+  --color-white: #fff;
+
+  /** Blues */
+  --color-blue-50: #f4f6f8;
+  --color-blue-100: #e9edf1;
+  --color-blue-150: #d4dae6;
+  --color-blue-175: #eff2f7;
+  --color-blue-200: #cfd8e3;
+  --color-blue-300: #8fa2c1;
+  --color-blue-400: #697c9f;
+  --color-blue-500: #3e4d6b;
+  --color-blue-600: #34425b;
+  --color-blue-700: #2d384d;
+  --color-blue-800: #232c3d;
+  --color-blue-900: #1b222e;
+
+  /** Grays */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-offset: #9ca3af;
+
+  /** Greens */
+  --color-green-50: #f3f6f4;
+  --color-green-100: #e7edea;
+  --color-green-200: #d0ddd4;
+  --color-green-300: #b2c9b8;
+  --color-green-400: #9ab4a1;
+  --color-green-500: #86a68d;
+  --color-green-600: #738d79;
+  --color-green-700: #5f7a65;
+  --color-green-800: #4c6152;
+  --color-green-900: #3d4f41;
+
+  /** Oranges */
+  --color-orange-50: #fcf4f1;
+  --color-orange-100: #f7e6df;
+  --color-orange-200: #efcbbb;
+  --color-orange-300: #e2a38d;
+  --color-orange-400: #d58369;
+  --color-orange-450: #d17e60;
+  --color-orange-500: #c66b52;
+  --color-orange-600: #ae563f;
+  --color-orange-700: #8f4332;
+  --color-orange-800: #72382c;
+  --color-orange-900: #5d3027;
+
+  /** Purples */
+  --color-purple-100: #ece7f3;
+  --color-purple-600: #6a6486;
+
+  /** Reds */
+  --color-red-100: #f6e7e3;
+  --color-red-400: #cf7b6d;
+  --color-red-500: #ac5d50;
+  --color-red-600: #8d493d;
+
+  /** Yellows */
+  --color-yellow-100: #f6f1dd;
+  --color-yellow-200: #eee3bb;
+  --color-yellow-300: #e2d08d;
+  --color-yellow-400: #cfb466;
+  --color-yellow-500: #b38f47;
+  --color-yellow-600: #8f6d36;
+  --color-yellow-700: #6d5129;
+
+  /**
+   * =============================================================================
+   *  Vendor colors
+   * =============================================================================
+   */
+
+  --color-bluesky: #00A8E8;
+  --color-bluesky-active: #0087bd;
+  --color-codepen: #000;
+  --color-codepen-active: #1a1a1a;
+  --color-github: #211F1F;
+  --color-github-active: #333131;
+  --color-linkedin: #0a66c2;
+  --color-linkedin-active: #084c9e;
+  --color-mastodon: #6364FF;
+  --color-mastodon-active: #5557e6;
+  --color-reddit: #FF4500;
+  --color-reddit-active: #e03d00;
+  --color-google-red: #EA4335;
+  --color-google-yellow: #FBBC04;
+  --color-google-blue: #4285F4;
+  --color-google-blue-dark: #1967D2;
+  --color-google-green: #34A853;
+  --color-google-green-dark: #188038;
+  --color-x: #000;
+  --color-x-active: #1a1a1a;
+}

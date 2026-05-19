@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
+import warnings
 from datetime import timedelta
 from functools import lru_cache, wraps
 from typing import Any, Callable, Literal, TypedDict, cast
@@ -16,7 +17,6 @@ from typing import Any, Callable, Literal, TypedDict, cast
 from django.conf import settings
 from django.db.models import F, Model
 from django.utils import timezone
-from langgraph.graph import END, StateGraph
 
 from content.deduplication import canonicalize_url
 from content.models import Content, ContentPipelineState
@@ -46,6 +46,29 @@ from pipeline.resilience import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _load_langgraph_graph() -> tuple[Any, Any]:
+    """Import LangGraph graph primitives with the upstream warning filtered.
+
+    LangGraph currently constructs a Reviver without an explicit
+    ``allowed_objects`` setting during import, which emits a pending deprecation
+    warning upstream.
+    """
+
+    from langchain_core._api.deprecation import LangChainPendingDeprecationWarning
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r"The default value of `allowed_objects` will change in a future version\..*",
+            category=LangChainPendingDeprecationWarning,
+            module=r"langgraph\.cache\.base(?:\..*)?",
+        )
+        from langgraph.graph import END, StateGraph
+
+    return END, StateGraph
+
 
 DEDUPLICATION_SKILL_NAME = "deduplication"
 CLASSIFICATION_SKILL_NAME = "content_classification"
@@ -173,6 +196,8 @@ def get_ingestion_graph():
         A compiled state graph that classifies content, scores relevance, and then
         routes the item to summarization, archival, or human review.
     """
+
+    END, StateGraph = _load_langgraph_graph()
 
     graph = StateGraph(PipelineState)
     graph.add_node("deduplicate", cast(Any, deduplicate_node))

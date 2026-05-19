@@ -4,7 +4,6 @@ import math
 from collections import Counter
 from datetime import datetime, timedelta
 from functools import lru_cache, wraps
-from pathlib import Path
 from typing import Any, Callable, Protocol, TypeVar, cast
 
 from celery import shared_task
@@ -23,7 +22,12 @@ from core.embeddings import (
     get_topic_centroid_similarity,
     upsert_topic_centroid,
 )
-from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
+from core.llm import (
+    build_skill_user_prompt,
+    get_skill_definition,
+    get_skill_resource_path,
+    openrouter_chat_json,
+)
 from digest_engine.telemetry import trace_span
 from entities.models import Entity, EntityMention, EntityMentionRole
 from pipeline.resilience import execute_with_resilience
@@ -2214,12 +2218,10 @@ def _similarity_window_score(
 def _original_content_prompt_resource(resource_name: str) -> str:
     """Load one original-content ideation prompt resource from disk."""
 
-    resource_path = (
-        Path(__file__).resolve().parent.parent
-        / "skills"
-        / ORIGINAL_CONTENT_IDEATION_SKILL_NAME
-        / "resources"
-        / f"{resource_name}.md"
+    resource_path = get_skill_resource_path(
+        ORIGINAL_CONTENT_IDEATION_SKILL_NAME,
+        "resources",
+        f"{resource_name}.md",
     )
     return resource_path.read_text(encoding="utf-8").strip()
 

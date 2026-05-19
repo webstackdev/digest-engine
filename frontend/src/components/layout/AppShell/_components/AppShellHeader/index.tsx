@@ -54,11 +54,11 @@ export function AppShellHeader({
           </Link>
           <NotificationMenu websocketUrl={buildNotificationsWebsocketUrl()} />
           <ThemeToggle />
-          <Separator className="hidden h-6 bg-border/70 md:block" orientation="vertical" />
+          <Separator className="hidden h-6 bg-trim-offset/70 md:block" orientation="vertical" />
           <UserMenu />
         </div>
       </div>
-      <p className="max-w-xl text-sm leading-6 text-muted-foreground md:text-base">{description}</p>
+      <p className="max-w-xl text-sm leading-6 text-content-offset md:text-base">{description}</p>
     </header>
   )
 }

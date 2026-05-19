@@ -30,24 +30,24 @@ export function MembershipsCard({
   redirectTarget,
 }: MembershipsCardProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Current team</p>
-          <h3 className="m-0 font-display text-title-sm font-bold text-foreground">Memberships</h3>
+          <h3 className="m-0 font-display text-title-sm font-bold text-content-active">Memberships</h3>
         </div>
         <div className="space-y-3">
           {memberships.map((membership) => (
             <article
-              className="grid gap-4 rounded-2xl border border-border/10 bg-muted/45 p-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center"
+              className="grid gap-4 rounded-2xl border border-trim-offset bg-page-offset p-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center"
               key={membership.id}
             >
               <div>
-                <p className="m-0 text-sm font-semibold text-foreground">
+                <p className="m-0 text-sm font-semibold text-content-active">
                   {membership.display_name || membership.username}
                 </p>
-                <p className="m-0 text-sm text-muted">{membership.email}</p>
-                <p className="mt-2 mb-0 text-xs uppercase tracking-eyebrow text-muted">
+                <p className="m-0 text-sm text-content-offset">{membership.email}</p>
+                <p className="mt-2 mb-0 text-xs uppercase tracking-eyebrow text-content-offset">
                   Joined {formatDate(membership.joined_at)}
                 </p>
               </div>
@@ -64,7 +64,7 @@ export function MembershipsCard({
                   </Label>
                   <Select defaultValue={membership.role} name="role">
                     <SelectTrigger
-                      className="min-h-11 rounded-2xl border-border/12 bg-card px-4 py-3 text-sm text-foreground"
+                      className="min-h-11 rounded-2xl border-trim-offset bg-page-base px-4 py-3 text-sm text-content-active"
                       id={`membership-role-${membership.id}`}
                     >
                       <SelectValue placeholder="Role" />
@@ -85,7 +85,7 @@ export function MembershipsCard({
               <div className="flex flex-wrap items-center justify-end gap-3">
                 {membership.user !== currentUserId ? (
                   <Link
-                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-border/12 bg-card px-4 py-3 text-sm font-medium text-foreground transition hover:bg-muted"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-trim-offset bg-page-base px-4 py-3 text-sm font-medium text-content-active transition hover:bg-page-offset"
                     href={`/messages?project=${projectId}&recipient=${membership.user}`}
                   >
                     Message

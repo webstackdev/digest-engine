@@ -1,0 +1,155 @@
+/**
+* =============================================================================
+*  DARK THEME DEFINITIONS
+* =============================================================================
+*/
+:where(.dark, [data-theme="dark"]) {
+  /**
+   * =============================================================================
+   *  Base colors
+   * =============================================================================
+   */
+
+  /** Primary color for theme */
+  --theme-color-primary: #8fa2c1;
+
+  /** A shade of the primary color for accent */
+  --theme-color-primary-offset: #e9edf1;
+
+  /** A shade of the primary color for accent */
+  --theme-color-primary-inverse: #1b222e;
+
+  /** Secondary color for theme */
+  --theme-color-secondary: #b2c9b8;
+
+  /** A shade of the secondary color for accent */
+  --theme-color-secondary-offset: #e7edea;
+
+  /** A shade of the primary color for accent */
+  --theme-color-secondary-inverse: #3d4f41;
+
+  /** Accent color for theme */
+  --theme-color-accent: #d58369;
+
+  /** A shade of the accent color for accent */
+  --theme-color-accent-offset: #e2a38d;
+
+  /**
+   * =============================================================================
+   *  Page element colors
+   * =============================================================================
+   */
+
+  /** A solid fill color for page page elements */
+  --theme-color-page-base: #1b222e; /** --color-bg */
+
+  /** Opposite of a solid fill color for page page elements */
+  --theme-color-page-inverse: #f4f6f8;
+
+  /** A shade of the page color for hover and focus states */
+  --theme-color-page-offset: #232c3d; /** --color-bg-page-offset */
+
+  /** A solid fill color for page page elements */
+  --theme-color-page-active: #2d384d; /** --color-bg */
+
+  /**
+   * =============================================================================
+   *  Text colors
+   * =============================================================================
+   */
+
+  /** Main content text color */
+  --theme-color-content: #f3f4f6; /** --color-content */
+
+  /** A shade of the text color for accent */
+  --theme-color-content-offset: #9ca3af; /** --color-content-offset */
+
+  /** A shade of the text color for hover and focus states */
+  --theme-color-content-active: #fff; /** --color-content-active */
+
+  /** Main content text color */
+  --theme-color-content-inverse: #1b222e; /** --color-content */
+
+  /** A shade of the text color for hover and focus states */
+  --theme-color-content-inverse-active: #2d384d; /** --color-content-inverse-active */
+
+  /**
+   * =============================================================================
+   *  Border colors
+   * =============================================================================
+   */
+
+   /** A color for use in page borders */
+  --theme-color-trim: #8fa2c1;
+
+  /** A color for use in page borders on hover */
+  --theme-color-trim-offset: #e9edf1;
+
+  /** A color for use in primary page accent elements */
+  --theme-color-spotlight: #cfb466;
+
+  /** A shade of the accent color for hover and focus states */
+  --theme-color-spotlight-offset: #e2d08d;
+
+  /**
+   * =============================================================================
+   *  Success colors
+   * =============================================================================
+   */
+
+  --theme-color-success: #9ab4a1;
+  --theme-color-success-offset: #b2c9b8;
+  --theme-color-success-inverse: #3d4f41;
+
+  /**
+   * =============================================================================
+   *  Info colors
+   * =============================================================================
+   */
+
+  --theme-color-info: #8fa2c1;
+  --theme-color-info-offset: #cfd8e3;
+  --theme-color-info-inverse: #1b222e;
+
+  /**
+   * =============================================================================
+   *  Note colors
+   * =============================================================================
+   */
+
+  --theme-color-note: #d1d5db;
+  --theme-color-note-offset: #e5e7eb;
+  --theme-color-note-inverse: #111827;
+
+  /**
+   * =============================================================================
+   *  Warning colors
+   * =============================================================================
+   */
+
+  --theme-color-warning: #cfb466;
+  --theme-color-warning-offset: #e2d08d;
+  --theme-color-warning-inverse: #6d5129;
+
+  /**
+   * =============================================================================
+   *  Danger colors
+   * =============================================================================
+   */
+
+  --theme-color-danger: #cf7b6d;
+  --theme-color-danger-offset: #f6e7e3;
+  --theme-color-danger-inverse: #8d493d;
+
+  /**
+   * =============================================================================
+   *  Icon color
+   * =============================================================================
+   */
+
+    /** Main icon color */
+  --theme-color-icons: #e9edf1;
+
+  /** A shade of the icon color for hover and focus states */
+  --theme-color-icons-active: #f4f6f8;
+}

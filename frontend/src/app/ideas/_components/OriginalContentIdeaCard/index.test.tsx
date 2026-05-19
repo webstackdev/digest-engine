@@ -18,7 +18,7 @@ describe("OriginalContentIdeaCard", () => {
     expect(screen.getByText("Explain the operator gap")).toBeInTheDocument()
     expect(
       screen.getByText("Show where platform promises are outpacing the teams expected to maintain them."),
-    ).toHaveClass("text-muted-foreground")
+    ).toHaveClass("text-content-offset")
     expect(screen.getByRole("link", { name: "Useful AI briefing" })).toHaveAttribute(
       "href",
       "/content/41?project=1",
@@ -48,9 +48,9 @@ describe("OriginalContentIdeaCard", () => {
     )
 
     expect(screen.getByText("No supporting content was attached to this idea.")).toHaveClass(
-      "text-muted-foreground",
+      "text-content-offset",
     )
-    expect(screen.getByText(/Decided by editor-2/)).toHaveClass("text-muted-foreground")
+    expect(screen.getByText(/Decided by editor-2/)).toHaveClass("text-content-offset")
     expect(screen.getByRole("button", { name: "Mark written" })).toBeInTheDocument()
   })
 })

@@ -2,10 +2,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
 const AVATAR_TONES = [
-  "bg-primary text-primary-foreground",
-  "bg-secondary text-secondary-foreground",
-  "bg-sidebar text-sidebar-foreground",
-  "bg-destructive text-destructive-foreground",
+  "bg-primary text-primary-inverse",
+  "bg-secondary text-secondary-inverse",
+  "bg-page-offset text-content-active",
+  "bg-danger text-danger-inverse",
 ]
 
 type UserAvatarProps = {

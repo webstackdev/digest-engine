@@ -1,0 +1,61 @@
+/* ==========================================================================
+   Print Theme Override (UNLAYERED)
+   Imported without a layer so it beats the unlayered theme files
+   ([data-theme="light"], etc.) via source order + specificity.
+   ========================================================================== */
+
+@media print {
+  html[data-theme] {
+    --theme-color-primary: #000;
+    --theme-color-primary-offset: #222;
+    --theme-color-primary-inverse: #fff;
+    --theme-color-secondary: #000;
+    --theme-color-secondary-offset: #111;
+    --theme-color-secondary-inverse: #fff;
+    --theme-color-accent: #000;
+    --theme-color-accent-offset: #e5e5e5;
+    --theme-color-page-base: #fff;
+    --theme-color-page-active: #222;
+    --theme-color-page-inverse: #000;
+    --theme-color-page-offset: #f5f5f5;
+    --theme-color-content: #000;
+    --theme-color-content-offset: #222;
+    --theme-color-content-active: #000;
+    --theme-color-content-inverse: #fff;
+    --theme-color-content-inverse-active: #e5e5e5;
+    --theme-color-trim: #000;
+    --theme-color-spotlight: #000;
+    --theme-color-spotlight-offset: #333;
+    --theme-color-success: #000;
+    --theme-color-success-offset: #111;
+    --theme-color-success-inverse: #f0f0f0;
+    --theme-color-info: #000;
+    --theme-color-info-offset: #111;
+    --theme-color-info-inverse: #f0f0f0;
+    --theme-color-note: #000;
+    --theme-color-note-offset: #333;
+    --theme-color-note-inverse: #e5e5e5;
+    --theme-color-warning: #000;
+    --theme-color-warning-offset: #111;
+    --theme-color-warning-inverse: #f0f0f0;
+    --theme-color-danger: #000;
+    --theme-color-danger-offset: #111;
+    --theme-color-danger-inverse: #f0f0f0;
+    --theme-color-icons: #000;
+    --theme-color-icons-active: #333;
+    --theme-color-black: #000;
+    --theme-color-white: #fff;
+    --theme-color-blue-100: #e8e8e8;
+    --theme-color-blue-600: #222;
+    --theme-color-blue-900: #000;
+    --theme-color-gray-50: #f9f9f9;
+    --theme-color-gray-200: #e0e0e0;
+    --theme-color-gray-300: #c8c8c8;
+    --theme-color-gray-600: #333;
+    --theme-color-gray-700: #222;
+    --theme-color-gray-800: #111;
+    --theme-color-gray-offset: #555;
+    --theme-color-green-100: #e8e8e8;
+    --theme-color-green-900: #000;
+  }
+}

@@ -23,11 +23,11 @@ export function AvatarPreview({
   const avatarUrl = profile.avatar_thumbnail_url ?? profile.avatar_url
 
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Avatar</p>
-          <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
+          <h2 className="m-0 font-display text-title-sm font-bold text-content-active">
             Profile image
           </h2>
         </div>
@@ -35,12 +35,12 @@ export function AvatarPreview({
         <div className="flex items-center gap-4">
           <UserAvatar
             avatarUrl={avatarUrl}
-            className="size-24 border border-border/10 shadow-sm after:hidden"
-            fallbackClassName="bg-primary text-2xl font-semibold text-primary-foreground"
+            className="size-24 border border-trim-offset shadow-sm after:hidden"
+            fallbackClassName="bg-primary text-2xl font-semibold text-primary-inverse"
             name={profile.display_name || profile.email || profile.username}
             size="lg"
           />
-          <div className="space-y-2 text-sm leading-6 text-muted">
+          <div className="space-y-2 text-sm leading-6 text-content-offset">
             <p className="m-0">
               Drop in a square image to personalize the editor cockpit and header menu.
             </p>

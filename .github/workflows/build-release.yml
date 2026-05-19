@@ -52,16 +52,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 11.1.2
+
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "22"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm ci
+        run: pnpm install --filter=@digestengine/frontend --frozen-lockfile
 
       - name: Prepare frontend env
         working-directory: frontend
@@ -70,12 +74,11 @@ jobs:
           echo "NEXTAUTH_SECRET=ci-build-secret" >> .env.local
 
       - name: Build frontend
-        working-directory: frontend
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: ci-build-secret
-        run: npm run build
+        run: pnpm --filter=@digestengine/frontend run build
 
   build-backend:
     name: Build and scan backend image
@@ -96,6 +99,7 @@ jobs:
         with:
           image-ref: digest-engine-ci:${{ github.sha }}
           scan-type: image
+          scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"

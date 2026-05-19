@@ -15,7 +15,7 @@ export function ResolvedCandidateList({
 }: ResolvedCandidateListProps) {
   if (resolvedCandidates.length === 0) {
     return (
-      <Alert className="rounded-panel border-border/12 bg-muted/60">
+      <Alert className="rounded-3xl border-trim-offset bg-page-offset">
         <AlertDescription>
           No auto-promotion or review history is available for this project yet.
         </AlertDescription>
@@ -26,14 +26,14 @@ export function ResolvedCandidateList({
   return (
     <section className="space-y-4">
       {resolvedCandidates.map((candidate) => (
-        <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl" key={candidate.id}>
+        <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl" key={candidate.id}>
           <CardContent className="pt-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="space-y-2">
-                <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
+                <h2 className="m-0 font-display text-title-sm font-bold text-content-active">
                   {candidate.name}
                 </h2>
-                <div className="flex flex-wrap gap-2 text-sm text-muted">
+                <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                   <span>{candidate.occurrence_count} occurrences</span>
                   <span>{candidate.source_plugin_count} sources</span>
                   <span>Resolved {formatDate(candidate.updated_at)}</span>
@@ -46,7 +46,7 @@ export function ResolvedCandidateList({
                 {formatDisplayLabel(candidate.status)}
               </StatusBadge>
             </div>
-            <div className="mt-4 flex flex-wrap gap-2 text-sm text-muted">
+            <div className="mt-4 flex flex-wrap gap-2 text-sm text-content-offset">
               {candidate.source_plugins.map((plugin) => (
                 <Badge className="rounded-full px-3 py-1 text-sm" key={`${candidate.id}:${plugin}`} variant="secondary">
                   {formatDisplayLabel(plugin)}

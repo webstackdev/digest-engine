@@ -40,22 +40,22 @@ export function MembersPageContent({
       selectedProjectId={selectedProject.id}
     >
       {errorMessage ? (
-        <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+        <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
       {successMessage ? (
-        <Alert className="rounded-panel border-border/10 bg-muted/60">
+        <Alert className="rounded-3xl border-trim-offset bg-page-offset">
           <AlertDescription>{successMessage}</AlertDescription>
         </Alert>
       ) : null}
 
       <section className="space-y-4">
-        <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+        <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
           <CardContent className="flex items-center justify-between gap-4 pt-4">
             <div>
               <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Roster</p>
-              <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
+              <h2 className="m-0 font-display text-title-sm font-bold text-content-active">
                 {selectedProject.name} members
               </h2>
             </div>

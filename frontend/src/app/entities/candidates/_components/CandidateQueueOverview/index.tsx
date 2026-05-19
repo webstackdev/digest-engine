@@ -23,36 +23,36 @@ export function CandidateQueueOverview({
   return (
     <>
       <section className="grid gap-4 sm:grid-cols-3">
-        <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+        <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
           <CardContent className="pt-4">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Clusters</p>
             <p className="mt-1 text-3xl font-bold">{clusterCount}</p>
-            <p className="text-sm leading-6 text-muted">
+            <p className="text-sm leading-6 text-content-offset">
               Grouped review cards for pending candidates.
             </p>
           </CardContent>
         </Card>
-        <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+        <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
           <CardContent className="pt-4">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Pending</p>
             <p className="mt-1 text-3xl font-bold">{pendingCount}</p>
-            <p className="text-sm leading-6 text-muted">
+            <p className="text-sm leading-6 text-content-offset">
               Candidates still waiting for editorial action or auto-promotion.
             </p>
           </CardContent>
         </Card>
-        <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+        <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
           <CardContent className="pt-4">
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Auto-promotion log</p>
             <p className="mt-1 text-3xl font-bold">{resolvedCount}</p>
-            <p className="text-sm leading-6 text-muted">
+            <p className="text-sm leading-6 text-content-offset">
               Accepted, rejected, or merged candidates already resolved.
             </p>
           </CardContent>
         </Card>
       </section>
 
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="flex flex-wrap gap-3 pt-4">
           <Link
             className={cn(

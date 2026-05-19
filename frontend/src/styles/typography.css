@@ -1,0 +1,233 @@
+/**
+ * Shared typography foundations for the frontend app.
+ *
+ * This layer should stay close to the product direction in the comp: calm,
+ * modern, and sans-led, with Outfit handling display headings and Public Sans
+ * handling body copy.
+ */
+@theme {
+  /* Type scale */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  --font-size-5xl: 2.75rem;
+  --font-size-6xl: 3.5rem;
+  --font-size-7xl: 4.5rem;
+
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Line Heights */
+  --line-height-tight: 1.15;
+  --line-height-snug: 1.32;
+  --line-height-normal: 1.6;
+
+  /* Letter Spacing */
+  --letter-spacing-tighter: -0.04em;
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.08em;
+  --letter-spacing-wider: 0.14em;
+}
+
+/* Desktop scale adjustments */
+@media (width >= 48em) {
+  :root {
+    --font-size-xl: 1.375rem;
+    --font-size-2xl: 1.75rem;
+    --font-size-3xl: 2.25rem;
+    --font-size-4xl: 3rem;
+    --font-size-5xl: 3.75rem;
+    --font-size-6xl: 4.5rem;
+    --font-size-7xl: 5.25rem;
+  }
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  address {
+    font-style: normal;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-primary) 20%, white);
+    color: var(--color-foreground, inherit);
+  }
+
+  a {
+    color: inherit;
+    text-decoration-line: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 28%, transparent);
+    text-decoration-thickness: 0.08em;
+    text-underline-offset: 0.14em;
+    transition: color 150ms ease, text-decoration-color 150ms ease;
+  }
+
+  a:hover,
+  a:focus-visible {
+    text-decoration-color: currentColor;
+  }
+
+  abbr[data-tooltip] {
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 4px;
+  }
+
+  b,
+  strong {
+    font-weight: var(--font-weight-bold);
+  }
+
+  p {
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+    hyphens: manual;
+  }
+
+  blockquote > p::before {
+    content: open-quote;
+  }
+
+  blockquote > p::after {
+    content: close-quote;
+  }
+
+  blockquote cite {
+    font-style: normal;
+  }
+
+  code,
+  kbd,
+  pre,
+  samp {
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: inherit;
+    font-family: var(--font-heading);
+    font-weight: var(--font-weight-semibold);
+    hyphens: none;
+    letter-spacing: var(--letter-spacing-tight);
+    overflow-wrap: break-word;
+    text-wrap: balance;
+  }
+
+  h1,
+  h2,
+  h3 {
+    line-height: 1;
+    text-rendering: optimizelegibility;
+  }
+
+  h4,
+  h5,
+  h6 {
+    line-height: var(--line-height-snug);
+  }
+
+  h1,
+  .h1 {
+    font-size: var(--font-size-4xl);
+  }
+
+  h2,
+  .h2 {
+    font-size: var(--font-size-3xl);
+  }
+
+  h3,
+  .h3 {
+    font-size: var(--font-size-2xl);
+  }
+
+  h4,
+  .h4 {
+    font-size: var(--font-size-xl);
+  }
+
+  h5,
+  .h5 {
+    font-size: var(--font-size-lg);
+  }
+
+  h6,
+  .h6 {
+    font-size: var(--font-size-base);
+    letter-spacing: var(--letter-spacing-normal);
+  }
+
+  @media (width <= 26em) {
+    h1,
+    .h1 {
+      font-size: var(--font-size-3xl);
+    }
+
+    h2,
+    .h2 {
+      font-size: var(--font-size-2xl);
+    }
+
+    h3,
+    .h3 {
+      font-size: var(--font-size-xl);
+    }
+  }
+
+  input,
+  button,
+  textarea,
+  select {
+    color: inherit;
+    font: inherit;
+  }
+
+  /** Fix Firefox line-height on input */
+  input {
+    line-height: normal;
+  }
+
+  legend {
+    font-family: var(--font-heading);
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-semibold);
+    line-height: inherit;
+  }
+
+  li {
+    hyphens: manual;
+    overflow-wrap: break-word;
+  }
+
+  optgroup {
+    font-weight: var(--font-weight-normal);
+  }
+
+  sub,
+  sup {
+    font-size: 0.75em;
+    line-height: 0;
+  }
+}

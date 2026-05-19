@@ -24,7 +24,7 @@ describe("EntityOverviewCard", () => {
     expect(screen.getByRole("heading", { name: "Anthropic" })).toBeInTheDocument()
     expect(screen.getByText("Authority 91%")).toBeInTheDocument()
     expect(screen.getByText("2 mentions")).toBeInTheDocument()
-    expect(screen.getByText("2 mentions").parentElement).toHaveClass("text-muted-foreground")
+    expect(screen.getByText("2 mentions").parentElement).toHaveClass("text-content-offset")
     expect(screen.getByText("Safety-focused AI company")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Website" })).toHaveAttribute(
       "href",

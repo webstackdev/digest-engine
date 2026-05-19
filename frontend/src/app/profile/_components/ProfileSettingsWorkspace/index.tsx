@@ -41,8 +41,8 @@ export function ProfileSettingsWorkspace({
         <Alert
           className={
             notice.tone === "success"
-              ? "rounded-panel border-border/10 bg-muted/60"
-              : "rounded-panel border-destructive/20 bg-destructive/10"
+              ? "rounded-3xl border-trim-offset bg-page-offset"
+              : "rounded-3xl border-danger bg-danger"
           }
           variant={notice.tone === "success" ? "default" : "destructive"}
         >

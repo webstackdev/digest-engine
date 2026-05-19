@@ -24,7 +24,7 @@ describe("ThemeSuggestionCard", () => {
     expect(screen.getByText("Track the platform agent shift")).toBeInTheDocument()
     expect(
       screen.getByText("Editors should cover how vendors are reshaping platform work with agent runtimes."),
-    ).toHaveClass("text-muted-foreground")
+    ).toHaveClass("text-content-offset")
     expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument()
     expect(screen.getByRole("link", { name: "Useful AI briefing" })).toBeInTheDocument()
@@ -47,7 +47,7 @@ describe("ThemeSuggestionCard", () => {
     )
 
     expect(screen.getByText("Dismissal reason: Already covered")).toHaveClass(
-      "text-muted-foreground",
+      "text-content-offset",
     )
     expect(screen.queryByRole("button", { name: "Accept" })).not.toBeInTheDocument()
   })

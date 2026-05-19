@@ -22,12 +22,12 @@ export function InvitationDetailsCard({
   const callbackUrl = `/invite/${token}`
 
   return (
-    <Card className="rounded-3xl border border-border/12 bg-muted/45 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-offset shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="m-0 text-sm text-muted">Project</p>
-            <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
+            <p className="m-0 text-sm text-content-offset">Project</p>
+            <h2 className="m-0 font-display text-title-sm font-bold text-content-active">
               {invitation.project_name}
             </h2>
           </div>
@@ -41,19 +41,19 @@ export function InvitationDetailsCard({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <p className="m-0 text-sm text-muted">Invited email</p>
-            <p className="m-0 text-sm font-medium text-foreground">{invitation.email}</p>
+            <p className="m-0 text-sm text-content-offset">Invited email</p>
+            <p className="m-0 text-sm font-medium text-content-active">{invitation.email}</p>
           </div>
           <div>
-            <p className="m-0 text-sm text-muted">Role</p>
-            <p className="m-0 text-sm font-medium text-foreground">{formatDisplayLabel(invitation.role)}</p>
+            <p className="m-0 text-sm text-content-offset">Role</p>
+            <p className="m-0 text-sm font-medium text-content-active">{formatDisplayLabel(invitation.role)}</p>
           </div>
         </div>
 
         {invitation.status === "revoked" ? (
-          <p className="m-0 text-sm leading-6 text-destructive">This invitation has been revoked.</p>
+          <p className="m-0 text-sm leading-6 text-danger">This invitation has been revoked.</p>
         ) : invitation.status === "accepted" ? (
-          <p className="m-0 text-sm leading-6 text-muted">This invitation has already been accepted.</p>
+          <p className="m-0 text-sm leading-6 text-content-offset">This invitation has already been accepted.</p>
         ) : isAuthenticated ? (
           <form action={`/api/invitations/${token}/accept`} method="POST">
             <input name="redirectTo" type="hidden" value={callbackUrl} />
@@ -63,7 +63,7 @@ export function InvitationDetailsCard({
           </form>
         ) : (
           <div className="space-y-3">
-            <p className="m-0 text-sm leading-6 text-muted">
+            <p className="m-0 text-sm leading-6 text-content-offset">
               Sign in as {invitation.email} to accept this invitation.
             </p>
             <Link

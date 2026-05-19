@@ -423,7 +423,7 @@ def test_run_all_scheduled_newsletter_drafts_executes_due_projects_inline(
     settings, mocker
 ):
     settings.CELERY_TASK_ALWAYS_EAGER = True
-    fixed_now = timezone.now().replace(second=0, microsecond=0)
+    fixed_now = timezone.now().replace(hour=9, minute=17, second=0, microsecond=0)
     due_expression = f"{fixed_now.minute} {fixed_now.hour} * * *"
     due_project = Project.objects.create(
         name="Due Project",
@@ -462,7 +462,7 @@ def test_run_all_scheduled_newsletter_drafts_enqueues_due_projects_when_not_eage
     settings, mocker
 ):
     settings.CELERY_TASK_ALWAYS_EAGER = False
-    fixed_now = timezone.now().replace(second=0, microsecond=0)
+    fixed_now = timezone.now().replace(hour=9, minute=17, second=0, microsecond=0)
     due_expression = f"{fixed_now.minute} {fixed_now.hour} * * *"
     due_project = Project.objects.create(
         name="Queued Project",
@@ -491,7 +491,7 @@ def test_run_all_scheduled_newsletter_drafts_enqueues_due_projects_when_not_eage
 
 def test_run_all_scheduled_newsletter_drafts_skips_daily_cap(settings, mocker):
     settings.CELERY_TASK_ALWAYS_EAGER = False
-    fixed_now = timezone.now().replace(second=0, microsecond=0)
+    fixed_now = timezone.now().replace(hour=9, minute=17, second=0, microsecond=0)
     due_expression = f"{fixed_now.minute} {fixed_now.hour} * * *"
     capped_project = Project.objects.create(
         name="Capped Project",

@@ -122,8 +122,8 @@ export function AppShellSidebar({
   ]
 
   return (
-    <aside className="flex flex-col gap-6 bg-sidebar/95 p-5 text-sidebar-foreground md:p-8">
-      <Card className="rounded-3xl bg-sidebar-accent/25 py-0 text-sidebar-foreground ring-sidebar-border/50 shadow-none">
+    <aside className="flex flex-col gap-6 bg-page-offset p-5 text-content-active md:p-8">
+      <Card className="rounded-3xl bg-page-base py-0 text-content-active ring-trim-offset shadow-none">
         <CardContent className="space-y-4 p-5">
           <div>
             <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">
@@ -133,7 +133,7 @@ export function AppShellSidebar({
               {selectedProject?.name ?? "Select a project"}
             </h1>
           </div>
-          <p className="text-sm leading-6 text-sidebar-foreground/74">
+          <p className="text-sm leading-6 text-content-active">
             {selectedProject?.topic_description ??
               "Choose a project to review its content, editorial state, and source health."}
           </p>
@@ -144,7 +144,7 @@ export function AppShellSidebar({
         {navigationItems.map((item) =>
           item.kind === "messages" ? (
             <Card
-              className="rounded-panel bg-sidebar-accent/38 py-0 text-sidebar-foreground ring-sidebar-border/60 shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent/56 hover:ring-sidebar-ring/40"
+              className="rounded-3xl bg-page-base py-0 text-content-active ring-trim-offset shadow-none transition hover:-translate-y-0.5 hover:bg-page-base hover:ring-primary"
               key={item.label}
             >
               <CardContent className="flex items-center justify-between gap-3 px-4 py-4">
@@ -172,7 +172,7 @@ export function AppShellSidebar({
             </Card>
           ) : (
             <Link className="block" href={item.href} key={item.label}>
-              <Card className="rounded-panel bg-sidebar-accent/38 py-0 text-sidebar-foreground ring-sidebar-border/60 shadow-none transition hover:-translate-y-0.5 hover:bg-sidebar-accent/56 hover:ring-sidebar-ring/40">
+              <Card className="rounded-3xl bg-page-base py-0 text-content-active ring-trim-offset shadow-none transition hover:-translate-y-0.5 hover:bg-page-base hover:ring-primary">
                 <CardContent className="flex items-center justify-between gap-3 px-4 py-4">
                   <span>{item.label}</span>
                 </CardContent>
@@ -197,15 +197,15 @@ export function AppShellSidebar({
               >
                 <Card
                   className={cn(
-                    "rounded-panel py-0 text-sidebar-foreground shadow-none transition hover:-translate-y-0.5",
+                    "rounded-3xl py-0 text-content-active shadow-none transition hover:-translate-y-0.5",
                     isActive
-                      ? "bg-linear-to-b from-primary/15 to-sidebar-accent/48 ring-primary/30"
-                      : "bg-sidebar-accent/38 ring-sidebar-border/60 hover:bg-sidebar-accent/56 hover:ring-sidebar-ring/40",
+                      ? "bg-linear-to-b from-primary to-page-base ring-primary"
+                      : "bg-page-base ring-trim-offset hover:bg-page-base hover:ring-primary",
                   )}
                 >
                   <CardContent className="grid gap-1 px-4 py-4">
                     <span>{project.name}</span>
-                    <CardDescription className="text-sidebar-foreground/64">
+                    <CardDescription className="text-content-active">
                       {project.topic_description}
                     </CardDescription>
                   </CardContent>

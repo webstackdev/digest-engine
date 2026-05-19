@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@source "./";
+
+/**
+ * Shared Tailwind tokens for every workspace consumer.
+ *
+ * Only palette colors declared here should become shared color utilities.
+ * App-local themes may still map runtime semantic variables like `--background`
+ * or `--card`, but new shared colors should be added here deliberately instead
+ * of invented in app-local theme files.
+ */
+
+/**
+ * Size aliases were removed from this legacy file.
+ *
+ * Use built-in Tailwind width, radius, text, spacing, tracking, and leading
+ * utilities in app code instead. Shared type scale overrides now live in
+ * `typography.css`.
+ */
+
+

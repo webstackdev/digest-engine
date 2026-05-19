@@ -48,12 +48,12 @@ export function EntityDetailPageContent({
     >
       <div className="space-y-4">
         {errorMessage ? (
-          <Alert className="rounded-panel border-destructive/20 bg-destructive/14" variant="destructive">
-            <AlertDescription className="text-destructive">{errorMessage}</AlertDescription>
+          <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
+            <AlertDescription className="text-danger">{errorMessage}</AlertDescription>
           </Alert>
         ) : null}
         {successMessage ? (
-          <Alert className="rounded-panel border-border/12 bg-muted/60">
+          <Alert className="rounded-3xl border-trim-offset bg-page-offset">
             <AlertDescription>{successMessage}</AlertDescription>
           </Alert>
         ) : null}

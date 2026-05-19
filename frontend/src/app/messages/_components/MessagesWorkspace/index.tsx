@@ -314,15 +314,15 @@ export function MessagesWorkspace({
 
   return (
     <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-      <Card className="rounded-panel border-border/10 bg-card/90 py-0 shadow-none">
-        <CardHeader className="border-b border-border/60 py-4">
+      <Card className="rounded-3xl border-trim-offset bg-page-base py-0 shadow-none">
+        <CardHeader className="border-b border-trim-offset py-4">
           <CardTitle>Threads</CardTitle>
         </CardHeader>
         <CardContent className="max-h-152 space-y-3 overflow-y-auto py-4">
-          <form className="space-y-3 rounded-2xl border border-border/60 bg-muted/15 p-4" onSubmit={(event) => void handleStartConversation(event)}>
+          <form className="space-y-3 rounded-2xl border border-trim-offset bg-page-offset p-4" onSubmit={(event) => void handleStartConversation(event)}>
             <div className="space-y-1">
               <p className="text-sm font-medium">Start a conversation</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-content-offset">
                 Pick a collaborator from this project and optionally send the opening message immediately.
               </p>
             </div>
@@ -331,7 +331,7 @@ export function MessagesWorkspace({
               <span>Recipient</span>
               <select
                 aria-label="Recipient"
-                className="h-10 rounded-lg border border-input bg-transparent px-3 text-sm outline-none transition focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="h-10 rounded-lg border border-trim-offset bg-transparent px-3 text-sm transition"
                 disabled={availableRecipients.length === 0 || openThreadMutation.isPending}
                 value={activeRecipientId ?? ""}
                 onChange={(event) => {
@@ -369,11 +369,11 @@ export function MessagesWorkspace({
           </form>
 
           {threadsQuery.isError ? (
-            <Alert className="rounded-xl border-destructive/20 bg-destructive/10" variant="destructive">
+            <Alert className="rounded-xl border-danger bg-danger" variant="destructive">
               <AlertDescription>Unable to load message threads.</AlertDescription>
             </Alert>
           ) : threads.length === 0 ? (
-            <Alert className="rounded-panel border-border/10 bg-muted/60">
+            <Alert className="rounded-3xl border-trim-offset bg-page-offset">
               <AlertDescription>
                 No conversations yet. Start one from the project collaborators listed above.
               </AlertDescription>
@@ -388,8 +388,8 @@ export function MessagesWorkspace({
                 <button
                   className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
                     isSelected
-                      ? "border-primary/30 bg-primary/8"
-                      : "border-border/60 bg-muted/20 hover:border-border/90 hover:bg-muted/40"
+                      ? "border-primary bg-primary"
+                      : "border-trim-offset bg-page-offset hover:border-trim-offset hover:bg-page-offset"
                   }`}
                   data-active={isSelected ? "true" : "false"}
                   key={thread.id}
@@ -401,7 +401,7 @@ export function MessagesWorkspace({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-medium">{counterpartName}</p>
-                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                      <p className="mt-1 line-clamp-2 text-sm text-content-offset">
                         {thread.last_message_preview || "No messages yet."}
                       </p>
                     </div>
@@ -409,7 +409,7 @@ export function MessagesWorkspace({
                       <span className="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
                     ) : null}
                   </div>
-                  <p className="mt-3 text-xs text-muted-foreground">
+                  <p className="mt-3 text-xs text-content-offset">
                     {formatTimestamp(thread.last_message_at)}
                   </p>
                 </button>
@@ -419,8 +419,8 @@ export function MessagesWorkspace({
         </CardContent>
       </Card>
 
-      <Card className="rounded-panel border-border/10 bg-card/90 py-0 shadow-none">
-        <CardHeader className="border-b border-border/60 py-4">
+      <Card className="rounded-3xl border-trim-offset bg-page-base py-0 shadow-none">
+        <CardHeader className="border-b border-trim-offset py-4">
           <CardTitle>
             {selectedThread?.counterpart?.display_name ||
               selectedThread?.counterpart?.username ||
@@ -429,18 +429,18 @@ export function MessagesWorkspace({
         </CardHeader>
         <CardContent className="space-y-4 py-4">
           {selectedThread === null ? (
-            <Alert className="rounded-panel border-border/10 bg-muted/60">
+            <Alert className="rounded-3xl border-trim-offset bg-page-offset">
               <AlertDescription>Select a thread to read and reply.</AlertDescription>
             </Alert>
           ) : messagesQuery.isError ? (
-            <Alert className="rounded-xl border-destructive/20 bg-destructive/10" variant="destructive">
+            <Alert className="rounded-xl border-danger bg-danger" variant="destructive">
               <AlertDescription>Unable to load this thread.</AlertDescription>
             </Alert>
           ) : (
             <>
-              <div className="max-h-120 space-y-3 overflow-y-auto rounded-2xl border border-border/60 bg-muted/15 p-4">
+              <div className="max-h-120 space-y-3 overflow-y-auto rounded-2xl border border-trim-offset bg-page-offset p-4">
                 {(messagesQuery.data ?? []).length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-content-offset">
                     No messages yet. Send the first reply to start the conversation.
                   </p>
                 ) : (
@@ -455,12 +455,12 @@ export function MessagesWorkspace({
                         <div
                           className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
                             isCurrentUser
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-card ring-1 ring-border/70"
+                              ? "bg-primary text-primary-inverse"
+                              : "bg-page-base ring-1 ring-trim-offset"
                           }`}
                         >
                           {!isCurrentUser ? (
-                            <p className="mb-1 text-xs font-medium text-muted-foreground">
+                            <p className="mb-1 text-xs font-medium text-content-offset">
                               {message.sender_display_name}
                             </p>
                           ) : null}
@@ -468,8 +468,8 @@ export function MessagesWorkspace({
                           <p
                             className={`mt-2 text-[11px] ${
                               isCurrentUser
-                                ? "text-primary-foreground/70"
-                                : "text-muted-foreground"
+                                ? "text-content-inverse-active"
+                                : "text-content-offset"
                             }`}
                           >
                             {formatTimestamp(message.created_at)}
@@ -493,7 +493,7 @@ export function MessagesWorkspace({
                   }}
                 />
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-content-offset">
                     New messages in this thread appear live while the conversation stays open.
                   </p>
                   <Button disabled={sendMessageMutation.isPending || draftBody.trim().length === 0} type="submit">

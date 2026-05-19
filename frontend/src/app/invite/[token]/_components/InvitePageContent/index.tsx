@@ -23,30 +23,30 @@ export function InvitePageContent({
   isAuthenticated,
 }: InvitePageContentProps) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <Card className="w-full max-w-2xl rounded-3xl border border-border/12 bg-card/90 shadow-panel backdrop-blur-xl">
+    <div className="flex min-h-screen items-center justify-center bg-page-base px-4 py-10">
+      <Card className="w-full max-w-2xl rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="space-y-6 pt-4 md:pt-6">
           <div>
-            <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-muted">
+            <p className="m-0 text-eyebrow uppercase tracking-eyebrow text-content-offset">
               Digest Engine
             </p>
-            <h1 className="mt-2 font-display text-display-page font-bold text-foreground">
+            <h1 className="mt-2 font-display text-display-page font-bold text-content-active">
               Project invitation
             </h1>
           </div>
 
           {errorMessage ? (
-            <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+            <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
               <AlertDescription>{errorMessage}</AlertDescription>
             </Alert>
           ) : null}
           {successMessage ? (
-            <Alert className="rounded-panel border-border/10 bg-muted/60">
+            <Alert className="rounded-3xl border-trim-offset bg-page-offset">
               <AlertDescription>{successMessage}</AlertDescription>
             </Alert>
           ) : null}
           {invitationError ? (
-            <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+            <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
               <AlertDescription>{invitationError}</AlertDescription>
             </Alert>
           ) : null}

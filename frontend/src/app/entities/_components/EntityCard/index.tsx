@@ -24,7 +24,7 @@ type EntityCardProps = {
 /** Render a single editable entity card with recent mention context. */
 export function EntityCard({ entity, projectId }: EntityCardProps) {
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -33,7 +33,7 @@ export function EntityCard({ entity, projectId }: EntityCardProps) {
                 {entity.name}
               </Link>
             </h3>
-            <div className="flex flex-wrap gap-2 text-sm text-muted">
+            <div className="flex flex-wrap gap-2 text-sm text-content-offset">
               <span>{formatDate(entity.created_at)}</span>
               <span>Authority {entity.authority_score.toFixed(2)}</span>
               <span>
@@ -44,29 +44,29 @@ export function EntityCard({ entity, projectId }: EntityCardProps) {
           <StatusBadge tone="neutral">{entity.type}</StatusBadge>
         </div>
 
-        <section className="space-y-3 rounded-2xl border border-border/10 bg-muted/45 p-4">
+        <section className="space-y-3 rounded-2xl border border-trim-offset bg-page-offset p-4">
           <div className="flex items-center justify-between gap-3">
-            <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-muted">
+            <h4 className="m-0 text-sm font-semibold uppercase tracking-[0.18em] text-content-offset">
               Recent mentions
             </h4>
-            <span className="text-sm text-muted">{entity.mention_count} total</span>
+            <span className="text-sm text-content-offset">{entity.mention_count} total</span>
           </div>
           {entity.latest_mentions.length === 0 ? (
-            <Alert className="rounded-panel border-border/12 bg-card/80">
+            <Alert className="rounded-3xl border-trim-offset bg-page-base">
               <AlertDescription>No extracted mentions for this entity yet.</AlertDescription>
             </Alert>
           ) : (
             <ul className="m-0 grid list-none gap-3 p-0">
               {entity.latest_mentions.map((mention) => (
-                <li className="rounded-2xl border border-border/10 bg-card/80 p-3" key={mention.id}>
-                  <div className="flex flex-wrap gap-2 text-sm text-muted">
+                <li className="rounded-2xl border border-trim-offset bg-page-base p-3" key={mention.id}>
+                  <div className="flex flex-wrap gap-2 text-sm text-content-offset">
                     <span>{mention.content_title}</span>
                     <span>{mention.role}</span>
                     {mention.sentiment ? <span>{mention.sentiment}</span> : null}
                     <span>{Math.round(mention.confidence * 100)}% confidence</span>
                   </div>
                   {mention.span ? (
-                    <p className="mb-0 mt-2 text-sm leading-6 text-foreground">Matched span: {mention.span}</p>
+                    <p className="mb-0 mt-2 text-sm leading-6 text-content-active">Matched span: {mention.span}</p>
                   ) : null}
                 </li>
               ))}

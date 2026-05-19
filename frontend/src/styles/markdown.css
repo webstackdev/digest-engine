@@ -1,0 +1,139 @@
+/**
+ * Global styles for content in Markdown layout.
+ */
+
+/**
+ * Prevent Mermaid diagram text from clipping at foreignObject boundaries.
+ *
+ * rehype-mermaid computes foreignObject dimensions during build-time rendering
+ * in Playwright headless Chromium. Slight font-metric differences between the
+ * build environment and the user's browser cause text to overflow its container
+ * by a few pixels. Allowing overflow prevents the last characters from being
+ * clipped while keeping the node background shapes correctly sized.
+ */
+.nextra-content svg[id^="mermaid-"] foreignObject {
+  overflow: visible;
+}
+
+.nextra-content [id^="mermaid-"] foreignObject > div {
+  overflow: visible;
+}
+
+/**
+ * Footnote reference numbers should not have dotted underlines.
+ */
+.nextra-content sup a[data-footnote-ref],
+.nextra-content sup a.footnote-ref,
+.nextra-content sup a[data-footnote-ref]:hover,
+.nextra-content sup a.footnote-ref:hover {
+  text-decoration: none;
+}
+
+/**
+ * Footnote backref icon links should stay unadorned and use the active text
+ * color on hover so they fit the rest of the docs theme.
+ */
+.nextra-content a[data-footnote-backref],
+.nextra-content a.footnote-backref {
+  display: inline-block;
+  text-decoration: none;
+  transition: color 150ms ease, transform 150ms ease;
+}
+
+.nextra-content a[data-footnote-backref]:hover,
+.nextra-content a[data-footnote-backref]:focus-visible,
+.nextra-content a.footnote-backref:hover,
+.nextra-content a.footnote-backref:focus-visible {
+  color: var(--color-content-active);
+  text-decoration: none;
+  transform: translateY(-2px);
+}
+
+/**
+ * Add a soft separator above the generated footnotes section.
+ */
+.nextra-content section[data-footnotes] {
+  border-top: 1px solid var(--color-trim-offset);
+  margin-top: 2rem;
+  padding-top: 1rem;
+}
+
+/**
+ * Space subscript slightly off content.
+ */
+.nextra-content sub {
+  margin-left: 0.15rem;
+}
+
+/**
+ * Tailwind preflight makes SVG elements block-level, which breaks inline
+ * MathJax output inside prose.
+ */
+.nextra-content mjx-container svg {
+  display: inline-block;
+}
+
+/**
+ * Let captioned tables scroll horizontally instead of clipping on narrow
+ * viewports.
+ */
+.nextra-content figure:has(> table) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/**
+ * Nextra already handles task list layout. We only restyle the checkbox so it
+ * matches the shared theme tokens.
+ */
+.nextra-content li.task-list-item {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.6rem;
+  list-style: none;
+}
+
+.nextra-content li.task-list-item > input[type='checkbox'] {
+  appearance: none;
+  background-color: var(--color-page-offset);
+  background-image: none;
+  border: 2px solid var(--color-content-offset);
+  border-radius: var(--radius-sm, 0.25rem);
+  box-sizing: border-box;
+  display: inline-grid;
+  flex: 0 0 auto;
+  height: 1.15em;
+  margin-top: 0.25em;
+  place-content: center;
+  width: 1.15em;
+}
+
+.nextra-content li.task-list-item > input[type='checkbox']::before {
+  border-bottom: 0.18em solid var(--color-content-inverse);
+  border-right: 0.18em solid var(--color-content-inverse);
+  content: '';
+  height: 0.55em;
+  opacity: 0;
+  transform: rotate(45deg);
+  width: 0.35em;
+}
+
+.nextra-content li.task-list-item > input[type='checkbox']:checked {
+  background-color: var(--color-success);
+  background-image: none;
+  border-color: var(--color-success);
+}
+
+.nextra-content li.task-list-item > input[type='checkbox']:checked::before {
+  opacity: 1;
+}
+
+.nextra-content li.task-list-item > input[type='checkbox']:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.nextra-content li.task-list-item > input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--color-spotlight);
+  outline-offset: 2px;
+}

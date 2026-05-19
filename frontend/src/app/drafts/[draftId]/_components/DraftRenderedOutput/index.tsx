@@ -12,10 +12,10 @@ type DraftRenderedOutputProps = {
 export function DraftRenderedOutput({ draft, view }: DraftRenderedOutputProps) {
   if (view === "markdown") {
     return (
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="pt-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Rendered markdown</p>
-          <pre className="mt-4 overflow-auto rounded-2xl bg-sidebar/95 p-4 text-sm text-sidebar-foreground">
+          <pre className="mt-4 overflow-auto rounded-2xl bg-page-offset p-4 text-sm text-content-active">
             {draft.rendered_markdown}
           </pre>
         </CardContent>
@@ -25,11 +25,11 @@ export function DraftRenderedOutput({ draft, view }: DraftRenderedOutputProps) {
 
   if (view === "html") {
     return (
-      <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+      <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
         <CardContent className="pt-5">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Rendered HTML</p>
           <article
-            className="prose prose-sm mt-4 max-w-none text-foreground dark:prose-invert"
+            className="prose prose-sm mt-4 max-w-none text-content-active dark:prose-invert"
             dangerouslySetInnerHTML={{ __html: draft.rendered_html }}
           />
         </CardContent>

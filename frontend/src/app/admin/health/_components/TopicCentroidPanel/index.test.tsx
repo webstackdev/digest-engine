@@ -57,7 +57,7 @@ describe("TopicCentroidPanel", () => {
     )
 
     expect(screen.getByText("Topic centroid observability")).toBeInTheDocument()
-    expect(screen.getByText("Centroid state")).toHaveClass("text-muted-foreground")
+    expect(screen.getByText("Centroid state")).toHaveClass("text-content-offset")
     expect(screen.getAllByText("10.0%").length).toBeGreaterThan(0)
     expect(screen.getByText("Feedback 14")).toBeInTheDocument()
     expect(
@@ -89,9 +89,9 @@ describe("TopicCentroidPanel", () => {
 
     expect(
       screen.getByText("No centroid snapshots exist for this project yet."),
-    ).toHaveClass("text-muted-foreground")
+    ).toHaveClass("text-content-offset")
     expect(
       screen.getByText("No centroid snapshot history exists for this project yet."),
-    ).toHaveClass("text-muted-foreground")
+    ).toHaveClass("text-content-offset")
   })
 })

@@ -127,7 +127,7 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label="Open notifications"
-        className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-border/10 bg-card/85 p-0 shadow-sm transition hover:brightness-105 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-trim-offset bg-page-base p-0 shadow-sm transition hover:brightness-105"
       >
         <Bell className="size-5" />
         {unreadCount > 0 ? (
@@ -141,10 +141,10 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-88 overflow-hidden p-0">
-        <div className="flex items-center justify-between border-b border-border/70 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-trim-offset px-4 py-3">
           <div>
             <p className="text-sm font-semibold">Notification inbox</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-content-offset">
               {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
             </p>
           </div>
@@ -162,11 +162,11 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
 
         <div className="max-h-96 overflow-y-auto p-1">
           {notificationsQuery.isError ? (
-            <div className="px-3 py-4 text-sm text-destructive">
+            <div className="px-3 py-4 text-sm text-danger">
               Unable to load notifications.
             </div>
           ) : notifications.length === 0 ? (
-            <div className="px-3 py-4 text-sm text-muted-foreground">
+            <div className="px-3 py-4 text-sm text-content-offset">
               No notifications yet.
             </div>
           ) : (
@@ -180,12 +180,12 @@ export function NotificationMenu({ websocketUrl }: NotificationMenuProps) {
               >
                 <span
                   className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                    notification.is_read ? "bg-border" : "bg-primary"
+                    notification.is_read ? "bg-trim-offset" : "bg-primary"
                   }`}
                 />
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="line-clamp-2 text-sm leading-5">{notification.body}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-content-offset">
                     {notification.created_at.replace("T", " ").replace("Z", " UTC")}
                   </p>
                 </div>

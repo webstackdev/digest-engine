@@ -125,10 +125,10 @@ describe("ContentDetailSidebar", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByText("No review flags are attached to this content."),
-    ).toHaveClass("text-muted-foreground")
+    ).toHaveClass("text-content-offset")
     expect(
       screen.getByText("This content has not been promoted by a theme suggestion yet."),
-    ).toHaveClass("text-muted-foreground")
+    ).toHaveClass("text-content-offset")
     expect(screen.getByText("Review state")).toHaveClass("mb-3")
     expect(screen.getByText("Promotion state")).toHaveClass("mb-3")
     expect(screen.getByText("Navigate")).toHaveClass("mb-3")

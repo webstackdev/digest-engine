@@ -5,6 +5,13 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "cryptography"
+        versions:
+          - ">=47"
+      - dependency-name: "websockets"
+        versions:
+          - ">=16"
     groups:
       python-dependencies:
         patterns:
@@ -16,6 +23,7 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 5
     ignore:
+      # eslint 10 is blocked until eslint-config-next adds support for it.
       - dependency-name: "eslint"
         update-types:
           - "version-update:semver-major"

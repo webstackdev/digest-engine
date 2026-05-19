@@ -80,7 +80,7 @@ def openrouter_chat_json(
 def get_skill_definition(skill_name: str) -> SkillDefinition:
     """Load a skill definition from the repository skill markdown directory."""
 
-    skill_path = Path(__file__).resolve().parent.parent / "skills" / skill_name / "SKILL.md"
+    skill_path = get_skill_resource_path(skill_name, "SKILL.md")
     raw_text = skill_path.read_text(encoding="utf-8")
     frontmatter, body = _split_frontmatter(raw_text)
     name = frontmatter.get("name", skill_name).strip() or skill_name
@@ -93,6 +93,17 @@ def get_skill_definition(skill_name: str) -> SkillDefinition:
         output_fields=output_fields,
         instructions_markdown=instructions_markdown,
         instructions_html=markdown.markdown(instructions_markdown),
+    )
+
+
+def get_skill_resource_path(skill_name: str, *relative_parts: str) -> Path:
+    """Return the repository path for a runtime skill resource."""
+
+    return (
+        Path(__file__).resolve().parent.parent
+        / "skills"
+        / skill_name
+        / Path(*relative_parts)
     )
 
 

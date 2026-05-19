@@ -77,7 +77,7 @@ describe("SourceDiversityPanel", () => {
       screen.getByRole("heading", { level: 2, name: "Source diversity" }),
     ).toBeInTheDocument()
     expect(screen.getByText("Top plugin share trend").parentElement).toHaveClass(
-      "text-muted-foreground",
+      "text-content-offset",
     )
     expect(screen.getByText("Your stream is 70%+ from RSS this week.")).toBeInTheDocument()
     expect(screen.getByLabelText("Source diversity trend")).toBeInTheDocument()
@@ -96,6 +96,6 @@ describe("SourceDiversityPanel", () => {
 
     expect(
       screen.getByText("No source-diversity snapshots exist for this project yet."),
-    ).toHaveClass("text-muted-foreground")
+    ).toHaveClass("text-content-offset")
   })
 })

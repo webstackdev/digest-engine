@@ -49,11 +49,11 @@ export function AvatarDropzone({
   })
 
   return (
-    <Card className="rounded-3xl border border-border/12 bg-card/85 shadow-panel backdrop-blur-xl">
+    <Card className="rounded-3xl border border-trim-offset bg-page-base shadow-panel backdrop-blur-xl">
       <CardContent className="space-y-4 pt-4">
         <div className="space-y-1">
           <p className="m-0 text-eyebrow uppercase tracking-eyebrow opacity-70">Upload</p>
-          <h2 className="m-0 font-display text-title-sm font-bold text-foreground">
+          <h2 className="m-0 font-display text-title-sm font-bold text-content-active">
             Drag, drop, or browse
           </h2>
         </div>
@@ -62,23 +62,23 @@ export function AvatarDropzone({
           {...getRootProps()}
           className={`rounded-3xl border border-dashed px-5 py-8 text-center transition ${
             isDragReject
-              ? "border-destructive/40 bg-destructive/10"
+              ? "border-danger bg-danger"
               : isDragActive
-                ? "border-primary/45 bg-primary/8"
-                : "border-border/16 bg-muted/45 hover:border-primary/28 hover:bg-muted/60"
+                ? "border-primary bg-primary"
+                : "border-trim-offset bg-page-offset hover:border-primary hover:bg-page-offset"
           } ${isUploading ? "cursor-wait opacity-70" : "cursor-pointer"}`}
         >
           <input {...getInputProps({ "aria-label": "Upload avatar image" })} />
-          <p className="m-0 text-base font-medium text-foreground">
+          <p className="m-0 text-base font-medium text-content-active">
             {isUploading ? "Uploading avatar..." : "Drop an image here or click to browse."}
           </p>
-          <p className="mb-0 mt-2 text-sm leading-6 text-muted">
+          <p className="mb-0 mt-2 text-sm leading-6 text-content-offset">
             PNG, JPEG, and WebP files up to 2 MB.
           </p>
         </div>
 
         {errorMessage ? (
-          <Alert className="rounded-panel border-destructive/20 bg-destructive/10" variant="destructive">
+          <Alert className="rounded-3xl border-danger bg-danger" variant="destructive">
             <AlertDescription>{errorMessage}</AlertDescription>
           </Alert>
         ) : null}

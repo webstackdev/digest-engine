@@ -2,13 +2,19 @@ set dotenv-load := false
 
 compose := "docker compose"
 backend_env := "if [ ! -f .env ]; then cp .env.example .env; fi"
-backend_venv := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi"
-backend_python := ".venv/bin/python3"
+backend_venv := "uv sync --frozen"
+backend_python := ".venv/bin/python"
+backend_pants := "pants"
+backend_test_pants := "pants --process-execution-local-parallelism=4"
+backend_pants_targets := "::"
 backend_python_targets := "conftest.py manage.py content core digest_engine entities ingestion messaging newsletters notifications pipeline projects trends users tests"
 frontend_env := "if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi"
-frontend_cd := "cd frontend &&"
+pnpm_setup := "corepack enable && corepack prepare pnpm@11.1.0 --activate"
+pnpm_exec := "pnpm"
+turbo_exec := "pnpm turbo"
+frontend_filter := "--filter=@digestengine/frontend"
 django_manage := "docker compose exec django python manage.py"
-host_backend_test_env := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .venv; fi && set -a && . ./.env.test && set +a &&"
+host_backend_test_env := "uv sync --frozen && set -a && . ./.env.test && set +a &&"
 
 # -----------------------------------------------------------------------------
 # Setup
@@ -17,12 +23,19 @@ host_backend_test_env := "if [ ! -x .venv/bin/python3 ]; then python3 -m venv .v
 # Install backend Python dependencies and initialize the root env file
 backend-install:
     @{{backend_env}}
-    @{{backend_venv}}
-    @{{backend_python}} -m pip install -r requirements.txt
+    @command -v pants >/dev/null 2>&1 || { echo "Pants is required. Install it from https://www.pantsbuild.org/stable/docs/getting-started/installing-pants"; exit 1; }
+    @uv python install 3.13
+    @uv sync --frozen
 
-# Install frontend npm dependencies
+# Bootstrap a fresh clone with uv, pnpm, env files, and git hooks
+bootstrap:
+    @bash scripts/bootstrap_dev.sh
+
+# Ensure pnpm is enabled, then install frontend dependencies
 frontend-install:
-    @{{frontend_cd}} npm install
+    @{{frontend_env}}
+    @{{pnpm_setup}}
+    @{{pnpm_exec}} install {{frontend_filter}}
 
 # Install pre-commit hooks when running inside a git checkout
 install-hooks:
@@ -31,29 +44,41 @@ install-hooks:
 # Install backend, frontend, and git hook dependencies
 install: backend-install frontend-install install-hooks
 
+# Remove generated caches, coverage output, and frontend build artifacts
+clean:
+    @find . \
+        \( -path './.git' -o -path './.venv' -o -path './node_modules' -o -path './frontend/node_modules' \) -prune -o \
+        -type d \( -name '__pycache__' -o -name '.pytest_cache' -o -name '.ruff_cache' \) -exec rm -rf {} +
+    @rm -rf .coverage .turbo htmlcov frontend/.next frontend/coverage frontend/storybook-static frontend/node_modules/.cache
+
 # -----------------------------------------------------------------------------
 # Development And Builds
 # -----------------------------------------------------------------------------
+
+# App development tasks stay separate between the backend stack and the product frontend.
 
 # Start the backend development stack with Django, workers, and dependencies
 backend-dev:
     @{{backend_env}}
     @{{compose}} up django celery-worker celery-beat postgres redis qdrant nginx
 
-# Start the Next.js frontend development server
+# Start only the app frontend development server
 frontend-dev:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run dev
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run dev {{frontend_filter}}
 
 # Start Storybook for local frontend component development
 storybook-dev:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run storybook
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run storybook {{frontend_filter}}
 
 # Build the static Storybook site for production
 storybook-build:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run build-storybook
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run build-storybook {{frontend_filter}}
 
 # Start the full local docker-compose development stack
 dev:
@@ -66,10 +91,18 @@ backend-build:
 
 # Build the frontend production bundle
 frontend-build:
-    @{{frontend_cd}} npm run build
+    @{{frontend_env}}
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run build {{frontend_filter}}
+
+# Build the frontend TypeScript application through Turbo
+typescript-build:
+    @{{frontend_env}}
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run build
 
 # Build both backend and frontend deliverables
-build: backend-build frontend-build
+build: backend-build typescript-build
 
 # -----------------------------------------------------------------------------
 # Quality Checks
@@ -78,22 +111,23 @@ build: backend-build frontend-build
 # Run the frontend TypeScript typecheck
 frontend-typecheck:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run typecheck
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run typecheck
 
 # Lint and validate the backend Python and template code
 backend-lint:
     @{{backend_venv}}
-    @{{backend_python}} -m ruff check {{backend_python_targets}}
+    @{{backend_pants}} lint {{backend_pants_targets}}
     @{{backend_python}} -m djlint core/templates --check
-    @{{host_backend_test_env}} {{backend_python}} -m mypy --check-untyped-defs
+    @{{host_backend_test_env}} {{backend_pants}} check {{backend_pants_targets}}
     @{{backend_python}} -m pre_commit run --all-files check-yaml
     @{{host_backend_test_env}} {{backend_python}} manage.py check
 
-# Lint and typecheck the frontend codebase
+# Lint and typecheck the frontend TypeScript app
 frontend-lint:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run typecheck
-    @{{frontend_cd}} npm run lint
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run typecheck lint lint:style {{frontend_filter}}
 
 # Run all lint and validation tasks
 lint: backend-lint frontend-lint helm-lint
@@ -110,7 +144,8 @@ backend-lint-fix:
 # Auto-fix frontend lint issues where supported
 frontend-lint-fix:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run lint:fix
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run lint:fix lint:style:fix {{frontend_filter}}
 
 # Run all available lint auto-fixes
 lint-fix: backend-lint-fix frontend-lint-fix
@@ -118,42 +153,44 @@ lint-fix: backend-lint-fix frontend-lint-fix
 # Format frontend source files with Prettier
 frontend-format:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run format
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run format
 
 # Check frontend formatting without modifying files
 frontend-format-check:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run format:check
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run format:check
 
 # Run the frontend test suite
 frontend-test:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run test:run
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run test:run {{frontend_filter}}
 
 # Run Storybook browser tests for frontend components
 frontend-storybook-test:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run test:storybook
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run test:storybook {{frontend_filter}}
 
 # Run the complete frontend test suite including Storybook browser tests
 frontend-test-all:
     @{{frontend_env}}
-    @{{frontend_cd}} npm run test:all
+    @{{pnpm_setup}}
+    @{{turbo_exec}} run test:all
 
 # Run the backend test suite
 backend-test:
-    @{{host_backend_test_env}} {{backend_python}} -m pytest
+    @{{host_backend_test_env}} {{backend_test_pants}} test {{backend_pants_targets}}
 
 # Run backend tests with terminal coverage output
 backend-test-coverage:
-    @{{backend_venv}}
-    @{{backend_python}} -m coverage erase
-    @{{host_backend_test_env}} {{backend_python}} -m coverage run -m pytest
-    @{{backend_python}} -m coverage report -m
+    @{{host_backend_test_env}} {{backend_test_pants}} test --use-coverage {{backend_pants_targets}}
 
 # Generate backend HTML coverage output
-backend-test-coverage-html: backend-test-coverage
-    @{{backend_python}} -m coverage html
+backend-test-coverage-html:
+    @{{host_backend_test_env}} {{backend_test_pants}} --coverage-py-report='["console", "html"]' test --use-coverage {{backend_pants_targets}}
 
 # Run the main backend and frontend test suites
 test: backend-test frontend-test

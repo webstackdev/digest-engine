@@ -1,0 +1,146 @@
+/* ==========================================================================
+   Print Stylesheet
+   ========================================================================== */
+
+@media print {
+  /* --------------------------------------------------------------------------
+     Page setup
+     -------------------------------------------------------------------------- */
+
+  @page {
+    margin: 2cm;
+
+    @bottom-left {
+      color: #000;
+      content: "Webstack Builders, Inc.";
+      font-size: 0.75rem;
+    }
+
+    @bottom-right {
+      color: #000;
+      content: "Page " counter(page) " of " counter(pages);
+      font-family: Arial, sans-serif;
+      font-size: 0.8333rem;
+    }
+  }
+
+  /* --------------------------------------------------------------------------
+     Global resets — undo screen layout constraints for print
+     -------------------------------------------------------------------------- */
+
+  html {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Body: undo Tailwind h-full, overflow-hidden, flex, invisible */
+  body {
+    color: var(--color-content);
+    display: block !important;
+    height: auto !important;
+    margin: 0;
+    min-height: unset !important;
+    overflow: visible !important;
+    padding: 0;
+    visibility: visible !important;
+  }
+
+  /* --------------------------------------------------------------------------
+     Typography — widows, orphans, page breaks
+     -------------------------------------------------------------------------- */
+
+  p, blockquote, figcaption {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Keep headings attached to the content that follows them */
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid;
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* Cohesive borders when elements fragment across pages */
+  * {
+    box-decoration-break: clone;
+  }
+
+  /* --------------------------------------------------------------------------
+     Images
+     -------------------------------------------------------------------------- */
+
+  img {
+    break-inside: avoid;
+    max-width: 100% !important;
+  }
+
+  /* Don't print pseudo-element badges on images */
+  img::after,
+  img::before {
+    display: none !important;
+  }
+
+  /* --------------------------------------------------------------------------
+     Lists, figures, tables, code — avoid page breaks inside
+     -------------------------------------------------------------------------- */
+
+  li, [data-qr-code] {
+    break-inside: avoid;
+  }
+
+  /* --------------------------------------------------------------------------
+     Links — expand external URLs, suppress internal ones
+     -------------------------------------------------------------------------- */
+
+  a {
+    text-decoration: none;
+  }
+
+  /* Show full URL for outbound links */
+  article a[href^="http"]::after,
+  article a[href^="https"]::after {
+    content: " <" attr(href) "> ";
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+
+  /* Suppress URL expansion for internal links and anchor links */
+  article a[href^="/"]::after,
+  article a[href^="#"]::after {
+    content: none;
+  }
+
+  /* Don't expand links that wrap images */
+  a:has(img)::after {
+    content: none;
+  }
+
+  /* --------------------------------------------------------------------------
+     Abbreviations — print definition in parentheses
+     -------------------------------------------------------------------------- */
+
+  abbr[title]::after {
+    content: " (" attr(title) ")";
+  }
+
+  /* --------------------------------------------------------------------------
+     QR code — visible only in print (default isHidden adds `hidden` class)
+     -------------------------------------------------------------------------- */
+
+  [data-qr-code] {
+    break-inside: avoid;
+    display: block !important;
+    margin-top: 1cm;
+    text-align: center;
+  }
+
+  /* --------------------------------------------------------------------------
+     Backgrounds — override grey offset areas to paper-white
+     -------------------------------------------------------------------------- */
+
+  html, body {
+    background-color: #fff !important;
+  }
+
+}

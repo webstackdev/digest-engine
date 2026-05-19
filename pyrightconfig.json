@@ -1,0 +1,46 @@
+{
+  "include": [
+    "conftest.py",
+    "manage.py",
+    "content",
+    "core",
+    "digest_engine",
+    "entities",
+    "ingestion",
+    "messaging",
+    "newsletters",
+    "notifications",
+    "pipeline",
+    "projects",
+    "tests",
+    "trends",
+    "users"
+  ],
+  "exclude": [
+    "**/migrations",
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/node_modules"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.13",
+  "pythonPlatform": "Linux",
+  "typeCheckingMode": "basic",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        "."
+      ]
+    }
+  ],
+  "reportMissingImports": "none",
+  "reportMissingTypeStubs": "none",
+  "reportFunctionMemberAccess": "none",
+  "reportCallIssue": "none",
+  "reportArgumentType": "none",
+  "reportReturnType": "none",
+  "reportAttributeAccessIssue": "none"
+}

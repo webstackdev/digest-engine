@@ -1,13 +1,52 @@
 {
-  "$schema": "https://turbo.build/schema.json",
+  "$schema": "https://v2-9-14.turborepo.dev/schema.json",
+  "globalDependencies": ["**/.env.*local"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**"],
+      "inputs": [
+        "src/**",
+        "app/**",
+        "tsconfig.json",
+        "next.config.ts",
+        "tailwind.config.ts"
+      ]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "cache": true
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "lint:style": {
+      "cache": true,
+      "outputs": []
+    },
+    "lint:style:fix": {
+      "cache": false,
+      "outputs": []
     },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "test:run": {
+      "dependsOn": ["^build"]
+    },
+    "format": {
+      "cache": false
+    },
+    "format:check": {
+      "outputs": []
+    },
+    "storybook": {
+      "cache": false,
+      "persistent": true
+    },
+    "build-storybook": {
+      "outputs": ["storybook-static/**"]
     }
   }
 }
