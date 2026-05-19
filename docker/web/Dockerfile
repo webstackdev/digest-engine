@@ -9,6 +9,7 @@ ARG UV_VERSION=0.8.17
 WORKDIR /app
 
 RUN apt-get update \
+    && apt-get upgrade --yes \
     && apt-get install --yes --no-install-recommends build-essential curl libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
