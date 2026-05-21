@@ -123,9 +123,6 @@ INSTALLED_APPS = [
     "channels",
     # 4. Third-Party Authentication & API Tools
     "rest_framework",
-    "rest_framework.authtoken",
-    "dj_rest_auth",
-    "dj_rest_auth.registration",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -263,7 +260,6 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.TokenAuthentication",
         "rest_framework.authentication.BasicAuthentication",
     ],
     "DEFAULT_SCHEMA_CLASS": "drf_standardized_errors.openapi.AutoSchema",

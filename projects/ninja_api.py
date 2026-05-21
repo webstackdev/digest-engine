@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, cast
+from typing import Any
 
 from ninja import Router, Schema
 from ninja.errors import HttpError
-from rest_framework import serializers
+from ninja.responses import Status
 
 from core.api import logger
 from core.ninja_api import drf_authenticate
-from core.permissions import get_visible_projects_queryset
+from core.permissions import get_user_role, get_visible_projects_queryset
 from ingestion.plugins.bluesky import BlueskySourcePlugin
 from ingestion.plugins.linkedin import LinkedInSourcePlugin
 from ingestion.plugins.mastodon import MastodonSourcePlugin
@@ -25,7 +25,6 @@ from projects.models import (
     ProjectRole,
     generate_project_intake_token,
 )
-from projects.serializers import ProjectSerializer
 
 router = Router(tags=["Project Management"])
 
@@ -97,10 +96,74 @@ class MastodonCredentialsVerifyResponse(Schema):
     last_error: str
 
 
+class ValidationErrorSchema(Schema):
+    """Simple field-to-errors response payload."""
+
+    pass
+
+
 def _serialize_project(project: Project, request: Any = None) -> dict[str, Any]:
     """Return the project response body."""
-    context = {"request": request} if request else {}
-    return cast(dict[str, Any], ProjectSerializer(project, context=context).data)
+
+    credentials = BlueskyCredentials.objects.filter(project=project).first()
+    request_user = request.user if request is not None else None
+    return {
+        "id": int(project.pk),
+        "name": project.name,
+        "topic_description": project.topic_description,
+        "content_retention_days": project.content_retention_days,
+        "intake_token": project.intake_token,
+        "intake_enabled": project.intake_enabled,
+        "user_role": (
+            get_user_role(request_user, project)
+            if request_user is not None and request_user.is_authenticated
+            else None
+        ),
+        "has_bluesky_credentials": credentials is not None,
+        "bluesky_handle": credentials.handle if credentials else "",
+        "bluesky_is_active": credentials.is_active if credentials else False,
+        "bluesky_last_verified_at": (
+            credentials.last_verified_at if credentials else None
+        ),
+        "bluesky_last_error": credentials.last_error if credentials else "",
+        "created_at": project.created_at,
+    }
+
+
+def _validate_project_payload(payload: dict[str, Any]) -> dict[str, list[str]] | None:
+    """Return one validation payload when project fields are invalid."""
+
+    errors: dict[str, list[str]] = {}
+    name = payload.get("name")
+    if name is not None and not str(name).strip():
+        errors["name"] = ["This field may not be blank."]
+    topic_description = payload.get("topic_description")
+    if topic_description is not None and not str(topic_description).strip():
+        errors["topic_description"] = ["This field may not be blank."]
+    content_retention_days = payload.get("content_retention_days")
+    if content_retention_days is not None and int(content_retention_days) < 0:
+        errors["content_retention_days"] = [
+            "Ensure this value is greater than or equal to 0."
+        ]
+    return errors or None
+
+
+def _project_update_fields(payload: dict[str, Any]) -> list[str]:
+    """Return the subset of project model fields changed by the payload."""
+
+    allowed_fields = {
+        "name",
+        "topic_description",
+        "content_retention_days",
+        "intake_enabled",
+    }
+    return [field_name for field_name in payload if field_name in allowed_fields]
+
+
+def _credential_validation_error(field_name: str, message: str):
+    """Return one 400 response payload for credential verification failures."""
+
+    return Status(400, {field_name: [message]})
 
 
 def _get_project_or_404(request: Any, project_id: int) -> Project:
@@ -147,20 +210,25 @@ def list_projects(request):
     return [_serialize_project(project, request) for project in projects]
 
 
-@router.post("/projects/", response={201: ProjectSchema}, auth=drf_authenticate)
+@router.post(
+    "/projects/",
+    response={201: ProjectSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def create_project(request, payload: ProjectCreateInput):
     """Create a new project for the authenticated user."""
-    serializer = ProjectSerializer(
-        data=payload.model_dump(exclude_unset=True), context={"request": request}
-    )
-    serializer.is_valid(raise_exception=True)
-    project = serializer.save()
+
+    validated_payload = payload.model_dump(exclude_unset=True)
+    errors = _validate_project_payload(validated_payload)
+    if errors is not None:
+        return Status(400, errors)
+    project = Project.objects.create(**validated_payload)
     ProjectMembership.objects.create(
         user=request.user,
         project=project,
         role=ProjectRole.ADMIN,
     )
-    return 201, _serialize_project(project, request)
+    return Status(201, _serialize_project(project, request))
 
 
 @router.get("/projects/{project_id}/", response=ProjectSchema, auth=drf_authenticate)
@@ -170,18 +238,24 @@ def get_project(request, project_id: int):
     return _serialize_project(project, request)
 
 
-@router.patch("/projects/{project_id}/", response=ProjectSchema, auth=drf_authenticate)
+@router.patch(
+    "/projects/{project_id}/",
+    response={200: ProjectSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def update_project(request, project_id: int, payload: ProjectUpdateInput):
     """Update project details."""
     project = _require_project_admin(request, project_id)
-    serializer = ProjectSerializer(
-        project,
-        data=payload.model_dump(exclude_unset=True),
-        partial=True,
-        context={"request": request},
-    )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+
+    validated_payload = payload.model_dump(exclude_unset=True)
+    errors = _validate_project_payload(validated_payload)
+    if errors is not None:
+        return Status(400, errors)
+    for field_name in _project_update_fields(validated_payload):
+        setattr(project, field_name, validated_payload[field_name])
+    update_fields = _project_update_fields(validated_payload)
+    if update_fields:
+        project.save(update_fields=update_fields)
     return _serialize_project(project, request)
 
 
@@ -190,7 +264,7 @@ def delete_project(request, project_id: int):
     """Delete a project."""
     project = _require_project_admin(request, project_id)
     project.delete()
-    return 204, None
+    return Status(204)
 
 
 @router.post(
@@ -208,7 +282,7 @@ def rotate_intake_token(request, project_id: int):
 
 @router.post(
     "/projects/{project_id}/verify-bluesky-credentials/",
-    response=BlueskyCredentialsVerifyResponse,
+    response={200: BlueskyCredentialsVerifyResponse, 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def verify_bluesky_credentials(request, project_id: int):
@@ -216,12 +290,11 @@ def verify_bluesky_credentials(request, project_id: int):
     project = _require_project_admin(request, project_id)
     try:
         credentials = project.bluesky_credentials
-    except BlueskyCredentials.DoesNotExist as exc:
-        raise serializers.ValidationError(
-            {
-                "bluesky_credentials": "No Bluesky credentials are configured for this project."
-            }
-        ) from exc
+    except BlueskyCredentials.DoesNotExist:
+        return _credential_validation_error(
+            "bluesky_credentials",
+            "No Bluesky credentials are configured for this project.",
+        )
 
     try:
         BlueskySourcePlugin.verify_credentials(credentials)
@@ -229,11 +302,10 @@ def verify_bluesky_credentials(request, project_id: int):
         logger.exception(
             "Bluesky credential verification failed for project id=%s", project.id
         )
-        raise serializers.ValidationError(
-            {
-                "bluesky_credentials": "Credential verification failed. Please re-check the credentials and try again."
-            }
-        ) from exc
+        return _credential_validation_error(
+            "bluesky_credentials",
+            "Credential verification failed. Please re-check the credentials and try again.",
+        )
 
     credentials.refresh_from_db()
     return {
@@ -261,7 +333,7 @@ def start_linkedin_oauth(request, project_id: int, payload: LinkedInOAuthStartRe
 
 @router.post(
     "/projects/{project_id}/verify-linkedin-credentials/",
-    response=LinkedInCredentialsVerifyResponse,
+    response={200: LinkedInCredentialsVerifyResponse, 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def verify_linkedin_credentials(request, project_id: int):
@@ -269,12 +341,11 @@ def verify_linkedin_credentials(request, project_id: int):
     project = _require_project_admin(request, project_id)
     try:
         credentials = project.linkedin_credentials
-    except LinkedInCredentials.DoesNotExist as exc:
-        raise serializers.ValidationError(
-            {
-                "linkedin_credentials": "No LinkedIn credentials are configured for this project."
-            }
-        ) from exc
+    except LinkedInCredentials.DoesNotExist:
+        return _credential_validation_error(
+            "linkedin_credentials",
+            "No LinkedIn credentials are configured for this project.",
+        )
 
     try:
         LinkedInSourcePlugin.verify_credentials(credentials)
@@ -282,11 +353,10 @@ def verify_linkedin_credentials(request, project_id: int):
         logger.exception(
             "LinkedIn credential verification failed for project id=%s", project.id
         )
-        raise serializers.ValidationError(
-            {
-                "linkedin_credentials": "Credential verification failed. Please re-check the credentials and try again."
-            }
-        ) from exc
+        return _credential_validation_error(
+            "linkedin_credentials",
+            "Credential verification failed. Please re-check the credentials and try again.",
+        )
 
     credentials.refresh_from_db()
     return {
@@ -300,7 +370,7 @@ def verify_linkedin_credentials(request, project_id: int):
 
 @router.post(
     "/projects/{project_id}/verify-mastodon-credentials/",
-    response=MastodonCredentialsVerifyResponse,
+    response={200: MastodonCredentialsVerifyResponse, 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def verify_mastodon_credentials(request, project_id: int):
@@ -308,12 +378,11 @@ def verify_mastodon_credentials(request, project_id: int):
     project = _require_project_admin(request, project_id)
     try:
         credentials = project.mastodon_credentials
-    except MastodonCredentials.DoesNotExist as exc:
-        raise serializers.ValidationError(
-            {
-                "mastodon_credentials": "No Mastodon credentials are configured for this project."
-            }
-        ) from exc
+    except MastodonCredentials.DoesNotExist:
+        return _credential_validation_error(
+            "mastodon_credentials",
+            "No Mastodon credentials are configured for this project.",
+        )
 
     try:
         MastodonSourcePlugin.verify_credentials(credentials)
@@ -321,11 +390,10 @@ def verify_mastodon_credentials(request, project_id: int):
         logger.exception(
             "Mastodon credential verification failed for project id=%s", project.id
         )
-        raise serializers.ValidationError(
-            {
-                "mastodon_credentials": "Credential verification failed. Please re-check the credentials and try again."
-            }
-        ) from exc
+        return _credential_validation_error(
+            "mastodon_credentials",
+            "Credential verification failed. Please re-check the credentials and try again.",
+        )
 
     credentials.refresh_from_db()
     return {
@@ -381,6 +449,7 @@ from newsletters.ninja_api import (
     newsletter_drafts_router,
     newsletter_intakes_router,
 )
+from pipeline.ninja_api import router as pipeline_router
 from trends.ninja_api import (
     clusters_router,
     ideas_router,
@@ -415,6 +484,7 @@ router.add_router(
     "/projects/{project_id}/draft-original-pieces",
     newsletter_draft_original_pieces_router,
 )
+router.add_router("/projects/{project_id}", pipeline_router)
 router.add_router("/projects/{project_id}/clusters", clusters_router)
 router.add_router("/projects/{project_id}/themes", themes_router)
 router.add_router("/projects/{project_id}/ideas", ideas_router)

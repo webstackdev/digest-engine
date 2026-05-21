@@ -5,10 +5,12 @@ from __future__ import annotations
 from typing import Any, cast
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 from django.utils import timezone
 from ninja import Body, Path, Router
 from ninja.errors import HttpError
+from ninja.responses import Status
 
 from core.ninja_api import drf_authenticate
 from newsletters.models import (
@@ -19,15 +21,6 @@ from newsletters.models import (
     NewsletterDraftSection,
     NewsletterDraftStatus,
     NewsletterIntake,
-)
-from newsletters.serializers import (
-    IntakeAllowlistSerializer,
-    NewsletterDraftItemSerializer,
-    NewsletterDraftOriginalPieceSerializer,
-    NewsletterDraftRegenerateSectionSerializer,
-    NewsletterDraftSectionSerializer,
-    NewsletterDraftSerializer,
-    NewsletterIntakeSerializer,
 )
 from newsletters.tasks import (
     generate_newsletter_draft,
@@ -46,31 +39,137 @@ newsletter_draft_original_pieces_router = Router(tags=["Newsletter Composition"]
 def _serialize_allowlist(entry: IntakeAllowlist) -> dict[str, Any]:
     """Return one intake allowlist response body."""
 
-    return cast(dict[str, Any], IntakeAllowlistSerializer(entry).data)
+    return {
+        "id": int(entry.pk),
+        "project": entry.project_id,
+        "sender_email": entry.sender_email,
+        "is_confirmed": entry.is_confirmed,
+        "confirmed_at": entry.confirmed_at.isoformat() if entry.confirmed_at else None,
+        "confirmation_token": entry.confirmation_token,
+        "created_at": entry.created_at.isoformat(),
+    }
 
 
 def _serialize_intake(intake: NewsletterIntake) -> dict[str, Any]:
     """Return one newsletter intake response body."""
 
-    return cast(dict[str, Any], NewsletterIntakeSerializer(intake).data)
+    return {
+        "id": int(intake.pk),
+        "project": intake.project_id,
+        "sender_email": intake.sender_email,
+        "subject": intake.subject,
+        "received_at": intake.received_at.isoformat(),
+        "raw_html": intake.raw_html,
+        "raw_text": intake.raw_text,
+        "message_id": intake.message_id,
+        "status": intake.status,
+        "extraction_result": intake.extraction_result,
+        "error_message": intake.error_message,
+    }
+
+
+def _serialize_draft_item_content(item: NewsletterDraftItem) -> dict[str, Any]:
+    """Return the embedded content summary for one draft item."""
+
+    content = item.content
+    return {
+        "id": content.id,
+        "url": content.url,
+        "title": content.title,
+        "source_plugin": content.source_plugin,
+        "published_date": (
+            content.published_date.isoformat() if content.published_date else None
+        ),
+    }
 
 
 def _serialize_draft(draft: NewsletterDraft) -> dict[str, Any]:
     """Return one newsletter draft response body."""
 
-    return cast(dict[str, Any], NewsletterDraftSerializer(draft).data)
+    return {
+        "id": int(draft.pk),
+        "project": draft.project_id,
+        "title": draft.title,
+        "intro": draft.intro,
+        "outro": draft.outro,
+        "target_publish_date": (
+            draft.target_publish_date.isoformat() if draft.target_publish_date else None
+        ),
+        "status": draft.status,
+        "generated_at": draft.generated_at.isoformat(),
+        "last_edited_at": (
+            draft.last_edited_at.isoformat() if draft.last_edited_at else None
+        ),
+        "generation_metadata": draft.generation_metadata,
+        "sections": [
+            _serialize_draft_section(section) for section in draft.sections.all()
+        ],
+        "original_pieces": [
+            _serialize_original_piece(original_piece)
+            for original_piece in draft.original_pieces.all()
+        ],
+        "rendered_markdown": draft.render_markdown(),
+        "rendered_html": draft.render_html(),
+    }
+
+
+def _serialize_theme_suggestion(
+    section: NewsletterDraftSection,
+) -> dict[str, Any] | None:
+    """Return the embedded accepted-theme summary for one draft section."""
+
+    theme = section.theme_suggestion
+    if theme is None:
+        return None
+    return {
+        "id": int(theme.pk),
+        "title": theme.title,
+        "pitch": theme.pitch,
+        "why_it_matters": theme.why_it_matters,
+    }
 
 
 def _serialize_draft_section(section: NewsletterDraftSection) -> dict[str, Any]:
     """Return one newsletter draft section response body."""
 
-    return cast(dict[str, Any], NewsletterDraftSectionSerializer(section).data)
+    return {
+        "id": int(section.pk),
+        "draft": section.draft_id,
+        "theme_suggestion": section.theme_suggestion_id,
+        "theme_suggestion_detail": _serialize_theme_suggestion(section),
+        "title": section.title,
+        "lede": section.lede,
+        "order": section.order,
+        "items": [_serialize_draft_item(item) for item in section.items.all()],
+    }
 
 
 def _serialize_draft_item(item: NewsletterDraftItem) -> dict[str, Any]:
     """Return one newsletter draft item response body."""
 
-    return cast(dict[str, Any], NewsletterDraftItemSerializer(item).data)
+    return {
+        "id": int(item.pk),
+        "section": item.section_id,
+        "content": item.content_id,
+        "content_detail": _serialize_draft_item_content(item),
+        "summary_used": item.summary_used,
+        "why_it_matters": item.why_it_matters,
+        "order": item.order,
+    }
+
+
+def _serialize_original_idea(
+    original_piece: NewsletterDraftOriginalPiece,
+) -> dict[str, Any]:
+    """Return the embedded accepted-idea summary for one original piece."""
+
+    idea = original_piece.idea
+    return {
+        "id": int(idea.pk),
+        "angle_title": idea.angle_title,
+        "summary": idea.summary,
+        "suggested_outline": idea.suggested_outline,
+    }
 
 
 def _serialize_original_piece(
@@ -78,10 +177,102 @@ def _serialize_original_piece(
 ) -> dict[str, Any]:
     """Return one newsletter draft original-piece response body."""
 
-    return cast(
-        dict[str, Any],
-        NewsletterDraftOriginalPieceSerializer(original_piece).data,
-    )
+    return {
+        "id": int(original_piece.pk),
+        "draft": original_piece.draft_id,
+        "idea": original_piece.idea_id,
+        "idea_detail": _serialize_original_idea(original_piece),
+        "title": original_piece.title,
+        "pitch": original_piece.pitch,
+        "suggested_outline": original_piece.suggested_outline,
+        "order": original_piece.order,
+    }
+
+
+def _validation_error_payload(exc: ValidationError) -> dict[str, list[str]]:
+    """Convert a Django validation error into the native API error payload."""
+
+    if hasattr(exc, "message_dict"):
+        return {
+            field: [str(message) for message in messages]
+            for field, messages in exc.message_dict.items()
+        }
+    return {"__all__": [str(message) for message in exc.messages]}
+
+
+def _unknown_field_errors(
+    payload: dict[str, Any],
+    *,
+    accepted_fields: set[str],
+) -> dict[str, list[str]] | None:
+    """Reject fields that are not part of the supported payload contract."""
+
+    errors = {
+        field_name: ["This field is not allowed."]
+        for field_name in payload
+        if field_name not in accepted_fields
+    }
+    return errors or None
+
+
+def _validated_model_payload(
+    instance: (
+        IntakeAllowlist
+        | NewsletterDraft
+        | NewsletterDraftSection
+        | NewsletterDraftItem
+        | NewsletterDraftOriginalPiece
+    ),
+    payload: dict[str, Any],
+    *,
+    editable_fields: set[str],
+    accepted_fields: set[str],
+) -> tuple[dict[str, list[str]] | None, list[str]]:
+    """Validate one partial model payload and return the touched field names."""
+
+    errors = _unknown_field_errors(payload, accepted_fields=accepted_fields)
+    if errors is not None:
+        return errors, []
+
+    updated_fields: list[str] = []
+    for field_name in editable_fields:
+        if field_name in payload:
+            setattr(instance, field_name, payload[field_name])
+            updated_fields.append(field_name)
+    try:
+        instance.full_clean()
+    except ValidationError as exc:
+        return _validation_error_payload(exc), updated_fields
+    return None, updated_fields
+
+
+def _validated_regenerate_section_payload(
+    payload: dict[str, Any],
+    *,
+    draft: NewsletterDraft,
+) -> tuple[int | None, dict[str, list[str]] | None]:
+    """Validate the draft-section regeneration payload."""
+
+    errors = _unknown_field_errors(payload, accepted_fields={"section_id"})
+    if errors is not None:
+        return None, errors
+    if "section_id" not in payload:
+        return None, {"section_id": ["This field is required."]}
+
+    raw_section_id = payload["section_id"]
+    try:
+        section_id = int(raw_section_id)
+    except (TypeError, ValueError):
+        return None, {"section_id": ["A valid integer is required."]}
+
+    exists = NewsletterDraftSection.objects.filter(
+        pk=section_id,
+        draft=draft,
+        draft__project=draft.project,
+    ).exists()
+    if not exists:
+        return None, {"section_id": ["Draft section not found for this project."]}
+    return section_id, None
 
 
 def _draft_queryset():
@@ -235,7 +426,7 @@ def list_intake_allowlist(request: Any, project_id: int = Path(...)):
 
 @intake_allowlist_router.post(
     "/",
-    response={201: dict[str, Any]},
+    response={201: dict[str, Any], 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def create_intake_allowlist(
@@ -246,13 +437,25 @@ def create_intake_allowlist(
     """Create one intake allowlist entry for the selected project."""
 
     project = _require_project_writable(request, project_id)
-    serializer = IntakeAllowlistSerializer(
-        data=payload,
-        context={"project": project, "request": request},
+    entry = IntakeAllowlist(project=project)
+    errors, _ = _validated_model_payload(
+        entry,
+        payload,
+        editable_fields={"sender_email"},
+        accepted_fields={
+            "id",
+            "project",
+            "sender_email",
+            "is_confirmed",
+            "confirmed_at",
+            "confirmation_token",
+            "created_at",
+        },
     )
-    serializer.is_valid(raise_exception=True)
-    entry = serializer.save(project=project)
-    return 201, _serialize_allowlist(entry)
+    if errors is not None:
+        return Status(400, errors)
+    entry.save()
+    return Status(201, _serialize_allowlist(entry))
 
 
 @intake_allowlist_router.get(
@@ -273,7 +476,7 @@ def get_intake_allowlist(
 
 @intake_allowlist_router.patch(
     "/{allowlist_id}/",
-    response=dict[str, Any],
+    response={200: dict[str, Any], 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def update_intake_allowlist(
@@ -286,14 +489,24 @@ def update_intake_allowlist(
 
     _require_project_writable(request, project_id)
     entry = _get_allowlist_or_404(project_id, allowlist_id)
-    serializer = IntakeAllowlistSerializer(
+    errors, updated_fields = _validated_model_payload(
         entry,
-        data=payload,
-        partial=True,
-        context={"project": entry.project, "request": request},
+        payload,
+        editable_fields={"sender_email"},
+        accepted_fields={
+            "id",
+            "project",
+            "sender_email",
+            "is_confirmed",
+            "confirmed_at",
+            "confirmation_token",
+            "created_at",
+        },
     )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    if errors is not None:
+        return Status(400, errors)
+    if updated_fields:
+        entry.save(update_fields=updated_fields)
     return _serialize_allowlist(entry)
 
 
@@ -312,7 +525,7 @@ def delete_intake_allowlist(
     _require_project_writable(request, project_id)
     entry = _get_allowlist_or_404(project_id, allowlist_id)
     entry.delete()
-    return 204, None
+    return Status(204, None)
 
 
 @newsletter_intakes_router.get(
@@ -370,13 +583,16 @@ def generate_newsletter_draft_route(request: Any, project_id: int = Path(...)):
     _require_project_writable(request, project_id)
     if settings.CELERY_TASK_ALWAYS_EAGER:
         result = generate_newsletter_draft(project_id)
-        return 200, {
-            "status": "completed",
-            "project_id": project_id,
-            "result": result,
-        }
+        return Status(
+            200,
+            {
+                "status": "completed",
+                "project_id": project_id,
+                "result": result,
+            },
+        )
     generate_newsletter_draft.delay(project_id)
-    return 202, {"status": "queued", "project_id": project_id}
+    return Status(202, {"status": "queued", "project_id": project_id})
 
 
 @newsletter_drafts_router.get(
@@ -397,7 +613,7 @@ def get_newsletter_draft(
 
 @newsletter_drafts_router.patch(
     "/{draft_id}/",
-    response=dict[str, Any],
+    response={200: dict[str, Any], 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def update_newsletter_draft(
@@ -410,23 +626,38 @@ def update_newsletter_draft(
 
     _require_project_writable(request, project_id)
     draft = _get_draft_or_404(project_id, draft_id)
-    serializer = NewsletterDraftSerializer(
+    errors, updated_fields = _validated_model_payload(
         draft,
-        data=payload,
-        partial=True,
-        context={"project": draft.project, "request": request},
+        payload,
+        editable_fields={"title", "intro", "outro", "target_publish_date", "status"},
+        accepted_fields={
+            "id",
+            "project",
+            "title",
+            "intro",
+            "outro",
+            "target_publish_date",
+            "status",
+            "generated_at",
+            "last_edited_at",
+            "generation_metadata",
+            "sections",
+            "original_pieces",
+            "rendered_markdown",
+            "rendered_html",
+        },
     )
-    serializer.is_valid(raise_exception=True)
-    serializer.save(
-        status=NewsletterDraftStatus.EDITED,
-        last_edited_at=timezone.now(),
-    )
+    if errors is not None:
+        return Status(400, errors)
+    draft.status = NewsletterDraftStatus.EDITED
+    draft.last_edited_at = timezone.now()
+    draft.save(update_fields=sorted({*updated_fields, "status", "last_edited_at"}))
     return _serialize_draft(_get_draft_or_404(project_id, draft_id))
 
 
 @newsletter_drafts_router.post(
     "/{draft_id}/regenerate_section/",
-    response={200: dict[str, Any], 202: dict[str, Any]},
+    response={200: dict[str, Any], 202: dict[str, Any], 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def regenerate_newsletter_draft_section_route(
@@ -439,22 +670,22 @@ def regenerate_newsletter_draft_section_route(
 
     _require_project_writable(request, project_id)
     draft = _get_draft_or_404(project_id, draft_id)
-    serializer = NewsletterDraftRegenerateSectionSerializer(
-        data=payload,
-        context={"project": draft.project, "draft": draft, "request": request},
-    )
-    serializer.is_valid(raise_exception=True)
-    section_id = serializer.validated_data["section_id"]
+    section_id, errors = _validated_regenerate_section_payload(payload, draft=draft)
+    if errors is not None or section_id is None:
+        return Status(400, errors or {"section_id": ["This field is required."]})
     if settings.CELERY_TASK_ALWAYS_EAGER:
         regenerate_newsletter_draft_section(section_id)
         draft.refresh_from_db()
         return _serialize_draft(_get_draft_or_404(project_id, draft_id))
     regenerate_newsletter_draft_section.delay(section_id)
-    return 202, {
-        "status": "queued",
-        "draft_id": int(draft.pk),
-        "section_id": section_id,
-    }
+    return Status(
+        202,
+        {
+            "status": "queued",
+            "draft_id": int(draft.pk),
+            "section_id": section_id,
+        },
+    )
 
 
 @newsletter_draft_sections_router.get(
@@ -500,7 +731,7 @@ def get_newsletter_draft_section(
 
 @newsletter_draft_sections_router.patch(
     "/{section_id}/",
-    response=dict[str, Any],
+    response={200: dict[str, Any], 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def update_newsletter_draft_section(
@@ -513,10 +744,26 @@ def update_newsletter_draft_section(
 
     _require_project_writable(request, project_id)
     section = _get_draft_section_or_404(project_id, section_id)
-    serializer = NewsletterDraftSectionSerializer(section, data=payload, partial=True)
-    serializer.is_valid(raise_exception=True)
-    updated_section = serializer.save()
-    _mark_draft_edited(updated_section.draft)
+    errors, updated_fields = _validated_model_payload(
+        section,
+        payload,
+        editable_fields={"title", "lede", "order"},
+        accepted_fields={
+            "id",
+            "draft",
+            "theme_suggestion",
+            "theme_suggestion_detail",
+            "title",
+            "lede",
+            "order",
+            "items",
+        },
+    )
+    if errors is not None:
+        return Status(400, errors)
+    if updated_fields:
+        section.save(update_fields=updated_fields)
+    _mark_draft_edited(section.draft)
     return _serialize_draft_section(_get_draft_section_or_404(project_id, section_id))
 
 
@@ -537,7 +784,7 @@ def delete_newsletter_draft_section(
     draft = section.draft
     section.delete()
     _mark_draft_edited(draft)
-    return 204, None
+    return Status(204, None)
 
 
 @newsletter_draft_items_router.get(
@@ -575,7 +822,7 @@ def get_newsletter_draft_item(
 
 @newsletter_draft_items_router.patch(
     "/{item_id}/",
-    response=dict[str, Any],
+    response={200: dict[str, Any], 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def update_newsletter_draft_item(
@@ -588,10 +835,25 @@ def update_newsletter_draft_item(
 
     _require_project_writable(request, project_id)
     item = _get_draft_item_or_404(project_id, item_id)
-    serializer = NewsletterDraftItemSerializer(item, data=payload, partial=True)
-    serializer.is_valid(raise_exception=True)
-    updated_item = serializer.save()
-    _mark_draft_edited(updated_item.section.draft)
+    errors, updated_fields = _validated_model_payload(
+        item,
+        payload,
+        editable_fields={"summary_used", "why_it_matters", "order"},
+        accepted_fields={
+            "id",
+            "section",
+            "content",
+            "content_detail",
+            "summary_used",
+            "why_it_matters",
+            "order",
+        },
+    )
+    if errors is not None:
+        return Status(400, errors)
+    if updated_fields:
+        item.save(update_fields=updated_fields)
+    _mark_draft_edited(item.section.draft)
     return _serialize_draft_item(_get_draft_item_or_404(project_id, item_id))
 
 
@@ -612,7 +874,7 @@ def delete_newsletter_draft_item(
     draft = item.section.draft
     item.delete()
     _mark_draft_edited(draft)
-    return 204, None
+    return Status(204, None)
 
 
 @newsletter_draft_original_pieces_router.get(
@@ -653,7 +915,7 @@ def get_newsletter_draft_original_piece(
 
 @newsletter_draft_original_pieces_router.patch(
     "/{original_piece_id}/",
-    response=dict[str, Any],
+    response={200: dict[str, Any], 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def update_newsletter_draft_original_piece(
@@ -666,14 +928,26 @@ def update_newsletter_draft_original_piece(
 
     _require_project_writable(request, project_id)
     original_piece = _get_original_piece_or_404(project_id, original_piece_id)
-    serializer = NewsletterDraftOriginalPieceSerializer(
+    errors, updated_fields = _validated_model_payload(
         original_piece,
-        data=payload,
-        partial=True,
+        payload,
+        editable_fields={"title", "pitch", "suggested_outline", "order"},
+        accepted_fields={
+            "id",
+            "draft",
+            "idea",
+            "idea_detail",
+            "title",
+            "pitch",
+            "suggested_outline",
+            "order",
+        },
     )
-    serializer.is_valid(raise_exception=True)
-    updated_original_piece = serializer.save()
-    _mark_draft_edited(updated_original_piece.draft)
+    if errors is not None:
+        return Status(400, errors)
+    if updated_fields:
+        original_piece.save(update_fields=updated_fields)
+    _mark_draft_edited(original_piece.draft)
     return _serialize_original_piece(
         _get_original_piece_or_404(project_id, original_piece_id)
     )
@@ -696,7 +970,7 @@ def delete_newsletter_draft_original_piece(
     draft = original_piece.draft
     original_piece.delete()
     _mark_draft_edited(draft)
-    return 204, None
+    return Status(204, None)
 
 
 __all__ = [

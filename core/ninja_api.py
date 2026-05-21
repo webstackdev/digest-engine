@@ -1,56 +1,100 @@
-"""Shared Django Ninja helpers for incremental DRF migration."""
+"""Shared Django Ninja auth helpers that avoid DRF runtime coupling."""
 
 from __future__ import annotations
 
-from typing import Any
+import base64
+import binascii
 
+from django.contrib.auth import authenticate
 from django.http import HttpRequest
-from ninja import NinjaAPI
-from rest_framework.exceptions import APIException
-from rest_framework.request import Request
-from rest_framework.settings import api_settings
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import (
+    AuthenticationFailed as SimpleJWTAuthenticationFailed,
+    InvalidToken,
+    TokenError,
+)
 
 
-def drf_authenticate(request: HttpRequest) -> object | None:
-    """Authenticate one Ninja request with the configured DRF authenticators."""
-
-    drf_request = Request(request)
-    for authenticator_class in api_settings.DEFAULT_AUTHENTICATION_CLASSES:
-        authenticator = authenticator_class()
-        authentication_result = authenticator.authenticate(drf_request)
-        if authentication_result is None:
-            continue
-
-        user, auth = authentication_result
-        request.user = user
-        request.auth = auth
-        return user
+def _session_user(request: HttpRequest) -> object | None:
+    """Return the authenticated Django session user, if present."""
 
     user = getattr(request, "user", None)
     if user is not None and getattr(user, "is_authenticated", False):
+        request.auth = getattr(request, "auth", None)
         return user
     return None
 
 
-def _exception_payload(exc: APIException) -> dict[str, Any] | list[Any]:
-    """Normalize one DRF exception into a JSON-serializable payload."""
+def _authorization_header(request: HttpRequest) -> str:
+    """Return the raw Authorization header value for one request."""
 
-    detail = exc.detail
-    if isinstance(detail, (dict, list)):
-        return detail
-    return {"detail": str(detail)}
+    return request.META.get("HTTP_AUTHORIZATION", "").strip()
 
 
-def register_drf_exception_handlers(api: NinjaAPI) -> None:
-    """Expose DRF validation and permission errors through Ninja responses."""
+def _bearer_user(request: HttpRequest) -> object | None:
+    """Authenticate one request from a Bearer JWT authorization header."""
 
-    @api.exception_handler(APIException)
-    def handle_drf_api_exception(request: HttpRequest, exc: APIException):
-        return api.create_response(
-            request,
-            _exception_payload(exc),
-            status=exc.status_code,
-        )
+    authenticator = JWTAuthentication()
+    header = authenticator.get_header(request)
+    if header is None:
+        return None
+
+    try:
+        raw_token = authenticator.get_raw_token(header)
+    except SimpleJWTAuthenticationFailed:
+        return None
+    if raw_token is None:
+        return None
+
+    try:
+        validated_token = authenticator.get_validated_token(raw_token)
+        user = authenticator.get_user(validated_token)
+    except (InvalidToken, TokenError, SimpleJWTAuthenticationFailed):
+        return None
+
+    request.user = user
+    request.auth = validated_token
+    return user
 
 
-__all__ = ["drf_authenticate", "register_drf_exception_handlers"]
+def _basic_user(request: HttpRequest) -> object | None:
+    """Authenticate one request from an HTTP Basic authorization header."""
+
+    header = _authorization_header(request)
+    if not header:
+        return None
+
+    scheme, _, value = header.partition(" ")
+    if scheme.lower() != "basic" or not value:
+        return None
+
+    try:
+        decoded = base64.b64decode(value).decode("utf-8")
+    except (ValueError, binascii.Error, UnicodeDecodeError):
+        return None
+
+    username, separator, password = decoded.partition(":")
+    if not separator:
+        return None
+
+    user = authenticate(request, username=username, password=password)
+    if user is None:
+        return None
+
+    request.user = user
+    request.auth = None
+    return user
+
+
+def drf_authenticate(request: HttpRequest) -> object | None:
+    """Authenticate one Ninja request with session, bearer, or basic auth."""
+
+    for resolver in (_session_user, _bearer_user, _basic_user):
+        user = resolver(request)
+        if user is None:
+            continue
+        return user
+    return None
+
+
+__all__ = ["drf_authenticate"]

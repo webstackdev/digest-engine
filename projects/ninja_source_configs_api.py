@@ -1,14 +1,14 @@
-from typing import Any, cast
 import datetime
+from typing import Any
 
-from ninja import Router, Schema, Path
+from ninja import Path, Router, Schema
 from ninja.errors import HttpError
-from rest_framework import status
+from ninja.responses import Status
 
 from core.ninja_api import drf_authenticate
+from ingestion.plugins import validate_plugin_config
 from projects.ninja_api import _require_project_writable, _get_project_or_404
 from projects.models import SourceConfig
-from projects.serializers import SourceConfigSerializer
 
 router = Router(tags=["Source Configurations"])
 
@@ -35,7 +35,36 @@ class SourceConfigUpdateInput(Schema):
 
 
 def _serialize_config(config: SourceConfig) -> dict[str, Any]:
-    return cast(dict[str, Any], SourceConfigSerializer(config).data)
+    return {
+        "id": int(config.pk),
+        "project": config.project_id,
+        "plugin_name": config.plugin_name,
+        "config": config.config,
+        "is_active": config.is_active,
+        "last_fetched_at": config.last_fetched_at,
+    }
+
+
+def _validated_source_config_payload(
+    payload: dict[str, Any],
+    *,
+    instance: SourceConfig | None = None,
+) -> dict[str, Any] | None:
+    """Validate and normalize one source-config payload.
+
+    Returns a 400 payload shape when plugin validation fails.
+    """
+
+    plugin_name = payload.get("plugin_name") or getattr(instance, "plugin_name", None)
+    config = payload.get("config")
+    if config is None and instance is not None:
+        config = instance.config
+    if plugin_name:
+        try:
+            payload["config"] = validate_plugin_config(plugin_name, config or {})
+        except ValueError:
+            return {"config": ["Invalid source configuration."]}
+    return None
 
 
 def _get_source_config_or_404(project_id: int, config_id: int) -> SourceConfig:
@@ -54,17 +83,21 @@ def list_source_configs(request, project_id: int = Path(...)):
     return [_serialize_config(c) for c in configs]
 
 
-@router.post("/", response={201: SourceConfigSchema}, auth=drf_authenticate)
+@router.post(
+    "/",
+    response={201: SourceConfigSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def create_source_config(
     request, payload: SourceConfigCreateInput, project_id: int = Path(...)
 ):
     project = _require_project_writable(request, project_id)
-    serializer = SourceConfigSerializer(
-        data=payload.model_dump(exclude_unset=True), context={"project": project}
-    )
-    serializer.is_valid(raise_exception=True)
-    config = serializer.save(project=project)
-    return 201, _serialize_config(config)
+    validated_payload = payload.model_dump(exclude_unset=True)
+    errors = _validated_source_config_payload(validated_payload)
+    if errors is not None:
+        return Status(400, errors)
+    config = SourceConfig.objects.create(project=project, **validated_payload)
+    return Status(201, _serialize_config(config))
 
 
 @router.get("/{config_id}/", response=SourceConfigSchema, auth=drf_authenticate)
@@ -74,7 +107,11 @@ def get_source_config(request, project_id: int = Path(...), config_id: int = Pat
     return _serialize_config(config)
 
 
-@router.patch("/{config_id}/", response=SourceConfigSchema, auth=drf_authenticate)
+@router.patch(
+    "/{config_id}/",
+    response={200: SourceConfigSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def update_source_config(
     request,
     payload: SourceConfigUpdateInput,
@@ -83,14 +120,13 @@ def update_source_config(
 ):
     _require_project_writable(request, project_id)
     config = _get_source_config_or_404(project_id, config_id)
-    serializer = SourceConfigSerializer(
-        config,
-        data=payload.model_dump(exclude_unset=True),
-        partial=True,
-        context={"project": config.project},
-    )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    validated_payload = payload.model_dump(exclude_unset=True)
+    errors = _validated_source_config_payload(validated_payload, instance=config)
+    if errors is not None:
+        return Status(400, errors)
+    for field_name, value in validated_payload.items():
+        setattr(config, field_name, value)
+    config.save()
     return _serialize_config(config)
 
 
@@ -101,4 +137,4 @@ def delete_source_config(
     _require_project_writable(request, project_id)
     config = _get_source_config_or_404(project_id, config_id)
     config.delete()
-    return 204, None
+    return Status(204, None)

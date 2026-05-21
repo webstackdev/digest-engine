@@ -18,8 +18,10 @@ def _require_pk(instance: Model) -> int:
         raise ValueError(f"{instance.__class__.__name__} must be saved first.")
     return int(instance_pk)
 
+
 def _create_user(user_model: type[Any], **kwargs: object):
     return cast(Any, user_model.objects).create_user(**kwargs)
+
 
 class ProjectConfigNinjaApiTests(APITestCase):
     """Exercise project config Ninja API endpoints."""
@@ -27,7 +29,9 @@ class ProjectConfigNinjaApiTests(APITestCase):
     def setUp(self):
         user_model = get_user_model()
         self.owner = _create_user(user_model, username="owner", password="testpass123")
-        self.member_user = _create_user(user_model, username="member", password="testpass123")
+        self.member_user = _create_user(
+            user_model, username="member", password="testpass123"
+        )
         self.owner_project = Project.objects.create(
             name="Owner Project",
             topic_description="Platform engineering",
@@ -65,6 +69,41 @@ class ProjectConfigNinjaApiTests(APITestCase):
         self.assertEqual(response.json()["authority_weight_mention"], 0.2)
         self.assertEqual(response.json()["authority_weight_engagement"], 0.15)
         self.assertEqual(response.json()["authority_weight_cross_newsletter"], 0.2)
+
+    def test_project_config_create_persists_native_validated_payload(self):
+        response = self.client.post(
+            reverse(
+                "ninja-api:create_config",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            ),
+            {
+                "draft_schedule_cron": " 0  8 * * 1 ",
+                "authority_weight_engagement": 0.25,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        config = ProjectConfig.objects.get(project=self.owner_project)
+        self.assertEqual(config.draft_schedule_cron, "0 8 * * 1")
+        self.assertEqual(config.authority_weight_engagement, 0.25)
+        self.assertEqual(response.json()["draft_schedule_cron"], "0 8 * * 1")
+
+    def test_project_config_delete_removes_row(self):
+        config = ProjectConfig.objects.create(project=self.owner_project)
+
+        response = self.client.delete(
+            reverse(
+                "ninja-api:delete_config",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "config_id": _require_pk(config),
+                },
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ProjectConfig.objects.filter(pk=_require_pk(config)).exists())
 
     def test_project_config_patch_updates_multi_signal_authority_weights(self):
         config = ProjectConfig.objects.create(project=self.owner_project)
@@ -110,7 +149,9 @@ class ProjectConfigNinjaApiTests(APITestCase):
         # Check validation payload format
         json_data = response.json()
         self.assertIn("draft_schedule_cron", json_data)
-        self.assertIn("valid 5-part cron expression", json_data["draft_schedule_cron"][0])
+        self.assertIn(
+            "valid 5-part cron expression", json_data["draft_schedule_cron"][0]
+        )
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @patch("core.tasks.recompute_authority_scores")
@@ -143,7 +184,7 @@ class ProjectConfigNinjaApiTests(APITestCase):
         recompute_authority_scores_mock.assert_called_once_with(
             _require_pk(self.owner_project)
         )
-        
+
     def test_members_cannot_update_config(self):
         self.client.login(username="member", password="testpass123")
         config = ProjectConfig.objects.create(project=self.owner_project)

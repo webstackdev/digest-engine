@@ -140,6 +140,30 @@ class ContentNinjaApiTests(APITestCase):
         created_content = Content.objects.get(title="New Content")
         self.assertEqual(created_content.project, self.owner_project)
 
+    def test_content_create_rejects_cross_project_entity(self):
+        response = self.client.post(
+            reverse(
+                "ninja-api:list_contents",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            ),
+            {
+                "url": "https://example.com/new-cross-project-entity",
+                "title": "Cross Project Entity",
+                "author": "Owner Author",
+                "entity": _require_pk(self.other_entity),
+                "source_plugin": "rss",
+                "published_date": "2026-04-22T00:00:00Z",
+                "content_text": "Nested content text",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["entity"][0],
+            "Entity must belong to the selected project.",
+        )
+
     def test_content_detail_includes_summary_text(self):
         self.owner_content.summary_text = "A concise summary ready for editors."
         self.owner_content.save(update_fields=["summary_text"])

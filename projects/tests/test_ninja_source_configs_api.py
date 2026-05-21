@@ -6,6 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectMembership, ProjectRole, SourceConfig
 
 
@@ -51,8 +52,8 @@ class SourceConfigNinjaApiTests(APITestCase):
     def test_list_source_configs(self):
         SourceConfig.objects.create(
             project=self.owner_project,
-            plugin_name="tests_plugin",
-            config={"test": True},
+            plugin_name=SourcePluginName.RSS,
+            config={"feed_url": "https://example.com/feed.xml"},
         )
         response = self.client.get(
             reverse(
@@ -63,6 +64,7 @@ class SourceConfigNinjaApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         # Should be exactly 1
         self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["plugin_name"], SourcePluginName.RSS)
 
     def test_create_source_config(self):
         response = self.client.post(
@@ -70,18 +72,76 @@ class SourceConfigNinjaApiTests(APITestCase):
                 "ninja-api:create_source_config",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
-            {"plugin_name": "example_plugin", "config": {}, "is_active": True},
+            {
+                "plugin_name": SourcePluginName.RSS,
+                "config": {"feed_url": "https://example.com/feed.xml"},
+                "is_active": True,
+            },
             format="json",
         )
-        # Wait, example_plugin might not be registered if validate checks it.
-        # SourceConfigSerializer calls `validate_plugin_config`.
-        # Does the test environment permit arbitrary plugin names? Let's assume it fails if it's invalid plugin.
-        # It's an HTTP 201 if it's valid, but maybe we need a real plugin name.
-        pass  # We will test in the exact flow
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        config = SourceConfig.objects.get(project=self.owner_project)
+        self.assertEqual(config.plugin_name, SourcePluginName.RSS)
+        self.assertEqual(
+            config.config,
+            {"feed_url": "https://example.com/feed.xml"},
+        )
+        self.assertTrue(response.json()["is_active"])
+
+    def test_create_source_config_rejects_invalid_plugin_config(self):
+        response = self.client.post(
+            reverse(
+                "ninja-api:create_source_config",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            ),
+            {"plugin_name": SourcePluginName.RSS, "config": {}},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["config"][0],
+            "Invalid source configuration.",
+        )
+
+    def test_update_source_config_revalidates_and_normalizes_plugin_config(self):
+        config = SourceConfig.objects.create(
+            project=self.owner_project,
+            plugin_name=SourcePluginName.BLUESKY,
+            config={"author_handle": "owner.bsky.social"},
+        )
+
+        response = self.client.patch(
+            reverse(
+                "ninja-api:update_source_config",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "config_id": _require_pk(config),
+                },
+            ),
+            {"config": {"author_handle": "@Alice.BSKY.social"}},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        config.refresh_from_db()
+        self.assertEqual(
+            config.config,
+            {
+                "author_handle": "alice.bsky.social",
+                "include_replies": False,
+                "max_posts_per_fetch": 100,
+            },
+        )
+        self.assertEqual(
+            response.json()["config"]["author_handle"], "alice.bsky.social"
+        )
 
     def test_reader_cannot_delete(self):
         config = SourceConfig.objects.create(
-            project=self.owner_project, plugin_name="reddit"
+            project=self.owner_project,
+            plugin_name=SourcePluginName.REDDIT,
+            config={"subreddit": "MachineLearning"},
         )
         self.client.login(username="reader", password="testpass123")
         response = self.client.delete(

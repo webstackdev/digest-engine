@@ -1,17 +1,13 @@
-from typing import Any, cast
 import datetime
+from typing import Any
 
-from ninja import Router, Schema, Path
+from ninja import Path, Router, Schema
 from ninja.errors import HttpError
+from ninja.responses import Status
 
 from core.ninja_api import drf_authenticate
 from projects.ninja_api import _require_project_admin, _get_project_or_404
 from projects.models import BlueskyCredentials, MastodonCredentials, LinkedInCredentials
-from projects.serializers import (
-    BlueskyCredentialsSerializer,
-    MastodonCredentialsSerializer,
-    LinkedInCredentialsSerializer,
-)
 
 bluesky_router = Router(tags=["Bluesky Credentials"])
 
@@ -44,7 +40,18 @@ class BlueskyCredentialsUpdateInput(Schema):
 
 
 def _serialize_bluesky(cred: BlueskyCredentials) -> dict[str, Any]:
-    return cast(dict[str, Any], BlueskyCredentialsSerializer(cred).data)
+    return {
+        "id": int(cred.pk),
+        "project": cred.project_id,
+        "handle": cred.handle,
+        "pds_url": cred.pds_url,
+        "is_active": cred.is_active,
+        "has_stored_credential": cred.has_stored_credential(),
+        "last_verified_at": cred.last_verified_at,
+        "last_error": cred.last_error,
+        "created_at": cred.created_at,
+        "updated_at": cred.updated_at,
+    }
 
 
 def _get_bluesky_or_404(project_id: int, cred_id: int) -> BlueskyCredentials:
@@ -64,19 +71,26 @@ def list_bluesky(request, project_id: int = Path(...)):
 
 
 @bluesky_router.post(
-    "/", response={201: BlueskyCredentialsSchema}, auth=drf_authenticate
+    "/",
+    response={201: BlueskyCredentialsSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
 )
 def create_bluesky(
     request, payload: BlueskyCredentialsCreateInput, project_id: int = Path(...)
 ):
     project = _require_project_admin(request, project_id)
-    serializer = BlueskyCredentialsSerializer(
-        data=payload.model_dump(exclude_unset=True, exclude_none=True),
-        context={"project": project},
+    app_password = payload.app_password or ""
+    if not app_password:
+        return Status(400, {"app_password": ["A Bluesky app credential is required."]})
+    cred = BlueskyCredentials.objects.create(
+        project=project,
+        handle=payload.handle,
+        pds_url=payload.pds_url,
+        is_active=payload.is_active,
     )
-    serializer.is_valid(raise_exception=True)
-    cred = serializer.save(project=project)
-    return 201, _serialize_bluesky(cred)
+    cred.set_app_password(app_password)
+    cred.save(update_fields=["app_password_encrypted", "updated_at"])
+    return Status(201, _serialize_bluesky(cred))
 
 
 @bluesky_router.get(
@@ -89,7 +103,9 @@ def get_bluesky(request, project_id: int = Path(...), cred_id: int = Path(...)):
 
 
 @bluesky_router.patch(
-    "/{cred_id}/", response=BlueskyCredentialsSchema, auth=drf_authenticate
+    "/{cred_id}/",
+    response={200: BlueskyCredentialsSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
 )
 def update_bluesky(
     request,
@@ -99,14 +115,16 @@ def update_bluesky(
 ):
     _require_project_admin(request, project_id)
     cred = _get_bluesky_or_404(project_id, cred_id)
-    serializer = BlueskyCredentialsSerializer(
-        cred,
-        data=payload.model_dump(exclude_unset=True, exclude_none=True),
-        partial=True,
-        context={"project": cred.project},
-    )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    updates = payload.model_dump(exclude_unset=True, exclude_none=True)
+    if "handle" in updates:
+        cred.handle = updates["handle"]
+    if "pds_url" in updates:
+        cred.pds_url = updates["pds_url"]
+    if "is_active" in updates:
+        cred.is_active = updates["is_active"]
+    if "app_password" in updates and updates["app_password"]:
+        cred.set_app_password(updates["app_password"])
+    cred.save()
     return _serialize_bluesky(cred)
 
 
@@ -115,7 +133,7 @@ def delete_bluesky(request, project_id: int = Path(...), cred_id: int = Path(...
     _require_project_admin(request, project_id)
     cred = _get_bluesky_or_404(project_id, cred_id)
     cred.delete()
-    return 204, None
+    return Status(204, None)
 
 
 mastodon_router = Router(tags=["Mastodon Credentials"])
@@ -149,7 +167,18 @@ class MastodonCredentialsUpdateInput(Schema):
 
 
 def _serialize_mastodon(cred: MastodonCredentials) -> dict[str, Any]:
-    return cast(dict[str, Any], MastodonCredentialsSerializer(cred).data)
+    return {
+        "id": int(cred.pk),
+        "project": cred.project_id,
+        "instance_url": cred.instance_url,
+        "account_acct": cred.account_acct,
+        "is_active": cred.is_active,
+        "has_stored_credential": cred.has_stored_credential(),
+        "last_verified_at": cred.last_verified_at,
+        "last_error": cred.last_error,
+        "created_at": cred.created_at,
+        "updated_at": cred.updated_at,
+    }
 
 
 def _get_mastodon_or_404(project_id: int, cred_id: int) -> MastodonCredentials:
@@ -171,19 +200,26 @@ def list_mastodon(request, project_id: int = Path(...)):
 
 
 @mastodon_router.post(
-    "/", response={201: MastodonCredentialsSchema}, auth=drf_authenticate
+    "/",
+    response={201: MastodonCredentialsSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
 )
 def create_mastodon(
     request, payload: MastodonCredentialsCreateInput, project_id: int = Path(...)
 ):
     project = _require_project_admin(request, project_id)
-    serializer = MastodonCredentialsSerializer(
-        data=payload.model_dump(exclude_unset=True, exclude_none=True),
-        context={"project": project},
+    access_token = payload.access_token or ""
+    if not access_token:
+        return Status(400, {"access_token": ["A Mastodon access token is required."]})
+    cred = MastodonCredentials.objects.create(
+        project=project,
+        instance_url=payload.instance_url,
+        account_acct=payload.account_acct,
+        is_active=payload.is_active,
     )
-    serializer.is_valid(raise_exception=True)
-    cred = serializer.save(project=project)
-    return 201, _serialize_mastodon(cred)
+    cred.set_access_token(access_token)
+    cred.save(update_fields=["access_token_encrypted", "updated_at"])
+    return Status(201, _serialize_mastodon(cred))
 
 
 @mastodon_router.get(
@@ -196,7 +232,9 @@ def get_mastodon(request, project_id: int = Path(...), cred_id: int = Path(...))
 
 
 @mastodon_router.patch(
-    "/{cred_id}/", response=MastodonCredentialsSchema, auth=drf_authenticate
+    "/{cred_id}/",
+    response={200: MastodonCredentialsSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
 )
 def update_mastodon(
     request,
@@ -206,14 +244,16 @@ def update_mastodon(
 ):
     _require_project_admin(request, project_id)
     cred = _get_mastodon_or_404(project_id, cred_id)
-    serializer = MastodonCredentialsSerializer(
-        cred,
-        data=payload.model_dump(exclude_unset=True, exclude_none=True),
-        partial=True,
-        context={"project": cred.project},
-    )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    updates = payload.model_dump(exclude_unset=True, exclude_none=True)
+    if "instance_url" in updates:
+        cred.instance_url = updates["instance_url"]
+    if "account_acct" in updates:
+        cred.account_acct = updates["account_acct"]
+    if "is_active" in updates:
+        cred.is_active = updates["is_active"]
+    if "access_token" in updates and updates["access_token"]:
+        cred.set_access_token(updates["access_token"])
+    cred.save()
     return _serialize_mastodon(cred)
 
 
@@ -222,7 +262,7 @@ def delete_mastodon(request, project_id: int = Path(...), cred_id: int = Path(..
     _require_project_admin(request, project_id)
     cred = _get_mastodon_or_404(project_id, cred_id)
     cred.delete()
-    return 204, None
+    return Status(204, None)
 
 
 linkedin_router = Router(tags=["LinkedIn Credentials"])
@@ -256,7 +296,18 @@ class LinkedInCredentialsUpdateInput(Schema):
 
 
 def _serialize_linkedin(cred: LinkedInCredentials) -> dict[str, Any]:
-    return cast(dict[str, Any], LinkedInCredentialsSerializer(cred).data)
+    return {
+        "id": int(cred.pk),
+        "project": cred.project_id,
+        "member_urn": cred.member_urn,
+        "expires_at": cred.expires_at,
+        "is_active": cred.is_active,
+        "has_stored_credential": cred.has_stored_credential(),
+        "last_verified_at": cred.last_verified_at,
+        "last_error": cred.last_error,
+        "created_at": cred.created_at,
+        "updated_at": cred.updated_at,
+    }
 
 
 def _get_linkedin_or_404(project_id: int, cred_id: int) -> LinkedInCredentials:
@@ -278,19 +329,35 @@ def list_linkedin(request, project_id: int = Path(...)):
 
 
 @linkedin_router.post(
-    "/", response={201: LinkedInCredentialsSchema}, auth=drf_authenticate
+    "/",
+    response={201: LinkedInCredentialsSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
 )
 def create_linkedin(
     request, payload: LinkedInCredentialsCreateInput, project_id: int = Path(...)
 ):
     project = _require_project_admin(request, project_id)
-    serializer = LinkedInCredentialsSerializer(
-        data=payload.model_dump(exclude_unset=True, exclude_none=True),
-        context={"project": project},
+    access_token = payload.access_token or ""
+    refresh_token = payload.refresh_token or ""
+    if not access_token:
+        return Status(400, {"access_token": ["A LinkedIn access token is required."]})
+    if not refresh_token:
+        return Status(400, {"refresh_token": ["A LinkedIn refresh token is required."]})
+    cred = LinkedInCredentials.objects.create(
+        project=project,
+        member_urn=payload.member_urn,
+        is_active=payload.is_active,
     )
-    serializer.is_valid(raise_exception=True)
-    cred = serializer.save(project=project)
-    return 201, _serialize_linkedin(cred)
+    cred.set_access_token(access_token)
+    cred.set_refresh_token(refresh_token)
+    cred.save(
+        update_fields=[
+            "access_token_encrypted",
+            "refresh_token_encrypted",
+            "updated_at",
+        ]
+    )
+    return Status(201, _serialize_linkedin(cred))
 
 
 @linkedin_router.get(
@@ -303,7 +370,9 @@ def get_linkedin(request, project_id: int = Path(...), cred_id: int = Path(...))
 
 
 @linkedin_router.patch(
-    "/{cred_id}/", response=LinkedInCredentialsSchema, auth=drf_authenticate
+    "/{cred_id}/",
+    response={200: LinkedInCredentialsSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
 )
 def update_linkedin(
     request,
@@ -313,14 +382,16 @@ def update_linkedin(
 ):
     _require_project_admin(request, project_id)
     cred = _get_linkedin_or_404(project_id, cred_id)
-    serializer = LinkedInCredentialsSerializer(
-        cred,
-        data=payload.model_dump(exclude_unset=True, exclude_none=True),
-        partial=True,
-        context={"project": cred.project},
-    )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    updates = payload.model_dump(exclude_unset=True, exclude_none=True)
+    if "member_urn" in updates:
+        cred.member_urn = updates["member_urn"]
+    if "is_active" in updates:
+        cred.is_active = updates["is_active"]
+    if "access_token" in updates and updates["access_token"]:
+        cred.set_access_token(updates["access_token"])
+    if "refresh_token" in updates and updates["refresh_token"]:
+        cred.set_refresh_token(updates["refresh_token"])
+    cred.save()
     return _serialize_linkedin(cred)
 
 
@@ -329,4 +400,4 @@ def delete_linkedin(request, project_id: int = Path(...), cred_id: int = Path(..
     _require_project_admin(request, project_id)
     cred = _get_linkedin_or_404(project_id, cred_id)
     cred.delete()
-    return 204, None
+    return Status(204, None)

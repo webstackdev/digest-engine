@@ -3,22 +3,16 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, cast
+from typing import Any
 
+from django.core.exceptions import ValidationError
 from ninja import Path, Router, Schema
 from ninja.errors import HttpError
-from rest_framework import serializers
+from ninja.responses import Status
 
-from content.api import (
-    CLASSIFICATION_SKILL_NAME,
-    RELATED_CONTENT_SKILL_NAME,
-    RELEVANCE_SKILL_NAME,
-    SUMMARIZATION_SKILL_NAME,
-)
 from content.models import Content, UserFeedback
-from content.serializers import ContentSerializer, UserFeedbackSerializer
 from core.ninja_api import drf_authenticate
-from pipeline.serializers import SkillResultSerializer
+from entities.models import Entity
 from projects.models import ProjectMembership, ProjectRole
 from projects.ninja_api import (
     _get_project_or_404,
@@ -28,6 +22,11 @@ from projects.ninja_api import (
 
 content_router = Router(tags=["Content Library"])
 feedback_router = Router(tags=["Feedback"])
+
+CLASSIFICATION_SKILL_NAME = "content_classification"
+RELEVANCE_SKILL_NAME = "relevance_scoring"
+SUMMARIZATION_SKILL_NAME = "summarization"
+RELATED_CONTENT_SKILL_NAME = "find_related"
 
 SUPPORTED_SKILL_NAMES = {
     CLASSIFICATION_SKILL_NAME,
@@ -147,19 +146,181 @@ class UserFeedbackUpdateInput(Schema):
 def _serialize_content(content: Content) -> dict[str, Any]:
     """Return one content response body."""
 
-    return cast(dict[str, Any], ContentSerializer(content).data)
+    return {
+        "id": int(content.pk),
+        "project": content.project_id,
+        "url": content.url,
+        "title": content.title,
+        "author": content.author,
+        "entity": content.entity_id,
+        "source_plugin": content.source_plugin,
+        "content_type": content.content_type,
+        "canonical_url": content.canonical_url,
+        "published_date": content.published_date,
+        "ingested_at": content.ingested_at,
+        "content_text": content.content_text,
+        "summary_text": content.summary_text,
+        "relevance_score": content.relevance_score,
+        "authority_adjusted_score": content.authority_adjusted_score,
+        "embedding_id": content.embedding_id,
+        "source_metadata": content.source_metadata,
+        "duplicate_of": content.duplicate_of_id,
+        "duplicate_signal_count": content.duplicate_signal_count,
+        "is_reference": content.is_reference,
+        "is_active": content.is_active,
+        "newsletter_promotion_at": content.newsletter_promotion_at,
+        "newsletter_promotion_by": content.newsletter_promotion_by_id,
+        "newsletter_promotion_theme": content.newsletter_promotion_theme_id,
+    }
 
 
 def _serialize_skill_result(skill_result: Any) -> dict[str, Any]:
     """Return one persisted skill result response body."""
 
-    return cast(dict[str, Any], SkillResultSerializer(skill_result).data)
+    return {
+        "id": int(skill_result.pk),
+        "content": skill_result.content_id,
+        "project": skill_result.project_id,
+        "skill_name": skill_result.skill_name,
+        "status": skill_result.status,
+        "result_data": skill_result.result_data,
+        "error_message": skill_result.error_message,
+        "model_used": skill_result.model_used,
+        "latency_ms": skill_result.latency_ms,
+        "confidence": skill_result.confidence,
+        "invocation_id": str(skill_result.invocation_id),
+        "created_at": skill_result.created_at,
+        "superseded_by": skill_result.superseded_by_id,
+    }
 
 
 def _serialize_feedback(feedback: UserFeedback) -> dict[str, Any]:
     """Return one feedback response body."""
 
-    return cast(dict[str, Any], UserFeedbackSerializer(feedback).data)
+    return {
+        "id": int(feedback.pk),
+        "content": feedback.content_id,
+        "project": feedback.project_id,
+        "user": feedback.user_id,
+        "feedback_type": feedback.feedback_type,
+        "created_at": feedback.created_at,
+    }
+
+
+def _validation_error_payload(exc: ValidationError) -> dict[str, list[str]]:
+    """Convert a Django validation error into the Ninja error payload shape."""
+
+    if hasattr(exc, "message_dict"):
+        return {
+            field: [str(message) for message in messages]
+            for field, messages in exc.message_dict.items()
+        }
+    return {"__all__": [str(message) for message in exc.messages]}
+
+
+def _error_payload(field: str, message: str) -> dict[str, list[str]]:
+    """Return the native Ninja error payload shape."""
+
+    return {field: [message]}
+
+
+def _resolve_entity_for_project(
+    entity_id: int | None,
+    *,
+    project_id: int,
+) -> tuple[Entity | None, dict[str, list[str]] | None]:
+    """Resolve one entity reference and enforce project ownership."""
+
+    if entity_id is None:
+        return None, None
+    entity = Entity.objects.filter(pk=entity_id).first()
+    if entity is None or entity.project_id != project_id:
+        return None, _error_payload(
+            "entity", "Entity must belong to the selected project."
+        )
+    return entity, None
+
+
+def _validated_content_payload(
+    payload: dict[str, Any],
+    *,
+    project,
+    instance: Content | None = None,
+) -> tuple[dict[str, Any], dict[str, list[str]] | None]:
+    """Normalize and validate one content payload."""
+
+    validated_payload = dict(payload)
+    validated_payload.pop("project", None)
+
+    entity = instance.entity if instance is not None else None
+    if "entity" in validated_payload:
+        entity, entity_errors = _resolve_entity_for_project(
+            validated_payload.pop("entity"),
+            project_id=project.id,
+        )
+        if entity_errors is not None:
+            return validated_payload, entity_errors
+
+    content = instance or Content(project=project)
+    for field_name, value in validated_payload.items():
+        setattr(content, field_name, value)
+    content.entity = entity
+    try:
+        content.full_clean()
+    except ValidationError as exc:
+        return validated_payload, _validation_error_payload(exc)
+
+    validated_payload["entity"] = entity
+    return validated_payload, None
+
+
+def _resolve_feedback_content(
+    content_id: int,
+    *,
+    project_id: int,
+) -> tuple[Content | None, dict[str, list[str]] | None]:
+    """Resolve one content reference for feedback and enforce project ownership."""
+
+    content = Content.objects.filter(pk=content_id).first()
+    if content is None or content.project_id != project_id:
+        return None, _error_payload(
+            "content", "Content must belong to the selected project."
+        )
+    return content, None
+
+
+def _validated_feedback_payload(
+    payload: dict[str, Any],
+    *,
+    project,
+    user,
+    instance: UserFeedback | None = None,
+) -> tuple[dict[str, Any], dict[str, list[str]] | None]:
+    """Normalize and validate one feedback payload."""
+
+    validated_payload = dict(payload)
+    content = instance.content if instance is not None else None
+    if "content" in validated_payload:
+        content, content_errors = _resolve_feedback_content(
+            validated_payload.pop("content"),
+            project_id=project.id,
+        )
+        if content_errors is not None:
+            return validated_payload, content_errors
+
+    feedback = instance or UserFeedback(project=project, user=user)
+    for field_name, value in validated_payload.items():
+        setattr(feedback, field_name, value)
+    feedback.project = project
+    feedback.user = user
+    feedback.content = content
+    try:
+        feedback.full_clean()
+    except ValidationError as exc:
+        return validated_payload, _validation_error_payload(exc)
+
+    validated_payload["content"] = content
+    return validated_payload, None
 
 
 def _get_content_or_404(project_id: int, content_id: int) -> Content:
@@ -215,7 +376,11 @@ def list_contents(request: Any, project_id: int = Path(...)):
     return [_serialize_content(content) for content in contents]
 
 
-@content_router.post("/", response={201: ContentSchema}, auth=drf_authenticate)
+@content_router.post(
+    "/",
+    response={201: ContentSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def create_content(
     request: Any,
     payload: ContentCreateInput,
@@ -224,13 +389,14 @@ def create_content(
     """Create one content row under the selected project."""
 
     project = _require_project_writable(request, project_id)
-    serializer = ContentSerializer(
-        data=payload.model_dump(exclude_unset=True, exclude_none=False),
-        context={"project": project},
+    validated_payload, errors = _validated_content_payload(
+        payload.model_dump(exclude_unset=True, exclude_none=False),
+        project=project,
     )
-    serializer.is_valid(raise_exception=True)
-    content = serializer.save(project=project)
-    return 201, _serialize_content(content)
+    if errors is not None:
+        return Status(400, errors)
+    content = Content.objects.create(project=project, **validated_payload)
+    return Status(201, _serialize_content(content))
 
 
 @content_router.get(
@@ -251,7 +417,7 @@ def get_content(
 
 @content_router.patch(
     "/{content_id}/",
-    response=ContentSchema,
+    response={200: ContentSchema, 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def update_content(
@@ -264,14 +430,16 @@ def update_content(
 
     _require_project_writable(request, project_id)
     content = _get_content_or_404(project_id, content_id)
-    serializer = ContentSerializer(
-        content,
-        data=payload.model_dump(exclude_unset=True, exclude_none=False),
-        partial=True,
-        context={"project": content.project},
+    validated_payload, errors = _validated_content_payload(
+        payload.model_dump(exclude_unset=True, exclude_none=False),
+        project=content.project,
+        instance=content,
     )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    if errors is not None:
+        return Status(400, errors)
+    for field_name, value in validated_payload.items():
+        setattr(content, field_name, value)
+    content.save()
     return _serialize_content(content)
 
 
@@ -290,12 +458,16 @@ def delete_content(
     _require_project_admin(request, project_id)
     content = _get_content_or_404(project_id, content_id)
     content.delete()
-    return 204, None
+    return Status(204, None)
 
 
 @content_router.post(
     "/{content_id}/skills/{skill_name}/",
-    response={201: SkillResultSchema, 202: SkillResultSchema},
+    response={
+        201: SkillResultSchema,
+        202: SkillResultSchema,
+        400: dict[str, list[str]],
+    },
     auth=drf_authenticate,
 )
 def run_content_skill(
@@ -308,13 +480,13 @@ def run_content_skill(
 
     _require_project_writable(request, project_id)
     if skill_name not in SUPPORTED_SKILL_NAMES:
-        raise serializers.ValidationError(
+        return Status(
+            400,
             {
-                "skill_name": (
-                    "Unsupported skill. Choose one of: content_classification, relevance_scoring, "
-                    "summarization, find_related."
-                )
-            }
+                "skill_name": [
+                    "Unsupported skill. Choose one of: content_classification, relevance_scoring, summarization, find_related."
+                ]
+            },
         )
 
     content = _get_content_or_404(project_id, content_id)
@@ -322,12 +494,12 @@ def run_content_skill(
         from core.tasks import queue_content_skill
 
         skill_result = queue_content_skill(content, skill_name)
-        return 202, _serialize_skill_result(skill_result)
+        return Status(202, _serialize_skill_result(skill_result))
 
     from core.pipeline import execute_ad_hoc_skill
 
     skill_result = execute_ad_hoc_skill(content, skill_name)
-    return 201, _serialize_skill_result(skill_result)
+    return Status(201, _serialize_skill_result(skill_result))
 
 
 @feedback_router.get("/", response=list[UserFeedbackSchema], auth=drf_authenticate)
@@ -341,7 +513,11 @@ def list_feedback(request: Any, project_id: int = Path(...)):
     return [_serialize_feedback(feedback) for feedback in feedback_rows]
 
 
-@feedback_router.post("/", response={201: UserFeedbackSchema}, auth=drf_authenticate)
+@feedback_router.post(
+    "/",
+    response={201: UserFeedbackSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def create_feedback(
     request: Any,
     payload: UserFeedbackCreateInput,
@@ -350,13 +526,19 @@ def create_feedback(
     """Create one feedback row and attach the authenticated user."""
 
     project = _require_project_writable(request, project_id)
-    serializer = UserFeedbackSerializer(
-        data=payload.model_dump(exclude_unset=True),
-        context={"project": project},
+    validated_payload, errors = _validated_feedback_payload(
+        payload.model_dump(exclude_unset=True),
+        project=project,
+        user=request.user,
     )
-    serializer.is_valid(raise_exception=True)
-    feedback = serializer.save(project=project, user=request.user)
-    return 201, _serialize_feedback(feedback)
+    if errors is not None:
+        return Status(400, errors)
+    feedback = UserFeedback.objects.create(
+        project=project,
+        user=request.user,
+        **validated_payload,
+    )
+    return Status(201, _serialize_feedback(feedback))
 
 
 @feedback_router.get(
@@ -377,7 +559,7 @@ def get_feedback(
 
 @feedback_router.patch(
     "/{feedback_id}/",
-    response=UserFeedbackSchema,
+    response={200: UserFeedbackSchema, 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def update_feedback(
@@ -390,14 +572,17 @@ def update_feedback(
 
     feedback = _get_feedback_or_404(project_id, feedback_id)
     _require_feedback_editor(request, feedback)
-    serializer = UserFeedbackSerializer(
-        feedback,
-        data=payload.model_dump(exclude_unset=True),
-        partial=True,
-        context={"project": feedback.project},
+    validated_payload, errors = _validated_feedback_payload(
+        payload.model_dump(exclude_unset=True),
+        project=feedback.project,
+        user=feedback.user,
+        instance=feedback,
     )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    if errors is not None:
+        return Status(400, errors)
+    for field_name, value in validated_payload.items():
+        setattr(feedback, field_name, value)
+    feedback.save()
     return _serialize_feedback(feedback)
 
 
@@ -416,7 +601,7 @@ def delete_feedback(
     feedback = _get_feedback_or_404(project_id, feedback_id)
     _require_feedback_editor(request, feedback)
     feedback.delete()
-    return 204, None
+    return Status(204, None)
 
 
 __all__ = ["content_router", "feedback_router"]

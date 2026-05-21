@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, cast
+from typing import Any
 
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Prefetch, QuerySet
 from ninja import Path, Query, Router, Schema
 from ninja.errors import HttpError
-from rest_framework import serializers
+from ninja.responses import Status
 
 from entities.extraction import (
     accept_entity_candidate,
@@ -20,13 +21,6 @@ from entities.models import (
     EntityAuthoritySnapshot,
     EntityCandidate,
     EntityMention,
-)
-from entities.serializers import (
-    EntityAuthoritySnapshotSerializer,
-    EntityCandidateMergeSerializer,
-    EntityCandidateSerializer,
-    EntityMentionSummarySerializer,
-    EntitySerializer,
 )
 from core.ninja_api import drf_authenticate
 from projects.ninja_api import (
@@ -196,25 +190,197 @@ def _entity_candidate_queryset() -> QuerySet[EntityCandidate]:
 def _serialize_entity(entity: Entity) -> dict[str, Any]:
     """Return one entity response body."""
 
-    return cast(dict[str, Any], EntitySerializer(entity).data)
+    prefetched_mentions = getattr(entity, "prefetched_mentions", None)
+    if prefetched_mentions is None:
+        prefetched_mentions = entity.mentions.select_related("content").order_by(
+            "-created_at"
+        )
+    return {
+        "id": int(entity.pk),
+        "project": entity.project_id,
+        "name": entity.name,
+        "type": entity.type,
+        "description": entity.description,
+        "authority_score": entity.authority_score,
+        "website_url": entity.website_url,
+        "github_url": entity.github_url,
+        "linkedin_url": entity.linkedin_url,
+        "bluesky_handle": entity.bluesky_handle,
+        "mastodon_handle": entity.mastodon_handle,
+        "twitter_handle": entity.twitter_handle,
+        "identity_claims": [
+            {
+                "id": int(claim.pk),
+                "surface": claim.surface,
+                "claim_url": claim.claim_url,
+                "verified": claim.verified,
+                "verified_at": claim.verified_at,
+                "verification_method": claim.verification_method,
+            }
+            for claim in entity.identity_claims.all()
+        ],
+        "mention_count": getattr(entity, "mention_count", entity.mentions.count()),
+        "latest_mentions": [
+            _serialize_entity_mention(mention) for mention in prefetched_mentions[:3]
+        ],
+        "created_at": entity.created_at,
+    }
 
 
 def _serialize_entity_mention(mention: EntityMention) -> dict[str, Any]:
     """Return one entity mention response body."""
 
-    return cast(dict[str, Any], EntityMentionSummarySerializer(mention).data)
+    return {
+        "id": int(mention.pk),
+        "content_id": mention.content_id,
+        "content_title": mention.content.title,
+        "role": mention.role,
+        "sentiment": mention.sentiment,
+        "span": mention.span,
+        "confidence": mention.confidence,
+        "created_at": mention.created_at,
+    }
 
 
 def _serialize_authority_snapshot(snapshot: EntityAuthoritySnapshot) -> dict[str, Any]:
     """Return one entity authority snapshot response body."""
 
-    return cast(dict[str, Any], EntityAuthoritySnapshotSerializer(snapshot).data)
+    return {
+        "id": int(snapshot.pk),
+        "entity": snapshot.entity_id,
+        "project": snapshot.project_id,
+        "computed_at": snapshot.computed_at,
+        "mention_component": snapshot.mention_component,
+        "engagement_component": snapshot.engagement_component,
+        "recency_component": snapshot.recency_component,
+        "source_quality_component": snapshot.source_quality_component,
+        "cross_newsletter_component": snapshot.cross_newsletter_component,
+        "feedback_component": snapshot.feedback_component,
+        "duplicate_component": snapshot.duplicate_component,
+        "decayed_prior": snapshot.decayed_prior,
+        "weights_at_compute": snapshot.weights_at_compute,
+        "final_score": snapshot.final_score,
+    }
 
 
 def _serialize_entity_candidate(candidate: EntityCandidate) -> dict[str, Any]:
     """Return one entity candidate response body."""
 
-    return cast(dict[str, Any], EntityCandidateSerializer(candidate).data)
+    evidence = getattr(candidate, "prefetched_evidence", None)
+    if evidence is None:
+        evidence = candidate.evidence.all()
+    source_plugins = sorted(
+        {
+            evidence_row.source_plugin
+            for evidence_row in evidence
+            if evidence_row.source_plugin
+        }
+    )
+    identity_surfaces = sorted(
+        {
+            evidence_row.identity_surface
+            for evidence_row in evidence
+            if evidence_row.identity_surface
+        }
+    )
+    return {
+        "id": int(candidate.pk),
+        "project": candidate.project_id,
+        "name": candidate.name,
+        "suggested_type": candidate.suggested_type,
+        "first_seen_in": candidate.first_seen_in_id,
+        "first_seen_title": (
+            candidate.first_seen_in.title if candidate.first_seen_in else None
+        ),
+        "occurrence_count": candidate.occurrence_count,
+        "cluster_key": candidate.cluster_key,
+        "auto_promotion_blocked_reason": candidate.auto_promotion_blocked_reason,
+        "evidence_count": len(evidence),
+        "source_plugin_count": len(source_plugins),
+        "source_plugins": source_plugins,
+        "identity_surfaces": identity_surfaces,
+        "status": candidate.status,
+        "merged_into": candidate.merged_into_id,
+        "merged_into_name": (
+            candidate.merged_into.name if candidate.merged_into else None
+        ),
+        "created_at": candidate.created_at,
+        "updated_at": candidate.updated_at,
+    }
+
+
+def _validation_error_payload(exc: ValidationError) -> dict[str, list[str]]:
+    """Convert a Django validation error into the Ninja error payload shape."""
+
+    if hasattr(exc, "message_dict"):
+        return {
+            field: [str(message) for message in messages]
+            for field, messages in exc.message_dict.items()
+        }
+    return {"__all__": [str(message) for message in exc.messages]}
+
+
+def _error_payload(field: str, message: str) -> dict[str, list[str]]:
+    """Return the native Ninja error payload shape."""
+
+    return {field: [message]}
+
+
+def _validated_entity_payload(
+    payload: dict[str, Any],
+    *,
+    project,
+    instance: Entity | None = None,
+) -> tuple[dict[str, Any], dict[str, list[str]] | None]:
+    """Normalize and validate one entity payload."""
+
+    validated_payload = dict(payload)
+    validated_payload.pop("project", None)
+
+    entity = instance or Entity(project=project)
+    for field_name, value in validated_payload.items():
+        setattr(entity, field_name, value)
+    entity.project = project
+    try:
+        entity.full_clean()
+    except ValidationError as exc:
+        return validated_payload, _validation_error_payload(exc)
+    return validated_payload, None
+
+
+def _validated_history_limit(
+    limit: str | None,
+) -> tuple[int | None, dict[str, list[str]] | None]:
+    """Validate the optional entity authority-history limit."""
+
+    if limit is None:
+        return None, None
+    try:
+        parsed_limit = int(limit)
+    except ValueError:
+        return None, _error_payload(
+            "limit", "Limit must be an integer between 1 and 100."
+        )
+    if parsed_limit < 1 or parsed_limit > 100:
+        return None, _error_payload(
+            "limit", "Limit must be an integer between 1 and 100."
+        )
+    return parsed_limit, None
+
+
+def _validated_merge_target(
+    merged_into_id: int,
+    *,
+    project_id: int,
+) -> tuple[Entity | None, dict[str, list[str]] | None]:
+    """Resolve and validate one candidate-merge target inside the same project."""
+
+    merged_into = Entity.objects.filter(
+        pk=merged_into_id, project_id=project_id
+    ).first()
+    if merged_into is None:
+        return None, _error_payload("merged_into", "Select a valid choice.")
+    return merged_into, None
 
 
 def _get_entity_or_404(project_id: int, entity_id: int) -> Entity:
@@ -271,7 +437,11 @@ def list_entities(
     return [_serialize_entity(entity) for entity in entities]
 
 
-@entity_router.post("/", response={201: EntitySchema}, auth=drf_authenticate)
+@entity_router.post(
+    "/",
+    response={201: EntitySchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def create_entity(
     request: Any,
     payload: EntityCreateInput,
@@ -280,13 +450,16 @@ def create_entity(
     """Create one tracked entity under the selected project."""
 
     project = _require_project_writable(request, project_id)
-    serializer = EntitySerializer(
-        data=payload.model_dump(exclude_unset=True, exclude_none=False),
-        context={"project": project, "request": request},
+    validated_payload, errors = _validated_entity_payload(
+        payload.model_dump(exclude_unset=True, exclude_none=False),
+        project=project,
     )
-    serializer.is_valid(raise_exception=True)
-    entity = serializer.save(project=project)
-    return 201, _serialize_entity(_get_entity_or_404(project_id, cast(int, entity.pk)))
+    if errors is not None:
+        return Status(400, errors)
+    entity = Entity.objects.create(project=project, **validated_payload)
+    return Status(
+        201, _serialize_entity(_get_entity_or_404(project_id, int(entity.pk)))
+    )
 
 
 @entity_router.get("/{entity_id}/", response=EntitySchema, auth=drf_authenticate)
@@ -301,7 +474,11 @@ def get_entity(
     return _serialize_entity(_get_entity_or_404(project_id, entity_id))
 
 
-@entity_router.patch("/{entity_id}/", response=EntitySchema, auth=drf_authenticate)
+@entity_router.patch(
+    "/{entity_id}/",
+    response={200: EntitySchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def update_entity(
     request: Any,
     payload: EntityUpdateInput,
@@ -312,14 +489,16 @@ def update_entity(
 
     _require_project_writable(request, project_id)
     entity = _get_entity_or_404(project_id, entity_id)
-    serializer = EntitySerializer(
-        entity,
-        data=payload.model_dump(exclude_unset=True, exclude_none=False),
-        partial=True,
-        context={"project": entity.project, "request": request},
+    validated_payload, errors = _validated_entity_payload(
+        payload.model_dump(exclude_unset=True, exclude_none=False),
+        project=entity.project,
+        instance=entity,
     )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    if errors is not None:
+        return Status(400, errors)
+    for field_name, value in validated_payload.items():
+        setattr(entity, field_name, value)
+    entity.save()
     return _serialize_entity(_get_entity_or_404(project_id, entity_id))
 
 
@@ -334,7 +513,7 @@ def delete_entity(
     _require_project_admin(request, project_id)
     entity = _get_entity_or_404(project_id, entity_id)
     entity.delete()
-    return 204, None
+    return Status(204, None)
 
 
 @entity_router.get(
@@ -377,7 +556,7 @@ def entity_authority_components(
 
 @entity_router.get(
     "/{entity_id}/authority_history/",
-    response=list[EntityAuthoritySnapshotSchema],
+    response={200: list[EntityAuthoritySnapshotSchema], 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def entity_authority_history(
@@ -391,17 +570,10 @@ def entity_authority_history(
     _get_project_or_404(request, project_id)
     entity = _get_entity_or_404(project_id, entity_id)
     snapshots = entity.authority_snapshots.order_by("-computed_at")
-    if limit is not None:
-        try:
-            parsed_limit = int(limit)
-        except ValueError as exc:
-            raise serializers.ValidationError(
-                {"limit": "Limit must be an integer between 1 and 100."}
-            ) from exc
-        if parsed_limit < 1 or parsed_limit > 100:
-            raise serializers.ValidationError(
-                {"limit": "Limit must be an integer between 1 and 100."}
-            )
+    parsed_limit, limit_errors = _validated_history_limit(limit)
+    if limit_errors is not None:
+        return Status(400, limit_errors)
+    if parsed_limit is not None:
         snapshots = snapshots[:parsed_limit]
     return [_serialize_authority_snapshot(snapshot) for snapshot in snapshots]
 
@@ -481,7 +653,7 @@ def reject_entity_candidate_route(
 
 @entity_candidate_router.post(
     "/{candidate_id}/merge/",
-    response=EntityCandidateSchema,
+    response={200: EntityCandidateSchema, 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def merge_entity_candidate_route(
@@ -494,14 +666,15 @@ def merge_entity_candidate_route(
 
     _require_project_writable(request, project_id)
     candidate = _get_entity_candidate_or_404(project_id, candidate_id)
-    serializer = EntityCandidateMergeSerializer(
-        data=payload.model_dump(exclude_unset=True),
-        context={"project": candidate.project, "request": request},
+    merged_into, errors = _validated_merge_target(
+        payload.merged_into,
+        project_id=candidate.project_id,
     )
-    serializer.is_valid(raise_exception=True)
+    if errors is not None:
+        return Status(400, errors)
     merge_entity_candidate(
         candidate,
-        serializer.validated_data["merged_into"],
+        merged_into,
         schedule_enrichment=True,
     )
     candidate.refresh_from_db()

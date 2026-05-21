@@ -104,6 +104,23 @@ def test_ninja_thread_create_requires_a_shared_project():
     )
 
 
+def test_ninja_thread_create_rejects_messaging_yourself():
+    alice, _, _ = _create_fixture_users_and_projects()
+
+    client = APIClient()
+    client.force_login(alice)
+    response = _response(
+        client.post(
+            "/api/ninja/v1/messaging/threads/",
+            {"recipient_user_id": int(alice.pk)},
+            format="json",
+        )
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["recipient_user_id"][0] == "You cannot message yourself."
+
+
 def test_ninja_thread_create_creates_a_thread_and_optional_opening_message():
     alice, bob, _ = _create_fixture_users_and_projects()
 

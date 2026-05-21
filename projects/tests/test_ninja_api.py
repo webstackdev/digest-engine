@@ -100,6 +100,99 @@ class ProjectNinjaApiTests(APITestCase):
         self.assertTrue(response.json()[0]["bluesky_is_active"])
         self.assertEqual(response.json()[0]["bluesky_last_error"], "")
 
+    def test_canonical_v1_project_list_uses_ninja_router(self):
+        response = self.client.get("/api/v1/projects/")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), 1)
+        self.assertEqual(response.json()[0]["id"], _require_pk(self.owner_project))
+
+    def test_create_and_update_project_use_native_validation_and_payload_shape(self):
+        create_response = self.client.post(
+            reverse("ninja-api:create_project"),
+            {
+                "name": "New Project",
+                "topic_description": "AI workflows",
+                "content_retention_days": 120,
+                "intake_enabled": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        created_project = Project.objects.get(name="New Project")
+        self.assertEqual(create_response.json()["id"], _require_pk(created_project))
+        self.assertEqual(create_response.json()["user_role"], ProjectRole.ADMIN)
+        self.assertTrue(create_response.json()["intake_enabled"])
+        self.assertEqual(created_project.content_retention_days, 120)
+        self.assertTrue(
+            ProjectMembership.objects.filter(
+                project=created_project,
+                user=self.owner,
+                role=ProjectRole.ADMIN,
+            ).exists()
+        )
+
+        update_response = self.client.patch(
+            reverse(
+                "ninja-api:update_project",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            ),
+            {
+                "name": "Updated Owner Project",
+                "content_retention_days": 30,
+                "intake_enabled": True,
+            },
+            format="json",
+        )
+
+        self.owner_project.refresh_from_db()
+        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.owner_project.name, "Updated Owner Project")
+        self.assertEqual(self.owner_project.content_retention_days, 30)
+        self.assertTrue(self.owner_project.intake_enabled)
+        self.assertEqual(update_response.json()["name"], "Updated Owner Project")
+        self.assertTrue(update_response.json()["intake_enabled"])
+
+    def test_project_create_and_update_reject_invalid_native_payloads(self):
+        create_response = self.client.post(
+            reverse("ninja-api:create_project"),
+            {
+                "name": "   ",
+                "topic_description": "",
+                "content_retention_days": -1,
+            },
+            format="json",
+        )
+        update_response = self.client.patch(
+            reverse(
+                "ninja-api:update_project",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            ),
+            {
+                "content_retention_days": -5,
+            },
+            format="json",
+        )
+
+        self.assertEqual(create_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            create_response.json()["name"][0], "This field may not be blank."
+        )
+        self.assertEqual(
+            create_response.json()["topic_description"][0],
+            "This field may not be blank.",
+        )
+        self.assertEqual(
+            create_response.json()["content_retention_days"][0],
+            "Ensure this value is greater than or equal to 0.",
+        )
+        self.assertEqual(update_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            update_response.json()["content_retention_days"][0],
+            "Ensure this value is greater than or equal to 0.",
+        )
+
     def test_project_rotate_intake_token_returns_updated_project(self):
         original_token = self.owner_project.intake_token
 

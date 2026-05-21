@@ -293,6 +293,24 @@ class EntityNinjaApiTests(APITestCase):
         self.assertEqual(len(history_response.json()), 1)
         self.assertEqual(history_response.json()[0]["id"], _require_pk(second_snapshot))
 
+    def test_entity_authority_history_rejects_invalid_limit(self):
+        response = self.client.get(
+            reverse(
+                "ninja-api:entity_authority_history",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "entity_id": _require_pk(self.owner_entity),
+                },
+            ),
+            {"limit": "abc"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["limit"][0],
+            "Limit must be an integer between 1 and 100.",
+        )
+
     def test_entity_create_uses_project_from_url(self):
         response = self.client.post(
             reverse(

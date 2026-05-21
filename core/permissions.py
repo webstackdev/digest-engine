@@ -2,25 +2,19 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from rest_framework import permissions
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 from projects.models import Project, ProjectMembership, ProjectRole
 
-if TYPE_CHECKING:
 
-    class PermissionBase(permissions.BasePermission):
-        """Typed shim for DRF permissions whose default methods return bool."""
+class PermissionBase:
+    """Minimal permission interface shared by DRF viewsets and Ninja helpers."""
 
-        def has_permission(self, request, view) -> bool:
-            raise NotImplementedError()
+    def has_permission(self, request, view) -> bool:
+        return True
 
-        def has_object_permission(self, request, view, obj) -> bool:
-            raise NotImplementedError()
-
-else:
-    PermissionBase = permissions.BasePermission
+    def has_object_permission(self, request, view, obj) -> bool:
+        return True
 
 
 def get_visible_projects_queryset(user):
@@ -117,13 +111,13 @@ class IsProjectMemberWritable(PermissionBase):
             return True
 
         role = get_user_role(user, project)
-        if request.method in permissions.SAFE_METHODS:
+        if request.method in SAFE_METHODS:
             return role is not None
         return role in self.writable_roles
 
     def has_object_permission(self, request, view, obj) -> bool:
         role = get_user_role(request.user, _resolve_project(obj))
-        if request.method in permissions.SAFE_METHODS:
+        if request.method in SAFE_METHODS:
             return role is not None
         return role in self.writable_roles
 
@@ -161,13 +155,13 @@ class IsProjectFeedbackEditor(PermissionBase):
             return True
 
         role = get_user_role(user, project)
-        if request.method in permissions.SAFE_METHODS:
+        if request.method in SAFE_METHODS:
             return role is not None
         return role in self.contributor_roles
 
     def has_object_permission(self, request, view, obj) -> bool:
         role = get_user_role(request.user, _resolve_project(obj))
-        if request.method in permissions.SAFE_METHODS:
+        if request.method in SAFE_METHODS:
             return role is not None
         if role == ProjectRole.ADMIN:
             return True

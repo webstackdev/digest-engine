@@ -303,6 +303,59 @@ class NewsletterNinjaApiTests(APITestCase):
         regenerate_mock.assert_called_once_with(_require_pk(section))
         self.assertEqual(response.json()["id"], _require_pk(draft))
 
+    def test_newsletter_draft_regenerate_section_rejects_section_from_other_draft(self):
+        draft = NewsletterDraft.objects.create(
+            project=self.owner_project,
+            title="Draft",
+            intro="Intro",
+            outro="Outro",
+            status=NewsletterDraftStatus.READY,
+            generation_metadata={"source_theme_ids": [], "source_idea_ids": []},
+        )
+        other_draft = NewsletterDraft.objects.create(
+            project=self.owner_project,
+            title="Other draft",
+            intro="Intro",
+            outro="Outro",
+            status=NewsletterDraftStatus.READY,
+            generation_metadata={"source_theme_ids": [], "source_idea_ids": []},
+        )
+        theme = ThemeSuggestion.objects.create(
+            project=self.owner_project,
+            title="Theme",
+            pitch="Pitch",
+            why_it_matters="Why",
+            suggested_angle="",
+            velocity_at_creation=1.0,
+            novelty_score=0.7,
+            status=ThemeSuggestionStatus.ACCEPTED,
+        )
+        other_section = NewsletterDraftSection.objects.create(
+            draft=other_draft,
+            theme_suggestion=theme,
+            title="Other section",
+            lede="Other lede",
+            order=0,
+        )
+
+        response = self.client.post(
+            reverse(
+                "ninja-api:regenerate_newsletter_draft_section_route",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "draft_id": _require_pk(draft),
+                },
+            ),
+            {"section_id": _require_pk(other_section)},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["section_id"][0],
+            "Draft section not found for this project.",
+        )
+
     def test_newsletter_draft_item_patch_marks_draft_as_edited(self):
         draft = NewsletterDraft.objects.create(
             project=self.owner_project,

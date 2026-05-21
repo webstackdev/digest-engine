@@ -5,21 +5,21 @@ from __future__ import annotations
 from typing import Any, cast
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from ninja import File, Router, Schema
 from ninja.errors import HttpError
 from ninja.files import UploadedFile
-from rest_framework import serializers, status
-from rest_framework.exceptions import PermissionDenied
+from ninja.responses import Status
 
 from core.ninja_api import drf_authenticate
 from projects.models import ProjectMembership
-from users.api import _delete_avatar_assets, _enqueue_task, _validated_data
-from users.models import AppUser, MembershipInvitation
-from users.serializers import (
-    AvatarUploadSerializer,
-    ProfileSerializer,
-    PublicMembershipInvitationSerializer,
+from users.models import (
+    AVATAR_ALLOWED_CONTENT_TYPES,
+    AVATAR_MAX_FILE_SIZE,
+    AppUser,
+    MembershipInvitation,
+    avatar_thumbnail_path,
 )
 from users.tasks import generate_avatar_thumbnail
 
@@ -66,13 +66,105 @@ class PublicMembershipInvitationSchema(Schema):
 def _serialize_profile(user: AppUser) -> dict[str, Any]:
     """Return the profile response body for one user."""
 
-    return cast(dict[str, Any], ProfileSerializer(user).data)
+    return {
+        "id": int(user.pk),
+        "username": user.username,
+        "email": user.email,
+        "display_name": user.display_name,
+        "avatar": user.avatar_url,
+        "avatar_url": user.avatar_url,
+        "avatar_thumbnail_url": user.avatar_thumbnail_url,
+        "bio": user.bio,
+        "timezone": user.timezone,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+    }
 
 
 def _serialize_public_invitation(invitation: MembershipInvitation) -> dict[str, Any]:
     """Return the public invitation response body for one token."""
 
-    return cast(dict[str, Any], PublicMembershipInvitationSerializer(invitation).data)
+    return {
+        "token": invitation.token,
+        "project_id": invitation.project_id,
+        "project_name": invitation.project.name,
+        "email": invitation.email,
+        "role": invitation.role,
+        "status": _invitation_status(invitation),
+        "accepted_at": (
+            invitation.accepted_at.isoformat() if invitation.accepted_at else None
+        ),
+        "revoked_at": (
+            invitation.revoked_at.isoformat() if invitation.revoked_at else None
+        ),
+    }
+
+
+def _invitation_status(invitation: MembershipInvitation) -> str:
+    """Return the simple lifecycle status for one invitation token."""
+
+    if invitation.revoked_at is not None:
+        return "revoked"
+    if invitation.accepted_at is not None:
+        return "accepted"
+    return "pending"
+
+
+def _enqueue_task(task: object, *args: object) -> None:
+    """Dispatch a Celery task through its delay seam."""
+
+    cast(Any, task).delay(*args)
+
+
+def _delete_avatar_assets(user: AppUser) -> None:
+    """Delete the user's stored avatar and generated thumbnail files."""
+
+    if user.avatar:
+        storage = user.avatar.storage
+        avatar_name = user.avatar.name
+        thumbnail_name = avatar_thumbnail_path(user)
+        if avatar_name and storage.exists(avatar_name):
+            storage.delete(avatar_name)
+        if storage.exists(thumbnail_name):
+            storage.delete(thumbnail_name)
+
+
+def _validation_error_payload(exc: ValidationError) -> dict[str, list[str]]:
+    """Convert a Django validation error into the Ninja error payload shape."""
+
+    if hasattr(exc, "message_dict"):
+        return {
+            field: [str(message) for message in messages]
+            for field, messages in exc.message_dict.items()
+        }
+    return {"__all__": [str(message) for message in exc.messages]}
+
+
+def _validated_profile_payload(
+    payload: dict[str, Any],
+    *,
+    user: AppUser,
+) -> dict[str, list[str]] | None:
+    """Validate one profile update payload against the AppUser model."""
+
+    for field_name, value in payload.items():
+        setattr(user, field_name, value)
+    try:
+        user.full_clean()
+    except ValidationError as exc:
+        return _validation_error_payload(exc)
+    return None
+
+
+def _validated_avatar_upload(avatar: UploadedFile) -> dict[str, list[str]] | None:
+    """Validate one uploaded avatar against the configured content limits."""
+
+    content_type = getattr(avatar, "content_type", "")
+    if content_type not in AVATAR_ALLOWED_CONTENT_TYPES:
+        return {"avatar": ["Upload a PNG, JPEG, or WebP avatar image."]}
+    if avatar.size > AVATAR_MAX_FILE_SIZE:
+        return {"avatar": ["Avatar images must be 2 MB or smaller."]}
+    return None
 
 
 def _get_invitation_or_404(token: str) -> MembershipInvitation:
@@ -93,35 +185,42 @@ def get_profile(request):
     return _serialize_profile(cast(AppUser, request.user))
 
 
-@router.patch("/profile/", response=UserProfileSchema, auth=drf_authenticate)
+@router.patch(
+    "/profile/",
+    response={200: UserProfileSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def patch_profile(request, payload: ProfileUpdateInput):
     """Update the current user's editable profile fields."""
 
     user = cast(AppUser, request.user)
-    serializer = ProfileSerializer(
-        user,
-        data=payload.model_dump(exclude_unset=True),
-        partial=True,
+    updated_fields = list(payload.model_dump(exclude_unset=True).keys())
+    errors = _validated_profile_payload(
+        payload.model_dump(exclude_unset=True),
+        user=user,
     )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    if errors is not None:
+        return Status(400, errors)
+    if updated_fields:
+        user.save(update_fields=updated_fields)
     return _serialize_profile(user)
 
 
 @router.post(
     "/profile/avatar/",
-    response=UserProfileSchema,
+    response={200: UserProfileSchema, 400: dict[str, list[str]]},
     auth=drf_authenticate,
 )
 def upload_profile_avatar(request, avatar: File[UploadedFile]):
     """Store a new avatar image for the current user and queue a thumbnail."""
 
-    serializer = AvatarUploadSerializer(data={"avatar": avatar})
-    serializer.is_valid(raise_exception=True)
+    errors = _validated_avatar_upload(avatar)
+    if errors is not None:
+        return Status(400, errors)
 
     user = cast(AppUser, request.user)
     _delete_avatar_assets(user)
-    user.avatar = _validated_data(serializer)["avatar"]
+    user.avatar = avatar
     user.save(update_fields=["avatar"])
 
     if settings.CELERY_TASK_ALWAYS_EAGER:
@@ -157,7 +256,11 @@ def get_membership_invitation(request, token: str):
 
 @router.post(
     "/invitations/{token}/",
-    response=PublicMembershipInvitationSchema,
+    response={
+        200: PublicMembershipInvitationSchema,
+        400: dict[str, list[str]],
+        403: dict[str, str],
+    },
     auth=drf_authenticate,
 )
 def accept_membership_invitation(request, token: str):
@@ -165,19 +268,17 @@ def accept_membership_invitation(request, token: str):
 
     invitation = _get_invitation_or_404(token)
     if invitation.revoked_at is not None:
-        raise serializers.ValidationError(
-            {"token": "This invitation has been revoked."}
-        )
+        return Status(400, {"token": ["This invitation has been revoked."]})
     if invitation.accepted_at is not None:
-        raise serializers.ValidationError(
-            {"token": "This invitation has already been accepted."}
-        )
+        return Status(400, {"token": ["This invitation has already been accepted."]})
 
     user = cast(AppUser, request.user)
     user_email = (user.email or "").strip().lower()
     invitation_email = invitation.email.strip().lower()
     if not user_email or user_email != invitation_email:
-        raise PermissionDenied(f"Sign in as {invitation.email} to accept this invite.")
+        return Status(
+            403, {"detail": f"Sign in as {invitation.email} to accept this invite."}
+        )
 
     membership, created = ProjectMembership.objects.update_or_create(
         user=user,

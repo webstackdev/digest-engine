@@ -1,14 +1,12 @@
-from typing import Any, cast
 import datetime
+from typing import Any
 
-from ninja import Router, Schema, Path
+from ninja import Path, Router, Schema
 from ninja.errors import HttpError
-from rest_framework import status
+from ninja.responses import Status
 
 from core.ninja_api import drf_authenticate
-from projects.models import ProjectMembership
-from projects.serializers import ProjectMembershipSerializer
-from projects.api import _assert_project_keeps_admin
+from projects.models import ProjectMembership, ProjectRole
 from projects.ninja_api import _require_project_admin, _get_project_or_404
 
 router = Router(tags=["Project Memberships"])
@@ -31,7 +29,53 @@ class ProjectMembershipUpdateInput(Schema):
 
 
 def _serialize_membership(membership: ProjectMembership) -> dict[str, Any]:
-    return cast(dict[str, Any], ProjectMembershipSerializer(membership).data)
+    return {
+        "id": int(membership.pk),
+        "project": membership.project_id,
+        "user": membership.user_id,
+        "username": membership.user.username,
+        "email": membership.user.email,
+        "display_name": membership.user.display_name,
+        "role": membership.role,
+        "invited_by": membership.invited_by_id,
+        "joined_at": membership.joined_at,
+    }
+
+
+def _role_error(message: str) -> dict[str, list[str]]:
+    """Return the native Ninja error payload shape for role validation failures."""
+
+    return {"role": [message]}
+
+
+def _validate_role(role: str) -> dict[str, list[str]] | None:
+    """Restrict membership role updates to the supported project roles."""
+
+    if role not in ProjectRole.values:
+        return _role_error("Select a valid project role.")
+    return None
+
+
+def _validate_project_keeps_admin(
+    membership: ProjectMembership,
+    *,
+    next_role: str | None = None,
+) -> dict[str, list[str]] | None:
+    """Reject changes that would leave the project without an admin."""
+
+    resulting_role = next_role
+    if membership.role != ProjectRole.ADMIN or resulting_role == ProjectRole.ADMIN:
+        return None
+
+    has_other_admin = (
+        ProjectMembership.objects.filter(project=membership.project)
+        .exclude(pk=membership.pk)
+        .filter(role=ProjectRole.ADMIN)
+        .exists()
+    )
+    if not has_other_admin:
+        return _role_error("Projects must keep at least one admin.")
+    return None
 
 
 def _get_membership_or_404(project_id: int, membership_id: int) -> ProjectMembership:
@@ -58,7 +102,9 @@ def list_memberships(request, project_id: int = Path(...)):
 
 
 @router.patch(
-    "/{membership_id}/", response=ProjectMembershipSchema, auth=drf_authenticate
+    "/{membership_id}/",
+    response={200: ProjectMembershipSchema, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
 )
 def update_membership(
     request,
@@ -69,28 +115,33 @@ def update_membership(
     _require_project_admin(request, project_id)
     membership = _get_membership_or_404(project_id, membership_id)
 
-    # Check custom constraint
-    _assert_project_keeps_admin(membership.project, membership, next_role=payload.role)
+    role_errors = _validate_role(payload.role)
+    if role_errors is not None:
+        return Status(400, role_errors)
 
-    serializer = ProjectMembershipSerializer(
-        membership,
-        data=payload.model_dump(exclude_unset=True),
-        partial=True,
-    )
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
+    admin_errors = _validate_project_keeps_admin(membership, next_role=payload.role)
+    if admin_errors is not None:
+        return Status(400, admin_errors)
+
+    membership.role = payload.role
+    membership.save(update_fields=["role"])
     return _serialize_membership(membership)
 
 
-@router.delete("/{membership_id}/", response={204: None}, auth=drf_authenticate)
+@router.delete(
+    "/{membership_id}/",
+    response={204: None, 400: dict[str, list[str]]},
+    auth=drf_authenticate,
+)
 def delete_membership(
     request, project_id: int = Path(...), membership_id: int = Path(...)
 ):
     _require_project_admin(request, project_id)
     membership = _get_membership_or_404(project_id, membership_id)
 
-    # Check custom constraint
-    _assert_project_keeps_admin(membership.project, membership, next_role=None)
+    admin_errors = _validate_project_keeps_admin(membership, next_role=None)
+    if admin_errors is not None:
+        return Status(400, admin_errors)
 
     membership.delete()
-    return 204, None
+    return Status(204, None)

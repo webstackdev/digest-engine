@@ -127,6 +127,27 @@ class IngestionRunNinjaApiTests(APITestCase):
         self.assertEqual(created_run.project, self.owner_project)
         self.assertEqual(created_run.status, RunStatus.RUNNING)
 
+    def test_create_ingestion_run_rejects_invalid_status(self):
+        response = self.client.post(
+            reverse(
+                "ninja-api:create_ingestion_run",
+                kwargs={"project_id": _require_pk(self.owner_project)},
+            ),
+            {
+                "plugin_name": "bluesky",
+                "status": "invalid-status",
+                "items_fetched": 0,
+                "items_ingested": 0,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["status"][0],
+            "Value 'invalid-status' is not a valid choice.",
+        )
+
     def test_reader_can_list_but_cannot_create(self):
         _typed_client(self.client).force_login(self.reader)
 

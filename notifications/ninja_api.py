@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -11,7 +11,6 @@ from ninja.responses import Status
 
 from core.ninja_api import drf_authenticate
 from notifications.models import Notification
-from notifications.serializers import NotificationSerializer
 
 router = Router(tags=["Notifications"])
 
@@ -45,15 +44,23 @@ class NotificationsReadAllResponseSchema(Schema):
 def _serialize_notification(notification: Notification) -> dict[str, Any]:
     """Return one serialized notification payload."""
 
-    return cast(dict[str, Any], NotificationSerializer(notification).data)
+    return {
+        "id": int(notification.pk),
+        "project": notification.project_id,
+        "level": notification.level,
+        "body": notification.body,
+        "link_path": notification.link_path,
+        "metadata": notification.metadata,
+        "created_at": notification.created_at.isoformat(),
+        "read_at": notification.read_at.isoformat() if notification.read_at else None,
+        "is_read": notification.is_read,
+    }
 
 
 def _serialize_notifications(notifications: list[Notification]) -> list[dict[str, Any]]:
     """Return serialized notification payloads for a list response."""
 
-    return cast(
-        list[dict[str, Any]], NotificationSerializer(notifications, many=True).data
-    )
+    return [_serialize_notification(notification) for notification in notifications]
 
 
 def _notifications_queryset(request) -> Any:
