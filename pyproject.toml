@@ -109,6 +109,7 @@ dependencies = [
 	"wrapt==2.1.2",
 	"xxhash==3.7.0",
 	"zope-interface==8.4",
+	"django-ninja>=1.6.2",
 ]
 
 [dependency-groups]

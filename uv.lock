@@ -738,6 +738,7 @@ dependencies = [
     { name = "django-anymail" },
     { name = "django-cors-headers" },
     { name = "django-import-export" },
+    { name = "django-ninja" },
     { name = "django-storages" },
     { name = "django-stubs" },
     { name = "django-stubs-ext" },
@@ -854,6 +855,7 @@ requires-dist = [
     { name = "django-anymail", specifier = "==15.0" },
     { name = "django-cors-headers", specifier = "==4.9.0" },
     { name = "django-import-export", specifier = "==4.4.1" },
+    { name = "django-ninja", specifier = ">=1.6.2" },
     { name = "django-storages", specifier = "==1.14.6" },
     { name = "django-stubs", specifier = "==6.0.4" },
     { name = "django-stubs-ext", specifier = "==6.0.4" },
@@ -1051,6 +1053,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/92/32/5b83cc46a70ac94c1d17144097bf8aee7d9bb401d0863652c8d5ce1d2e50/django_import_export-4.4.1.tar.gz", hash = "sha256:165dc7fdcd56a6356342eef3f88f3f3682b64b6f67e9a259a137e8b57aeff10c", size = 2238690, upload-time = "2026-05-05T12:42:44.295Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/91/d1/110aeb2acffea56d4222861b5678c2643f0bda00081e40d687077348bb7c/django_import_export-4.4.1-py3-none-any.whl", hash = "sha256:8be2782e505ae303ccb02070a1b4c528995922126fca9ee449eb28666835dd4b", size = 157691, upload-time = "2026-05-05T12:42:42.554Z" },
+]
+
+[[package]]
+name = "django-ninja"
+version = "1.6.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d5/7c/3307e17b872f545c88314b2737a22f965785dfb5a120d739b0131d0492c3/django_ninja-1.6.2.tar.gz", hash = "sha256:d56ae5aa4791068ef4ac9a66cfdf2fc11f507413ded35abb79c51d0d52ad6412", size = 3685599, upload-time = "2026-03-18T20:06:47.284Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/21/0c/25f72060a39632fbd2d90e9c8b6052a09cd45b0598fc06c0758d313f0052/django_ninja-1.6.2-py3-none-any.whl", hash = "sha256:20095f5900bada22ea00cf1a58af50bdb285b2354c61a9d9b47d0dc89ac462d6", size = 2374994, upload-time = "2026-03-18T20:06:45.676Z" },
 ]
 
 [[package]]

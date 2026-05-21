@@ -10,6 +10,7 @@ from django.views.generic.base import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from core.auth_views import GitHubLoginView, GoogleLoginView
+from digest_engine.ninja_api import api as ninja_api
 from trends.metrics import trend_task_run_metrics_view
 
 
@@ -37,6 +38,7 @@ urlpatterns = [
     path("api/auth/registration/", include("dj_rest_auth.registration.urls")),
     path("api/auth/github/", GitHubLoginView.as_view(), name="github_login"),
     path("api/auth/google/", GoogleLoginView.as_view(), name="google_login"),
+    path("api/ninja/", ninja_api.urls),
     path("api/v1/", include("users.api_urls")),
     path("api/v1/", include(("core.api_urls", "api"), namespace="v1")),
     path(

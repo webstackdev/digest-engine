@@ -60,6 +60,7 @@
     "pyasn",
     "pylint",
     "pyopenssl",
+    "pyproject",
     "PYTHONDONTWRITEBYTECODE",
     "PYTHONUNBUFFERED",
     "pytokens",
@@ -96,5 +97,6 @@
     "xrpc",
     "xxhash",
     "zope"
-  ]
+  ],
+  "git.ignoreLimitWarning": true
 }
