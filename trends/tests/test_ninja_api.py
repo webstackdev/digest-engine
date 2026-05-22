@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from http import HTTPStatus
 from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
 from content.models import Content
 from entities.models import Entity
@@ -38,19 +38,13 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-def _typed_client(client: object) -> APIClient:
-    """Cast the DRF test client so Pylance sees APIClient helpers."""
-
-    return cast(APIClient, client)
-
-
 def _create_user(user_model: type[Any], **kwargs: object):
     """Create a user through the custom manager with a typed escape hatch."""
 
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class TrendsNinjaApiTests(APITestCase):
+class TrendsNinjaApiTests(TestCase):
     """Exercise project-scoped Ninja trends endpoints from the trends app."""
 
     def setUp(self):
@@ -120,7 +114,7 @@ class TrendsNinjaApiTests(APITestCase):
             drift_from_previous=0.1,
             drift_from_week_ago=0.2,
         )
-        _typed_client(self.client).force_login(self.owner)
+        self.client.force_login(self.owner)
 
     def test_topic_centroid_summary_returns_latest_snapshot_and_averages(self):
         older_snapshot = TopicCentroidSnapshot.objects.create(
@@ -144,7 +138,7 @@ class TrendsNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(response.json()["project"], _require_pk(self.owner_project))
         self.assertEqual(response.json()["snapshot_count"], 2)
         self.assertEqual(response.json()["active_snapshot_count"], 2)
@@ -221,12 +215,12 @@ class TrendsNinjaApiTests(APITestCase):
             {"limit": 1},
         )
 
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
         self.assertEqual(len(list_response.json()), 1)
         self.assertEqual(list_response.json()[0]["id"], _require_pk(cluster))
         self.assertAlmostEqual(list_response.json()[0]["velocity_score"], 1.0)
 
-        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail_response.status_code, HTTPStatus.OK)
         self.assertEqual(detail_response.json()["id"], _require_pk(cluster))
         self.assertEqual(len(detail_response.json()["memberships"]), 1)
         self.assertEqual(
@@ -239,7 +233,7 @@ class TrendsNinjaApiTests(APITestCase):
             _require_pk(second_snapshot),
         )
 
-        self.assertEqual(history_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(history_response.status_code, HTTPStatus.OK)
         self.assertEqual(len(history_response.json()), 1)
         self.assertEqual(history_response.json()[0]["id"], _require_pk(second_snapshot))
 
@@ -303,7 +297,6 @@ class TrendsNinjaApiTests(APITestCase):
                     "suggestion_id": _require_pk(accept_suggestion),
                 },
             ),
-            format="json",
         )
         dismiss_response = self.client.post(
             reverse(
@@ -314,20 +307,20 @@ class TrendsNinjaApiTests(APITestCase):
                 },
             ),
             {"reason": "already covered"},
-            format="json",
+            content_type="application/json",
         )
 
         accept_suggestion.refresh_from_db()
         dismiss_suggestion.refresh_from_db()
         promoted_content.refresh_from_db()
 
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
         self.assertEqual(len(list_response.json()), 2)
         self.assertEqual(
             list_response.json()[0]["status"], ThemeSuggestionStatus.PENDING
         )
 
-        self.assertEqual(accept_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(accept_response.status_code, HTTPStatus.OK)
         self.assertEqual(accept_suggestion.status, ThemeSuggestionStatus.ACCEPTED)
         self.assertEqual(accept_suggestion.decided_by, self.owner)
         self.assertIsNotNone(accept_suggestion.decided_at)
@@ -336,7 +329,7 @@ class TrendsNinjaApiTests(APITestCase):
         self.assertIsNotNone(promoted_content.newsletter_promotion_at)
         self.assertEqual(len(accept_response.json()["promoted_contents"]), 1)
 
-        self.assertEqual(dismiss_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(dismiss_response.status_code, HTTPStatus.OK)
         self.assertEqual(dismiss_suggestion.status, ThemeSuggestionStatus.DISMISSED)
         self.assertEqual(dismiss_suggestion.dismissal_reason, "already covered")
         self.assertEqual(dismiss_suggestion.decided_by, self.owner)
@@ -387,7 +380,6 @@ class TrendsNinjaApiTests(APITestCase):
                     "idea_id": _require_pk(accepted_then_written_idea),
                 },
             ),
-            format="json",
         )
         dismiss_response = self.client.post(
             reverse(
@@ -398,7 +390,7 @@ class TrendsNinjaApiTests(APITestCase):
                 },
             ),
             {"reason": "already assigned"},
-            format="json",
+            content_type="application/json",
         )
         mark_written_response = self.client.post(
             reverse(
@@ -408,22 +400,21 @@ class TrendsNinjaApiTests(APITestCase):
                     "idea_id": _require_pk(accepted_then_written_idea),
                 },
             ),
-            format="json",
         )
 
         accepted_then_written_idea.refresh_from_db()
         dismissed_idea.refresh_from_db()
 
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
         self.assertEqual(len(list_response.json()), 2)
         self.assertEqual(
             list_response.json()[0]["status"],
             OriginalContentIdeaStatus.PENDING,
         )
 
-        self.assertEqual(accept_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(accept_response.status_code, HTTPStatus.OK)
         self.assertEqual(accept_response.json()["status"], "accepted")
-        self.assertEqual(mark_written_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(mark_written_response.status_code, HTTPStatus.OK)
         self.assertEqual(mark_written_response.json()["status"], "written")
         self.assertEqual(
             accepted_then_written_idea.status,
@@ -432,7 +423,7 @@ class TrendsNinjaApiTests(APITestCase):
         self.assertEqual(accepted_then_written_idea.decided_by, self.owner)
         self.assertIsNotNone(accepted_then_written_idea.decided_at)
 
-        self.assertEqual(dismiss_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(dismiss_response.status_code, HTTPStatus.OK)
         self.assertEqual(dismissed_idea.status, OriginalContentIdeaStatus.DISMISSED)
         self.assertEqual(dismissed_idea.dismissal_reason, "already assigned")
         self.assertEqual(dismissed_idea.decided_by, self.owner)
@@ -453,7 +444,6 @@ class TrendsNinjaApiTests(APITestCase):
                         "ninja-api:generate_original_content_ideas_route",
                         kwargs={"project_id": _require_pk(self.owner_project)},
                     ),
-                    format="json",
                 )
 
         with self.settings(CELERY_TASK_ALWAYS_EAGER=False):
@@ -465,15 +455,14 @@ class TrendsNinjaApiTests(APITestCase):
                         "ninja-api:generate_original_content_ideas_route",
                         kwargs={"project_id": _require_pk(self.owner_project)},
                     ),
-                    format="json",
                 )
 
-        self.assertEqual(eager_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(eager_response.status_code, HTTPStatus.OK)
         self.assertEqual(eager_response.json()["status"], "completed")
         self.assertEqual(eager_response.json()["result"]["created"], 2)
         generate_mock.assert_called_once_with(_require_pk(self.owner_project))
 
-        self.assertEqual(queued_response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(queued_response.status_code, HTTPStatus.ACCEPTED)
         self.assertEqual(queued_response.json()["status"], "queued")
         delay_mock.assert_called_once_with(_require_pk(self.owner_project))
 
@@ -564,18 +553,18 @@ class TrendsNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
         self.assertEqual(len(list_response.json()), 1)
         self.assertEqual(list_response.json()[0]["id"], _require_pk(owner_snapshot))
 
-        self.assertEqual(summary_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(summary_response.status_code, HTTPStatus.OK)
         self.assertEqual(summary_response.json()["snapshot_count"], 1)
         self.assertEqual(
             summary_response.json()["latest_snapshot"]["id"],
             _require_pk(owner_snapshot),
         )
 
-        self.assertEqual(task_summary_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(task_summary_response.status_code, HTTPStatus.OK)
         self.assertEqual(
             task_summary_response.json()["project"], _require_pk(self.owner_project)
         )
@@ -601,7 +590,7 @@ class TrendsNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, HTTPStatus.UNAUTHORIZED)
         self.assertEqual(response.json(), {"detail": "Unauthorized"})
 
     def test_metrics_endpoint_emits_latest_run_status_and_timestamps(self):
@@ -636,7 +625,7 @@ class TrendsNinjaApiTests(APITestCase):
             )
 
         response_body = response.content.decode("utf-8")
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertIn(
             'newsletter_trend_task_run_latest_status{project_id="1",task_name="recompute_topic_centroid",status="failed"} 1',
             response_body,

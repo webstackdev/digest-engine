@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
 from newsletters.models import (
     IntakeAllowlist,
@@ -37,19 +37,13 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-def _typed_client(client: object) -> APIClient:
-    """Cast the DRF test client so Pylance sees APIClient helpers."""
-
-    return cast(APIClient, client)
-
-
 def _create_user(user_model: type[Any], **kwargs: object):
     """Create a user through the custom manager with a typed escape hatch."""
 
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class NewsletterNinjaApiTests(APITestCase):
+class NewsletterNinjaApiTests(TestCase):
     """Exercise newsletter-owned Ninja API endpoints."""
 
     def setUp(self):
@@ -99,7 +93,7 @@ class NewsletterNinjaApiTests(APITestCase):
             status=NewsletterIntakeStatus.EXTRACTED,
             extraction_result={"items": []},
         )
-        _typed_client(self.client).force_login(self.owner)
+        self.client.force_login(self.owner)
 
     def test_intake_allowlist_list_is_scoped_to_request_user_project(self):
         other_allowlist = IntakeAllowlist.objects.create(
@@ -114,7 +108,7 @@ class NewsletterNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(
             response.json()[0]["id"], _require_pk(self.owner_intake_allowlist)
@@ -129,10 +123,10 @@ class NewsletterNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"sender_email": "new-sender@example.com"},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_response.status_code, HTTPStatus.CREATED)
         created_allowlist = IntakeAllowlist.objects.get(
             project=self.owner_project,
             sender_email="new-sender@example.com",
@@ -151,7 +145,7 @@ class NewsletterNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(delete_response.status_code, HTTPStatus.NO_CONTENT)
         self.assertFalse(
             IntakeAllowlist.objects.filter(pk=_require_pk(created_allowlist)).exists()
         )
@@ -173,7 +167,7 @@ class NewsletterNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], _require_pk(self.owner_intake))
 
@@ -202,7 +196,7 @@ class NewsletterNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], _require_pk(owner_draft))
         self.assertIn("rendered_markdown", response.json()[0])
@@ -225,10 +219,9 @@ class NewsletterNinjaApiTests(APITestCase):
                         "ninja-api:generate_newsletter_draft_route",
                         kwargs={"project_id": _require_pk(self.owner_project)},
                     ),
-                    format="json",
                 )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(response.json()["status"], "completed")
         self.assertEqual(response.json()["result"]["draft_id"], 42)
         generate_mock.assert_called_once_with(_require_pk(self.owner_project))
@@ -243,10 +236,9 @@ class NewsletterNinjaApiTests(APITestCase):
                         "ninja-api:generate_newsletter_draft_route",
                         kwargs={"project_id": _require_pk(self.owner_project)},
                     ),
-                    format="json",
                 )
 
-        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.status_code, HTTPStatus.ACCEPTED)
         self.assertEqual(response.json()["status"], "queued")
         delay_mock.assert_called_once_with(_require_pk(self.owner_project))
 
@@ -296,10 +288,10 @@ class NewsletterNinjaApiTests(APITestCase):
                         },
                     ),
                     {"section_id": _require_pk(section)},
-                    format="json",
+                    content_type="application/json",
                 )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         regenerate_mock.assert_called_once_with(_require_pk(section))
         self.assertEqual(response.json()["id"], _require_pk(draft))
 
@@ -347,10 +339,10 @@ class NewsletterNinjaApiTests(APITestCase):
                 },
             ),
             {"section_id": _require_pk(other_section)},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["section_id"][0],
             "Draft section not found for this project.",
@@ -407,12 +399,12 @@ class NewsletterNinjaApiTests(APITestCase):
                 },
             ),
             {"summary_used": "Updated summary"},
-            format="json",
+            content_type="application/json",
         )
 
         draft.refresh_from_db()
         item.refresh_from_db()
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(item.summary_used, "Updated summary")
         self.assertEqual(draft.status, NewsletterDraftStatus.EDITED)
         self.assertIsNotNone(draft.last_edited_at)
@@ -456,7 +448,7 @@ class NewsletterNinjaApiTests(APITestCase):
         )
 
         draft.refresh_from_db()
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, HTTPStatus.NO_CONTENT)
         self.assertEqual(draft.status, NewsletterDraftStatus.EDITED)
         self.assertFalse(
             NewsletterDraftOriginalPiece.objects.filter(

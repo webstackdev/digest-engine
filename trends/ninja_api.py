@@ -13,7 +13,7 @@ from ninja.errors import HttpError
 from ninja.responses import Status
 
 from content.models import Content
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from projects.models import Project, ProjectMembership, ProjectRole
 from projects.ninja_api import _get_project_or_404
 from trends.models import (
@@ -747,7 +747,7 @@ def _get_trend_task_run_or_404(project_id: int, run_id: int) -> TrendTaskRun:
     return run
 
 
-@clusters_router.get("/", response=list[TopicClusterSchema], auth=drf_authenticate)
+@clusters_router.get("/", response=list[TopicClusterSchema], auth=api_authenticate)
 def list_topic_clusters(request: Any, project_id: int = Path(...)):
     """List topic clusters visible to the current project member."""
 
@@ -763,7 +763,7 @@ def list_topic_clusters(request: Any, project_id: int = Path(...)):
 @clusters_router.get(
     "/{cluster_id}/",
     response=dict[str, Any],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_topic_cluster(
     request: Any,
@@ -781,7 +781,7 @@ def get_topic_cluster(
 @clusters_router.get(
     "/{cluster_id}/velocity_history/",
     response={200: list[TopicVelocitySnapshotSchema], 400: dict[str, str]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def topic_cluster_velocity_history(
     request: Any,
@@ -804,7 +804,7 @@ def topic_cluster_velocity_history(
     return [_serialize_velocity_snapshot(snapshot) for snapshot in snapshots]
 
 
-@themes_router.get("/", response=list[ThemeSuggestionSchema], auth=drf_authenticate)
+@themes_router.get("/", response=list[ThemeSuggestionSchema], auth=api_authenticate)
 def list_theme_suggestions(request: Any, project_id: int = Path(...)):
     """List theme suggestions visible to the current project member."""
 
@@ -820,7 +820,7 @@ def list_theme_suggestions(request: Any, project_id: int = Path(...)):
 @themes_router.post(
     "/{suggestion_id}/accept/",
     response={200: ThemeSuggestionSchema, 400: dict[str, str]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def accept_theme_suggestion_route(
     request: Any,
@@ -846,7 +846,7 @@ def accept_theme_suggestion_route(
 @themes_router.post(
     "/{suggestion_id}/dismiss/",
     response={200: ThemeSuggestionSchema, 400: dict[str, str]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def dismiss_theme_suggestion_route(
     request: Any,
@@ -874,7 +874,7 @@ def dismiss_theme_suggestion_route(
     )
 
 
-@ideas_router.get("/", response=list[OriginalContentIdeaSchema], auth=drf_authenticate)
+@ideas_router.get("/", response=list[OriginalContentIdeaSchema], auth=api_authenticate)
 def list_original_content_ideas(request: Any, project_id: int = Path(...)):
     """List original content ideas visible to the current project member."""
 
@@ -893,7 +893,7 @@ def list_original_content_ideas(request: Any, project_id: int = Path(...)):
         200: OriginalContentIdeaGenerateCompletedSchema,
         202: OriginalContentIdeaGenerateQueuedSchema,
     },
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def generate_original_content_ideas_route(
     request: Any,
@@ -920,7 +920,7 @@ def generate_original_content_ideas_route(
 @ideas_router.post(
     "/{idea_id}/accept/",
     response={200: OriginalContentIdeaSchema, 400: dict[str, str]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def accept_original_content_idea_route(
     request: Any,
@@ -946,7 +946,7 @@ def accept_original_content_idea_route(
 @ideas_router.post(
     "/{idea_id}/dismiss/",
     response={200: OriginalContentIdeaSchema, 400: dict[str, str]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def dismiss_original_content_idea_route(
     request: Any,
@@ -977,7 +977,7 @@ def dismiss_original_content_idea_route(
 @ideas_router.post(
     "/{idea_id}/mark_written/",
     response={200: OriginalContentIdeaSchema, 400: dict[str, str]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def mark_original_content_idea_written_route(
     request: Any,
@@ -1003,7 +1003,7 @@ def mark_original_content_idea_written_route(
 @topic_centroid_snapshots_router.get(
     "/",
     response=list[TopicCentroidSnapshotSchema],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_topic_centroid_snapshots(request: Any, project_id: int = Path(...)):
     """List topic centroid snapshots visible to project contributors."""
@@ -1018,7 +1018,7 @@ def list_topic_centroid_snapshots(request: Any, project_id: int = Path(...)):
 @topic_centroid_snapshots_router.get(
     "/summary/",
     response=TopicCentroidObservabilitySummarySchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def topic_centroid_snapshot_summary(request: Any, project_id: int = Path(...)):
     """Return aggregate centroid observability metrics."""
@@ -1054,7 +1054,7 @@ def topic_centroid_snapshot_summary(request: Any, project_id: int = Path(...)):
 @topic_centroid_snapshots_router.get(
     "/{snapshot_id}/",
     response=TopicCentroidSnapshotSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_topic_centroid_snapshot(
     request: Any,
@@ -1072,7 +1072,7 @@ def get_topic_centroid_snapshot(
 @source_diversity_snapshots_router.get(
     "/",
     response=list[SourceDiversitySnapshotSchema],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_source_diversity_snapshots(request: Any, project_id: int = Path(...)):
     """List source diversity snapshots visible to project contributors."""
@@ -1087,7 +1087,7 @@ def list_source_diversity_snapshots(request: Any, project_id: int = Path(...)):
 @source_diversity_snapshots_router.get(
     "/summary/",
     response=SourceDiversityObservabilitySummarySchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def source_diversity_snapshot_summary(request: Any, project_id: int = Path(...)):
     """Return project-level source diversity observability metrics."""
@@ -1114,7 +1114,7 @@ def source_diversity_snapshot_summary(request: Any, project_id: int = Path(...))
 @source_diversity_snapshots_router.get(
     "/{snapshot_id}/",
     response=SourceDiversitySnapshotSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_source_diversity_snapshot(
     request: Any,
@@ -1132,7 +1132,7 @@ def get_source_diversity_snapshot(
 @trend_task_runs_router.get(
     "/",
     response=list[TrendTaskRunSchema],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_trend_task_runs(request: Any, project_id: int = Path(...)):
     """List persisted trend task runs visible to project contributors."""
@@ -1145,7 +1145,7 @@ def list_trend_task_runs(request: Any, project_id: int = Path(...)):
 @trend_task_runs_router.get(
     "/summary/",
     response=TrendTaskRunObservabilitySummarySchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def trend_task_run_summary(request: Any, project_id: int = Path(...)):
     """Return the latest persisted run for each tracked trend task."""
@@ -1180,7 +1180,7 @@ def trend_task_run_summary(request: Any, project_id: int = Path(...)):
 @trend_task_runs_router.get(
     "/{run_id}/",
     response=TrendTaskRunSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_trend_task_run(
     request: Any,

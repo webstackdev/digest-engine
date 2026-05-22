@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any, cast
 
 import pytest
 from django.contrib.auth import get_user_model
-from rest_framework import status
-from rest_framework.test import APIClient
+from django.test import Client
 
 from messaging.models import DirectMessage, Thread, ThreadParticipant
 from projects.models import Project, ProjectMembership, ProjectRole
@@ -71,11 +71,11 @@ def test_ninja_thread_list_is_scoped_to_the_current_participant():
         thread=visible_thread, sender=bob, body="Draft is ready."
     )
 
-    client = APIClient()
+    client = Client()
     client.force_login(alice)
-    response = _response(client.get("/api/ninja/v1/messaging/threads/"))
+    response = _response(client.get("/api/v1/messaging/threads/"))
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == HTTPStatus.OK
     assert len(response.json()) == 1
     payload = response.json()[0]
     assert payload["id"] == int(visible_thread.pk)
@@ -87,17 +87,17 @@ def test_ninja_thread_list_is_scoped_to_the_current_participant():
 def test_ninja_thread_create_requires_a_shared_project():
     alice, _, carol = _create_fixture_users_and_projects()
 
-    client = APIClient()
+    client = Client()
     client.force_login(alice)
     response = _response(
         client.post(
-            "/api/ninja/v1/messaging/threads/",
+            "/api/v1/messaging/threads/",
             {"recipient_user_id": int(carol.pk)},
-            format="json",
+            content_type="application/json",
         )
     )
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == HTTPStatus.BAD_REQUEST
     assert (
         response.json()["recipient_user_id"][0]
         == "You can only message users who share a project with you."
@@ -107,37 +107,37 @@ def test_ninja_thread_create_requires_a_shared_project():
 def test_ninja_thread_create_rejects_messaging_yourself():
     alice, _, _ = _create_fixture_users_and_projects()
 
-    client = APIClient()
+    client = Client()
     client.force_login(alice)
     response = _response(
         client.post(
-            "/api/ninja/v1/messaging/threads/",
+            "/api/v1/messaging/threads/",
             {"recipient_user_id": int(alice.pk)},
-            format="json",
+            content_type="application/json",
         )
     )
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == HTTPStatus.BAD_REQUEST
     assert response.json()["recipient_user_id"][0] == "You cannot message yourself."
 
 
 def test_ninja_thread_create_creates_a_thread_and_optional_opening_message():
     alice, bob, _ = _create_fixture_users_and_projects()
 
-    client = APIClient()
+    client = Client()
     client.force_login(alice)
     response = _response(
         client.post(
-            "/api/ninja/v1/messaging/threads/",
+            "/api/v1/messaging/threads/",
             {
                 "recipient_user_id": int(bob.pk),
                 "opening_message": "Want to review this draft together?",
             },
-            format="json",
+            content_type="application/json",
         )
     )
 
-    assert response.status_code == status.HTTP_201_CREATED
+    assert response.status_code == HTTPStatus.CREATED
     thread = Thread.objects.get(pk=response.json()["id"])
     assert thread.participants.count() == 2
     assert thread.messages.count() == 1
@@ -150,25 +150,25 @@ def test_ninja_messages_endpoint_lists_and_creates_messages_for_a_participant():
     thread = _create_thread(alice, bob)
     DirectMessage.objects.create(thread=thread, sender=bob, body="Initial note")
 
-    client = APIClient()
+    client = Client()
     client.force_login(alice)
     list_response = _response(
-        client.get(f"/api/ninja/v1/messaging/threads/{thread.pk}/messages/")
+        client.get(f"/api/v1/messaging/threads/{thread.pk}/messages/")
     )
 
-    assert list_response.status_code == status.HTTP_200_OK
+    assert list_response.status_code == HTTPStatus.OK
     assert len(list_response.json()) == 1
     assert list_response.json()[0]["sender_username"] == "bob-ninja"
 
     create_response = _response(
         client.post(
-            f"/api/ninja/v1/messaging/threads/{thread.pk}/messages/",
+            f"/api/v1/messaging/threads/{thread.pk}/messages/",
             {"body": "Replying now."},
-            format="json",
+            content_type="application/json",
         )
     )
 
-    assert create_response.status_code == status.HTTP_201_CREATED
+    assert create_response.status_code == HTTPStatus.CREATED
     assert create_response.json()["sender_username"] == "alice-ninja"
     thread.refresh_from_db()
     assert thread.last_message_at is not None
@@ -183,13 +183,16 @@ def test_ninja_read_action_updates_the_current_users_last_read_cursor():
     thread.last_message_at = message.created_at
     thread.save(update_fields=["last_message_at"])
 
-    client = APIClient()
+    client = Client()
     client.force_login(alice)
     response = _response(
-        client.post(f"/api/ninja/v1/messaging/threads/{thread.pk}/read/", format="json")
+        client.post(
+            f"/api/v1/messaging/threads/{thread.pk}/read/",
+            content_type="application/json",
+        )
     )
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == HTTPStatus.OK
     participant_state = ThreadParticipant.objects.get(thread=thread, user=alice)
     assert response.json()["thread_id"] == int(thread.pk)
     assert participant_state.last_read_at is not None

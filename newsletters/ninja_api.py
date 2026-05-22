@@ -12,7 +12,7 @@ from ninja import Body, Path, Router
 from ninja.errors import HttpError
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from newsletters.models import (
     IntakeAllowlist,
     NewsletterDraft,
@@ -412,7 +412,7 @@ def _mark_draft_edited(draft: NewsletterDraft) -> None:
 @intake_allowlist_router.get(
     "/",
     response=list[dict[str, Any]],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_intake_allowlist(request: Any, project_id: int = Path(...)):
     """List intake allowlist entries for the selected project."""
@@ -427,7 +427,7 @@ def list_intake_allowlist(request: Any, project_id: int = Path(...)):
 @intake_allowlist_router.post(
     "/",
     response={201: dict[str, Any], 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_intake_allowlist(
     request: Any,
@@ -461,7 +461,7 @@ def create_intake_allowlist(
 @intake_allowlist_router.get(
     "/{allowlist_id}/",
     response=dict[str, Any],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_intake_allowlist(
     request: Any,
@@ -477,7 +477,7 @@ def get_intake_allowlist(
 @intake_allowlist_router.patch(
     "/{allowlist_id}/",
     response={200: dict[str, Any], 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_intake_allowlist(
     request: Any,
@@ -513,7 +513,7 @@ def update_intake_allowlist(
 @intake_allowlist_router.delete(
     "/{allowlist_id}/",
     response={204: None},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_intake_allowlist(
     request: Any,
@@ -531,7 +531,7 @@ def delete_intake_allowlist(
 @newsletter_intakes_router.get(
     "/",
     response=list[dict[str, Any]],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_newsletter_intakes(request: Any, project_id: int = Path(...)):
     """List newsletter intake rows for the selected project."""
@@ -546,7 +546,7 @@ def list_newsletter_intakes(request: Any, project_id: int = Path(...)):
 @newsletter_intakes_router.get(
     "/{intake_id}/",
     response=dict[str, Any],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_newsletter_intake(
     request: Any,
@@ -562,7 +562,7 @@ def get_newsletter_intake(
 @newsletter_drafts_router.get(
     "/",
     response=list[dict[str, Any]],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_newsletter_drafts(request: Any, project_id: int = Path(...)):
     """List newsletter drafts for the selected project."""
@@ -575,7 +575,7 @@ def list_newsletter_drafts(request: Any, project_id: int = Path(...)):
 @newsletter_drafts_router.post(
     "/generate/",
     response={200: dict[str, Any], 202: dict[str, Any]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def generate_newsletter_draft_route(request: Any, project_id: int = Path(...)):
     """Trigger newsletter draft generation for the selected project."""
@@ -598,7 +598,7 @@ def generate_newsletter_draft_route(request: Any, project_id: int = Path(...)):
 @newsletter_drafts_router.get(
     "/{draft_id}/",
     response=dict[str, Any],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_newsletter_draft(
     request: Any,
@@ -614,7 +614,7 @@ def get_newsletter_draft(
 @newsletter_drafts_router.patch(
     "/{draft_id}/",
     response={200: dict[str, Any], 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_newsletter_draft(
     request: Any,
@@ -658,7 +658,7 @@ def update_newsletter_draft(
 @newsletter_drafts_router.post(
     "/{draft_id}/regenerate_section/",
     response={200: dict[str, Any], 202: dict[str, Any], 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def regenerate_newsletter_draft_section_route(
     request: Any,
@@ -691,7 +691,7 @@ def regenerate_newsletter_draft_section_route(
 @newsletter_draft_sections_router.get(
     "/",
     response=list[dict[str, Any]],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_newsletter_draft_sections(request: Any, project_id: int = Path(...)):
     """List newsletter draft sections for the selected project."""
@@ -716,7 +716,7 @@ def list_newsletter_draft_sections(request: Any, project_id: int = Path(...)):
 @newsletter_draft_sections_router.get(
     "/{section_id}/",
     response=dict[str, Any],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_newsletter_draft_section(
     request: Any,
@@ -732,7 +732,7 @@ def get_newsletter_draft_section(
 @newsletter_draft_sections_router.patch(
     "/{section_id}/",
     response={200: dict[str, Any], 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_newsletter_draft_section(
     request: Any,
@@ -770,7 +770,7 @@ def update_newsletter_draft_section(
 @newsletter_draft_sections_router.delete(
     "/{section_id}/",
     response={204: None},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_newsletter_draft_section(
     request: Any,
@@ -790,7 +790,7 @@ def delete_newsletter_draft_section(
 @newsletter_draft_items_router.get(
     "/",
     response=list[dict[str, Any]],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_newsletter_draft_items(request: Any, project_id: int = Path(...)):
     """List newsletter draft items for the selected project."""
@@ -807,7 +807,7 @@ def list_newsletter_draft_items(request: Any, project_id: int = Path(...)):
 @newsletter_draft_items_router.get(
     "/{item_id}/",
     response=dict[str, Any],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_newsletter_draft_item(
     request: Any,
@@ -823,7 +823,7 @@ def get_newsletter_draft_item(
 @newsletter_draft_items_router.patch(
     "/{item_id}/",
     response={200: dict[str, Any], 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_newsletter_draft_item(
     request: Any,
@@ -860,7 +860,7 @@ def update_newsletter_draft_item(
 @newsletter_draft_items_router.delete(
     "/{item_id}/",
     response={204: None},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_newsletter_draft_item(
     request: Any,
@@ -880,7 +880,7 @@ def delete_newsletter_draft_item(
 @newsletter_draft_original_pieces_router.get(
     "/",
     response=list[dict[str, Any]],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_newsletter_draft_original_pieces(request: Any, project_id: int = Path(...)):
     """List newsletter draft original pieces for the selected project."""
@@ -898,7 +898,7 @@ def list_newsletter_draft_original_pieces(request: Any, project_id: int = Path(.
 @newsletter_draft_original_pieces_router.get(
     "/{original_piece_id}/",
     response=dict[str, Any],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_newsletter_draft_original_piece(
     request: Any,
@@ -916,7 +916,7 @@ def get_newsletter_draft_original_piece(
 @newsletter_draft_original_pieces_router.patch(
     "/{original_piece_id}/",
     response={200: dict[str, Any], 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_newsletter_draft_original_piece(
     request: Any,
@@ -956,7 +956,7 @@ def update_newsletter_draft_original_piece(
 @newsletter_draft_original_pieces_router.delete(
     "/{original_piece_id}/",
     response={204: None},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_newsletter_draft_original_piece(
     request: Any,

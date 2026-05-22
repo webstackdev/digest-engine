@@ -5,7 +5,7 @@ from ninja import Path, Router, Schema
 from ninja.errors import HttpError
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from ingestion.plugins import validate_plugin_config
 from projects.ninja_api import _require_project_writable, _get_project_or_404
 from projects.models import SourceConfig
@@ -74,7 +74,7 @@ def _get_source_config_or_404(project_id: int, config_id: int) -> SourceConfig:
     return config
 
 
-@router.get("/", response=list[SourceConfigSchema], auth=drf_authenticate)
+@router.get("/", response=list[SourceConfigSchema], auth=api_authenticate)
 def list_source_configs(request, project_id: int = Path(...)):
     _get_project_or_404(request, project_id)
     configs = SourceConfig.objects.select_related("project").filter(
@@ -86,7 +86,7 @@ def list_source_configs(request, project_id: int = Path(...)):
 @router.post(
     "/",
     response={201: SourceConfigSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_source_config(
     request, payload: SourceConfigCreateInput, project_id: int = Path(...)
@@ -100,7 +100,7 @@ def create_source_config(
     return Status(201, _serialize_config(config))
 
 
-@router.get("/{config_id}/", response=SourceConfigSchema, auth=drf_authenticate)
+@router.get("/{config_id}/", response=SourceConfigSchema, auth=api_authenticate)
 def get_source_config(request, project_id: int = Path(...), config_id: int = Path(...)):
     _get_project_or_404(request, project_id)
     config = _get_source_config_or_404(project_id, config_id)
@@ -110,7 +110,7 @@ def get_source_config(request, project_id: int = Path(...), config_id: int = Pat
 @router.patch(
     "/{config_id}/",
     response={200: SourceConfigSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_source_config(
     request,
@@ -130,7 +130,7 @@ def update_source_config(
     return _serialize_config(config)
 
 
-@router.delete("/{config_id}/", response={204: None}, auth=drf_authenticate)
+@router.delete("/{config_id}/", response={204: None}, auth=api_authenticate)
 def delete_source_config(
     request, project_id: int = Path(...), config_id: int = Path(...)
 ):

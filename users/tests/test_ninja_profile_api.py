@@ -13,7 +13,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, override_settings
 from django.utils import timezone
 from PIL import Image
-from rest_framework_simplejwt.tokens import AccessToken
+
+from core.jwt import issue_auth_tokens
 
 from projects.models import Project, ProjectMembership, ProjectRole
 from users.models import AppUser, MembershipInvitation
@@ -60,7 +61,7 @@ def test_ninja_profile_get_returns_the_authenticated_user(tmp_path):
     client.force_login(user)
 
     with override_settings(MEDIA_ROOT=tmp_path):
-        response = _response(client.get("/api/ninja/v1/profile/"))
+        response = _response(client.get("/api/v1/profile/"))
 
     assert response.status_code == HTTPStatus.OK
     assert response.json()["username"] == "ninja-profile-reader"
@@ -78,12 +79,12 @@ def test_ninja_profile_get_accepts_bearer_auth(tmp_path):
         password="testpass123",
         display_name="Bearer User",
     )
-    access_token = str(AccessToken.for_user(user))
+    access_token = issue_auth_tokens(user)["access"]
 
     with override_settings(MEDIA_ROOT=tmp_path):
         response = _response(
             client.get(
-                "/api/ninja/v1/profile/",
+                "/api/v1/profile/",
                 HTTP_AUTHORIZATION=f"Bearer {access_token}",
             )
         )
@@ -105,7 +106,7 @@ def test_ninja_profile_get_accepts_basic_auth(tmp_path):
     with override_settings(MEDIA_ROOT=tmp_path):
         response = _response(
             client.get(
-                "/api/ninja/v1/profile/",
+                "/api/v1/profile/",
                 HTTP_AUTHORIZATION=_basic_auth_header(user.username, "testpass123"),
             )
         )
@@ -125,7 +126,7 @@ def test_ninja_profile_patch_updates_profile_fields(tmp_path):
     with override_settings(MEDIA_ROOT=tmp_path):
         response = _response(
             client.patch(
-                "/api/ninja/v1/profile/",
+                "/api/v1/profile/",
                 data=json.dumps(
                     {
                         "display_name": "Profile Editor",
@@ -155,7 +156,7 @@ def test_ninja_profile_avatar_upload_returns_avatar_and_thumbnail_urls(tmp_path)
     with override_settings(MEDIA_ROOT=tmp_path):
         response = _response(
             client.post(
-                "/api/ninja/v1/profile/avatar/",
+                "/api/v1/profile/avatar/",
                 {"avatar": make_avatar_file()},
             )
         )
@@ -189,7 +190,7 @@ def test_ninja_profile_avatar_upload_rejects_invalid_content_type(tmp_path):
     with override_settings(MEDIA_ROOT=tmp_path):
         response = _response(
             client.post(
-                "/api/ninja/v1/profile/avatar/",
+                "/api/v1/profile/avatar/",
                 {"avatar": invalid_file},
             )
         )
@@ -209,13 +210,13 @@ def test_ninja_profile_avatar_delete_clears_avatar_and_thumbnail(tmp_path):
     with override_settings(MEDIA_ROOT=tmp_path):
         upload_response = _response(
             client.post(
-                "/api/ninja/v1/profile/avatar/",
+                "/api/v1/profile/avatar/",
                 {"avatar": make_avatar_file()},
             )
         )
         assert upload_response.status_code == HTTPStatus.OK
 
-        response = _response(client.delete("/api/ninja/v1/profile/avatar/"))
+        response = _response(client.delete("/api/v1/profile/avatar/"))
         user.refresh_from_db()
         thumbnail_path = tmp_path / f"avatars/{user.id}/thumb.webp"
 
@@ -244,7 +245,7 @@ def test_ninja_invitation_token_get_returns_public_payload():
         invited_by=inviter,
     )
 
-    response = _response(client.get(f"/api/ninja/v1/invitations/{invitation.token}/"))
+    response = _response(client.get(f"/api/v1/invitations/{invitation.token}/"))
 
     assert response.status_code == HTTPStatus.OK
     assert response.json()["project_name"] == "Ninja Invitation Project"
@@ -275,7 +276,7 @@ def test_ninja_invitation_token_post_accepts_matching_user():
     )
     client.force_login(invitee)
 
-    response = _response(client.post(f"/api/ninja/v1/invitations/{invitation.token}/"))
+    response = _response(client.post(f"/api/v1/invitations/{invitation.token}/"))
 
     invitation.refresh_from_db()
     membership = ProjectMembership.objects.get(user=invitee, project=project)
@@ -310,7 +311,7 @@ def test_ninja_invitation_token_post_rejects_revoked_invitation():
     )
     client.force_login(invitee)
 
-    response = _response(client.post(f"/api/ninja/v1/invitations/{invitation.token}/"))
+    response = _response(client.post(f"/api/v1/invitations/{invitation.token}/"))
 
     assert response.status_code == HTTPStatus.BAD_REQUEST
     assert response.json()["token"][0] == "This invitation has been revoked."

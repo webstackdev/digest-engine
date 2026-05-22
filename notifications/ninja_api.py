@@ -9,7 +9,7 @@ from django.utils import timezone
 from ninja import Query, Router, Schema
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from notifications.models import Notification
 
 router = Router(tags=["Notifications"])
@@ -69,7 +69,7 @@ def _notifications_queryset(request) -> Any:
     return Notification.objects.select_related("project").filter(user=request.user)
 
 
-@router.get("/notifications/", response=list[NotificationSchema], auth=drf_authenticate)
+@router.get("/notifications/", response=list[NotificationSchema], auth=api_authenticate)
 def list_notifications(request, filters: Query[NotificationListFilters]):
     """Return the current user's notifications, newest first."""
 
@@ -83,7 +83,7 @@ def list_notifications(request, filters: Query[NotificationListFilters]):
 @router.post(
     "/notifications/read-all/",
     response=NotificationsReadAllResponseSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def read_all_notifications(request):
     """Mark every unread notification as read for the current user."""
@@ -97,7 +97,7 @@ def read_all_notifications(request):
 
 
 @router.delete(
-    "/notifications/{notification_id}/", auth=drf_authenticate, response={204: None}
+    "/notifications/{notification_id}/", auth=api_authenticate, response={204: None}
 )
 def delete_notification(request, notification_id: int):
     """Delete one notification from the current user's inbox."""
@@ -112,7 +112,7 @@ def delete_notification(request, notification_id: int):
 @router.post(
     "/notifications/{notification_id}/read/",
     response=NotificationSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def read_notification(request, notification_id: int):
     """Mark one notification as read and return the updated payload."""

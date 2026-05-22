@@ -1,4 +1,4 @@
-"""Non-DRF authentication views used during the DRF removal migration."""
+"""Authentication views backed by Django auth and JWTs."""
 
 from __future__ import annotations
 
@@ -28,9 +28,9 @@ from django.utils.encoding import force_str
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views import View
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.ninja_api import drf_authenticate
+from core.jwt import issue_auth_tokens
+from core.ninja_api import api_authenticate
 from users.models import AppUser
 
 
@@ -43,11 +43,11 @@ def _auth_error(message: str, *, status_code: int = 400) -> JsonResponse:
 def _auth_response(user: AppUser, *, status_code: int = 200) -> JsonResponse:
     """Return the shared JWT auth payload for one authenticated user."""
 
-    refresh = RefreshToken.for_user(user)
+    tokens = issue_auth_tokens(user)
     return JsonResponse(
         {
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
+            "access": tokens["access"],
+            "refresh": tokens["refresh"],
             "user": {
                 "id": user.id,
                 "username": user.username,
@@ -82,13 +82,13 @@ def _validation_error_message(error: ValidationError) -> str:
 
 
 def _validation_error_response(errors: dict[str, object]) -> JsonResponse:
-    """Return one field-error payload compatible with the prior DRF endpoints."""
+    """Return one field-error payload compatible with the existing auth clients."""
 
     return JsonResponse(errors, status=400)
 
 
 def _serialize_auth_user(user: AppUser) -> dict[str, object]:
-    """Return the legacy dj-rest-auth user-details payload shape."""
+    """Return the compatibility payload shape for auth user details."""
 
     return {
         "pk": user.pk,
@@ -100,9 +100,9 @@ def _serialize_auth_user(user: AppUser) -> dict[str, object]:
 
 
 def _authenticated_user(request: HttpRequest) -> AppUser | None:
-    """Return one authenticated user using the shared non-DRF auth bridge."""
+    """Return one authenticated user using the shared API auth bridge."""
 
-    authenticated_user = drf_authenticate(request)
+    authenticated_user = api_authenticate(request)
     if isinstance(authenticated_user, AppUser):
         return authenticated_user
     return None
@@ -350,7 +350,7 @@ def password_change_view(request: HttpRequest) -> JsonResponse:
 
 @method_decorator(csrf_exempt, name="dispatch")
 class user_view(View):
-    """Read or update the authenticated user without DRF runtime dependencies."""
+    """Read or update the authenticated user without framework-specific auth glue."""
 
     http_method_names = ["get", "patch", "put"]
 

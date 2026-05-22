@@ -7,11 +7,9 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.shortcuts import redirect
 from django.urls import include, path
 from django.views.generic.base import RedirectView
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from core.auth_views import GitHubLoginView, GoogleLoginView
 from digest_engine.ninja_api import api as ninja_api
-from digest_engine.ninja_api import legacy_api as legacy_ninja_api
 from projects.linkedin_oauth import linkedin_oauth_callback_view
 from trends.metrics import trend_task_run_metrics_view
 from users.auth_views import (
@@ -53,10 +51,14 @@ urlpatterns = [
     path("anymail/", include("anymail.urls")),
     path(
         "api/docs/",
-        SpectacularSwaggerView.as_view(url_name="schema"),
-        name="swagger-ui",
+        RedirectView.as_view(url="/api/docs", permanent=False),
+        name="api-docs",
     ),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/schema/",
+        RedirectView.as_view(url="/api/openapi.json", permanent=False),
+        name="openapi-schema",
+    ),
     path("api/auth/login/", login_view, name="auth_login"),
     path("api/auth/logout/", logout_view, name="auth_logout"),
     path(
@@ -74,7 +76,6 @@ urlpatterns = [
     path("api/auth/google/", GoogleLoginView.as_view(), name="google_login"),
     path("api/v1/", include(legacy_v1_callback_patterns, namespace="v1")),
     path("api/", ninja_api.urls),
-    path("api/ninja/", legacy_ninja_api.urls),
     path(
         "favicon.ico",
         RedirectView.as_view(url="/static/core/favicon.ico", permanent=True),

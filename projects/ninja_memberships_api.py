@@ -5,7 +5,7 @@ from ninja import Path, Router, Schema
 from ninja.errors import HttpError
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from projects.models import ProjectMembership, ProjectRole
 from projects.ninja_api import _require_project_admin, _get_project_or_404
 
@@ -89,7 +89,7 @@ def _get_membership_or_404(project_id: int, membership_id: int) -> ProjectMember
     return membership
 
 
-@router.get("/", response=list[ProjectMembershipSchema], auth=drf_authenticate)
+@router.get("/", response=list[ProjectMembershipSchema], auth=api_authenticate)
 def list_memberships(request, project_id: int = Path(...)):
     _require_project_admin(request, project_id)
     # The original query uses select_related and orders by joined_at, user__username
@@ -104,7 +104,7 @@ def list_memberships(request, project_id: int = Path(...)):
 @router.patch(
     "/{membership_id}/",
     response={200: ProjectMembershipSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_membership(
     request,
@@ -131,7 +131,7 @@ def update_membership(
 @router.delete(
     "/{membership_id}/",
     response={204: None, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_membership(
     request, project_id: int = Path(...), membership_id: int = Path(...)

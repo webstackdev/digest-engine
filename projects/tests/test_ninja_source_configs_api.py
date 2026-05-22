@@ -1,10 +1,10 @@
+from http import HTTPStatus
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 from projects.model_support import SourcePluginName
 from projects.models import Project, ProjectMembership, ProjectRole, SourceConfig
@@ -22,7 +22,7 @@ def _create_user(user_model: type[Any], **kwargs: object):
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class SourceConfigNinjaApiTests(APITestCase):
+class SourceConfigNinjaApiTests(TestCase):
     """Exercise source configurations Ninja API endpoints."""
 
     def setUp(self):
@@ -61,7 +61,7 @@ class SourceConfigNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         # Should be exactly 1
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["plugin_name"], SourcePluginName.RSS)
@@ -77,9 +77,9 @@ class SourceConfigNinjaApiTests(APITestCase):
                 "config": {"feed_url": "https://example.com/feed.xml"},
                 "is_active": True,
             },
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
         config = SourceConfig.objects.get(project=self.owner_project)
         self.assertEqual(config.plugin_name, SourcePluginName.RSS)
         self.assertEqual(
@@ -95,10 +95,10 @@ class SourceConfigNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"plugin_name": SourcePluginName.RSS, "config": {}},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["config"][0],
             "Invalid source configuration.",
@@ -120,10 +120,10 @@ class SourceConfigNinjaApiTests(APITestCase):
                 },
             ),
             {"config": {"author_handle": "@Alice.BSKY.social"}},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         config.refresh_from_db()
         self.assertEqual(
             config.config,
@@ -153,4 +153,4 @@ class SourceConfigNinjaApiTests(APITestCase):
                 },
             )
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)

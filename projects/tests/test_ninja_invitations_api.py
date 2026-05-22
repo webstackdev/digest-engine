@@ -1,11 +1,11 @@
+from http import HTTPStatus
 from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 import projects.ninja_api
 from projects.models import Project, ProjectMembership, ProjectRole
@@ -24,7 +24,7 @@ def _create_user(user_model: type[Any], **kwargs: object):
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class ProjectInvitationNinjaApiTests(APITestCase):
+class ProjectInvitationNinjaApiTests(TestCase):
     """Exercise project invitation Ninja API endpoints."""
 
     def setUp(self):
@@ -64,7 +64,7 @@ class ProjectInvitationNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["email"], "test1@example.com")
 
@@ -76,9 +76,9 @@ class ProjectInvitationNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"email": " TEST2@Example.com ", "role": ProjectRole.MEMBER},
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
         self.assertEqual(response.json()["email"], "test2@example.com")
         self.assertEqual(
             MembershipInvitation.objects.filter(project=self.owner_project).count(), 1
@@ -95,10 +95,10 @@ class ProjectInvitationNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"email": self.member_user.email, "role": ProjectRole.MEMBER},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["email"][0],
             "That user is already a project member.",
@@ -122,10 +122,10 @@ class ProjectInvitationNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"email": "Test4@example.com", "role": ProjectRole.READER},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["email"][0],
             "An active invitation already exists for this email.",
@@ -147,6 +147,6 @@ class ProjectInvitationNinjaApiTests(APITestCase):
                 },
             )
         )
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, HTTPStatus.NO_CONTENT)
         invitation.refresh_from_db()
         self.assertIsNotNone(invitation.revoked_at)

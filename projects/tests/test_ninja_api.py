@@ -1,11 +1,11 @@
+from http import HTTPStatus
 from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
 from projects.models import (
     BlueskyCredentials,
@@ -25,17 +25,12 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-def _typed_client(client: object) -> APIClient:
-    """Cast the DRF test client so Pylance sees APIClient helpers."""
-    return cast(APIClient, client)
-
-
 def _create_user(user_model: type[Any], **kwargs: object):
     """Create a user through the custom manager with a typed escape hatch."""
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class ProjectNinjaApiTests(APITestCase):
+class ProjectNinjaApiTests(TestCase):
     """Exercise project-owned Ninja API endpoints."""
 
     def setUp(self):
@@ -69,7 +64,7 @@ class ProjectNinjaApiTests(APITestCase):
         response = self.client.get(
             reverse("ninja-api:list_projects"), HTTP_HOST="localhost"
         )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, HTTPStatus.UNAUTHORIZED)
         self.assertEqual(
             response.json(),
             {"detail": "Unauthorized"},
@@ -85,7 +80,7 @@ class ProjectNinjaApiTests(APITestCase):
 
         response = self.client.get(reverse("ninja-api:list_projects"))
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], _require_pk(self.owner_project))
         self.assertEqual(response.json()[0]["user_role"], ProjectRole.ADMIN)
@@ -103,7 +98,7 @@ class ProjectNinjaApiTests(APITestCase):
     def test_canonical_v1_project_list_uses_ninja_router(self):
         response = self.client.get("/api/v1/projects/")
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], _require_pk(self.owner_project))
 
@@ -116,10 +111,10 @@ class ProjectNinjaApiTests(APITestCase):
                 "content_retention_days": 120,
                 "intake_enabled": True,
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_response.status_code, HTTPStatus.CREATED)
         created_project = Project.objects.get(name="New Project")
         self.assertEqual(create_response.json()["id"], _require_pk(created_project))
         self.assertEqual(create_response.json()["user_role"], ProjectRole.ADMIN)
@@ -143,11 +138,11 @@ class ProjectNinjaApiTests(APITestCase):
                 "content_retention_days": 30,
                 "intake_enabled": True,
             },
-            format="json",
+            content_type="application/json",
         )
 
         self.owner_project.refresh_from_db()
-        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.status_code, HTTPStatus.OK)
         self.assertEqual(self.owner_project.name, "Updated Owner Project")
         self.assertEqual(self.owner_project.content_retention_days, 30)
         self.assertTrue(self.owner_project.intake_enabled)
@@ -162,7 +157,7 @@ class ProjectNinjaApiTests(APITestCase):
                 "topic_description": "",
                 "content_retention_days": -1,
             },
-            format="json",
+            content_type="application/json",
         )
         update_response = self.client.patch(
             reverse(
@@ -172,10 +167,10 @@ class ProjectNinjaApiTests(APITestCase):
             {
                 "content_retention_days": -5,
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(create_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(create_response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             create_response.json()["name"][0], "This field may not be blank."
         )
@@ -187,7 +182,7 @@ class ProjectNinjaApiTests(APITestCase):
             create_response.json()["content_retention_days"][0],
             "Ensure this value is greater than or equal to 0.",
         )
-        self.assertEqual(update_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(update_response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             update_response.json()["content_retention_days"][0],
             "Ensure this value is greater than or equal to 0.",
@@ -201,11 +196,11 @@ class ProjectNinjaApiTests(APITestCase):
                 "ninja-api:rotate_intake_token",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
-            format="json",
+            content_type="application/json",
         )
 
         self.owner_project.refresh_from_db()
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertNotEqual(self.owner_project.intake_token, original_token)
         self.assertEqual(
             response.json()["intake_token"], self.owner_project.intake_token
@@ -217,10 +212,10 @@ class ProjectNinjaApiTests(APITestCase):
                 "ninja-api:verify_bluesky_credentials",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
 
     @patch("ingestion.plugins.bluesky.BlueskySourcePlugin.verify_credentials")
     def test_verify_bluesky_credentials_verifies_project_account(self, verify_mock):
@@ -235,10 +230,10 @@ class ProjectNinjaApiTests(APITestCase):
                 "ninja-api:verify_bluesky_credentials",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         verify_mock.assert_called_once()
         verified_credentials = verify_mock.call_args.args[0]
         self.assertEqual(verified_credentials, credentials)
@@ -246,7 +241,7 @@ class ProjectNinjaApiTests(APITestCase):
         self.assertEqual(response.json()["handle"], "project.bsky.social")
         self.assertEqual(response.json()["last_error"], "")
 
-    @patch("core.api.logger.exception")
+    @patch("projects.ninja_api.logger.exception")
     @patch(
         "ingestion.plugins.bluesky.BlueskySourcePlugin.verify_credentials",
         side_effect=RuntimeError("bad login"),
@@ -265,10 +260,10 @@ class ProjectNinjaApiTests(APITestCase):
                 "ninja-api:verify_bluesky_credentials",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertNotIn("bad login", str(response.json()))
         logger_exception_mock.assert_called_once_with(
             "Bluesky credential verification failed for project id=%s",
@@ -281,9 +276,9 @@ class ProjectNinjaApiTests(APITestCase):
                 "ninja-api:verify_mastodon_credentials",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
 
     @patch("ingestion.plugins.mastodon.MastodonSourcePlugin.verify_credentials")
     def test_verify_mastodon_credentials_verifies_project_account(self, verify_mock):
@@ -300,10 +295,10 @@ class ProjectNinjaApiTests(APITestCase):
                 "ninja-api:verify_mastodon_credentials",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         verify_mock.assert_called_once()
         self.assertEqual(response.json()["status"], "verified")
         self.assertEqual(response.json()["account_acct"], "test@mastodon.social")
@@ -315,9 +310,9 @@ class ProjectNinjaApiTests(APITestCase):
                 "ninja-api:verify_linkedin_credentials",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
 
     @patch("ingestion.plugins.linkedin.LinkedInSourcePlugin.verify_credentials")
     def test_verify_linkedin_credentials_verifies_project_account(self, verify_mock):
@@ -333,10 +328,10 @@ class ProjectNinjaApiTests(APITestCase):
                 "ninja-api:verify_linkedin_credentials",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         verify_mock.assert_called_once()
         self.assertEqual(response.json()["status"], "verified")
         self.assertEqual(response.json()["member_urn"], "urn:li:person:123")
@@ -353,10 +348,10 @@ class ProjectNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             ),
             {"redirect_to": "http://localhost:3000/callback"},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(
             response.json()["authorize_url"],
             "https://www.linkedin.com/oauth/v2/authorization?test=1",

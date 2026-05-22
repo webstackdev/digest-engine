@@ -1,10 +1,10 @@
+from http import HTTPStatus
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
 
 from projects.models import Project, ProjectMembership, ProjectRole
 
@@ -21,7 +21,7 @@ def _create_user(user_model: type[Any], **kwargs: object):
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class ProjectMembershipNinjaApiTests(APITestCase):
+class ProjectMembershipNinjaApiTests(TestCase):
     """Exercise project membership Ninja API endpoints."""
 
     def setUp(self):
@@ -53,7 +53,7 @@ class ProjectMembershipNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         # 2 memberships
         self.assertEqual(len(response.json()), 2)
 
@@ -67,9 +67,9 @@ class ProjectMembershipNinjaApiTests(APITestCase):
                 },
             ),
             {"role": ProjectRole.ADMIN},
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.member_membership.refresh_from_db()
         self.assertEqual(self.member_membership.role, ProjectRole.ADMIN)
 
@@ -83,9 +83,9 @@ class ProjectMembershipNinjaApiTests(APITestCase):
                 },
             ),
             {"role": ProjectRole.MEMBER},
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["role"][0],
             "Projects must keep at least one admin.",
@@ -101,10 +101,10 @@ class ProjectMembershipNinjaApiTests(APITestCase):
                 },
             ),
             {"role": "invalid-role"},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(response.json()["role"][0], "Select a valid project role.")
 
     def test_delete_membership(self):
@@ -117,7 +117,7 @@ class ProjectMembershipNinjaApiTests(APITestCase):
                 },
             )
         )
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, HTTPStatus.NO_CONTENT)
         self.assertEqual(
             ProjectMembership.objects.filter(project=self.owner_project).count(), 1
         )
@@ -133,7 +133,7 @@ class ProjectMembershipNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["role"][0],
             "Projects must keep at least one admin.",

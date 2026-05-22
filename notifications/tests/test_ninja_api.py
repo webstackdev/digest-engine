@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from rest_framework import status
-from rest_framework.test import APIClient
+from django.test import Client
 
 import pytest
 
@@ -53,11 +53,11 @@ def test_ninja_notification_list_returns_only_current_user_notifications():
         body="Other user notification",
     )
 
-    client = APIClient()
+    client = Client()
     client.force_login(owner)
-    response = _response(client.get("/api/ninja/v1/notifications/"))
+    response = _response(client.get("/api/v1/notifications/"))
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == HTTPStatus.OK
     payload = response.json()
     assert len(payload) == 2
     assert payload[0]["body"] == "Needs attention"
@@ -86,11 +86,11 @@ def test_ninja_notification_list_can_filter_to_unread_notifications():
         body="Needs attention",
     )
 
-    client = APIClient()
+    client = Client()
     client.force_login(owner)
-    response = _response(client.get("/api/ninja/v1/notifications/", {"unread": "true"}))
+    response = _response(client.get("/api/v1/notifications/", {"unread": "true"}))
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == HTTPStatus.OK
     payload = response.json()
     assert len(payload) == 1
     assert payload[0]["body"] == "Needs attention"
@@ -108,13 +108,11 @@ def test_ninja_notification_read_action_sets_read_at():
         body="Needs attention",
     )
 
-    client = APIClient()
+    client = Client()
     client.force_login(owner)
-    response = _response(
-        client.post(f"/api/ninja/v1/notifications/{notification.pk}/read/")
-    )
+    response = _response(client.post(f"/api/v1/notifications/{notification.pk}/read/"))
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == HTTPStatus.OK
     notification.refresh_from_db()
     assert notification.read_at is not None
     assert response.json()["is_read"] is True
@@ -139,11 +137,11 @@ def test_ninja_notification_read_all_marks_only_current_users_unread_rows():
         body="Other user notification",
     )
 
-    client = APIClient()
+    client = Client()
     client.force_login(owner)
-    response = _response(client.post("/api/ninja/v1/notifications/read-all/"))
+    response = _response(client.post("/api/v1/notifications/read-all/"))
 
-    assert response.status_code == status.HTTP_200_OK
+    assert response.status_code == HTTPStatus.OK
     assert response.json()["updated_count"] == 1
     unread_notification.refresh_from_db()
     assert unread_notification.read_at is not None
@@ -160,11 +158,9 @@ def test_ninja_notification_destroy_deletes_owned_notification():
         body="Needs attention",
     )
 
-    client = APIClient()
+    client = Client()
     client.force_login(owner)
-    response = _response(
-        client.delete(f"/api/ninja/v1/notifications/{notification.pk}/")
-    )
+    response = _response(client.delete(f"/api/v1/notifications/{notification.pk}/"))
 
-    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert response.status_code == HTTPStatus.NO_CONTENT
     assert Notification.objects.filter(pk=notification.pk).exists() is False

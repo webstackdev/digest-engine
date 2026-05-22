@@ -16,7 +16,8 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from requests.exceptions import HTTPError
-from rest_framework_simplejwt.tokens import RefreshToken
+
+from core.jwt import issue_auth_tokens
 
 SocialUserModel = get_user_model()
 
@@ -30,11 +31,11 @@ def _social_login_error(message: str, *, status_code: int = 400) -> JsonResponse
 def _social_login_response(user) -> JsonResponse:
     """Return the frontend auth payload for one authenticated social user."""
 
-    refresh = RefreshToken.for_user(user)
+    tokens = issue_auth_tokens(user)
     return JsonResponse(
         {
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
+            "access": tokens["access"],
+            "refresh": tokens["refresh"],
             "user": {
                 "id": user.id,
                 "username": user.username,

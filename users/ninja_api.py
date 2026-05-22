@@ -12,7 +12,7 @@ from ninja.errors import HttpError
 from ninja.files import UploadedFile
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from projects.models import ProjectMembership
 from users.models import (
     AVATAR_ALLOWED_CONTENT_TYPES,
@@ -178,7 +178,7 @@ def _get_invitation_or_404(token: str) -> MembershipInvitation:
         raise HttpError(404, {"detail": "Not found."}) from exc
 
 
-@router.get("/profile/", response=UserProfileSchema, auth=drf_authenticate)
+@router.get("/profile/", response=UserProfileSchema, auth=api_authenticate)
 def get_profile(request):
     """Return the current authenticated user's profile payload."""
 
@@ -188,7 +188,7 @@ def get_profile(request):
 @router.patch(
     "/profile/",
     response={200: UserProfileSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def patch_profile(request, payload: ProfileUpdateInput):
     """Update the current user's editable profile fields."""
@@ -209,7 +209,7 @@ def patch_profile(request, payload: ProfileUpdateInput):
 @router.post(
     "/profile/avatar/",
     response={200: UserProfileSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def upload_profile_avatar(request, avatar: File[UploadedFile]):
     """Store a new avatar image for the current user and queue a thumbnail."""
@@ -234,7 +234,7 @@ def upload_profile_avatar(request, avatar: File[UploadedFile]):
 @router.delete(
     "/profile/avatar/",
     response=UserProfileSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_profile_avatar(request):
     """Remove the current user's avatar image and generated thumbnail."""
@@ -261,7 +261,7 @@ def get_membership_invitation(request, token: str):
         400: dict[str, list[str]],
         403: dict[str, str],
     },
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def accept_membership_invitation(request, token: str):
     """Accept a project invitation for the authenticated user."""

@@ -122,7 +122,6 @@ INSTALLED_APPS = [
     "django.contrib.sites",  # Required for allauth
     "channels",
     # 4. Third-Party Authentication & API Tools
-    "rest_framework",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -131,8 +130,6 @@ INSTALLED_APPS = [
     "anymail",
     # 5. Utilities & Schema Tools
     "import_export",  # Standard library
-    "drf_spectacular",
-    "drf_standardized_errors",
     # 6. Project Apps
     "users",
     "projects",
@@ -252,24 +249,6 @@ AWS_S3_FILE_OVERWRITE = False
 MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
 MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "var" / "media")))
 
-# DRF: the API defaults to authenticated access so browser sessions and basic
-# auth work locally, but anonymous requests are rejected.
-REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.BasicAuthentication",
-    ],
-    "DEFAULT_SCHEMA_CLASS": "drf_standardized_errors.openapi.AutoSchema",
-    "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
-}
-
-DRF_STANDARDIZED_ERRORS = {
-    "ALLOWED_ERROR_STATUS_CODES": ["400", "403", "404"],
-}
-
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 
@@ -332,8 +311,6 @@ __all__ = [
     "MEDIA_URL",
     "MEDIA_ROOT",
     "MESSAGING_ENABLED",
-    "REST_FRAMEWORK",
-    "DRF_STANDARDIZED_ERRORS",
     "CHANNEL_LAYERS",
     "SECURE_PROXY_SSL_HEADER",
     "USE_X_FORWARDED_HOST",

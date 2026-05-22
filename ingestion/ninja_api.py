@@ -10,7 +10,7 @@ from ninja import Path, Router, Schema
 from ninja.errors import HttpError
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from ingestion.models import IngestionRun
 from projects.ninja_api import _get_project_or_404, _require_project_writable
 
@@ -115,7 +115,7 @@ def _get_ingestion_run_or_404(project_id: int, run_id: int) -> IngestionRun:
     return ingestion_run
 
 
-@router.get("/", response=list[IngestionRunSchema], auth=drf_authenticate)
+@router.get("/", response=list[IngestionRunSchema], auth=api_authenticate)
 def list_ingestion_runs(request: Any, project_id: int = Path(...)):
     """List ingestion runs visible to the current project member."""
 
@@ -129,7 +129,7 @@ def list_ingestion_runs(request: Any, project_id: int = Path(...)):
 @router.post(
     "/",
     response={201: IngestionRunSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_ingestion_run(
     request: Any,
@@ -149,7 +149,7 @@ def create_ingestion_run(
     return Status(201, _serialize_ingestion_run(ingestion_run))
 
 
-@router.get("/{run_id}/", response=IngestionRunSchema, auth=drf_authenticate)
+@router.get("/{run_id}/", response=IngestionRunSchema, auth=api_authenticate)
 def get_ingestion_run(
     request: Any,
     project_id: int = Path(...),
@@ -164,7 +164,7 @@ def get_ingestion_run(
 @router.patch(
     "/{run_id}/",
     response={200: IngestionRunSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_ingestion_run(
     request: Any,
@@ -189,7 +189,7 @@ def update_ingestion_run(
     return _serialize_ingestion_run(ingestion_run)
 
 
-@router.delete("/{run_id}/", response={204: None}, auth=drf_authenticate)
+@router.delete("/{run_id}/", response={204: None}, auth=api_authenticate)
 def delete_ingestion_run(
     request: Any,
     project_id: int = Path(...),

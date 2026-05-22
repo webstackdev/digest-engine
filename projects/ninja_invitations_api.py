@@ -9,7 +9,7 @@ from ninja import Path, Router, Schema
 from ninja.errors import HttpError
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from projects.ninja_api import _require_project_admin
 from projects.models import ProjectRole
 from users.models import MembershipInvitation
@@ -141,7 +141,7 @@ def _get_invitation_or_404(project_id: int, invitation_id: int) -> MembershipInv
     return invitation
 
 
-@router.get("/", response=list[MembershipInvitationSchema], auth=drf_authenticate)
+@router.get("/", response=list[MembershipInvitationSchema], auth=api_authenticate)
 def list_invitations(request, project_id: int = Path(...)):
     project = _require_project_admin(request, project_id)
     invitations = (
@@ -155,7 +155,7 @@ def list_invitations(request, project_id: int = Path(...)):
 @router.post(
     "/",
     response={201: MembershipInvitationSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_invitation(
     request, payload: MembershipInvitationCreateInput, project_id: int = Path(...)
@@ -179,7 +179,7 @@ def create_invitation(
     return Status(201, _serialize_invitation(invitation, project))
 
 
-@router.delete("/{invitation_id}/", response={204: None}, auth=drf_authenticate)
+@router.delete("/{invitation_id}/", response={204: None}, auth=api_authenticate)
 def revoke_invitation(
     request, project_id: int = Path(...), invitation_id: int = Path(...)
 ):

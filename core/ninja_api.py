@@ -7,12 +7,8 @@ import binascii
 
 from django.contrib.auth import authenticate
 from django.http import HttpRequest
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import (
-    AuthenticationFailed as SimpleJWTAuthenticationFailed,
-    InvalidToken,
-    TokenError,
-)
+
+from core.jwt import authenticate_access_token
 
 
 def _session_user(request: HttpRequest) -> object | None:
@@ -34,26 +30,20 @@ def _authorization_header(request: HttpRequest) -> str:
 def _bearer_user(request: HttpRequest) -> object | None:
     """Authenticate one request from a Bearer JWT authorization header."""
 
-    authenticator = JWTAuthentication()
-    header = authenticator.get_header(request)
-    if header is None:
+    header = _authorization_header(request)
+    if not header:
         return None
 
-    try:
-        raw_token = authenticator.get_raw_token(header)
-    except SimpleJWTAuthenticationFailed:
-        return None
-    if raw_token is None:
+    scheme, _, raw_token = header.partition(" ")
+    if scheme.lower() != "bearer" or not raw_token:
         return None
 
-    try:
-        validated_token = authenticator.get_validated_token(raw_token)
-        user = authenticator.get_user(validated_token)
-    except (InvalidToken, TokenError, SimpleJWTAuthenticationFailed):
+    user, payload = authenticate_access_token(raw_token)
+    if user is None or payload is None:
         return None
 
     request.user = user
-    request.auth = validated_token
+    request.auth = payload
     return user
 
 
@@ -86,7 +76,7 @@ def _basic_user(request: HttpRequest) -> object | None:
     return user
 
 
-def drf_authenticate(request: HttpRequest) -> object | None:
+def api_authenticate(request: HttpRequest) -> object | None:
     """Authenticate one Ninja request with session, bearer, or basic auth."""
 
     for resolver in (_session_user, _bearer_user, _basic_user):
@@ -97,4 +87,4 @@ def drf_authenticate(request: HttpRequest) -> object | None:
     return None
 
 
-__all__ = ["drf_authenticate"]
+__all__ = ["api_authenticate"]

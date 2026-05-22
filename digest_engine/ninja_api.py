@@ -24,6 +24,5 @@ def _build_api(*, urls_namespace: str) -> NinjaAPI:
 
 
 api = _build_api(urls_namespace="ninja-api")
-legacy_api = _build_api(urls_namespace="legacy-ninja-api")
 
-__all__ = ["api", "legacy_api"]
+__all__ = ["api"]

@@ -12,7 +12,7 @@ from django.utils import timezone
 from ninja import Router, Schema
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from messaging.models import (
     DirectMessage,
     Thread,
@@ -235,7 +235,7 @@ def _get_thread_for_request(request, thread_id: int) -> Thread:
     return get_object_or_404(_threads_queryset(request), pk=thread_id)
 
 
-@router.get("/messaging/threads/", response=list[ThreadSchema], auth=drf_authenticate)
+@router.get("/messaging/threads/", response=list[ThreadSchema], auth=api_authenticate)
 def list_threads(request):
     """Return the current user's 1:1 messaging threads, newest first."""
 
@@ -245,7 +245,7 @@ def list_threads(request):
 @router.post(
     "/messaging/threads/",
     response={201: ThreadSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_thread(request, payload: ThreadCreateInput):
     """Find an existing 1:1 thread with another visible user or create it."""
@@ -292,7 +292,7 @@ def create_thread(request, payload: ThreadCreateInput):
 @router.get(
     "/messaging/threads/{thread_id}/messages/",
     response=list[DirectMessageSchema],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_thread_messages(request, thread_id: int):
     """Return messages for one direct-message thread."""
@@ -305,7 +305,7 @@ def list_thread_messages(request, thread_id: int):
 @router.post(
     "/messaging/threads/{thread_id}/messages/",
     response={201: DirectMessageSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_thread_message(request, thread_id: int, payload: DirectMessageCreateInput):
     """Send one direct message in the specified thread."""
@@ -330,7 +330,7 @@ def create_thread_message(request, thread_id: int, payload: DirectMessageCreateI
 @router.post(
     "/messaging/threads/{thread_id}/read/",
     response=ThreadReadResponseSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def read_thread(request, thread_id: int):
     """Move the current user's read cursor to the latest message."""

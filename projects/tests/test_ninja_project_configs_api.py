@@ -1,12 +1,11 @@
+from http import HTTPStatus
 from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
-from django.test import override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
 from projects.models import Project, ProjectConfig, ProjectMembership, ProjectRole
 
@@ -23,7 +22,7 @@ def _create_user(user_model: type[Any], **kwargs: object):
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class ProjectConfigNinjaApiTests(APITestCase):
+class ProjectConfigNinjaApiTests(TestCase):
     """Exercise project config Ninja API endpoints."""
 
     def setUp(self):
@@ -64,7 +63,7 @@ class ProjectConfigNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(response.json()["draft_schedule_cron"], "0 9 * * *")
         self.assertEqual(response.json()["authority_weight_mention"], 0.2)
         self.assertEqual(response.json()["authority_weight_engagement"], 0.15)
@@ -80,10 +79,10 @@ class ProjectConfigNinjaApiTests(APITestCase):
                 "draft_schedule_cron": " 0  8 * * 1 ",
                 "authority_weight_engagement": 0.25,
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
         config = ProjectConfig.objects.get(project=self.owner_project)
         self.assertEqual(config.draft_schedule_cron, "0 8 * * 1")
         self.assertEqual(config.authority_weight_engagement, 0.25)
@@ -102,7 +101,7 @@ class ProjectConfigNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.status_code, HTTPStatus.NO_CONTENT)
         self.assertFalse(ProjectConfig.objects.filter(pk=_require_pk(config)).exists())
 
     def test_project_config_patch_updates_multi_signal_authority_weights(self):
@@ -121,11 +120,11 @@ class ProjectConfigNinjaApiTests(APITestCase):
                 "authority_weight_engagement": 0.25,
                 "authority_weight_source_quality": 0.3,
             },
-            format="json",
+            content_type="application/json",
         )
 
         config.refresh_from_db()
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(config.draft_schedule_cron, "15 7 * * 1")
         self.assertEqual(config.authority_weight_engagement, 0.25)
         self.assertEqual(config.authority_weight_source_quality, 0.3)
@@ -142,10 +141,10 @@ class ProjectConfigNinjaApiTests(APITestCase):
                 },
             ),
             {"draft_schedule_cron": "not a cron"},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         # Check validation payload format
         json_data = response.json()
         self.assertIn("draft_schedule_cron", json_data)
@@ -171,10 +170,10 @@ class ProjectConfigNinjaApiTests(APITestCase):
                     "config_id": _require_pk(config),
                 },
             ),
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(response.json()["status"], "completed")
         self.assertEqual(response.json()["project_id"], _require_pk(self.owner_project))
         self.assertEqual(response.json()["config_id"], _require_pk(config))
@@ -197,6 +196,6 @@ class ProjectConfigNinjaApiTests(APITestCase):
                 },
             ),
             {"draft_schedule_cron": "15 7 * * 1"},
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)

@@ -5,7 +5,7 @@ from ninja import Path, Router, Schema
 from ninja.errors import HttpError
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from projects.ninja_api import _require_project_admin, _get_project_or_404
 from projects.models import BlueskyCredentials, MastodonCredentials, LinkedInCredentials
 
@@ -61,7 +61,7 @@ def _get_bluesky_or_404(project_id: int, cred_id: int) -> BlueskyCredentials:
     return cred
 
 
-@bluesky_router.get("/", response=list[BlueskyCredentialsSchema], auth=drf_authenticate)
+@bluesky_router.get("/", response=list[BlueskyCredentialsSchema], auth=api_authenticate)
 def list_bluesky(request, project_id: int = Path(...)):
     _get_project_or_404(request, project_id)
     creds = BlueskyCredentials.objects.filter(project_id=project_id).order_by(
@@ -73,7 +73,7 @@ def list_bluesky(request, project_id: int = Path(...)):
 @bluesky_router.post(
     "/",
     response={201: BlueskyCredentialsSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_bluesky(
     request, payload: BlueskyCredentialsCreateInput, project_id: int = Path(...)
@@ -94,7 +94,7 @@ def create_bluesky(
 
 
 @bluesky_router.get(
-    "/{cred_id}/", response=BlueskyCredentialsSchema, auth=drf_authenticate
+    "/{cred_id}/", response=BlueskyCredentialsSchema, auth=api_authenticate
 )
 def get_bluesky(request, project_id: int = Path(...), cred_id: int = Path(...)):
     _get_project_or_404(request, project_id)
@@ -105,7 +105,7 @@ def get_bluesky(request, project_id: int = Path(...), cred_id: int = Path(...)):
 @bluesky_router.patch(
     "/{cred_id}/",
     response={200: BlueskyCredentialsSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_bluesky(
     request,
@@ -128,7 +128,7 @@ def update_bluesky(
     return _serialize_bluesky(cred)
 
 
-@bluesky_router.delete("/{cred_id}/", response={204: None}, auth=drf_authenticate)
+@bluesky_router.delete("/{cred_id}/", response={204: None}, auth=api_authenticate)
 def delete_bluesky(request, project_id: int = Path(...), cred_id: int = Path(...)):
     _require_project_admin(request, project_id)
     cred = _get_bluesky_or_404(project_id, cred_id)
@@ -189,7 +189,7 @@ def _get_mastodon_or_404(project_id: int, cred_id: int) -> MastodonCredentials:
 
 
 @mastodon_router.get(
-    "/", response=list[MastodonCredentialsSchema], auth=drf_authenticate
+    "/", response=list[MastodonCredentialsSchema], auth=api_authenticate
 )
 def list_mastodon(request, project_id: int = Path(...)):
     _get_project_or_404(request, project_id)
@@ -202,7 +202,7 @@ def list_mastodon(request, project_id: int = Path(...)):
 @mastodon_router.post(
     "/",
     response={201: MastodonCredentialsSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_mastodon(
     request, payload: MastodonCredentialsCreateInput, project_id: int = Path(...)
@@ -223,7 +223,7 @@ def create_mastodon(
 
 
 @mastodon_router.get(
-    "/{cred_id}/", response=MastodonCredentialsSchema, auth=drf_authenticate
+    "/{cred_id}/", response=MastodonCredentialsSchema, auth=api_authenticate
 )
 def get_mastodon(request, project_id: int = Path(...), cred_id: int = Path(...)):
     _get_project_or_404(request, project_id)
@@ -234,7 +234,7 @@ def get_mastodon(request, project_id: int = Path(...), cred_id: int = Path(...))
 @mastodon_router.patch(
     "/{cred_id}/",
     response={200: MastodonCredentialsSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_mastodon(
     request,
@@ -257,7 +257,7 @@ def update_mastodon(
     return _serialize_mastodon(cred)
 
 
-@mastodon_router.delete("/{cred_id}/", response={204: None}, auth=drf_authenticate)
+@mastodon_router.delete("/{cred_id}/", response={204: None}, auth=api_authenticate)
 def delete_mastodon(request, project_id: int = Path(...), cred_id: int = Path(...)):
     _require_project_admin(request, project_id)
     cred = _get_mastodon_or_404(project_id, cred_id)
@@ -318,7 +318,7 @@ def _get_linkedin_or_404(project_id: int, cred_id: int) -> LinkedInCredentials:
 
 
 @linkedin_router.get(
-    "/", response=list[LinkedInCredentialsSchema], auth=drf_authenticate
+    "/", response=list[LinkedInCredentialsSchema], auth=api_authenticate
 )
 def list_linkedin(request, project_id: int = Path(...)):
     _get_project_or_404(request, project_id)
@@ -331,7 +331,7 @@ def list_linkedin(request, project_id: int = Path(...)):
 @linkedin_router.post(
     "/",
     response={201: LinkedInCredentialsSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_linkedin(
     request, payload: LinkedInCredentialsCreateInput, project_id: int = Path(...)
@@ -361,7 +361,7 @@ def create_linkedin(
 
 
 @linkedin_router.get(
-    "/{cred_id}/", response=LinkedInCredentialsSchema, auth=drf_authenticate
+    "/{cred_id}/", response=LinkedInCredentialsSchema, auth=api_authenticate
 )
 def get_linkedin(request, project_id: int = Path(...), cred_id: int = Path(...)):
     _get_project_or_404(request, project_id)
@@ -372,7 +372,7 @@ def get_linkedin(request, project_id: int = Path(...), cred_id: int = Path(...))
 @linkedin_router.patch(
     "/{cred_id}/",
     response={200: LinkedInCredentialsSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_linkedin(
     request,
@@ -395,7 +395,7 @@ def update_linkedin(
     return _serialize_linkedin(cred)
 
 
-@linkedin_router.delete("/{cred_id}/", response={204: None}, auth=drf_authenticate)
+@linkedin_router.delete("/{cred_id}/", response={204: None}, auth=api_authenticate)
 def delete_linkedin(request, project_id: int = Path(...), cred_id: int = Path(...)):
     _require_project_admin(request, project_id)
     cred = _get_linkedin_or_404(project_id, cred_id)

@@ -22,7 +22,7 @@ from entities.models import (
     EntityCandidate,
     EntityMention,
 )
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from projects.ninja_api import (
     _get_project_or_404,
     _require_project_admin,
@@ -421,7 +421,7 @@ def _apply_entity_ordering(
     return queryset.order_by(ordering)
 
 
-@entity_router.get("/", response=list[EntitySchema], auth=drf_authenticate)
+@entity_router.get("/", response=list[EntitySchema], auth=api_authenticate)
 def list_entities(
     request: Any,
     project_id: int = Path(...),
@@ -440,7 +440,7 @@ def list_entities(
 @entity_router.post(
     "/",
     response={201: EntitySchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_entity(
     request: Any,
@@ -462,7 +462,7 @@ def create_entity(
     )
 
 
-@entity_router.get("/{entity_id}/", response=EntitySchema, auth=drf_authenticate)
+@entity_router.get("/{entity_id}/", response=EntitySchema, auth=api_authenticate)
 def get_entity(
     request: Any,
     project_id: int = Path(...),
@@ -477,7 +477,7 @@ def get_entity(
 @entity_router.patch(
     "/{entity_id}/",
     response={200: EntitySchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_entity(
     request: Any,
@@ -502,7 +502,7 @@ def update_entity(
     return _serialize_entity(_get_entity_or_404(project_id, entity_id))
 
 
-@entity_router.delete("/{entity_id}/", response={204: None}, auth=drf_authenticate)
+@entity_router.delete("/{entity_id}/", response={204: None}, auth=api_authenticate)
 def delete_entity(
     request: Any,
     project_id: int = Path(...),
@@ -519,7 +519,7 @@ def delete_entity(
 @entity_router.get(
     "/{entity_id}/mentions/",
     response=list[EntityMentionSummarySchema],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def entity_mentions(
     request: Any,
@@ -537,7 +537,7 @@ def entity_mentions(
 @entity_router.get(
     "/{entity_id}/authority_components/",
     response=EntityAuthoritySnapshotSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def entity_authority_components(
     request: Any,
@@ -557,7 +557,7 @@ def entity_authority_components(
 @entity_router.get(
     "/{entity_id}/authority_history/",
     response={200: list[EntityAuthoritySnapshotSchema], 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def entity_authority_history(
     request: Any,
@@ -581,7 +581,7 @@ def entity_authority_history(
 @entity_candidate_router.get(
     "/",
     response=list[EntityCandidateSchema],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_entity_candidates(request: Any, project_id: int = Path(...)):
     """List entity candidates visible to the current project member."""
@@ -594,7 +594,7 @@ def list_entity_candidates(request: Any, project_id: int = Path(...)):
 @entity_candidate_router.get(
     "/{candidate_id}/",
     response=EntityCandidateSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_entity_candidate(
     request: Any,
@@ -612,7 +612,7 @@ def get_entity_candidate(
 @entity_candidate_router.post(
     "/{candidate_id}/accept/",
     response=EntityCandidateSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def accept_entity_candidate_route(
     request: Any,
@@ -633,7 +633,7 @@ def accept_entity_candidate_route(
 @entity_candidate_router.post(
     "/{candidate_id}/reject/",
     response=EntityCandidateSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def reject_entity_candidate_route(
     request: Any,
@@ -654,7 +654,7 @@ def reject_entity_candidate_route(
 @entity_candidate_router.post(
     "/{candidate_id}/merge/",
     response={200: EntityCandidateSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def merge_entity_candidate_route(
     request: Any,

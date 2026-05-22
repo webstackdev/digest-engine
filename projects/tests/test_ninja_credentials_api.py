@@ -1,9 +1,10 @@
+from http import HTTPStatus
 from typing import Any, cast
+
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
 from projects.models import (
     BlueskyCredentials,
@@ -22,15 +23,11 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-def _typed_client(client: object) -> APIClient:
-    return cast(APIClient, client)
-
-
 def _create_user(user_model: type[Any], **kwargs: object):
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class ProjectCredentialsNinjaApiTests(APITestCase):
+class ProjectCredentialsNinjaApiTests(TestCase):
     def setUp(self):
         user_model = get_user_model()
         self.owner = _create_user(user_model, username="owner", password="testpassword")
@@ -64,7 +61,7 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
             user=self.owner, project=self.member_project, role=ProjectRole.MEMBER
         )
 
-        _typed_client(self.client).force_login(self.owner)
+        self.client.force_login(self.owner)
 
     def test_bluesky_credentials_list_create_and_update_hide_stored_password(self):
         url_list = reverse(
@@ -73,7 +70,7 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
         )
 
         list_response = self.client.get(url_list)
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
         self.assertEqual(list_response.json(), [])
 
         create_response = self.client.post(
@@ -84,9 +81,9 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
                 "is_active": True,
                 "app_password": "app-password",
             },
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_response.status_code, HTTPStatus.CREATED)
         credentials = BlueskyCredentials.objects.get(project=self.owner_project)
         self.assertEqual(credentials.handle, "owner.project.bsky.social")
         self.assertEqual(credentials.pds_url, "https://pds.example.com")
@@ -103,9 +100,9 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
                 },
             ),
             {"handle": "@new.bsky.social"},
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.status_code, HTTPStatus.OK)
         credentials.refresh_from_db()
         self.assertEqual(credentials.handle, "new.bsky.social")
         self.assertEqual(credentials.get_app_password(), "app-password")
@@ -124,9 +121,9 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
                 "is_active": True,
                 "app_password": "app-password",
             },
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(create_response.status_code, HTTPStatus.FORBIDDEN)
 
     def test_mastodon_credentials_list_create_and_update(self):
         url_list = reverse(
@@ -134,7 +131,7 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
             kwargs={"project_id": _require_pk(self.owner_project)},
         )
         list_response = self.client.get(url_list)
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
 
         create_response = self.client.post(
             url_list,
@@ -144,9 +141,9 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
                 "is_active": True,
                 "access_token": "token123",
             },
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_response.status_code, HTTPStatus.CREATED)
         credentials = MastodonCredentials.objects.get(project=self.owner_project)
         self.assertEqual(credentials.instance_url, "https://mastodon.social")
         self.assertEqual(credentials.get_access_token(), "token123")
@@ -161,9 +158,11 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
             },
         )
         update_response = self.client.patch(
-            url_detail, {"account_acct": "newuser@mastodon.social"}, format="json"
+            url_detail,
+            {"account_acct": "newuser@mastodon.social"},
+            content_type="application/json",
         )
-        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.status_code, HTTPStatus.OK)
 
         delete_response = self.client.delete(
             reverse(
@@ -174,7 +173,7 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
                 },
             )
         )
-        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(delete_response.status_code, HTTPStatus.NO_CONTENT)
 
     def test_linkedin_credentials_list_create_and_update(self):
         url_list = reverse(
@@ -190,9 +189,9 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
                 "access_token": "access123",
                 "refresh_token": "refresh123",
             },
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_response.status_code, HTTPStatus.CREATED)
         credentials = LinkedInCredentials.objects.get(project=self.owner_project)
         self.assertEqual(credentials.member_urn, "urn:li:person:12345")
         self.assertEqual(credentials.get_access_token(), "access123")
@@ -208,9 +207,11 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
             },
         )
         update_response = self.client.patch(
-            url_detail, {"member_urn": "urn:li:person:67890"}, format="json"
+            url_detail,
+            {"member_urn": "urn:li:person:67890"},
+            content_type="application/json",
         )
-        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.status_code, HTTPStatus.OK)
 
     def test_bluesky_credentials_create_requires_app_password(self):
         url_list = reverse(
@@ -225,9 +226,9 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
                 "is_active": True,
                 "app_password": "",
             },
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
 
     def test_linkedin_credentials_create_requires_both_oauth_tokens(self):
         url_list = reverse(
@@ -242,6 +243,6 @@ class ProjectCredentialsNinjaApiTests(APITestCase):
                 "access_token": "",
                 "refresh_token": "refresh-token",
             },
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)

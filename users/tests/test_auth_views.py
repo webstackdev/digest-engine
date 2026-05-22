@@ -1,4 +1,4 @@
-"""Focused tests for the non-DRF auth views."""
+"""Focused tests for the auth views."""
 
 from __future__ import annotations
 

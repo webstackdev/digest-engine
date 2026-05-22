@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any, cast
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
 from ingestion.models import IngestionRun, RunStatus
 from projects.models import Project, ProjectMembership, ProjectRole
@@ -21,19 +21,13 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-def _typed_client(client: object) -> APIClient:
-    """Cast the DRF test client so Pylance sees APIClient helpers."""
-
-    return cast(APIClient, client)
-
-
 def _create_user(user_model: type[Any], **kwargs: object):
     """Create a user through the custom manager with a typed escape hatch."""
 
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class IngestionRunNinjaApiTests(APITestCase):
+class IngestionRunNinjaApiTests(TestCase):
     """Exercise project-scoped Ninja ingestion-run endpoints."""
 
     def setUp(self):
@@ -91,7 +85,7 @@ class IngestionRunNinjaApiTests(APITestCase):
             error_message="Boom",
         )
 
-        _typed_client(self.client).force_login(self.owner)
+        self.client.force_login(self.owner)
 
     def test_list_ingestion_runs_is_project_scoped(self):
         response = self.client.get(
@@ -101,7 +95,7 @@ class IngestionRunNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], _require_pk(self.owner_run))
 
@@ -119,10 +113,10 @@ class IngestionRunNinjaApiTests(APITestCase):
                 "error_message": "",
                 "project": _require_pk(self.other_project),
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
         created_run = IngestionRun.objects.get(plugin_name="bluesky")
         self.assertEqual(created_run.project, self.owner_project)
         self.assertEqual(created_run.status, RunStatus.RUNNING)
@@ -139,17 +133,17 @@ class IngestionRunNinjaApiTests(APITestCase):
                 "items_fetched": 0,
                 "items_ingested": 0,
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["status"][0],
             "Value 'invalid-status' is not a valid choice.",
         )
 
     def test_reader_can_list_but_cannot_create(self):
-        _typed_client(self.client).force_login(self.reader)
+        self.client.force_login(self.reader)
 
         list_response = self.client.get(
             reverse(
@@ -157,7 +151,7 @@ class IngestionRunNinjaApiTests(APITestCase):
                 kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
 
         create_response = self.client.post(
             reverse(
@@ -170,9 +164,9 @@ class IngestionRunNinjaApiTests(APITestCase):
                 "items_fetched": 1,
                 "items_ingested": 0,
             },
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(create_response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(create_response.status_code, HTTPStatus.FORBIDDEN)
 
     def test_update_and_delete_ingestion_run(self):
         update_response = self.client.patch(
@@ -189,10 +183,10 @@ class IngestionRunNinjaApiTests(APITestCase):
                 "items_ingested": 3,
                 "error_message": "Partial failure",
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.status_code, HTTPStatus.OK)
         self.owner_run.refresh_from_db()
         self.assertEqual(self.owner_run.status, RunStatus.FAILED)
         self.assertEqual(self.owner_run.items_fetched, 7)
@@ -207,7 +201,7 @@ class IngestionRunNinjaApiTests(APITestCase):
                 },
             )
         )
-        self.assertEqual(delete_response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(delete_response.status_code, HTTPStatus.NO_CONTENT)
         self.assertFalse(
             IngestionRun.objects.filter(pk=_require_pk(self.owner_run)).exists()
         )

@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import datetime
+import logging
 from typing import Any
 
 from ninja import Router, Schema
 from ninja.errors import HttpError
 from ninja.responses import Status
 
-from core.api import logger
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from core.permissions import get_user_role, get_visible_projects_queryset
 from ingestion.plugins.bluesky import BlueskySourcePlugin
 from ingestion.plugins.linkedin import LinkedInSourcePlugin
@@ -25,6 +25,8 @@ from projects.models import (
     ProjectRole,
     generate_project_intake_token,
 )
+
+logger = logging.getLogger(__name__)
 
 router = Router(tags=["Project Management"])
 
@@ -201,7 +203,7 @@ def _require_project_admin(request: Any, project_id: int) -> Project:
     return project
 
 
-@router.get("/projects/", response=list[ProjectSchema], auth=drf_authenticate)
+@router.get("/projects/", response=list[ProjectSchema], auth=api_authenticate)
 def list_projects(request):
     """Return accessible projects for the authenticated user."""
     projects = get_visible_projects_queryset(request.user).select_related(
@@ -213,7 +215,7 @@ def list_projects(request):
 @router.post(
     "/projects/",
     response={201: ProjectSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_project(request, payload: ProjectCreateInput):
     """Create a new project for the authenticated user."""
@@ -231,7 +233,7 @@ def create_project(request, payload: ProjectCreateInput):
     return Status(201, _serialize_project(project, request))
 
 
-@router.get("/projects/{project_id}/", response=ProjectSchema, auth=drf_authenticate)
+@router.get("/projects/{project_id}/", response=ProjectSchema, auth=api_authenticate)
 def get_project(request, project_id: int):
     """Return project details."""
     project = _get_project_or_404(request, project_id)
@@ -241,7 +243,7 @@ def get_project(request, project_id: int):
 @router.patch(
     "/projects/{project_id}/",
     response={200: ProjectSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_project(request, project_id: int, payload: ProjectUpdateInput):
     """Update project details."""
@@ -259,7 +261,7 @@ def update_project(request, project_id: int, payload: ProjectUpdateInput):
     return _serialize_project(project, request)
 
 
-@router.delete("/projects/{project_id}/", response={204: None}, auth=drf_authenticate)
+@router.delete("/projects/{project_id}/", response={204: None}, auth=api_authenticate)
 def delete_project(request, project_id: int):
     """Delete a project."""
     project = _require_project_admin(request, project_id)
@@ -270,7 +272,7 @@ def delete_project(request, project_id: int):
 @router.post(
     "/projects/{project_id}/rotate-intake-token/",
     response=ProjectSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def rotate_intake_token(request, project_id: int):
     """Generate a fresh intake token for the selected project."""
@@ -283,7 +285,7 @@ def rotate_intake_token(request, project_id: int):
 @router.post(
     "/projects/{project_id}/verify-bluesky-credentials/",
     response={200: BlueskyCredentialsVerifyResponse, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def verify_bluesky_credentials(request, project_id: int):
     """Verify the Bluesky credentials stored for the selected project."""
@@ -319,7 +321,7 @@ def verify_bluesky_credentials(request, project_id: int):
 @router.post(
     "/projects/{project_id}/start-linkedin-oauth/",
     response=LinkedInOAuthStartResponse,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def start_linkedin_oauth(request, project_id: int, payload: LinkedInOAuthStartRequest):
     """Return the LinkedIn OAuth authorization URL for the selected project."""
@@ -334,7 +336,7 @@ def start_linkedin_oauth(request, project_id: int, payload: LinkedInOAuthStartRe
 @router.post(
     "/projects/{project_id}/verify-linkedin-credentials/",
     response={200: LinkedInCredentialsVerifyResponse, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def verify_linkedin_credentials(request, project_id: int):
     """Verify the LinkedIn credentials stored for the selected project."""
@@ -371,7 +373,7 @@ def verify_linkedin_credentials(request, project_id: int):
 @router.post(
     "/projects/{project_id}/verify-mastodon-credentials/",
     response={200: MastodonCredentialsVerifyResponse, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def verify_mastodon_credentials(request, project_id: int):
     """Verify the Mastodon credentials stored for the selected project."""
@@ -421,7 +423,7 @@ __all__ = ["router"]
 #
 # project_configs_router = Router(tags=["Project Configurations"])
 #
-# @project_configs_router.get("/", auth=drf_authenticate)
+# @project_configs_router.get("/", auth=api_authenticate)
 # def list_configs(request, project_id: int):
 #     project = _get_project_or_404(request, project_id)
 #     ...

@@ -76,7 +76,7 @@ kubectl port-forward svc/digest-engine-digest-engine-nginx 8080:80
 
 - Admin UI: <http://localhost:8080/admin/>
 - Frontend UI: <http://localhost:3000/>
-- Swagger schema: <http://localhost:8080/api/docs/#/>
+- API docs: <http://localhost:8080/api/docs>
 - Storybook (`just storybook-dev`): <http://localhost:6006/>
 
 > [!NOTE]

@@ -42,7 +42,6 @@ from .base import (
     DEBUG,
     DEFAULT_AUTO_FIELD,
     DEFAULT_FROM_EMAIL,
-    DRF_STANDARDIZED_ERRORS,
     EMAIL_BACKEND,
     FRONTEND_BASE_URL,
     INSTALLED_APPS,
@@ -74,7 +73,6 @@ from .base import (
     RESEND_API_KEY,
     RESEND_FROM_EMAIL,
     RESEND_INBOUND_SECRET,
-    REST_FRAMEWORK,
     ROOT_URLCONF,
     SECRET_KEY,
     SECURE_PROXY_SSL_HEADER,
@@ -101,7 +99,6 @@ from .celery import (
     REDIS_URL,
 )
 from .logging import LOG_LEVEL, LOGGING
-from .swagger import SPECTACULAR_SETTINGS
 
 __all__ = [
     "ACCOUNT_EMAIL_VERIFICATION",
@@ -140,7 +137,6 @@ __all__ = [
     "DEBUG",
     "DEFAULT_FROM_EMAIL",
     "DEFAULT_AUTO_FIELD",
-    "DRF_STANDARDIZED_ERRORS",
     "EMAIL_BACKEND",
     "FRONTEND_BASE_URL",
     "ANYMAIL",
@@ -186,13 +182,11 @@ __all__ = [
     "RESEND_FROM_EMAIL",
     "ANYMAIL_WEBHOOK_SECRET",
     "REDIS_URL",
-    "REST_FRAMEWORK",
     "ROOT_URLCONF",
     "SERVER_EMAIL",
     "SECRET_KEY",
     "SECURE_PROXY_SSL_HEADER",
     "SITE_ID",
-    "SPECTACULAR_SETTINGS",
     "STORAGES",
     "STATIC_ROOT",
     "STATIC_URL",

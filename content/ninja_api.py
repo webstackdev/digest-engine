@@ -11,7 +11,7 @@ from ninja.errors import HttpError
 from ninja.responses import Status
 
 from content.models import Content, UserFeedback
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from entities.models import Entity
 from projects.models import ProjectMembership, ProjectRole
 from projects.ninja_api import (
@@ -365,7 +365,7 @@ def _require_feedback_editor(request: Any, feedback: UserFeedback) -> None:
     raise HttpError(403, "You do not have permission to perform this action.")
 
 
-@content_router.get("/", response=list[ContentSchema], auth=drf_authenticate)
+@content_router.get("/", response=list[ContentSchema], auth=api_authenticate)
 def list_contents(request: Any, project_id: int = Path(...)):
     """List content rows visible to the current project member."""
 
@@ -379,7 +379,7 @@ def list_contents(request: Any, project_id: int = Path(...)):
 @content_router.post(
     "/",
     response={201: ContentSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_content(
     request: Any,
@@ -402,7 +402,7 @@ def create_content(
 @content_router.get(
     "/{content_id}/",
     response=ContentSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_content(
     request: Any,
@@ -418,7 +418,7 @@ def get_content(
 @content_router.patch(
     "/{content_id}/",
     response={200: ContentSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_content(
     request: Any,
@@ -446,7 +446,7 @@ def update_content(
 @content_router.delete(
     "/{content_id}/",
     response={204: None},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_content(
     request: Any,
@@ -468,7 +468,7 @@ def delete_content(
         202: SkillResultSchema,
         400: dict[str, list[str]],
     },
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def run_content_skill(
     request: Any,
@@ -502,7 +502,7 @@ def run_content_skill(
     return Status(201, _serialize_skill_result(skill_result))
 
 
-@feedback_router.get("/", response=list[UserFeedbackSchema], auth=drf_authenticate)
+@feedback_router.get("/", response=list[UserFeedbackSchema], auth=api_authenticate)
 def list_feedback(request: Any, project_id: int = Path(...)):
     """List feedback rows visible to the current project member."""
 
@@ -516,7 +516,7 @@ def list_feedback(request: Any, project_id: int = Path(...)):
 @feedback_router.post(
     "/",
     response={201: UserFeedbackSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_feedback(
     request: Any,
@@ -544,7 +544,7 @@ def create_feedback(
 @feedback_router.get(
     "/{feedback_id}/",
     response=UserFeedbackSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_feedback(
     request: Any,
@@ -560,7 +560,7 @@ def get_feedback(
 @feedback_router.patch(
     "/{feedback_id}/",
     response={200: UserFeedbackSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_feedback(
     request: Any,
@@ -589,7 +589,7 @@ def update_feedback(
 @feedback_router.delete(
     "/{feedback_id}/",
     response={204: None},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_feedback(
     request: Any,

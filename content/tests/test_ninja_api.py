@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
 from content.models import Content, FeedbackType, UserFeedback
 from entities.models import Entity
@@ -25,19 +25,13 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-def _typed_client(client: object) -> APIClient:
-    """Cast the DRF test client so Pylance sees APIClient helpers."""
-
-    return cast(APIClient, client)
-
-
 def _create_user(user_model: type[Any], **kwargs: object):
     """Create a user through the custom manager with a typed escape hatch."""
 
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class ContentNinjaApiTests(APITestCase):
+class ContentNinjaApiTests(TestCase):
     """Exercise project-scoped Ninja content and feedback endpoints."""
 
     def setUp(self):
@@ -106,7 +100,7 @@ class ContentNinjaApiTests(APITestCase):
             published_date="2026-04-21T00:00:00Z",
             content_text="Other content text",
         )
-        _typed_client(self.client).force_login(self.owner)
+        self.client.force_login(self.owner)
 
     def assert_standardized_validation_error(
         self, payload: dict[str, object], attr: str
@@ -133,10 +127,10 @@ class ContentNinjaApiTests(APITestCase):
                 "content_text": "Nested content text",
                 "project": _require_pk(self.other_project),
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
         created_content = Content.objects.get(title="New Content")
         self.assertEqual(created_content.project, self.owner_project)
 
@@ -155,10 +149,10 @@ class ContentNinjaApiTests(APITestCase):
                 "published_date": "2026-04-22T00:00:00Z",
                 "content_text": "Nested content text",
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["entity"][0],
             "Entity must belong to the selected project.",
@@ -178,7 +172,7 @@ class ContentNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(
             response.json()["summary_text"], "A concise summary ready for editors."
         )
@@ -188,11 +182,10 @@ class ContentNinjaApiTests(APITestCase):
         self, run_relevance_scoring_delay_mock
     ):
         response = self.client.post(
-            f"/api/ninja/v1/projects/{_require_pk(self.owner_project)}/contents/{_require_pk(self.owner_content)}/skills/relevance_scoring/",
-            format="json",
+            f"/api/v1/projects/{_require_pk(self.owner_project)}/contents/{_require_pk(self.owner_content)}/skills/relevance_scoring/",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.status_code, HTTPStatus.ACCEPTED)
         pending_result = SkillResult.objects.get(
             content=self.owner_content,
             skill_name="relevance_scoring",
@@ -222,11 +215,10 @@ class ContentNinjaApiTests(APITestCase):
         ]
 
         response = self.client.post(
-            f"/api/ninja/v1/projects/{_require_pk(self.owner_project)}/contents/{_require_pk(self.owner_content)}/skills/find_related/",
-            format="json",
+            f"/api/v1/projects/{_require_pk(self.owner_project)}/contents/{_require_pk(self.owner_content)}/skills/find_related/",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
         self.assertEqual(response.json()["skill_name"], "find_related")
         self.assertEqual(response.json()["status"], SkillStatus.COMPLETED)
         self.assertEqual(
@@ -245,10 +237,10 @@ class ContentNinjaApiTests(APITestCase):
                 "content": _require_pk(self.owner_content),
                 "feedback_type": FeedbackType.UPVOTE,
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
         feedback = UserFeedback.objects.get()
         self.assertEqual(feedback.user, self.owner)
         self.assertEqual(feedback.feedback_type, FeedbackType.UPVOTE)
@@ -264,10 +256,10 @@ class ContentNinjaApiTests(APITestCase):
                 "content": _require_pk(self.other_content),
                 "feedback_type": FeedbackType.DOWNVOTE,
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["content"][0],
             "Content must belong to the selected project.",
@@ -282,7 +274,7 @@ class ContentNinjaApiTests(APITestCase):
             feedback_type=FeedbackType.UPVOTE,
         )
         queue_centroid_mock.reset_mock()
-        _typed_client(self.client).force_login(self.member)
+        self.client.force_login(self.member)
 
         response = self.client.patch(
             reverse(
@@ -293,10 +285,10 @@ class ContentNinjaApiTests(APITestCase):
                 },
             ),
             {"feedback_type": FeedbackType.DOWNVOTE},
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         feedback.refresh_from_db()
         self.assertEqual(feedback.feedback_type, FeedbackType.DOWNVOTE)
         queue_centroid_mock.assert_called_once_with(_require_pk(self.owner_project))
@@ -308,7 +300,7 @@ class ContentNinjaApiTests(APITestCase):
             user=self.owner,
             feedback_type=FeedbackType.UPVOTE,
         )
-        _typed_client(self.client).force_login(self.member)
+        self.client.force_login(self.member)
 
         response = self.client.delete(
             reverse(
@@ -320,4 +312,4 @@ class ContentNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)

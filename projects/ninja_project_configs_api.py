@@ -9,7 +9,7 @@ from ninja import Path, Router, Schema
 from ninja.errors import HttpError
 from ninja.responses import Status
 
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from projects.models import ProjectConfig
 from projects.ninja_api import _get_project_or_404, _require_project_admin
 
@@ -123,7 +123,7 @@ def _get_config_or_404(project_id: int, config_id: int) -> ProjectConfig:
     return config
 
 
-@router.get("/", response=list[ProjectConfigSchema], auth=drf_authenticate)
+@router.get("/", response=list[ProjectConfigSchema], auth=api_authenticate)
 def list_configs(request, project_id: int = Path(...)):
     _get_project_or_404(request, project_id)
     configs = ProjectConfig.objects.filter(project_id=project_id).select_related(
@@ -135,7 +135,7 @@ def list_configs(request, project_id: int = Path(...)):
 @router.post(
     "/",
     response={201: ProjectConfigSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_config(
     request, payload: ProjectConfigCreateInput, project_id: int = Path(...)
@@ -152,7 +152,7 @@ def create_config(
     return Status(201, _serialize_config(config))
 
 
-@router.get("/{config_id}/", response=ProjectConfigSchema, auth=drf_authenticate)
+@router.get("/{config_id}/", response=ProjectConfigSchema, auth=api_authenticate)
 def get_config(request, project_id: int = Path(...), config_id: int = Path(...)):
     _get_project_or_404(request, project_id)
     config = _get_config_or_404(project_id, config_id)
@@ -162,7 +162,7 @@ def get_config(request, project_id: int = Path(...), config_id: int = Path(...))
 @router.patch(
     "/{config_id}/",
     response={200: ProjectConfigSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_config(
     request,
@@ -186,7 +186,7 @@ def update_config(
     return _serialize_config(config)
 
 
-@router.delete("/{config_id}/", response={204: None}, auth=drf_authenticate)
+@router.delete("/{config_id}/", response={204: None}, auth=api_authenticate)
 def delete_config(request, project_id: int = Path(...), config_id: int = Path(...)):
     _require_project_admin(request, project_id)
     config = _get_config_or_404(project_id, config_id)
@@ -197,7 +197,7 @@ def delete_config(request, project_id: int = Path(...), config_id: int = Path(..
 @router.post(
     "/{config_id}/recompute_authority/",
     response={200: ProjectConfigRecomputeResponse, 202: ProjectConfigRecomputeResponse},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def recompute_authority(
     request, project_id: int = Path(...), config_id: int = Path(...)

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
 from content.models import Content
 from entities.models import Entity
@@ -30,19 +30,13 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-def _typed_client(client: object) -> APIClient:
-    """Cast the DRF test client so Pylance sees APIClient helpers."""
-
-    return cast(APIClient, client)
-
-
 def _create_user(user_model: type[Any], **kwargs: object):
     """Create a user through the custom manager with a typed escape hatch."""
 
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class PipelineNinjaApiTests(APITestCase):
+class PipelineNinjaApiTests(TestCase):
     """Exercise project-scoped Ninja pipeline endpoints."""
 
     def setUp(self):
@@ -157,7 +151,7 @@ class PipelineNinjaApiTests(APITestCase):
             resolved=False,
             resolution="",
         )
-        _typed_client(self.client).force_login(self.owner)
+        self.client.force_login(self.owner)
 
     def test_skill_result_routes_cover_list_create_update_and_validation(self):
         list_response = self.client.get(
@@ -189,20 +183,20 @@ class PipelineNinjaApiTests(APITestCase):
                 "model_used": "gpt-5.4",
                 "superseded_by": _require_pk(self.owner_skill_result),
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
         self.assertEqual(len(list_response.json()), 1)
         self.assertEqual(
             list_response.json()[0]["id"], _require_pk(self.owner_skill_result)
         )
-        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail_response.status_code, HTTPStatus.OK)
         self.assertEqual(
             detail_response.json()["content"], _require_pk(self.owner_content)
         )
 
-        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_response.status_code, HTTPStatus.CREATED)
         created_id = create_response.json()["id"]
         created_skill_result = SkillResult.objects.get(pk=created_id)
         self.assertEqual(created_skill_result.project, self.owner_project)
@@ -225,7 +219,7 @@ class PipelineNinjaApiTests(APITestCase):
                 "confidence": 0.91,
                 "superseded_by": None,
             },
-            format="json",
+            content_type="application/json",
         )
         invalid_response = self.client.post(
             reverse(
@@ -237,14 +231,14 @@ class PipelineNinjaApiTests(APITestCase):
                 "skill_name": "summarization",
                 "status": SkillStatus.COMPLETED,
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(update_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(update_response.status_code, HTTPStatus.OK)
         self.assertEqual(update_response.json()["status"], SkillStatus.COMPLETED)
         self.assertAlmostEqual(update_response.json()["confidence"], 0.91)
         self.assertIsNone(update_response.json()["superseded_by"])
-        self.assertEqual(invalid_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(invalid_response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             invalid_response.json()["content"][0],
             "Content must belong to the selected project.",
@@ -278,19 +272,19 @@ class PipelineNinjaApiTests(APITestCase):
                 "failed_node": "classify",
                 "failure_detail": "Low confidence.",
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
         self.assertEqual(len(list_response.json()), 1)
         self.assertEqual(
             list_response.json()[0]["id"], _require_pk(self.owner_review_item)
         )
-        self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail_response.status_code, HTTPStatus.OK)
         self.assertEqual(
             detail_response.json()["content"], _require_pk(self.owner_content)
         )
-        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(create_response.status_code, HTTPStatus.CREATED)
 
         created_review_id = create_response.json()["id"]
         patch_response = self.client.patch(
@@ -305,7 +299,7 @@ class PipelineNinjaApiTests(APITestCase):
                 "resolved": True,
                 "resolution": ReviewResolution.HUMAN_APPROVED,
             },
-            format="json",
+            content_type="application/json",
         )
         resolve_response = self.client.post(
             reverse(
@@ -315,7 +309,6 @@ class PipelineNinjaApiTests(APITestCase):
                     "review_item_id": _require_pk(self.owner_review_item),
                 },
             ),
-            format="json",
         )
         archive_target = ReviewQueue.objects.create(
             project=self.owner_project,
@@ -333,7 +326,6 @@ class PipelineNinjaApiTests(APITestCase):
                     "review_item_id": _require_pk(archive_target),
                 },
             ),
-            format="json",
         )
         invalid_response = self.client.post(
             reverse(
@@ -345,27 +337,27 @@ class PipelineNinjaApiTests(APITestCase):
                 "reason": ReviewReason.BORDERLINE_RELEVANCE,
                 "confidence": 0.5,
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(patch_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(patch_response.status_code, HTTPStatus.OK)
         self.assertTrue(patch_response.json()["resolved"])
         self.assertEqual(
             patch_response.json()["resolution"],
             ReviewResolution.HUMAN_APPROVED,
         )
-        self.assertEqual(resolve_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(resolve_response.status_code, HTTPStatus.OK)
         self.assertEqual(
             resolve_response.json()["resolution"],
             ReviewResolution.MANUALLY_RESOLVED,
         )
         self.assertTrue(resolve_response.json()["resolved"])
         self.assertIsNotNone(resolve_response.json()["resolved_at"])
-        self.assertEqual(archive_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(archive_response.status_code, HTTPStatus.OK)
         self.assertEqual(
             archive_response.json()["resolution"], ReviewResolution.ARCHIVED
         )
-        self.assertEqual(invalid_response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(invalid_response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             invalid_response.json()["content"][0],
             "Content must belong to the selected project.",
@@ -388,7 +380,6 @@ class PipelineNinjaApiTests(APITestCase):
                             "review_item_id": _require_pk(self.owner_review_item),
                         },
                     ),
-                    format="json",
                 )
 
         with self.settings(CELERY_TASK_ALWAYS_EAGER=False):
@@ -403,18 +394,17 @@ class PipelineNinjaApiTests(APITestCase):
                             "review_item_id": _require_pk(self.owner_review_item),
                         },
                     ),
-                    format="json",
                 )
 
         retry_mock.assert_called_once_with(_require_pk(self.owner_review_item))
-        self.assertEqual(eager_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(eager_response.status_code, HTTPStatus.OK)
         self.assertEqual(eager_response.json()["status"], "retried")
         delay_mock.assert_called_once_with(_require_pk(self.owner_review_item))
-        self.assertEqual(queued_response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(queued_response.status_code, HTTPStatus.ACCEPTED)
         self.assertEqual(queued_response.json()["status"], "queued")
 
     def test_pipeline_ninja_permissions_match_existing_roles(self):
-        _typed_client(self.client).force_login(self.reader)
+        self.client.force_login(self.reader)
 
         reader_skill_results = self.client.get(
             reverse(
@@ -438,21 +428,21 @@ class PipelineNinjaApiTests(APITestCase):
                 "skill_name": "summarization",
                 "status": SkillStatus.PENDING,
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(reader_skill_results.status_code, status.HTTP_200_OK)
-        self.assertEqual(reader_review_queue.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(reader_skill_create.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(reader_skill_results.status_code, HTTPStatus.OK)
+        self.assertEqual(reader_review_queue.status_code, HTTPStatus.FORBIDDEN)
+        self.assertEqual(reader_skill_create.status_code, HTTPStatus.FORBIDDEN)
 
-        _typed_client(self.client).force_login(self.member)
+        self.client.force_login(self.member)
         member_review_queue = self.client.get(
             reverse(
                 "ninja-api:list_review_queue_items",
                 kwargs={"project_id": _require_pk(self.owner_project)},
             )
         )
-        self.assertEqual(member_review_queue.status_code, status.HTTP_200_OK)
+        self.assertEqual(member_review_queue.status_code, HTTPStatus.OK)
 
     def test_pipeline_ninja_requires_authentication(self):
         self.client.logout()
@@ -464,5 +454,5 @@ class PipelineNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, HTTPStatus.UNAUTHORIZED)
         self.assertEqual(response.json(), {"detail": "Unauthorized"})

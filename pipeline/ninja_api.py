@@ -12,7 +12,7 @@ from ninja.errors import HttpError
 from ninja.responses import Status
 
 from content.models import Content
-from core.ninja_api import drf_authenticate
+from core.ninja_api import api_authenticate
 from core.tasks import retry_pipeline_review_item
 from pipeline.models import (
     ReviewQueue,
@@ -280,7 +280,7 @@ def _validate_review_resolution(resolution: str):
 @router.get(
     "/skill-results/",
     response=list[SkillResultSchema],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_skill_results(request: Any, project_id: int = Path(...)):
     """Return persisted pipeline skill results for one project."""
@@ -295,7 +295,7 @@ def list_skill_results(request: Any, project_id: int = Path(...)):
 @router.post(
     "/skill-results/",
     response={201: SkillResultSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_skill_result(
     request: Any,
@@ -339,7 +339,7 @@ def create_skill_result(
 @router.get(
     "/skill-results/{skill_result_id}/",
     response=SkillResultSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_skill_result(
     request: Any,
@@ -357,7 +357,7 @@ def get_skill_result(
 @router.patch(
     "/skill-results/{skill_result_id}/",
     response={200: SkillResultSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_skill_result(
     request: Any,
@@ -413,7 +413,7 @@ def update_skill_result(
 @router.delete(
     "/skill-results/{skill_result_id}/",
     response={204: None},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_skill_result(
     request: Any,
@@ -431,7 +431,7 @@ def delete_skill_result(
 @router.get(
     "/review-queue/",
     response=list[ReviewQueueItemSchema],
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def list_review_queue_items(request: Any, project_id: int = Path(...)):
     """Return review-queue items for one project."""
@@ -446,7 +446,7 @@ def list_review_queue_items(request: Any, project_id: int = Path(...)):
 @router.post(
     "/review-queue/",
     response={201: ReviewQueueItemSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def create_review_queue_item(
     request: Any,
@@ -484,7 +484,7 @@ def create_review_queue_item(
 @router.get(
     "/review-queue/{review_item_id}/",
     response=ReviewQueueItemSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def get_review_queue_item(
     request: Any,
@@ -500,7 +500,7 @@ def get_review_queue_item(
 @router.patch(
     "/review-queue/{review_item_id}/",
     response={200: ReviewQueueItemSchema, 400: dict[str, list[str]]},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def update_review_queue_item(
     request: Any,
@@ -549,7 +549,7 @@ def update_review_queue_item(
 @router.delete(
     "/review-queue/{review_item_id}/",
     response={204: None},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def delete_review_queue_item(
     request: Any,
@@ -567,7 +567,7 @@ def delete_review_queue_item(
 @router.post(
     "/review-queue/{review_item_id}/retry/",
     response={200: dict[str, Any], 202: ReviewQueueRetryQueuedSchema},
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def retry_review_queue_item_route(
     request: Any,
@@ -593,7 +593,7 @@ def retry_review_queue_item_route(
 @router.post(
     "/review-queue/{review_item_id}/resolve/",
     response=ReviewQueueItemSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def resolve_review_queue_item_route(
     request: Any,
@@ -614,7 +614,7 @@ def resolve_review_queue_item_route(
 @router.post(
     "/review-queue/{review_item_id}/archive/",
     response=ReviewQueueItemSchema,
-    auth=drf_authenticate,
+    auth=api_authenticate,
 )
 def archive_review_queue_item_route(
     request: Any,

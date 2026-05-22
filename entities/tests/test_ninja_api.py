@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any, cast
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
+from django.test import TestCase
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
 
 from content.models import Content
 from entities.models import (
@@ -31,19 +31,13 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-def _typed_client(client: object) -> APIClient:
-    """Cast the DRF test client so Pylance sees APIClient helpers."""
-
-    return cast(APIClient, client)
-
-
 def _create_user(user_model: type[Any], **kwargs: object):
     """Create a user through the custom manager with a typed escape hatch."""
 
     return cast(Any, user_model.objects).create_user(**kwargs)
 
 
-class EntityNinjaApiTests(APITestCase):
+class EntityNinjaApiTests(TestCase):
     """Exercise entity-owned Ninja API endpoints."""
 
     def setUp(self):
@@ -118,7 +112,7 @@ class EntityNinjaApiTests(APITestCase):
             published_date="2026-04-21T00:00:00Z",
             content_text="Other content text",
         )
-        _typed_client(self.client).force_login(self.owner)
+        self.client.force_login(self.owner)
 
     def test_entity_list_is_scoped_to_request_user_project(self):
         response = self.client.get(
@@ -128,7 +122,7 @@ class EntityNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(len(response.json()), 1)
         self.assertEqual(response.json()[0]["id"], _require_pk(self.owner_entity))
 
@@ -157,7 +151,7 @@ class EntityNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(response.json()[0]["mention_count"], 1)
         self.assertEqual(
             response.json()[0]["latest_mentions"][0]["id"],
@@ -208,7 +202,7 @@ class EntityNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(len(response.json()), 2)
         self.assertEqual(response.json()[0]["id"], _require_pk(second_mention))
         self.assertEqual(response.json()[1]["id"], _require_pk(first_mention))
@@ -231,7 +225,7 @@ class EntityNinjaApiTests(APITestCase):
             {"ordering": "-authority_score"},
         )
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, HTTPStatus.OK)
         self.assertEqual(response.json()[0]["id"], _require_pk(second_entity))
 
     def test_entity_authority_actions_return_snapshots(self):
@@ -284,12 +278,12 @@ class EntityNinjaApiTests(APITestCase):
             {"limit": 1},
         )
 
-        self.assertEqual(components_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(components_response.status_code, HTTPStatus.OK)
         self.assertEqual(
             components_response.json()["weights_at_compute"]["engagement"],
             0.15,
         )
-        self.assertEqual(history_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(history_response.status_code, HTTPStatus.OK)
         self.assertEqual(len(history_response.json()), 1)
         self.assertEqual(history_response.json()[0]["id"], _require_pk(second_snapshot))
 
@@ -305,7 +299,7 @@ class EntityNinjaApiTests(APITestCase):
             {"limit": "abc"},
         )
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, HTTPStatus.BAD_REQUEST)
         self.assertEqual(
             response.json()["limit"][0],
             "Limit must be an integer between 1 and 100.",
@@ -322,15 +316,15 @@ class EntityNinjaApiTests(APITestCase):
                 "type": "organization",
                 "project": _require_pk(self.other_project),
             },
-            format="json",
+            content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, HTTPStatus.CREATED)
         created_entity = Entity.objects.get(name="Created Entity")
         self.assertEqual(created_entity.project, self.owner_project)
 
     def test_reader_cannot_delete_entity(self):
-        _typed_client(self.client).force_login(self.reader)
+        self.client.force_login(self.reader)
         response = self.client.delete(
             reverse(
                 "ninja-api:delete_entity",
@@ -341,7 +335,7 @@ class EntityNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, HTTPStatus.FORBIDDEN)
 
     def test_entity_candidate_list_and_actions(self):
         owner_candidate = EntityCandidate.objects.create(
@@ -369,18 +363,17 @@ class EntityNinjaApiTests(APITestCase):
             )
         )
 
-        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(list_response.status_code, HTTPStatus.OK)
         self.assertEqual(list_response.json()[0]["id"], _require_pk(owner_candidate))
         self.assertEqual(list_response.json()[0]["source_plugins"], ["linkedin"])
 
         with patch("entities.extraction.queue_entity_identity_enrichment"):
             accept_response = self.client.post(
-                f"/api/ninja/v1/projects/{_require_pk(self.owner_project)}/entity-candidates/{_require_pk(owner_candidate)}/accept/",
-                format="json",
+                f"/api/v1/projects/{_require_pk(self.owner_project)}/entity-candidates/{_require_pk(owner_candidate)}/accept/",
             )
 
         owner_candidate.refresh_from_db()
-        self.assertEqual(accept_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(accept_response.status_code, HTTPStatus.OK)
         self.assertEqual(owner_candidate.status, EntityCandidateStatus.ACCEPTED)
         self.assertEqual(
             accept_response.json()["status"], EntityCandidateStatus.ACCEPTED
@@ -394,11 +387,10 @@ class EntityNinjaApiTests(APITestCase):
             first_seen_in=self.owner_content,
         )
         reject_response = self.client.post(
-            f"/api/ninja/v1/projects/{_require_pk(self.owner_project)}/entity-candidates/{_require_pk(reject_candidate)}/reject/",
-            format="json",
+            f"/api/v1/projects/{_require_pk(self.owner_project)}/entity-candidates/{_require_pk(reject_candidate)}/reject/",
         )
         reject_candidate.refresh_from_db()
-        self.assertEqual(reject_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(reject_response.status_code, HTTPStatus.OK)
         self.assertEqual(reject_candidate.status, EntityCandidateStatus.REJECTED)
 
         merge_candidate = EntityCandidate.objects.create(
@@ -408,21 +400,21 @@ class EntityNinjaApiTests(APITestCase):
             first_seen_in=self.owner_content,
         )
         invalid_merge = self.client.post(
-            f"/api/ninja/v1/projects/{_require_pk(self.owner_project)}/entity-candidates/{_require_pk(merge_candidate)}/merge/",
+            f"/api/v1/projects/{_require_pk(self.owner_project)}/entity-candidates/{_require_pk(merge_candidate)}/merge/",
             {"merged_into": _require_pk(self.other_entity)},
-            format="json",
+            content_type="application/json",
         )
-        self.assertEqual(invalid_merge.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(invalid_merge.status_code, HTTPStatus.BAD_REQUEST)
         self.assertIn("merged_into", invalid_merge.json())
 
         with patch("entities.extraction.queue_entity_identity_enrichment"):
             valid_merge = self.client.post(
-                f"/api/ninja/v1/projects/{_require_pk(self.owner_project)}/entity-candidates/{_require_pk(merge_candidate)}/merge/",
+                f"/api/v1/projects/{_require_pk(self.owner_project)}/entity-candidates/{_require_pk(merge_candidate)}/merge/",
                 {"merged_into": _require_pk(self.owner_entity)},
-                format="json",
+                content_type="application/json",
             )
 
         merge_candidate.refresh_from_db()
-        self.assertEqual(valid_merge.status_code, status.HTTP_200_OK)
+        self.assertEqual(valid_merge.status_code, HTTPStatus.OK)
         self.assertEqual(merge_candidate.status, EntityCandidateStatus.MERGED)
         self.assertEqual(merge_candidate.merged_into, self.owner_entity)
