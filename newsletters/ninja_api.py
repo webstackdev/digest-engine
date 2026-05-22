@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Prefetch
 from django.utils import timezone
@@ -13,6 +12,7 @@ from ninja.errors import HttpError
 from ninja.responses import Status
 
 from core.ninja_api import api_authenticate
+from digest_engine.taskiq import enqueue_task, task_always_eager
 from newsletters.models import (
     IntakeAllowlist,
     NewsletterDraft,
@@ -26,7 +26,7 @@ from newsletters.tasks import (
     generate_newsletter_draft,
     regenerate_newsletter_draft_section,
 )
-from projects.ninja_api import _get_project_or_404, _require_project_writable
+from projects.ninja_helpers import _get_project_or_404, _require_project_writable
 
 intake_allowlist_router = Router(tags=["Ingestion"])
 newsletter_intakes_router = Router(tags=["Ingestion"])
@@ -581,7 +581,7 @@ def generate_newsletter_draft_route(request: Any, project_id: int = Path(...)):
     """Trigger newsletter draft generation for the selected project."""
 
     _require_project_writable(request, project_id)
-    if settings.CELERY_TASK_ALWAYS_EAGER:
+    if task_always_eager():
         result = generate_newsletter_draft(project_id)
         return Status(
             200,
@@ -591,7 +591,7 @@ def generate_newsletter_draft_route(request: Any, project_id: int = Path(...)):
                 "result": result,
             },
         )
-    generate_newsletter_draft.delay(project_id)
+    enqueue_task(generate_newsletter_draft, project_id)
     return Status(202, {"status": "queued", "project_id": project_id})
 
 
@@ -673,11 +673,11 @@ def regenerate_newsletter_draft_section_route(
     section_id, errors = _validated_regenerate_section_payload(payload, draft=draft)
     if errors is not None or section_id is None:
         return Status(400, errors or {"section_id": ["This field is required."]})
-    if settings.CELERY_TASK_ALWAYS_EAGER:
+    if task_always_eager():
         regenerate_newsletter_draft_section(section_id)
         draft.refresh_from_db()
         return _serialize_draft(_get_draft_or_404(project_id, draft_id))
-    regenerate_newsletter_draft_section.delay(section_id)
+    enqueue_task(regenerate_newsletter_draft_section, section_id)
     return Status(
         202,
         {

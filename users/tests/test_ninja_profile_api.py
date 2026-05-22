@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import base64
 import json
-from io import BytesIO
 from http import HTTPStatus
+from io import BytesIO
 from typing import Any, cast
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -15,7 +16,6 @@ from django.utils import timezone
 from PIL import Image
 
 from core.jwt import issue_auth_tokens
-
 from projects.models import Project, ProjectMembership, ProjectRole
 from users.models import AppUser, MembershipInvitation
 
@@ -48,7 +48,7 @@ def make_avatar_file(
     return SimpleUploadedFile(filename, buffer.getvalue(), content_type=content_type)
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True, MEDIA_URL="/media/")
+@override_settings(TASKIQ_ALWAYS_EAGER=True, MEDIA_URL="/media/")
 def test_ninja_profile_get_returns_the_authenticated_user(tmp_path):
     client = Client()
     user = AppUser.objects.create_user(
@@ -70,7 +70,7 @@ def test_ninja_profile_get_returns_the_authenticated_user(tmp_path):
     assert response.json()["avatar_thumbnail_url"] is None
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True, MEDIA_URL="/media/")
+@override_settings(TASKIQ_ALWAYS_EAGER=True, MEDIA_URL="/media/")
 def test_ninja_profile_get_accepts_bearer_auth(tmp_path):
     client = Client()
     user = AppUser.objects.create_user(
@@ -93,7 +93,7 @@ def test_ninja_profile_get_accepts_bearer_auth(tmp_path):
     assert response.json()["username"] == "ninja-profile-bearer"
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True, MEDIA_URL="/media/")
+@override_settings(TASKIQ_ALWAYS_EAGER=True, MEDIA_URL="/media/")
 def test_ninja_profile_get_accepts_basic_auth(tmp_path):
     client = Client()
     user = AppUser.objects.create_user(
@@ -115,7 +115,7 @@ def test_ninja_profile_get_accepts_basic_auth(tmp_path):
     assert response.json()["username"] == "ninja-profile-basic"
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True, MEDIA_URL="/media/")
+@override_settings(TASKIQ_ALWAYS_EAGER=True, MEDIA_URL="/media/")
 def test_ninja_profile_patch_updates_profile_fields(tmp_path):
     client = Client()
     user = AppUser.objects.create_user(
@@ -145,7 +145,7 @@ def test_ninja_profile_patch_updates_profile_fields(tmp_path):
     assert user.timezone == "America/New_York"
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True, MEDIA_URL="/media/")
+@override_settings(TASKIQ_ALWAYS_EAGER=True, MEDIA_URL="/media/")
 def test_ninja_profile_avatar_upload_returns_avatar_and_thumbnail_urls(tmp_path):
     client = Client()
     user = AppUser.objects.create_user(
@@ -173,7 +173,7 @@ def test_ninja_profile_avatar_upload_returns_avatar_and_thumbnail_urls(tmp_path)
     assert thumbnail_path.exists()
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True, MEDIA_URL="/media/")
+@override_settings(TASKIQ_ALWAYS_EAGER=True, MEDIA_URL="/media/")
 def test_ninja_profile_avatar_upload_rejects_invalid_content_type(tmp_path):
     client = Client()
     user = AppUser.objects.create_user(
@@ -199,7 +199,7 @@ def test_ninja_profile_avatar_upload_rejects_invalid_content_type(tmp_path):
     assert response.json()["avatar"][0] == "Upload a PNG, JPEG, or WebP avatar image."
 
 
-@override_settings(CELERY_TASK_ALWAYS_EAGER=True, MEDIA_URL="/media/")
+@override_settings(TASKIQ_ALWAYS_EAGER=True, MEDIA_URL="/media/")
 def test_ninja_profile_avatar_delete_clears_avatar_and_thumbnail(tmp_path):
     client = Client()
     user = AppUser.objects.create_user(
@@ -224,6 +224,35 @@ def test_ninja_profile_avatar_delete_clears_avatar_and_thumbnail(tmp_path):
     assert user.avatar.name == ""
     assert response.json()["avatar_url"] is None
     assert response.json()["avatar_thumbnail_url"] is None
+    assert thumbnail_path.exists() is False
+
+
+@override_settings(TASKIQ_ALWAYS_EAGER=False, MEDIA_URL="/media/")
+def test_ninja_profile_avatar_upload_queues_taskiq_thumbnail_task(tmp_path):
+    client = Client()
+    user = AppUser.objects.create_user(
+        username="ninja-profile-avatar-queued", password="testpass123"
+    )
+    client.force_login(user)
+
+    with patch(
+        "users.ninja_api.generate_avatar_thumbnail.kiq",
+        new_callable=AsyncMock,
+    ) as queue_thumbnail:
+        with override_settings(MEDIA_ROOT=tmp_path):
+            response = _response(
+                client.post(
+                    "/api/v1/profile/avatar/",
+                    {"avatar": make_avatar_file()},
+                )
+            )
+
+            user.refresh_from_db()
+            thumbnail_path = tmp_path / f"avatars/{user.id}/thumb.webp"
+
+    assert response.status_code == HTTPStatus.OK
+    queue_thumbnail.assert_awaited_once_with(user.id)
+    assert user.avatar.name.endswith("avatar.png")
     assert thumbnail_path.exists() is False
 
 

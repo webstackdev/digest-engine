@@ -14,7 +14,7 @@ from content.models import Content, UserFeedback
 from core.ninja_api import api_authenticate
 from entities.models import Entity
 from projects.models import ProjectMembership, ProjectRole
-from projects.ninja_api import (
+from projects.ninja_helpers import (
     _get_project_or_404,
     _require_project_admin,
     _require_project_writable,

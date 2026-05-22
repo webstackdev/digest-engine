@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime
 from typing import Any
 
-from django.conf import settings
 from django.utils import timezone
 from ninja import Path, Router, Schema
 from ninja.errors import HttpError
@@ -14,13 +13,14 @@ from ninja.responses import Status
 from content.models import Content
 from core.ninja_api import api_authenticate
 from core.tasks import retry_pipeline_review_item
+from digest_engine.taskiq import enqueue_task, task_always_eager
 from pipeline.models import (
     ReviewQueue,
     ReviewResolution,
     SkillResult,
 )
 from projects.models import Project, ProjectMembership, ProjectRole
-from projects.ninja_api import _get_project_or_404
+from projects.ninja_helpers import _get_project_or_404
 
 router = Router(tags=["AI Processing"])
 
@@ -245,9 +245,8 @@ def _project_skill_result_reference_or_error(project: Project, skill_result_id: 
 def _validate_skill_status(status_value: str):
     """Return a validation payload when the supplied skill status is invalid."""
 
-    valid_statuses = {
-        choice for choice, _ in SkillResult._meta.get_field("status").choices
-    }
+    choices = SkillResult._meta.get_field("status").choices or ()
+    valid_statuses = {choice for choice, _ in choices}
     if status_value not in valid_statuses:
         return {"status": ["Select a valid choice."]}
     return None
@@ -256,9 +255,8 @@ def _validate_skill_status(status_value: str):
 def _validate_review_reason(reason: str):
     """Return a validation payload when the supplied review reason is invalid."""
 
-    valid_reasons = {
-        choice for choice, _ in ReviewQueue._meta.get_field("reason").choices
-    }
+    choices = ReviewQueue._meta.get_field("reason").choices or ()
+    valid_reasons = {choice for choice, _ in choices}
     if reason not in valid_reasons:
         return {"reason": ["Select a valid choice."]}
     return None
@@ -269,9 +267,8 @@ def _validate_review_resolution(resolution: str):
 
     if resolution == "":
         return None
-    valid_resolutions = {
-        choice for choice, _ in ReviewQueue._meta.get_field("resolution").choices
-    }
+    choices = ReviewQueue._meta.get_field("resolution").choices or ()
+    valid_resolutions = {choice for choice, _ in choices}
     if resolution not in valid_resolutions:
         return {"resolution": ["Select a valid choice."]}
     return None
@@ -578,9 +575,9 @@ def retry_review_queue_item_route(
 
     _require_project_contributor(request, project_id)
     review_item = _get_review_item_or_404(project_id, review_item_id)
-    if settings.CELERY_TASK_ALWAYS_EAGER:
+    if task_always_eager():
         return retry_pipeline_review_item(review_item.pk)
-    retry_pipeline_review_item.delay(review_item.pk)
+    enqueue_task(retry_pipeline_review_item, review_item.pk)
     return Status(
         202,
         {

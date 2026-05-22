@@ -5,11 +5,10 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Any, cast
 
-from django.contrib.auth import get_user_model
-from django.utils import timezone
-from django.test import Client
-
 import pytest
+from django.contrib.auth import get_user_model
+from django.test import Client
+from django.utils import timezone
 
 from notifications.models import Notification, NotificationLevel
 from projects.models import Project

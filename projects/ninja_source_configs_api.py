@@ -7,8 +7,8 @@ from ninja.responses import Status
 
 from core.ninja_api import api_authenticate
 from ingestion.plugins import validate_plugin_config
-from projects.ninja_api import _require_project_writable, _get_project_or_404
 from projects.models import SourceConfig
+from projects.ninja_helpers import _get_project_or_404, _require_project_writable
 
 router = Router(tags=["Source Configurations"])
 

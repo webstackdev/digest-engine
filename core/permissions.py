@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
-
 from projects.models import Project, ProjectMembership, ProjectRole
+
+SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
 class PermissionBase:

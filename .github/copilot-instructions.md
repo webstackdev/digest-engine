@@ -1,6 +1,6 @@
 # Digest Engine Project Instructions
 
-You are working in Digest Engine, a Django + Ninja API + Celery + Qdrant backend with a Next.js App Router frontend.
+You are working in Digest Engine, a Django + Ninja API + Taskiq + Qdrant backend with a Next.js App Router frontend.
 
 ## Repository Shape
 
@@ -29,7 +29,7 @@ You are working in Digest Engine, a Django + Ninja API + Celery + Qdrant backend
 - Keep route handlers and views thin. Put operational logic in `core/tasks.py`, `core/pipeline.py`, `ingestion/plugins/`, `newsletters/intake.py`, or nearby helpers owned by the feature's app.
 - Preserve existing API field shapes. Backend serializers and frontend types currently use `snake_case`; do not introduce ad hoc `camelCase` transforms.
 - When API behavior changes, update the Ninja schema, response typing, and docs metadata in the owning `*_ninja_api.py` module.
-- When changing ingestion, newsletter intake, AI processing, or embeddings, preserve the handoff between database state, Celery tasks, and Qdrant state.
+- When changing ingestion, newsletter intake, AI processing, or embeddings, preserve the handoff between database state, Taskiq tasks, and Qdrant state.
 
 ## Frontend Conventions
 
@@ -85,4 +85,4 @@ Use the workspace skills in `.github/skills/` when they match the task:
 - `bridge-scaffolder`: features that span Django API work and Next.js consumption.
 - `project-api-patterns`: adding or changing project-scoped DRF endpoints.
 - `source-plugin-patterns`: adding or changing ingestion plugins or source-config behavior.
-- `ai-pipeline-patterns`: changing embeddings, relevance scoring, newsletter intake, or Celery-driven AI workflow behavior.
+- `ai-pipeline-patterns`: changing embeddings, relevance scoring, newsletter intake, or Taskiq-driven AI workflow behavior.

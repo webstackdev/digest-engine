@@ -7,7 +7,7 @@ from ninja.responses import Status
 
 from core.ninja_api import api_authenticate
 from projects.models import ProjectMembership, ProjectRole
-from projects.ninja_api import _require_project_admin, _get_project_or_404
+from projects.ninja_helpers import _require_project_admin
 
 router = Router(tags=["Project Memberships"])
 

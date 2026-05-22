@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from typing import Any, cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
@@ -152,7 +152,7 @@ class ProjectConfigNinjaApiTests(TestCase):
             "valid 5-part cron expression", json_data["draft_schedule_cron"][0]
         )
 
-    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    @override_settings(TASKIQ_ALWAYS_EAGER=True)
     @patch("core.tasks.recompute_authority_scores")
     @patch("core.tasks.recompute_source_quality")
     def test_project_config_recompute_authority_runs_tasks_immediately(
@@ -181,6 +181,35 @@ class ProjectConfigNinjaApiTests(TestCase):
             _require_pk(self.owner_project)
         )
         recompute_authority_scores_mock.assert_called_once_with(
+            _require_pk(self.owner_project)
+        )
+
+    @patch("core.tasks.recompute_authority_scores.kiq", new_callable=AsyncMock)
+    @patch("core.tasks.recompute_source_quality.kiq", new_callable=AsyncMock)
+    def test_project_config_recompute_authority_queues_taskiq_tasks(
+        self,
+        recompute_source_quality_queue_mock,
+        recompute_authority_scores_queue_mock,
+    ):
+        config = ProjectConfig.objects.create(project=self.owner_project)
+
+        response = self.client.post(
+            reverse(
+                "ninja-api:recompute_authority",
+                kwargs={
+                    "project_id": _require_pk(self.owner_project),
+                    "config_id": _require_pk(config),
+                },
+            ),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, HTTPStatus.ACCEPTED)
+        self.assertEqual(response.json()["status"], "queued")
+        recompute_source_quality_queue_mock.assert_awaited_once_with(
+            _require_pk(self.owner_project)
+        )
+        recompute_authority_scores_queue_mock.assert_awaited_once_with(
             _require_pk(self.owner_project)
         )
 

@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 _PROVIDER_CONFIGURED = False
 _DJANGO_INSTRUMENTED = False
-_CELERY_INSTRUMENTED = False
 _DEPENDENCY_WARNING_EMITTED = False
 
 
@@ -58,7 +57,6 @@ def _warn_missing_dependencies() -> None:
 def configure_telemetry(
     *,
     instrument_django: bool = False,
-    celery_app: object | None = None,
 ) -> bool:
     """Configure OTLP tracing and instrument supported runtimes when enabled."""
 
@@ -70,7 +68,6 @@ def configure_telemetry(
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
             OTLPSpanExporter,
         )
-        from opentelemetry.instrumentation.celery import CeleryInstrumentor
         from opentelemetry.instrumentation.django import DjangoInstrumentor
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
@@ -79,7 +76,7 @@ def configure_telemetry(
         _warn_missing_dependencies()
         return False
 
-    global _PROVIDER_CONFIGURED, _DJANGO_INSTRUMENTED, _CELERY_INSTRUMENTED
+    global _PROVIDER_CONFIGURED, _DJANGO_INSTRUMENTED
 
     if not _PROVIDER_CONFIGURED:
         resource = Resource.create(
@@ -106,13 +103,6 @@ def configure_telemetry(
     if instrument_django and not _DJANGO_INSTRUMENTED:
         DjangoInstrumentor().instrument(tracer_provider=tracer_provider)
         _DJANGO_INSTRUMENTED = True
-
-    if celery_app is not None and not _CELERY_INSTRUMENTED:
-        CeleryInstrumentor().instrument(
-            tracer_provider=tracer_provider,
-            skip_dep_check=True,
-        )
-        _CELERY_INSTRUMENTED = True
 
     return True
 

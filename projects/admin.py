@@ -4,7 +4,6 @@ import json
 from typing import TYPE_CHECKING, Any, cast
 
 from django import forms
-from django.conf import settings
 from django.contrib import admin, messages
 from django.utils import timezone
 from django.utils.html import format_html
@@ -12,6 +11,7 @@ from django.utils.safestring import mark_safe
 from import_export.admin import ExportActionMixin
 from unfold.admin import ModelAdmin
 
+from digest_engine.taskiq import enqueue_task, task_always_eager
 from ingestion.plugins import get_plugin_for_source_config, validate_plugin_config
 from projects.models import (
     BlueskyCredentials,
@@ -502,12 +502,12 @@ class ProjectConfigAdmin(admin.ModelAdmin):
         selected_count = 0
         for config in queryset.select_related("project"):
             project_id = int(config.project_id)
-            if settings.CELERY_TASK_ALWAYS_EAGER:
+            if task_always_eager():
                 recompute_source_quality(project_id)
                 recompute_authority_scores(project_id)
             else:
-                recompute_source_quality.delay(project_id)
-                recompute_authority_scores.delay(project_id)
+                enqueue_task(recompute_source_quality, project_id)
+                enqueue_task(recompute_authority_scores, project_id)
             selected_count += 1
         if selected_count:
             self.message_user(

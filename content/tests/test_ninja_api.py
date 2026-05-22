@@ -3,7 +3,7 @@ from __future__ import annotations
 from http import HTTPStatus
 from types import SimpleNamespace
 from typing import Any, cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
@@ -177,9 +177,9 @@ class ContentNinjaApiTests(TestCase):
             response.json()["summary_text"], "A concise summary ready for editors."
         )
 
-    @patch("core.tasks.run_relevance_scoring_skill.delay")
+    @patch("core.tasks.run_relevance_scoring_skill.kiq", new_callable=AsyncMock)
     def test_content_skill_action_queues_relevance_scoring(
-        self, run_relevance_scoring_delay_mock
+        self, run_relevance_scoring_queue_mock
     ):
         response = self.client.post(
             f"/api/v1/projects/{_require_pk(self.owner_project)}/contents/{_require_pk(self.owner_content)}/skills/relevance_scoring/",
@@ -191,7 +191,7 @@ class ContentNinjaApiTests(TestCase):
             skill_name="relevance_scoring",
             superseded_by__isnull=True,
         )
-        run_relevance_scoring_delay_mock.assert_called_once_with(
+        run_relevance_scoring_queue_mock.assert_awaited_once_with(
             _require_pk(pending_result)
         )
         self.owner_content.refresh_from_db()
@@ -293,13 +293,17 @@ class ContentNinjaApiTests(TestCase):
         self.assertEqual(feedback.feedback_type, FeedbackType.DOWNVOTE)
         queue_centroid_mock.assert_called_once_with(_require_pk(self.owner_project))
 
-    def test_feedback_member_cannot_delete_another_users_feedback(self):
+    @patch("content.signals.queue_topic_centroid_recompute")
+    def test_feedback_member_cannot_delete_another_users_feedback(
+        self, queue_centroid_mock
+    ):
         feedback = UserFeedback.objects.create(
             content=self.owner_content,
             project=self.owner_project,
             user=self.owner,
             feedback_type=FeedbackType.UPVOTE,
         )
+        queue_centroid_mock.reset_mock()
         self.client.force_login(self.member)
 
         response = self.client.delete(

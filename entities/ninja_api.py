@@ -11,6 +11,7 @@ from ninja import Path, Query, Router, Schema
 from ninja.errors import HttpError
 from ninja.responses import Status
 
+from core.ninja_api import api_authenticate
 from entities.extraction import (
     accept_entity_candidate,
     merge_entity_candidate,
@@ -22,8 +23,7 @@ from entities.models import (
     EntityCandidate,
     EntityMention,
 )
-from core.ninja_api import api_authenticate
-from projects.ninja_api import (
+from projects.ninja_helpers import (
     _get_project_or_404,
     _require_project_admin,
     _require_project_writable,

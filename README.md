@@ -13,7 +13,7 @@ The system is organized into projects: each newsletter project has its own track
 
 ### Fresh Clone Bootstrap
 
-- Linux and macOS: run `./scripts/bootstrap_dev.sh` from the repo root. The script installs `uv` and `pants` if either is missing, syncs the locked Python environment, installs the frontend dependencies, and sets up git hooks.
+- Linux and macOS: run `./scripts/bootstrap_dev.sh` from the repo root. The script installs `uv` and `pants` if either is missing, syncs the locked Python environment, installs the locked workspace JavaScript dependencies including the root Turbo runner, repairs the local Turbo link if needed, and sets up git hooks.
 - Windows: install `uv`, `pants`, and `just`, then run `just install` from the repo root.
 
 **Linux:**
@@ -169,7 +169,7 @@ The system is designed for graceful failure, not silent corruption. Unparseable 
 
 ## Tech Stack
 
-**Backend:** Django + DRF · Celery + Redis · PostgreSQL · Qdrant (vector DB)
+**Backend:** Django + Ninja API · Taskiq + RabbitMQ/Redis · PostgreSQL · Qdrant (vector DB)
 
 **AI Pipeline:** LangGraph · Claude Skills format · Multi-model via OpenRouter (Llama 3.1, Gemma 3, DeepSeek V3, Qwen 2.5; Command R+ for production) · Ollama for self-hosting · Sentence embeddings
 

@@ -1,12 +1,10 @@
-"""Celery tasks that drive ingestion, AI processing, and newsletter extraction."""
+"""Background tasks that drive ingestion, AI processing, and newsletter extraction."""
 
 import logging
 import math
 from collections import defaultdict
 from datetime import timedelta
-from typing import Protocol, cast
 
-from celery import shared_task
 from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Model, Q
@@ -23,6 +21,12 @@ from core.pipeline import (
 )
 from core.pipeline import (
     retry_review_queue_item as retry_review_queue_item_from_pipeline,
+)
+from digest_engine.taskiq import (
+    broker,
+    enqueue_task,
+    run_task_inline,
+    task_always_eager,
 )
 from entities.models import (
     Entity,
@@ -65,22 +69,6 @@ __all__ = [
 ]
 
 
-class DelayedTask(Protocol):
-    """Protocol for Celery tasks that can run eagerly or via ``delay``."""
-
-    def __call__(self, *args: object, **kwargs: object) -> object:
-        pass
-
-    def delay(self, *args: object, **kwargs: object) -> object:
-        pass
-
-
-def _enqueue_task(task: object, *args: object) -> None:
-    """Dispatch a Celery task through a typed ``delay`` seam."""
-
-    cast(DelayedTask, task).delay(*args)
-
-
 def _require_pk(instance: Model) -> int:
     """Return a saved model primary key as an ``int``."""
 
@@ -98,7 +86,7 @@ def _retention_cutoff(days: int):
     return timezone.now() - timedelta(days=days)
 
 
-@shared_task(name="core.tasks.run_all_authority_recomputations")
+@broker.task(task_name="core.tasks.run_all_authority_recomputations")
 def run_all_authority_recomputations():
     """Queue authority recomputation for every project.
 
@@ -108,48 +96,48 @@ def run_all_authority_recomputations():
 
     project_ids = list(Project.objects.values_list("id", flat=True))
     for project_id in project_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             recompute_authority_scores(project_id)
         else:
-            _enqueue_task(recompute_authority_scores, project_id)
+            enqueue_task(recompute_authority_scores, project_id)
 
     return len(project_ids)
 
 
-@shared_task(name="core.tasks.run_all_source_quality_recomputations")
+@broker.task(task_name="core.tasks.run_all_source_quality_recomputations")
 def run_all_source_quality_recomputations() -> int:
     """Queue source-quality recomputation for every project."""
 
     project_ids = list(Project.objects.values_list("id", flat=True))
     for project_id in project_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             recompute_source_quality(project_id)
         else:
-            _enqueue_task(recompute_source_quality, project_id)
+            enqueue_task(recompute_source_quality, project_id)
     return len(project_ids)
 
 
-@shared_task(name="core.tasks.run_all_retention_policies")
+@broker.task(task_name="core.tasks.run_all_retention_policies")
 def run_all_retention_policies() -> int:
     """Queue retention-policy cleanup for every project."""
 
     project_ids = list(Project.objects.values_list("id", flat=True))
     for project_id in project_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             apply_retention_policies(project_id)
         else:
-            _enqueue_task(apply_retention_policies, project_id)
+            enqueue_task(apply_retention_policies, project_id)
     return len(project_ids)
 
 
-@shared_task(name="core.tasks.process_content")
+@broker.task(task_name="core.tasks.process_content")
 def process_content(content_id: int):
     """Run the main AI pipeline for a stored content item."""
 
     return process_content_pipeline(content_id)
 
 
-@shared_task(name="core.tasks.circuit_breaker_health_check")
+@broker.task(task_name="core.tasks.circuit_breaker_health_check")
 def circuit_breaker_health_check() -> dict[str, object]:
     """Probe opened circuit breakers and close the ones that recover."""
 
@@ -169,7 +157,7 @@ def circuit_breaker_health_check() -> dict[str, object]:
     }
 
 
-@shared_task(name="core.tasks.retry_pipeline_review_item")
+@broker.task(task_name="core.tasks.retry_pipeline_review_item")
 def retry_pipeline_review_item(review_item_id: int) -> dict[str, object]:
     """Retry one pipeline review item from its failed node."""
 
@@ -179,7 +167,7 @@ def retry_pipeline_review_item(review_item_id: int) -> dict[str, object]:
     return retry_review_queue_item_from_pipeline(review_item)
 
 
-@shared_task(name="core.tasks.apply_retention_policies")
+@broker.task(task_name="core.tasks.apply_retention_policies")
 def apply_retention_policies(project_id: int) -> dict[str, object]:
     """Delete old observability records for one project."""
 
@@ -231,7 +219,7 @@ def apply_retention_policies(project_id: int) -> dict[str, object]:
     }
 
 
-@shared_task(name="core.tasks.recompute_source_quality")
+@broker.task(task_name="core.tasks.recompute_source_quality")
 def recompute_source_quality(project_id: int) -> dict[str, object]:
     """Recompute source-quality scores used by entity authority scoring."""
 
@@ -268,7 +256,7 @@ def recompute_source_quality(project_id: int) -> dict[str, object]:
     }
 
 
-@shared_task(name="core.tasks.recompute_authority_scores")
+@broker.task(task_name="core.tasks.recompute_authority_scores")
 def recompute_authority_scores(project_id: int):
     """Rebuild authority scores and snapshots for one project's entities."""
 
@@ -502,14 +490,14 @@ def recompute_authority_scores(project_id: int):
     return {"project_id": project_id, "entities_updated": len(entity_updates)}
 
 
-@shared_task(name="core.tasks.run_relevance_scoring_skill", ignore_result=True)
+@broker.task(task_name="core.tasks.run_relevance_scoring_skill")
 def run_relevance_scoring_skill(skill_result_id: int):
     """Execute a pending ad hoc relevance skill result in the background."""
 
     return execute_background_skill_result(skill_result_id, RELEVANCE_SKILL_NAME)
 
 
-@shared_task(name="core.tasks.run_summarization_skill", ignore_result=True)
+@broker.task(task_name="core.tasks.run_summarization_skill")
 def run_summarization_skill(skill_result_id: int):
     """Execute a pending ad hoc summarization skill result in the background."""
 
@@ -532,16 +520,16 @@ def queue_content_skill(content: Content, skill_name: str):
 
     if skill_name == RELEVANCE_SKILL_NAME:
         skill_result_pk = _require_pk(skill_result)
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             run_relevance_scoring_skill(skill_result_pk)
         else:
-            _enqueue_task(run_relevance_scoring_skill, skill_result_pk)
+            enqueue_task(run_relevance_scoring_skill, skill_result_pk)
     elif skill_name == SUMMARIZATION_SKILL_NAME:
         skill_result_pk = _require_pk(skill_result)
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             run_summarization_skill(skill_result_pk)
         else:
-            _enqueue_task(run_summarization_skill, skill_result_pk)
+            enqueue_task(run_summarization_skill, skill_result_pk)
     else:
         raise ValueError(f"Unsupported async skill name: {skill_name}")
 
@@ -832,7 +820,7 @@ def _schedule_content_processing(content: Content) -> None:
 
     upsert_content_embedding(content)
     content_pk = _require_pk(content)
-    if settings.CELERY_TASK_ALWAYS_EAGER:
-        process_content(content_pk)
+    if task_always_eager():
+        run_task_inline(process_content, content_pk)
     else:
-        _enqueue_task(process_content, content_pk)
+        enqueue_task(process_content, content_pk)

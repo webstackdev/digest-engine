@@ -1,6 +1,4 @@
-import re
-
-with open('projects/ninja_api.py', 'r') as f:
+with open("projects/ninja_api.py", "r") as f:
     text = f.read()
 
 writable_fn = """def _require_project_writable(request: Any, project_id: int) -> Project:
@@ -14,7 +12,11 @@ writable_fn = """def _require_project_writable(request: Any, project_id: int) ->
     return project
 
 """
-text = text.replace('def _require_project_admin(request: Any, project_id: int) -> Project:', writable_fn + 'def _require_project_admin(request: Any, project_id: int) -> Project:')
+text = text.replace(
+    "def _require_project_admin(request: Any, project_id: int) -> Project:",
+    writable_fn
+    + "def _require_project_admin(request: Any, project_id: int) -> Project:",
+)
 
-with open('projects/ninja_api.py', 'w') as f:
+with open("projects/ninja_api.py", "w") as f:
     f.write(text)

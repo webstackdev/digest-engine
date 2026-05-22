@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from http import HTTPStatus
 from typing import Any, cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
@@ -429,7 +429,7 @@ class TrendsNinjaApiTests(TestCase):
         self.assertEqual(dismissed_idea.decided_by, self.owner)
 
     def test_original_content_idea_generate_route_handles_eager_and_queued_modes(self):
-        with self.settings(CELERY_TASK_ALWAYS_EAGER=True):
+        with self.settings(TASKIQ_ALWAYS_EAGER=True):
             with patch(
                 "trends.ninja_api.generate_original_content_ideas",
                 return_value={
@@ -446,10 +446,11 @@ class TrendsNinjaApiTests(TestCase):
                     ),
                 )
 
-        with self.settings(CELERY_TASK_ALWAYS_EAGER=False):
+        with self.settings(TASKIQ_ALWAYS_EAGER=False):
             with patch(
-                "trends.ninja_api.generate_original_content_ideas.delay"
-            ) as delay_mock:
+                "trends.ninja_api.generate_original_content_ideas.kiq",
+                new_callable=AsyncMock,
+            ) as queue_mock:
                 queued_response = self.client.post(
                     reverse(
                         "ninja-api:generate_original_content_ideas_route",
@@ -464,7 +465,7 @@ class TrendsNinjaApiTests(TestCase):
 
         self.assertEqual(queued_response.status_code, HTTPStatus.ACCEPTED)
         self.assertEqual(queued_response.json()["status"], "queued")
-        delay_mock.assert_called_once_with(_require_pk(self.owner_project))
+        queue_mock.assert_awaited_once_with(_require_pk(self.owner_project))
 
     def test_source_diversity_and_trend_task_summaries_are_scoped_to_project(self):
         owner_snapshot = SourceDiversitySnapshot.objects.create(

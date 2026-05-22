@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from urllib.parse import parse_qs, urlparse
 from unittest.mock import patch
-
-from django.test import Client, override_settings
-from django.urls import reverse
+from urllib.parse import parse_qs, urlparse
 
 import pytest
+from django.test import Client, override_settings
+from django.urls import reverse
 
 from projects.linkedin_oauth import (
     build_linkedin_authorize_url,

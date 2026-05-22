@@ -15,6 +15,7 @@ from django.utils import timezone
 from content.models import Content
 from core.embeddings import search_similar_entities_for_content
 from core.llm import build_skill_user_prompt, get_skill_definition, openrouter_chat_json
+from digest_engine.taskiq import enqueue_task, task_always_eager
 from entities.models import (
     Entity,
     EntityCandidate,
@@ -355,10 +356,10 @@ def queue_entity_identity_enrichment(entity_id: int) -> None:
 
     from entities.tasks import enrich_entity_identity
 
-    if settings.CELERY_TASK_ALWAYS_EAGER:
+    if task_always_eager():
         enrich_entity_identity(entity_id)
         return
-    enrich_entity_identity.delay(entity_id)
+    enqueue_task(enrich_entity_identity, entity_id)
 
 
 def backfill_entity_mentions(

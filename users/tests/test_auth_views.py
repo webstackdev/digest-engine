@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 
 import pytest
-from allauth.account.models import EmailAddress
 from allauth.account.forms import default_token_generator
+from allauth.account.models import EmailAddress
 from allauth.account.utils import user_pk_to_url_str
 from django.core import mail
 from django.test import Client

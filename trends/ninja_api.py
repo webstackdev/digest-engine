@@ -6,7 +6,6 @@ import datetime
 from typing import Any, cast
 from uuid import UUID
 
-from django.conf import settings
 from django.db.models import Avg, Count, OuterRef, Prefetch, Q, Subquery
 from ninja import Body, Path, Router, Schema
 from ninja.errors import HttpError
@@ -14,8 +13,9 @@ from ninja.responses import Status
 
 from content.models import Content
 from core.ninja_api import api_authenticate
+from digest_engine.taskiq import enqueue_task, task_always_eager
 from projects.models import Project, ProjectMembership, ProjectRole
-from projects.ninja_api import _get_project_or_404
+from projects.ninja_helpers import _get_project_or_404
 from trends.models import (
     ContentClusterMembership,
     OriginalContentIdea,
@@ -903,7 +903,7 @@ def generate_original_content_ideas_route(
 
     project = _require_project_contributor(request, project_id)
     resolved_project_id = _require_pk(project)
-    if settings.CELERY_TASK_ALWAYS_EAGER:
+    if task_always_eager():
         result = generate_original_content_ideas(resolved_project_id)
         return Status(
             200,
@@ -913,7 +913,7 @@ def generate_original_content_ideas_route(
                 "result": result,
             },
         )
-    generate_original_content_ideas.delay(resolved_project_id)
+    enqueue_task(generate_original_content_ideas, resolved_project_id)
     return Status(202, {"status": "queued", "project_id": resolved_project_id})
 
 

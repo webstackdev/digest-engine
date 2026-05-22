@@ -128,7 +128,7 @@ def test_process_content_runs_full_pipeline_for_relevant_content(
     result = process_content(_require_pk(pipeline_context.content))
 
     pipeline_context.content.refresh_from_db()
-    assert result["status"] == "completed"
+    assert result.get("status") == "completed"
     assert pipeline_context.content.content_type == "release_notes"
     assert pipeline_context.content.relevance_score == pytest.approx(0.92)
     assert pipeline_context.content.authority_adjusted_score == pytest.approx(1.0)
@@ -273,7 +273,7 @@ def test_process_content_queues_borderline_items_for_review(pipeline_context, mo
     result = process_content(pipeline_context.content.id)
 
     pipeline_context.content.refresh_from_db()
-    assert result["status"] == "review"
+    assert result.get("status") == "review"
     assert pipeline_context.content.is_active is True
     summarize_mock.assert_not_called()
     review_item = ReviewQueue.objects.get(
@@ -320,7 +320,7 @@ def test_process_content_archives_irrelevant_items(pipeline_context, mocker):
     result = process_content(pipeline_context.content.id)
 
     pipeline_context.content.refresh_from_db()
-    assert result["status"] == "archived"
+    assert result.get("status") == "archived"
     assert pipeline_context.content.is_active is False
     summarize_mock.assert_not_called()
     assert (
@@ -377,7 +377,7 @@ def test_process_content_adds_review_item_for_low_confidence_classification(
 
     result = process_content(pipeline_context.content.id)
 
-    assert result["status"] == "completed"
+    assert result.get("status") == "completed"
     review_item = ReviewQueue.objects.get(
         content=pipeline_context.content,
         reason=ReviewReason.LOW_CONFIDENCE_CLASSIFICATION,
@@ -415,7 +415,7 @@ def test_process_content_marks_exact_duplicates_and_skips_downstream_skills(
 
     duplicate.refresh_from_db()
     existing.refresh_from_db()
-    assert result["status"] == "duplicate"
+    assert result.get("status") == "duplicate"
     assert duplicate.duplicate_of == existing
     assert duplicate.is_active is False
     assert existing.duplicate_signal_count == 1
@@ -468,7 +468,7 @@ def test_process_content_marks_semantic_duplicates_with_high_similarity(
 
     candidate.refresh_from_db()
     existing.refresh_from_db()
-    assert result["status"] == "duplicate"
+    assert result.get("status") == "duplicate"
     assert candidate.duplicate_of == existing
     assert candidate.is_active is False
     assert existing.duplicate_signal_count == 1
@@ -1343,7 +1343,7 @@ def test_process_content_records_entity_extraction_skill_result(
         skill_name=ENTITY_EXTRACTION_SKILL_NAME,
     )
 
-    assert result["status"] == "completed"
+    assert result.get("status") == "completed"
     assert skill_result.status == SkillStatus.COMPLETED
     assert skill_result.confidence == pytest.approx(0.88)
     assert skill_result.result_data is not None

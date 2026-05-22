@@ -6,8 +6,8 @@ from ninja.errors import HttpError
 from ninja.responses import Status
 
 from core.ninja_api import api_authenticate
-from projects.ninja_api import _require_project_admin, _get_project_or_404
-from projects.models import BlueskyCredentials, MastodonCredentials, LinkedInCredentials
+from projects.models import BlueskyCredentials, LinkedInCredentials, MastodonCredentials
+from projects.ninja_helpers import _get_project_or_404, _require_project_admin
 
 bluesky_router = Router(tags=["Bluesky Credentials"])
 

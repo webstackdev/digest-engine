@@ -42,6 +42,8 @@ python_requirements(
 		"py-ubjson": ["ubjson"],
 		"python-dotenv": ["dotenv"],
 		"qdrant-client": ["qdrant_client"],
+		"taskiq-aio-pika": ["taskiq_aio_pika"],
+		"taskiq-redis": ["taskiq_redis"],
 		"sentence-transformers": ["sentence_transformers"],
 		"types-Deprecated": ["Deprecated"],
 		"types-psycopg2": ["psycopg2"],

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from django.db.models import Model
@@ -50,9 +51,17 @@ def source_plugin_context(django_user_model):
     return SimpleNamespace(user=user, project=project, entity=entity)
 
 
-def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, mocker):
+def test_run_ingestion_creates_content_from_rss_entries(
+    source_plugin_context,
+    mocker,
+    settings,
+):
+    settings.TASKIQ_ALWAYS_EAGER = False
     upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
-    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    process_content_queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
     parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
@@ -81,7 +90,7 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
     assert content.project == source_plugin_context.project
     assert content.entity == source_plugin_context.entity
     upsert_embedding_mock.assert_called_once_with(content)
-    process_content_delay_mock.assert_called_once_with(_require_pk(content))
+    process_content_queue_mock.assert_awaited_once_with(_require_pk(content))
     assert (
         SourceConfig.objects.get(pk=_require_pk(source_config)).last_fetched_at
         is not None
@@ -94,7 +103,10 @@ def test_run_ingestion_creates_content_from_rss_entries(source_plugin_context, m
 
 def test_run_ingestion_skips_same_source_duplicate_urls(source_plugin_context, mocker):
     upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
-    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    process_content_queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
     parse_mock = mocker.patch("ingestion.plugins.rss.feedparser.parse")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
@@ -130,7 +142,7 @@ def test_run_ingestion_skips_same_source_duplicate_urls(source_plugin_context, m
     assert result["items_fetched"] == 1
     assert result["items_ingested"] == 0
     upsert_embedding_mock.assert_not_called()
-    process_content_delay_mock.assert_not_called()
+    process_content_queue_mock.assert_not_awaited()
     assert Content.objects.filter(url="https://example.com/post-1").count() == 1
 
 
@@ -138,7 +150,10 @@ def test_ingest_source_config_allows_cross_plugin_duplicate_urls_for_pipeline_de
     source_plugin_context, mocker
 ):
     upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
-    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    process_content_queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.REDDIT,
@@ -177,12 +192,15 @@ def test_ingest_source_config_allows_cross_plugin_duplicate_urls_for_pipeline_de
     assert items_ingested == 1
     assert Content.objects.filter(project=source_plugin_context.project).count() == 2
     upsert_embedding_mock.assert_called_once()
-    process_content_delay_mock.assert_called_once()
+    process_content_queue_mock.assert_awaited_once()
 
 
 def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, mocker):
     upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
-    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    process_content_queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
     reddit_mock = mocker.patch("ingestion.plugins.reddit.praw.Reddit")
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
@@ -212,7 +230,7 @@ def test_run_ingestion_creates_content_from_reddit_posts(source_plugin_context, 
     assert result["items_ingested"] == 1
     content = Content.objects.get(title="Reddit Post")
     upsert_embedding_mock.assert_called_once_with(content)
-    process_content_delay_mock.assert_called_once_with(_require_pk(content))
+    process_content_queue_mock.assert_awaited_once_with(_require_pk(content))
     assert content.source_plugin == SourcePluginName.REDDIT
     assert content.entity is None
     assert content.source_metadata["score"] == 14
@@ -223,7 +241,10 @@ def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
     source_plugin_context, mocker
 ):
     upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
-    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    process_content_queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.BLUESKY,
@@ -265,14 +286,17 @@ def test_ingest_source_config_deduplicates_bluesky_posts_by_post_uri(
     assert items_ingested == 0
     assert Content.objects.filter(project=source_plugin_context.project).count() == 1
     upsert_embedding_mock.assert_not_called()
-    process_content_delay_mock.assert_not_called()
+    process_content_queue_mock.assert_not_awaited()
 
 
 def test_ingest_source_config_deduplicates_mastodon_statuses_by_status_uri(
     source_plugin_context, mocker
 ):
     upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
-    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    process_content_queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.MASTODON,
@@ -319,14 +343,17 @@ def test_ingest_source_config_deduplicates_mastodon_statuses_by_status_uri(
     assert items_ingested == 0
     assert Content.objects.filter(project=source_plugin_context.project).count() == 1
     upsert_embedding_mock.assert_not_called()
-    process_content_delay_mock.assert_not_called()
+    process_content_queue_mock.assert_not_awaited()
 
 
 def test_ingest_source_config_deduplicates_linkedin_posts_by_post_urn(
     source_plugin_context, mocker
 ):
     upsert_embedding_mock = mocker.patch("core.embeddings.upsert_content_embedding")
-    process_content_delay_mock = mocker.patch("core.tasks.process_content.delay")
+    process_content_queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
     source_config = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.LINKEDIN,
@@ -370,7 +397,7 @@ def test_ingest_source_config_deduplicates_linkedin_posts_by_post_urn(
     assert items_ingested == 0
     assert Content.objects.filter(project=source_plugin_context.project).count() == 1
     upsert_embedding_mock.assert_not_called()
-    process_content_delay_mock.assert_not_called()
+    process_content_queue_mock.assert_not_awaited()
 
 
 def test_refresh_linkedin_tokens_refreshes_expiring_credentials(
@@ -394,7 +421,10 @@ def test_refresh_linkedin_tokens_refreshes_expiring_credentials(
 def test_run_all_ingestions_enqueues_active_source_configs(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("ingestion.tasks.run_ingestion.delay")
+    queue_mock = mocker.patch(
+        "ingestion.tasks.run_ingestion.kiq",
+        new_callable=AsyncMock,
+    )
     active_one = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -415,17 +445,20 @@ def test_run_all_ingestions_enqueues_active_source_configs(
     enqueued_count = run_all_ingestions()
 
     assert enqueued_count == 2
-    delay_mock.assert_any_call(_require_pk(active_one))
-    delay_mock.assert_any_call(_require_pk(active_two))
-    assert delay_mock.call_count == 2
+    queue_mock.assert_any_await(_require_pk(active_one))
+    queue_mock.assert_any_await(_require_pk(active_two))
+    assert queue_mock.await_count == 2
 
 
 def test_run_all_ingestions_executes_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.TASKIQ_ALWAYS_EAGER = True
     run_ingestion_mock = mocker.patch("ingestion.tasks.run_ingestion")
-    delay_mock = mocker.patch("ingestion.tasks.run_ingestion.delay")
+    queue_mock = mocker.patch(
+        "ingestion.tasks.run_ingestion.kiq",
+        new_callable=AsyncMock,
+    )
     active_one = SourceConfig.objects.create(
         project=source_plugin_context.project,
         plugin_name=SourcePluginName.RSS,
@@ -443,7 +476,7 @@ def test_run_all_ingestions_executes_inline_when_eager(
     run_ingestion_mock.assert_any_call(_require_pk(active_one))
     run_ingestion_mock.assert_any_call(_require_pk(active_two))
     assert run_ingestion_mock.call_count == 2
-    delay_mock.assert_not_called()
+    queue_mock.assert_not_awaited()
 
 
 def test_run_ingestion_marks_failure_when_plugin_errors(source_plugin_context, mocker):
@@ -499,7 +532,7 @@ def test_run_ingestion_notifies_project_admins_when_plugin_errors(
 def test_ingest_source_config_truncates_fields_and_processes_inline(
     source_plugin_context, settings, mocker
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.TASKIQ_ALWAYS_EAGER = True
     plugin = mocker.Mock()
     plugin.fetch_new_content.return_value = [
         SimpleNamespace(
@@ -520,7 +553,10 @@ def test_ingest_source_config_truncates_fields_and_processes_inline(
     mocker.patch("ingestion.tasks.get_plugin_for_source_config", return_value=plugin)
     upsert_mock = mocker.patch("core.embeddings.upsert_content_embedding")
     process_mock = mocker.patch("core.tasks.process_content")
-    delay_mock = mocker.patch("core.tasks.process_content.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
 
     items_fetched, items_ingested = _ingest_source_config(source_config)
 
@@ -531,5 +567,5 @@ def test_ingest_source_config_truncates_fields_and_processes_inline(
     assert len(created.title) == 512
     assert len(created.author) == 255
     upsert_mock.assert_called_once_with(created)
-    process_mock.assert_called_once_with(_require_pk(created))
-    delay_mock.assert_not_called()
+    process_mock.original_func.assert_called_once_with(_require_pk(created))
+    queue_mock.assert_not_awaited()

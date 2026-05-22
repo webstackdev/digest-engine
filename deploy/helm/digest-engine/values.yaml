@@ -20,7 +20,8 @@ env:
   resendFromEmail: onboarding@resend.dev
   redditUserAgent: digest-engine/0.1
   logLevel: INFO
-  celeryTaskAlwaysEager: "false"
+  taskiqAlwaysEager: "false"
+  taskiqSchedulerSkipFirstRun: "true"
   openrouterApiBase: https://openrouter.ai/api/v1
   openrouterAppUrl: ""
   openrouterAppName: digest-engine
@@ -66,24 +67,26 @@ django:
     - "2"
   resources: {}
 
-celeryWorker:
+taskiqWorker:
   replicaCount: 1
   command:
-    - celery
-    - -A
-    - digest_engine
+    - taskiq
     - worker
-    - --loglevel=info
+    - digest_engine.taskiq:broker
+    - --fs-discover
+    - --log-level
+    - INFO
   resources: {}
 
-celeryBeat:
+taskiqScheduler:
   replicaCount: 1
   command:
-    - celery
-    - -A
-    - digest_engine
-    - beat
-    - --loglevel=info
+    - sh
+    - -lc
+    - >-
+      skip_flag="";
+      if [ "${TASKIQ_SCHEDULER_SKIP_FIRST_RUN:-true}" = "true" ]; then skip_flag="--skip-first-run"; fi;
+      exec taskiq scheduler digest_engine.taskiq:scheduler --fs-discover --log-level INFO ${skip_flag}
   resources: {}
 
 nginx:
@@ -129,6 +132,23 @@ redis:
       - ReadWriteOnce
   resources: {}
 
+rabbitmq:
+  enabled: true
+  image:
+    repository: rabbitmq
+    tag: 3.13-alpine
+    pullPolicy: IfNotPresent
+  username: digest-engine
+  password: digest-engine
+  service:
+    port: 5672
+  persistence:
+    enabled: true
+    size: 4Gi
+    accessModes:
+      - ReadWriteOnce
+  resources: {}
+
 qdrant:
   enabled: true
   image:
@@ -159,7 +179,7 @@ keda:
   maxReplicaCount: 5
   pollingInterval: 30
   cooldownPeriod: 120
-  redisListName: celery
+  queueName: taskiq
 
 networkPolicy:
   enabled: false

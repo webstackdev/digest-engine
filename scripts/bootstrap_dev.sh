@@ -28,7 +28,8 @@ uv sync --frozen
 
 corepack enable
 corepack prepare pnpm@11.1.0 --activate
-pnpm install --filter=@digestengine/frontend
+pnpm install --frozen-lockfile
+./scripts/ensure_turbo_link.sh
 
 if git rev-parse --git-dir >/dev/null 2>&1; then
   .venv/bin/pre-commit install --install-hooks

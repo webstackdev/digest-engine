@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from http import HTTPStatus
 from typing import Any, cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
@@ -364,7 +364,7 @@ class PipelineNinjaApiTests(TestCase):
         )
 
     def test_review_queue_retry_handles_eager_and_queued_modes(self):
-        with self.settings(CELERY_TASK_ALWAYS_EAGER=True):
+        with self.settings(TASKIQ_ALWAYS_EAGER=True):
             with patch(
                 "pipeline.ninja_api.retry_pipeline_review_item",
                 return_value={
@@ -382,10 +382,11 @@ class PipelineNinjaApiTests(TestCase):
                     ),
                 )
 
-        with self.settings(CELERY_TASK_ALWAYS_EAGER=False):
+        with self.settings(TASKIQ_ALWAYS_EAGER=False):
             with patch(
-                "pipeline.ninja_api.retry_pipeline_review_item.delay"
-            ) as delay_mock:
+                "pipeline.ninja_api.retry_pipeline_review_item.kiq",
+                new_callable=AsyncMock,
+            ) as queue_mock:
                 queued_response = self.client.post(
                     reverse(
                         "ninja-api:retry_review_queue_item_route",
@@ -399,7 +400,7 @@ class PipelineNinjaApiTests(TestCase):
         retry_mock.assert_called_once_with(_require_pk(self.owner_review_item))
         self.assertEqual(eager_response.status_code, HTTPStatus.OK)
         self.assertEqual(eager_response.json()["status"], "retried")
-        delay_mock.assert_called_once_with(_require_pk(self.owner_review_item))
+        queue_mock.assert_awaited_once_with(_require_pk(self.owner_review_item))
         self.assertEqual(queued_response.status_code, HTTPStatus.ACCEPTED)
         self.assertEqual(queued_response.json()["status"], "queued")
 

@@ -11,6 +11,7 @@ from django.utils.safestring import mark_safe
 from unfold.admin import ModelAdmin
 
 from core.tasks import retry_pipeline_review_item
+from digest_engine.taskiq import enqueue_task
 from pipeline.models import ReviewQueue, ReviewResolution, SkillResult
 
 
@@ -257,7 +258,7 @@ class ReviewQueueAdmin(ModelAdmin):
         """Retry selected review items from their recorded failed node."""
 
         for review_item in queryset:
-            retry_pipeline_review_item.delay(review_item.pk)
+            enqueue_task(retry_pipeline_review_item, review_item.pk)
         self.message_user(request, "Selected items queued for retry.", messages.SUCCESS)
 
     def changelist_view(self, request, extra_context=None):

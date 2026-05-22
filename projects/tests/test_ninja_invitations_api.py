@@ -7,7 +7,6 @@ from django.db.models import Model
 from django.test import TestCase
 from django.urls import reverse
 
-import projects.ninja_api
 from projects.models import Project, ProjectMembership, ProjectRole
 from users.models import MembershipInvitation
 

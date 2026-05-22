@@ -7,27 +7,28 @@ from urllib.parse import urlencode
 
 from allauth.account.adapter import get_adapter as get_account_adapter
 from allauth.account.forms import default_token_generator
-from allauth.account.utils import setup_user_email
-from allauth.account.utils import user_pk_to_url_str, user_username
-from allauth.account.utils import url_str_to_user_pk
+from allauth.account.utils import setup_user_email, url_str_to_user_pk, user_pk_to_url_str, user_username
+from django.conf import settings
 from django.contrib.auth import (
     authenticate,
-    login as django_login,
-    logout as django_logout,
     update_session_auth_hash,
 )
+from django.contrib.auth import (
+    login as django_login,
+)
+from django.contrib.auth import (
+    logout as django_logout,
+)
 from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.conf import settings
-from django.contrib.sites.shortcuts import get_current_site
-from django.http import HttpResponseNotAllowed
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, HttpResponseNotAllowed, JsonResponse
 from django.utils.decorators import method_decorator
 from django.utils.encoding import force_str
+from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from django.views import View
 
 from core.jwt import issue_auth_tokens
 from core.ninja_api import api_authenticate

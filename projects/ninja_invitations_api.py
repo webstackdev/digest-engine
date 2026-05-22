@@ -10,8 +10,8 @@ from ninja.errors import HttpError
 from ninja.responses import Status
 
 from core.ninja_api import api_authenticate
-from projects.ninja_api import _require_project_admin
 from projects.models import ProjectRole
+from projects.ninja_helpers import _require_project_admin
 from users.models import MembershipInvitation
 
 router = Router(tags=["Project Invitations"])

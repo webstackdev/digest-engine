@@ -1,4 +1,5 @@
 from io import StringIO
+from unittest.mock import AsyncMock
 
 import pytest
 from django.core.management import CommandError, call_command
@@ -99,3 +100,24 @@ def test_bootstrap_live_sources_requires_one_project_selector():
         call_command(
             "bootstrap_live_sources", rss_feed=["https://example.com/feed.xml"]
         )
+
+
+def test_bootstrap_live_sources_queues_ingestion_when_run_now(mocker):
+    project = Project.objects.create(
+        name="Bootstrap Project",
+        topic_description="Platform engineering",
+    )
+    queue_mock = mocker.patch(
+        "ingestion.tasks.run_ingestion.kiq",
+        new_callable=AsyncMock,
+    )
+
+    call_command(
+        "bootstrap_live_sources",
+        project_id=project.id,
+        rss_feed=["https://example.com/feed.xml"],
+        run_now=True,
+    )
+
+    source_config = SourceConfig.objects.get(project=project)
+    queue_mock.assert_awaited_once_with(source_config.id)

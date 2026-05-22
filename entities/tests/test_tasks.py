@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from django.utils import timezone
@@ -16,6 +17,8 @@ from entities.tasks import (
     auto_promote_entity_candidates,
     cluster_entity_candidates,
     enrich_entity_identity,
+    run_all_entity_candidate_auto_promotions,
+    run_all_entity_candidate_clustering,
 )
 from projects.model_support import SourcePluginName
 from projects.models import Project
@@ -41,6 +44,13 @@ def _content(project: Project, *, suffix: str, source_plugin: str) -> Content:
         published_date=timezone.now(),
         content_text=f"{suffix} content for River Labs.",
     )
+
+
+def _require_pk(instance) -> int:
+    instance_pk = instance.pk
+    if instance_pk is None:
+        raise ValueError(f"{instance.__class__.__name__} must be saved first.")
+    return int(instance_pk)
 
 
 def test_cluster_entity_candidates_groups_similar_candidates(
@@ -86,12 +96,60 @@ def test_cluster_entity_candidates_groups_similar_candidates(
     assert first_candidate.contextual_embedding_id is not None
 
 
+def test_run_all_entity_candidate_clustering_enqueues_all_projects(
+    entity_discovery_context,
+    settings,
+    mocker,
+):
+    settings.TASKIQ_ALWAYS_EAGER = False
+    queue_mock = mocker.patch(
+        "entities.tasks.cluster_entity_candidates.kiq",
+        new_callable=AsyncMock,
+    )
+    other_project = Project.objects.create(
+        name="Other Discovery Project",
+        topic_description="Security",
+    )
+
+    enqueued_count = run_all_entity_candidate_clustering()
+
+    assert enqueued_count == 2
+    queue_mock.assert_any_await(entity_discovery_context.project.id)
+    queue_mock.assert_any_await(_require_pk(other_project))
+    assert queue_mock.await_count == 2
+
+
+def test_run_all_entity_candidate_clustering_executes_inline_when_eager(
+    entity_discovery_context,
+    settings,
+    mocker,
+):
+    settings.TASKIQ_ALWAYS_EAGER = True
+    cluster_mock = mocker.patch("entities.tasks.cluster_entity_candidates")
+    queue_mock = mocker.patch(
+        "entities.tasks.cluster_entity_candidates.kiq",
+        new_callable=AsyncMock,
+    )
+    other_project = Project.objects.create(
+        name="Inline Discovery Project",
+        topic_description="Platform",
+    )
+
+    enqueued_count = run_all_entity_candidate_clustering()
+
+    assert enqueued_count == 2
+    cluster_mock.assert_any_call(entity_discovery_context.project.id)
+    cluster_mock.assert_any_call(_require_pk(other_project))
+    assert cluster_mock.call_count == 2
+    queue_mock.assert_not_awaited()
+
+
 def test_auto_promote_entity_candidates_promotes_verified_multi_source_candidate(
     entity_discovery_context,
     settings,
     mocker,
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.TASKIQ_ALWAYS_EAGER = True
     candidate = EntityCandidate.objects.create(
         project=entity_discovery_context.project,
         name="River Labs",
@@ -158,6 +216,54 @@ def test_auto_promote_entity_candidates_promotes_verified_multi_source_candidate
     assert candidate.merged_into == entity
     assert entity.linkedin_url == "https://www.linkedin.com/company/river-labs"
     assert claim.verified is True
+
+
+def test_run_all_entity_candidate_auto_promotions_enqueues_all_projects(
+    entity_discovery_context,
+    settings,
+    mocker,
+):
+    settings.TASKIQ_ALWAYS_EAGER = False
+    queue_mock = mocker.patch(
+        "entities.tasks.auto_promote_entity_candidates.kiq",
+        new_callable=AsyncMock,
+    )
+    other_project = Project.objects.create(
+        name="Other Promotion Project",
+        topic_description="Signals",
+    )
+
+    enqueued_count = run_all_entity_candidate_auto_promotions()
+
+    assert enqueued_count == 2
+    queue_mock.assert_any_await(entity_discovery_context.project.id)
+    queue_mock.assert_any_await(_require_pk(other_project))
+    assert queue_mock.await_count == 2
+
+
+def test_run_all_entity_candidate_auto_promotions_executes_inline_when_eager(
+    entity_discovery_context,
+    settings,
+    mocker,
+):
+    settings.TASKIQ_ALWAYS_EAGER = True
+    promote_mock = mocker.patch("entities.tasks.auto_promote_entity_candidates")
+    queue_mock = mocker.patch(
+        "entities.tasks.auto_promote_entity_candidates.kiq",
+        new_callable=AsyncMock,
+    )
+    other_project = Project.objects.create(
+        name="Inline Promotion Project",
+        topic_description="Signals",
+    )
+
+    enqueued_count = run_all_entity_candidate_auto_promotions()
+
+    assert enqueued_count == 2
+    promote_mock.assert_any_call(entity_discovery_context.project.id)
+    promote_mock.assert_any_call(_require_pk(other_project))
+    assert promote_mock.call_count == 2
+    queue_mock.assert_not_awaited()
 
 
 def test_enrich_entity_identity_uses_github_profile_probe(

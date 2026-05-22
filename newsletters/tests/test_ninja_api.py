@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from http import HTTPStatus
 from typing import Any, cast
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
@@ -203,7 +203,7 @@ class NewsletterNinjaApiTests(TestCase):
         self.assertIn("rendered_html", response.json()[0])
 
     def test_newsletter_draft_generate_action_runs_immediately_in_eager_mode(self):
-        with self.settings(CELERY_TASK_ALWAYS_EAGER=True):
+        with self.settings(TASKIQ_ALWAYS_EAGER=True):
             with patch(
                 "newsletters.ninja_api.generate_newsletter_draft",
                 return_value={
@@ -227,10 +227,11 @@ class NewsletterNinjaApiTests(TestCase):
         generate_mock.assert_called_once_with(_require_pk(self.owner_project))
 
     def test_newsletter_draft_generate_action_queues_in_background_mode(self):
-        with self.settings(CELERY_TASK_ALWAYS_EAGER=False):
+        with self.settings(TASKIQ_ALWAYS_EAGER=False):
             with patch(
-                "newsletters.ninja_api.generate_newsletter_draft.delay"
-            ) as delay_mock:
+                "newsletters.ninja_api.generate_newsletter_draft.kiq",
+                new_callable=AsyncMock,
+            ) as queue_mock:
                 response = self.client.post(
                     reverse(
                         "ninja-api:generate_newsletter_draft_route",
@@ -240,7 +241,7 @@ class NewsletterNinjaApiTests(TestCase):
 
         self.assertEqual(response.status_code, HTTPStatus.ACCEPTED)
         self.assertEqual(response.json()["status"], "queued")
-        delay_mock.assert_called_once_with(_require_pk(self.owner_project))
+        queue_mock.assert_awaited_once_with(_require_pk(self.owner_project))
 
     def test_newsletter_draft_regenerate_section_runs_immediately_in_eager_mode(self):
         draft = NewsletterDraft.objects.create(
@@ -269,7 +270,7 @@ class NewsletterNinjaApiTests(TestCase):
             order=0,
         )
 
-        with self.settings(CELERY_TASK_ALWAYS_EAGER=True):
+        with self.settings(TASKIQ_ALWAYS_EAGER=True):
             with patch(
                 "newsletters.ninja_api.regenerate_newsletter_draft_section",
                 return_value={
@@ -294,6 +295,56 @@ class NewsletterNinjaApiTests(TestCase):
         self.assertEqual(response.status_code, HTTPStatus.OK)
         regenerate_mock.assert_called_once_with(_require_pk(section))
         self.assertEqual(response.json()["id"], _require_pk(draft))
+
+    def test_newsletter_draft_regenerate_section_queues_in_background_mode(self):
+        draft = NewsletterDraft.objects.create(
+            project=self.owner_project,
+            title="Draft",
+            intro="Intro",
+            outro="Outro",
+            status=NewsletterDraftStatus.READY,
+            generation_metadata={"source_theme_ids": [], "source_idea_ids": []},
+        )
+        theme = ThemeSuggestion.objects.create(
+            project=self.owner_project,
+            title="Theme",
+            pitch="Pitch",
+            why_it_matters="Why",
+            suggested_angle="",
+            velocity_at_creation=1.0,
+            novelty_score=0.7,
+            status=ThemeSuggestionStatus.ACCEPTED,
+        )
+        section = NewsletterDraftSection.objects.create(
+            draft=draft,
+            theme_suggestion=theme,
+            title="Before",
+            lede="Before lede",
+            order=0,
+        )
+
+        with self.settings(TASKIQ_ALWAYS_EAGER=False):
+            with patch(
+                "newsletters.ninja_api.regenerate_newsletter_draft_section.kiq",
+                new_callable=AsyncMock,
+            ) as queue_mock:
+                response = self.client.post(
+                    reverse(
+                        "ninja-api:regenerate_newsletter_draft_section_route",
+                        kwargs={
+                            "project_id": _require_pk(self.owner_project),
+                            "draft_id": _require_pk(draft),
+                        },
+                    ),
+                    {"section_id": _require_pk(section)},
+                    content_type="application/json",
+                )
+
+        self.assertEqual(response.status_code, HTTPStatus.ACCEPTED)
+        self.assertEqual(response.json()["status"], "queued")
+        self.assertEqual(response.json()["draft_id"], _require_pk(draft))
+        self.assertEqual(response.json()["section_id"], _require_pk(section))
+        queue_mock.assert_awaited_once_with(_require_pk(section))
 
     def test_newsletter_draft_regenerate_section_rejects_section_from_other_draft(self):
         draft = NewsletterDraft.objects.create(

@@ -3,6 +3,7 @@ from base64 import b64encode
 from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any, cast
+from unittest.mock import AsyncMock
 
 import pytest
 from django.core import mail
@@ -155,9 +156,12 @@ def test_handle_anymail_inbound_creates_pending_intake_and_sends_confirmation(
 
 
 def test_handle_anymail_inbound_queues_confirmed_sender(settings, mocker, project):
-    settings.CELERY_TASK_ALWAYS_EAGER = False
+    settings.TASKIQ_ALWAYS_EAGER = False
     send_mock = mocker.patch("newsletters.intake.send_confirmation_email")
-    delay_mock = mocker.patch("newsletters.tasks.process_newsletter_intake.delay")
+    queue_mock = mocker.patch(
+        "newsletters.tasks.process_newsletter_intake.kiq",
+        new_callable=AsyncMock,
+    )
     IntakeAllowlist.objects.create(
         project=project,
         sender_email="newsletter@example.com",
@@ -178,7 +182,7 @@ def test_handle_anymail_inbound_queues_confirmed_sender(settings, mocker, projec
     handle_anymail_inbound(sender=object(), event=event, esp_name="Resend")
 
     intake = NewsletterIntake.objects.get(message_id="msg-456")
-    delay_mock.assert_called_once_with(_require_pk(intake))
+    queue_mock.assert_awaited_once_with(_require_pk(intake))
     send_mock.assert_not_called()
 
 
@@ -337,7 +341,7 @@ def test_send_confirmation_email_uses_django_mail_backend(settings):
 def test_confirm_newsletter_sender_confirms_allowlist_and_queues_pending_intakes(
     client, settings, mocker, project
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = False
+    settings.TASKIQ_ALWAYS_EAGER = False
     allowlist = IntakeAllowlist.objects.create(
         project=project, sender_email="newsletter@example.com"
     )
@@ -348,7 +352,10 @@ def test_confirm_newsletter_sender_confirms_allowlist_and_queues_pending_intakes
         raw_text="Visit https://example.com/post",
         message_id="msg-456",
     )
-    delay_mock = mocker.patch("newsletters.tasks.process_newsletter_intake.delay")
+    queue_mock = mocker.patch(
+        "newsletters.tasks.process_newsletter_intake.kiq",
+        new_callable=AsyncMock,
+    )
 
     response = client.get(
         reverse(
@@ -359,13 +366,13 @@ def test_confirm_newsletter_sender_confirms_allowlist_and_queues_pending_intakes
     assert response.status_code == 200
     allowlist.refresh_from_db()
     assert allowlist.confirmed_at is not None
-    delay_mock.assert_called_once_with(_require_pk(intake))
+    queue_mock.assert_awaited_once_with(_require_pk(intake))
 
 
 def test_process_newsletter_intake_creates_content_for_confirmed_sender(
     settings, mocker, project
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = False
+    settings.TASKIQ_ALWAYS_EAGER = False
     allowlist = IntakeAllowlist.objects.create(
         project=project,
         sender_email="newsletter@example.com",
@@ -380,7 +387,10 @@ def test_process_newsletter_intake_creates_content_for_confirmed_sender(
         message_id="msg-789",
     )
     upsert_mock = mocker.patch("core.embeddings.upsert_content_embedding")
-    delay_mock = mocker.patch("core.tasks.process_content.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
 
     from newsletters.tasks import process_newsletter_intake
 
@@ -397,4 +407,4 @@ def test_process_newsletter_intake_creates_content_for_confirmed_sender(
     source_metadata = cast(dict[str, Any], content.source_metadata)
     assert source_metadata["newsletter_intake_id"] == _require_pk(intake)
     upsert_mock.assert_called_once_with(content)
-    delay_mock.assert_called_once_with(_require_pk(content))
+    queue_mock.assert_awaited_once_with(_require_pk(content))

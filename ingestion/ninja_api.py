@@ -12,7 +12,7 @@ from ninja.responses import Status
 
 from core.ninja_api import api_authenticate
 from ingestion.models import IngestionRun
-from projects.ninja_api import _get_project_or_404, _require_project_writable
+from projects.ninja_helpers import _get_project_or_404, _require_project_writable
 
 router = Router(tags=["Ingestion"])
 

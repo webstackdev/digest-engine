@@ -7,14 +7,25 @@ import logging
 from typing import Any
 
 from ninja import Router, Schema
-from ninja.errors import HttpError
 from ninja.responses import Status
 
+from content.ninja_api import content_router, feedback_router
 from core.ninja_api import api_authenticate
 from core.permissions import get_user_role, get_visible_projects_queryset
+from entities.ninja_api import entity_candidate_router, entity_router
+from ingestion.ninja_api import router as ingestion_runs_router
 from ingestion.plugins.bluesky import BlueskySourcePlugin
 from ingestion.plugins.linkedin import LinkedInSourcePlugin
 from ingestion.plugins.mastodon import MastodonSourcePlugin
+from newsletters.ninja_api import (
+    intake_allowlist_router,
+    newsletter_draft_items_router,
+    newsletter_draft_original_pieces_router,
+    newsletter_draft_sections_router,
+    newsletter_drafts_router,
+    newsletter_intakes_router,
+)
+from pipeline.ninja_api import router as pipeline_router
 from projects.linkedin_oauth import build_linkedin_authorize_url
 from projects.models import (
     BlueskyCredentials,
@@ -24,6 +35,27 @@ from projects.models import (
     ProjectMembership,
     ProjectRole,
     generate_project_intake_token,
+)
+from projects.ninja_credentials_api import (
+    bluesky_router,
+    linkedin_router,
+    mastodon_router,
+)
+from projects.ninja_helpers import (
+    _get_project_or_404,
+    _require_project_admin,
+)
+from projects.ninja_invitations_api import router as project_invitations_router
+from projects.ninja_memberships_api import router as project_memberships_router
+from projects.ninja_project_configs_api import router as project_configs_router
+from projects.ninja_source_configs_api import router as source_configs_router
+from trends.ninja_api import (
+    clusters_router,
+    ideas_router,
+    source_diversity_snapshots_router,
+    themes_router,
+    topic_centroid_snapshots_router,
+    trend_task_runs_router,
 )
 
 logger = logging.getLogger(__name__)
@@ -168,41 +200,6 @@ def _credential_validation_error(field_name: str, message: str):
     return Status(400, {field_name: [message]})
 
 
-def _get_project_or_404(request: Any, project_id: int) -> Project:
-    """Load one project if the authenticated user has access."""
-    project = (
-        get_visible_projects_queryset(request.user)
-        .filter(id=project_id)
-        .select_related("bluesky_credentials")
-        .first()
-    )
-    if not project:
-        raise HttpError(404, "Not found.")
-    return project
-
-
-def _require_project_writable(request: Any, project_id: int) -> Project:
-    """Load one project, requiring admin or member (write) access."""
-    project = _get_project_or_404(request, project_id)
-    membership = ProjectMembership.objects.filter(
-        project=project, user=request.user
-    ).first()
-    if not membership or membership.role not in {ProjectRole.ADMIN, ProjectRole.MEMBER}:
-        raise HttpError(403, "You do not have permission to perform this action.")
-    return project
-
-
-def _require_project_admin(request: Any, project_id: int) -> Project:
-    """Load one project, requiring admin access."""
-    project = _get_project_or_404(request, project_id)
-    membership = ProjectMembership.objects.filter(
-        project=project, user=request.user
-    ).first()
-    if not membership or membership.role != ProjectRole.ADMIN:
-        raise HttpError(403, "You do not have permission to perform this action.")
-    return project
-
-
 @router.get("/projects/", response=list[ProjectSchema], auth=api_authenticate)
 def list_projects(request):
     """Return accessible projects for the authenticated user."""
@@ -300,7 +297,7 @@ def verify_bluesky_credentials(request, project_id: int):
 
     try:
         BlueskySourcePlugin.verify_credentials(credentials)
-    except Exception as exc:
+    except Exception:
         logger.exception(
             "Bluesky credential verification failed for project id=%s", project.id
         )
@@ -351,7 +348,7 @@ def verify_linkedin_credentials(request, project_id: int):
 
     try:
         LinkedInSourcePlugin.verify_credentials(credentials)
-    except Exception as exc:
+    except Exception:
         logger.exception(
             "LinkedIn credential verification failed for project id=%s", project.id
         )
@@ -388,7 +385,7 @@ def verify_mastodon_credentials(request, project_id: int):
 
     try:
         MastodonSourcePlugin.verify_credentials(credentials)
-    except Exception as exc:
+    except Exception:
         logger.exception(
             "Mastodon credential verification failed for project id=%s", project.id
         )
@@ -419,7 +416,7 @@ __all__ = ["router"]
 # Pattern usage:
 # ```python
 # from ninja import Router
-# from projects.ninja_api import _require_project_admin, _get_project_or_404
+# from projects.ninja_helpers import _require_project_admin, _get_project_or_404
 #
 # project_configs_router = Router(tags=["Project Configurations"])
 #
@@ -431,35 +428,6 @@ __all__ = ["router"]
 #
 # Then attach it here to the main project_router:
 # `router.add_router("/{project_id}/project-configs", project_configs_router)`
-from projects.ninja_project_configs_api import router as project_configs_router
-from projects.ninja_memberships_api import router as project_memberships_router
-from projects.ninja_invitations_api import router as project_invitations_router
-from projects.ninja_source_configs_api import router as source_configs_router
-from projects.ninja_credentials_api import (
-    bluesky_router,
-    mastodon_router,
-    linkedin_router,
-)
-from content.ninja_api import content_router, feedback_router
-from ingestion.ninja_api import router as ingestion_runs_router
-from entities.ninja_api import entity_candidate_router, entity_router
-from newsletters.ninja_api import (
-    intake_allowlist_router,
-    newsletter_draft_items_router,
-    newsletter_draft_original_pieces_router,
-    newsletter_draft_sections_router,
-    newsletter_drafts_router,
-    newsletter_intakes_router,
-)
-from pipeline.ninja_api import router as pipeline_router
-from trends.ninja_api import (
-    clusters_router,
-    ideas_router,
-    source_diversity_snapshots_router,
-    themes_router,
-    topic_centroid_snapshots_router,
-    trend_task_runs_router,
-)
 
 router.add_router("/projects/{project_id}/project-configs", project_configs_router)
 router.add_router("/projects/{project_id}/memberships", project_memberships_router)

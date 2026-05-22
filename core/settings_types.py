@@ -4,7 +4,6 @@ from typing import Protocol
 class CoreSettings(Protocol):
     AI_TRACE_URL_TEMPLATE: str
     BLUESKY_CREDENTIALS_ENCRYPTION_KEY: str
-    CELERY_TASK_ALWAYS_EAGER: bool
     DEFAULT_FROM_EMAIL: str
     LINKEDIN_CLIENT_ID: str
     LINKEDIN_CLIENT_SECRET: str
@@ -15,6 +14,7 @@ class CoreSettings(Protocol):
     NEWSLETTER_API_INTERNAL_URL: str
     NEWSLETTER_PUBLIC_URL: str
     QDRANT_URL: str
+    TASKIQ_ALWAYS_EAGER: bool
     EMBEDDING_MODEL: str
     EMBEDDING_PROVIDER: str
     EMBEDDING_TRUST_REMOTE_CODE: bool

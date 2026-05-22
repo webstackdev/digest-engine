@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from ninja import File, Router, Schema
@@ -13,6 +12,7 @@ from ninja.files import UploadedFile
 from ninja.responses import Status
 
 from core.ninja_api import api_authenticate
+from digest_engine.taskiq import enqueue_task, run_task_inline, task_always_eager
 from projects.models import ProjectMembership
 from users.models import (
     AVATAR_ALLOWED_CONTENT_TYPES,
@@ -110,12 +110,6 @@ def _invitation_status(invitation: MembershipInvitation) -> str:
     return "pending"
 
 
-def _enqueue_task(task: object, *args: object) -> None:
-    """Dispatch a Celery task through its delay seam."""
-
-    cast(Any, task).delay(*args)
-
-
 def _delete_avatar_assets(user: AppUser) -> None:
     """Delete the user's stored avatar and generated thumbnail files."""
 
@@ -162,7 +156,8 @@ def _validated_avatar_upload(avatar: UploadedFile) -> dict[str, list[str]] | Non
     content_type = getattr(avatar, "content_type", "")
     if content_type not in AVATAR_ALLOWED_CONTENT_TYPES:
         return {"avatar": ["Upload a PNG, JPEG, or WebP avatar image."]}
-    if avatar.size > AVATAR_MAX_FILE_SIZE:
+    avatar_size = getattr(avatar, "size", None)
+    if avatar_size is None or avatar_size > AVATAR_MAX_FILE_SIZE:
         return {"avatar": ["Avatar images must be 2 MB or smaller."]}
     return None
 
@@ -223,10 +218,10 @@ def upload_profile_avatar(request, avatar: File[UploadedFile]):
     user.avatar = avatar
     user.save(update_fields=["avatar"])
 
-    if settings.CELERY_TASK_ALWAYS_EAGER:
-        generate_avatar_thumbnail(user.id)
+    if task_always_eager():
+        run_task_inline(generate_avatar_thumbnail, user.id)
     else:
-        _enqueue_task(generate_avatar_thumbnail, user.id)
+        enqueue_task(generate_avatar_thumbnail, user.id)
 
     return _serialize_profile(user)
 

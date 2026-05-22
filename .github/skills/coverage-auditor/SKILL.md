@@ -1,6 +1,6 @@
 ---
 name: coverage-auditor
-description: "Use when adding or updating tests for Django, Ninja API, Celery, admin, plugin, or Next.js code, or when closing a coverage gap. Trigger phrases include add tests, improve coverage, pytest, vitest, missing branch, schema validation test, admin test, and route handler test."
+description: "Use when adding or updating tests for Django, Ninja API, Taskiq, admin, plugin, or Next.js code, or when closing a coverage gap. Trigger phrases include add tests, improve coverage, pytest, vitest, missing branch, schema validation test, admin test, and route handler test."
 ---
 
 # Coverage Auditor Skill

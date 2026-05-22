@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "digest-engine.fullname" . }}-celery-worker
+  name: {{ include "digest-engine.fullname" . }}-taskiq-worker
   labels:
     {{- include "digest-engine.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.celeryWorker.replicaCount }}
+  replicas: {{ .Values.taskiqWorker.replicaCount }}
   selector:
     matchLabels:
-      {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "celery-worker") | nindent 6 }}
+      {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "taskiq-worker") | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "celery-worker") | nindent 8 }}
+        {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "taskiq-worker") | nindent 8 }}
     spec:
       containers:
-        - name: celery-worker
+        - name: taskiq-worker
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-            {{- toYaml .Values.celeryWorker.command | nindent 12 }}
+            {{- toYaml .Values.taskiqWorker.command | nindent 12 }}
           env:
             - name: BOOTSTRAP_APP
               value: "false"
@@ -29,4 +29,4 @@ spec:
             - secretRef:
                 name: {{ include "digest-engine.secretName" . }}
           resources:
-            {{- toYaml .Values.celeryWorker.resources | nindent 12 }}
+            {{- toYaml .Values.taskiqWorker.resources | nindent 12 }}

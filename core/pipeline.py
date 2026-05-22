@@ -1143,7 +1143,7 @@ def create_pending_skill_result(content: Content, skill_name: str) -> SkillResul
         skill_name: Supported async skill name.
 
     Returns:
-        A pending skill-result row that can be updated by a Celery worker.
+        A pending skill-result row that can be updated by a Taskiq worker.
 
     Raises:
         ValueError: If the skill cannot be executed asynchronously.

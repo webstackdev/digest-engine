@@ -1,25 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "digest-engine.fullname" . }}-celery-beat
+  name: {{ include "digest-engine.fullname" . }}-taskiq-scheduler
   labels:
     {{- include "digest-engine.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.celeryBeat.replicaCount }}
+  replicas: {{ .Values.taskiqScheduler.replicaCount }}
   selector:
     matchLabels:
-      {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "celery-beat") | nindent 6 }}
+      {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "taskiq-scheduler") | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "celery-beat") | nindent 8 }}
+        {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "taskiq-scheduler") | nindent 8 }}
     spec:
       containers:
-        - name: celery-beat
+        - name: taskiq-scheduler
           image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command:
-            {{- toYaml .Values.celeryBeat.command | nindent 12 }}
+            {{- toYaml .Values.taskiqScheduler.command | nindent 12 }}
           env:
             - name: BOOTSTRAP_APP
               value: "false"
@@ -29,4 +29,4 @@ spec:
             - secretRef:
                 name: {{ include "digest-engine.secretName" . }}
           resources:
-            {{- toYaml .Values.celeryBeat.resources | nindent 12 }}
+            {{- toYaml .Values.taskiqScheduler.resources | nindent 12 }}

@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from celery.schedules import crontab
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from ninja import Path, Router, Schema
 from ninja.errors import HttpError
 from ninja.responses import Status
 
+from core.cron import validate_cron_expression
 from core.ninja_api import api_authenticate
+from digest_engine.taskiq import enqueue_task, task_always_eager
 from projects.models import ProjectConfig
-from projects.ninja_api import _get_project_or_404, _require_project_admin
+from projects.ninja_helpers import _get_project_or_404, _require_project_admin
 
 router = Router(tags=["Project Configurations"])
 
@@ -99,8 +99,8 @@ def _validated_project_config_payload(
         normalized = " ".join(str(payload["draft_schedule_cron"]).split())
         if normalized:
             try:
-                crontab.from_string(normalized)
-            except Exception:
+                normalized = validate_cron_expression(normalized)
+            except ValueError:
                 return {
                     "draft_schedule_cron": ["Enter a valid 5-part cron expression."]
                 }
@@ -214,12 +214,12 @@ def recompute_authority(
         "config_id": config.pk,
     }
 
-    if settings.CELERY_TASK_ALWAYS_EAGER:
+    if task_always_eager():
         recompute_source_quality(project_id)
         recompute_authority_scores(project_id)
         payload["status"] = "completed"
         return Status(200, payload)
 
-    recompute_source_quality.delay(project_id)
-    recompute_authority_scores.delay(project_id)
+    enqueue_task(recompute_source_quality, project_id)
+    enqueue_task(recompute_authority_scores, project_id)
     return Status(202, payload)
