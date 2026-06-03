@@ -4123,8 +4123,8 @@ packages:
     resolution: {integrity: sha512-OTIk8iR8/aCRWBqvxrzxR0hgxWpnYBblY1S5hDWBQfk/VFmJwzmJgQFN3WsoUKHISv2eAwe+PpbUzyL1CKTLXg==}
     engines: {node: ^20.17.0 || >=22.9.0}
 
-  ws@8.20.0:
-    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
+  ws@8.20.1:
+    resolution: {integrity: sha512-It4dO0K5v//JtTXuPkfEOaI3uUN87iYPnqo/ZzqCoG3g8uhA66QUMs/SrM0YK7/NAu+r4LMh/9dq2A7k+rHs+w==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -5500,7 +5500,7 @@ snapshots:
       sirv: 3.0.2
       tinyrainbow: 3.1.0
       vitest: 4.1.6(@types/node@25.8.0)(@vitest/browser-playwright@4.1.6)(@vitest/coverage-v8@4.1.6)(jsdom@29.1.1)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.27.7)(jiti@2.7.0))
-      ws: 8.20.0
+      ws: 8.20.1
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -7615,7 +7615,7 @@ snapshots:
       recast: 0.23.11
       semver: 7.8.0
       use-sync-external-store: 1.6.0(react@19.2.6)
-      ws: 8.20.0
+      ws: 8.20.1
     optionalDependencies:
       '@types/react': 19.2.14
       prettier: 3.8.3
@@ -8140,7 +8140,7 @@ snapshots:
     dependencies:
       signal-exit: 4.1.0
 
-  ws@8.20.0: {}
+  ws@8.20.1: {}
 
   wsl-utils@0.1.0:
     dependencies:
