@@ -5,30 +5,20 @@ from __future__ import annotations
 from email.utils import parseaddr
 from html import escape
 from html.parser import HTMLParser
-from typing import Any, Iterable, Protocol, cast
+from typing import Any, Iterable, cast
 
-from celery import current_app
 from django.conf import settings as django_settings
 from django.core.mail import EmailMultiAlternatives
 from django.db.models import Model
 from django.urls import reverse
 
 from core.settings_types import CoreSettings
+from digest_engine.taskiq import enqueue_task, run_task_inline, task_always_eager
 from newsletters.extraction import extract_newsletter_items
 from newsletters.models import IntakeAllowlist, NewsletterIntake
 from projects.models import Project
 
 settings = cast(CoreSettings, django_settings)
-
-
-class QueuedTask(Protocol):
-    """Protocol for Celery tasks used by newsletter intake dispatch."""
-
-    def apply(self, *args: object, **kwargs: object) -> object:
-        pass
-
-    def delay(self, *args: object, **kwargs: object) -> object:
-        pass
 
 
 def _require_pk(instance: Model) -> int:
@@ -40,13 +30,12 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-def _process_newsletter_intake_task() -> QueuedTask:
-    """Resolve the Celery task used to process stored intake rows."""
+def _process_newsletter_intake_task() -> object:
+    """Resolve the Taskiq task used to process stored intake rows."""
 
-    task = cast(Any, current_app.tasks).get("core.tasks.process_newsletter_intake")
-    if task is None:
-        raise RuntimeError("core.tasks.process_newsletter_intake is not registered")
-    return cast(QueuedTask, task)
+    from newsletters.tasks import process_newsletter_intake
+
+    return process_newsletter_intake
 
 
 __all__ = [
@@ -312,10 +301,10 @@ def queue_newsletter_intake(intake_id: int) -> None:
     """Dispatch newsletter extraction for a stored intake row."""
 
     process_newsletter_intake = _process_newsletter_intake_task()
-    if settings.CELERY_TASK_ALWAYS_EAGER:
-        process_newsletter_intake.apply(args=(intake_id,), throw=True)
+    if task_always_eager():
+        run_task_inline(process_newsletter_intake, intake_id)
     else:
-        process_newsletter_intake.delay(intake_id)
+        enqueue_task(process_newsletter_intake, intake_id)
 
 
 def _find_intake_project(recipients: Iterable[str]) -> Project | None:

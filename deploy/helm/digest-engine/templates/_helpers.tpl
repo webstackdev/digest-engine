@@ -43,6 +43,10 @@ app.kubernetes.io/component: {{ .component }}
 {{- printf "%s-redis" (include "digest-engine.fullname" .) -}}
 {{- end -}}
 
+{{- define "digest-engine.rabbitmqHost" -}}
+{{- printf "%s-rabbitmq" (include "digest-engine.fullname" .) -}}
+{{- end -}}
+
 {{- define "digest-engine.qdrantHost" -}}
 {{- printf "%s-qdrant" (include "digest-engine.fullname" .) -}}
 {{- end -}}
@@ -57,6 +61,10 @@ app.kubernetes.io/component: {{ .component }}
 
 {{- define "digest-engine.redisUrl" -}}
 {{- printf "redis://%s:%v/0" (include "digest-engine.redisHost" .) .Values.redis.service.port -}}
+{{- end -}}
+
+{{- define "digest-engine.rabbitmqUrl" -}}
+{{- printf "amqp://%s:%s@%s:%v/" .Values.rabbitmq.username .Values.rabbitmq.password (include "digest-engine.rabbitmqHost" .) .Values.rabbitmq.service.port -}}
 {{- end -}}
 
 {{- define "digest-engine.qdrantUrl" -}}

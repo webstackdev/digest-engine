@@ -11,6 +11,7 @@ x-app-common: &app-common
 
 x-shared-env: &shared-env
   DATABASE_URL: postgresql://newsletter:newsletter@postgres:5432/digest_engine
+  RABBITMQ_URL: amqp://digest-engine:digest-engine@rabbitmq:5672/
   REDIS_URL: redis://redis:6379/0
   QDRANT_URL: http://qdrant:6333
 
@@ -38,12 +39,12 @@ services:
       qdrant:
         condition: service_started
     healthcheck:
-      test: [ "CMD", "python", "manage.py", "check" ]
+      test: ["CMD", "python", "manage.py", "check"]
       interval: 30s
       timeout: 10s
       retries: 5
 
-  celery-worker:
+  taskiq-worker:
     <<: *app-common
     environment:
       BOOTSTRAP_APP: "false"
@@ -56,19 +57,24 @@ services:
         "--pattern=*.py",
         "--recursive",
         "--",
-        "celery",
-        "-A",
-        "digest_engine",
+        "taskiq",
         "worker",
-        "--loglevel=info",
+        "digest_engine.taskiq:broker",
+        "--fs-discover",
+        "--log-level",
+        "INFO",
       ]
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
       redis:
         condition: service_healthy
+      qdrant:
+        condition: service_started
 
-  celery-beat:
+  taskiq-scheduler:
     <<: *app-common
     environment:
       BOOTSTRAP_APP: "false"
@@ -77,15 +83,17 @@ services:
       [
         "sh",
         "-lc",
-        "mkdir -p .cache && exec watchmedo auto-restart --directory=.
-          --pattern=*.py --recursive -- celery -A digest_engine beat
-          --loglevel=info --schedule=.cache/celerybeat-schedule",
+        'skip_flag=''''; if [ "$${TASKIQ_SCHEDULER_SKIP_FIRST_RUN:-true}" = "true" ]; then skip_flag=''--skip-first-run''; fi; exec watchmedo auto-restart --directory=. --pattern=*.py --recursive -- taskiq scheduler digest_engine.taskiq:scheduler --fs-discover --log-level INFO $${skip_flag}',
       ]
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
       redis:
         condition: service_healthy
+      qdrant:
+        condition: service_started
 
   postgres:
     image: postgres:16
@@ -96,18 +104,31 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U newsletter -d digest_engine" ]
+      test: ["CMD-SHELL", "pg_isready -U newsletter -d digest_engine"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    command: [ "redis-server", "--save", "", "--appendonly", "no" ]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: digest-engine
+      RABBITMQ_DEFAULT_PASS: digest-engine
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -153,5 +174,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  rabbitmq_data:
   qdrant_data:
   frontend_node_modules:

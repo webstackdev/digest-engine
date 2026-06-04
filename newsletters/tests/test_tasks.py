@@ -1,5 +1,6 @@
 from datetime import timedelta
 from typing import cast
+from unittest.mock import AsyncMock
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -422,7 +423,7 @@ def test_task_regenerate_newsletter_draft_section_notifies_project_admins_on_fai
 def test_run_all_scheduled_newsletter_drafts_executes_due_projects_inline(
     settings, mocker
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.TASKIQ_ALWAYS_EAGER = True
     fixed_now = timezone.now().replace(hour=9, minute=17, second=0, microsecond=0)
     due_expression = f"{fixed_now.minute} {fixed_now.hour} * * *"
     due_project = Project.objects.create(
@@ -461,7 +462,7 @@ def test_run_all_scheduled_newsletter_drafts_executes_due_projects_inline(
 def test_run_all_scheduled_newsletter_drafts_enqueues_due_projects_when_not_eager(
     settings, mocker
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = False
+    settings.TASKIQ_ALWAYS_EAGER = False
     fixed_now = timezone.now().replace(hour=9, minute=17, second=0, microsecond=0)
     due_expression = f"{fixed_now.minute} {fixed_now.hour} * * *"
     due_project = Project.objects.create(
@@ -472,7 +473,10 @@ def test_run_all_scheduled_newsletter_drafts_enqueues_due_projects_when_not_eage
         project=due_project,
         draft_schedule_cron=due_expression,
     )
-    delay_mock = mocker.patch("newsletters.tasks.generate_newsletter_draft.delay")
+    queue_mock = mocker.patch(
+        "newsletters.tasks.generate_newsletter_draft.kiq",
+        new_callable=AsyncMock,
+    )
     mocker.patch("newsletters.tasks.timezone.now", return_value=fixed_now)
 
     result = run_all_scheduled_newsletter_drafts()
@@ -483,14 +487,14 @@ def test_run_all_scheduled_newsletter_drafts_enqueues_due_projects_when_not_eage
         "skipped_not_due": 0,
         "skipped_daily_cap": 0,
     }
-    delay_mock.assert_called_once_with(
+    queue_mock.assert_awaited_once_with(
         _require_pk(due_project),
         trigger_source="scheduled",
     )
 
 
 def test_run_all_scheduled_newsletter_drafts_skips_daily_cap(settings, mocker):
-    settings.CELERY_TASK_ALWAYS_EAGER = False
+    settings.TASKIQ_ALWAYS_EAGER = False
     fixed_now = timezone.now().replace(hour=9, minute=17, second=0, microsecond=0)
     due_expression = f"{fixed_now.minute} {fixed_now.hour} * * *"
     capped_project = Project.objects.create(
@@ -513,7 +517,10 @@ def test_run_all_scheduled_newsletter_drafts_skips_daily_cap(settings, mocker):
             "trigger_source": "scheduled",
         },
     )
-    delay_mock = mocker.patch("newsletters.tasks.generate_newsletter_draft.delay")
+    queue_mock = mocker.patch(
+        "newsletters.tasks.generate_newsletter_draft.kiq",
+        new_callable=AsyncMock,
+    )
     mocker.patch("newsletters.tasks.timezone.now", return_value=fixed_now)
 
     result = run_all_scheduled_newsletter_drafts()
@@ -524,4 +531,4 @@ def test_run_all_scheduled_newsletter_drafts_skips_daily_cap(settings, mocker):
         "skipped_not_due": 0,
         "skipped_daily_cap": 1,
     }
-    delay_mock.assert_not_called()
+    queue_mock.assert_not_awaited()

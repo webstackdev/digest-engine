@@ -11,6 +11,8 @@ data:
   SITE_ID: {{ .Values.env.siteId | quote }}
   REDIS_URL: {{ include "digest-engine.redisUrl" . | quote }}
   CHANNEL_LAYER_URL: {{ default (include "digest-engine.redisUrl" .) .Values.env.channelLayerUrl | quote }}
+  TASKIQ_ALWAYS_EAGER: {{ .Values.env.taskiqAlwaysEager | quote }}
+  TASKIQ_SCHEDULER_SKIP_FIRST_RUN: {{ .Values.env.taskiqSchedulerSkipFirstRun | quote }}
   QDRANT_URL: {{ include "digest-engine.qdrantUrl" . | quote }}
   MESSAGING_ENABLED: {{ .Values.env.messagingEnabled | quote }}
   NEWSLETTER_PUBLIC_URL: {{ .Values.env.newsletterPublicUrl | quote }}
@@ -20,7 +22,6 @@ data:
   RESEND_FROM_EMAIL: {{ .Values.env.resendFromEmail | quote }}
   REDDIT_USER_AGENT: {{ .Values.env.redditUserAgent | quote }}
   LOG_LEVEL: {{ .Values.env.logLevel | quote }}
-  CELERY_TASK_ALWAYS_EAGER: {{ .Values.env.celeryTaskAlwaysEager | quote }}
   OPENROUTER_API_BASE: {{ .Values.env.openrouterApiBase | quote }}
   OPENROUTER_APP_URL: {{ .Values.env.openrouterAppUrl | quote }}
   OPENROUTER_APP_NAME: {{ .Values.env.openrouterAppName | quote }}

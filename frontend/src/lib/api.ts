@@ -61,12 +61,11 @@ const API_BASE_URL =
   process.env.NEWSLETTER_API_BASE_URL ??
   "http://127.0.0.1:8080"
 
-type AuthorizationSource = "token" | "bearer" | "basic"
+type AuthorizationSource = "bearer" | "basic"
 
 type SessionWithBackendAuth = {
   backendAuth?: {
     access?: string
-    key?: string
   }
 }
 
@@ -109,9 +108,9 @@ function buildUrl(path: string) {
 /**
  * Choose the best available backend authorization mechanism for the request.
  *
- * The preference order is token auth, then bearer auth, then fallback Basic auth.
- * This keeps editor sessions aligned with backend auth while still supporting
- * local development outside the full auth flow.
+ * The preference order is bearer auth, then fallback Basic auth.
+ * This keeps editor sessions aligned with the JWT-backed auth path while still
+ * supporting local development when no backend auth session is available.
  *
  * @returns An Authorization header value accepted by the Django API.
  * @example
@@ -121,13 +120,6 @@ function buildUrl(path: string) {
  */
 async function getAuthorizationHeader() {
   const session = (await getServerSession(authOptions)) as SessionWithBackendAuth | null
-
-  if (session?.backendAuth?.key) {
-    return {
-      authorization: `Token ${session.backendAuth.key}`,
-      source: "token" as const,
-    }
-  }
 
   if (session?.backendAuth?.access) {
     return {

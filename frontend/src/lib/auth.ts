@@ -15,7 +15,6 @@ import GoogleProvider from "next-auth/providers/google"
 type BackendAuthPayload = {
   access?: string
   detail?: string
-  key?: string
   non_field_errors?: string[]
   refresh?: string
   user?: Record<string, unknown>
