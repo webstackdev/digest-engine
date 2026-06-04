@@ -1,0 +1,51 @@
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "digest-engine.rabbitmqHost" . }}
+  labels:
+    {{- include "digest-engine.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "digest-engine.rabbitmqHost" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "rabbitmq") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "rabbitmq") | nindent 8 }}
+    spec:
+      containers:
+        - name: rabbitmq
+          image: {{ .Values.rabbitmq.image.repository }}:{{ .Values.rabbitmq.image.tag }}
+          imagePullPolicy: {{ .Values.rabbitmq.image.pullPolicy }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "digest-engine.secretName" . }}
+                  key: RABBITMQ_DEFAULT_USER
+            - name: RABBITMQ_DEFAULT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "digest-engine.secretName" . }}
+                  key: RABBITMQ_DEFAULT_PASS
+          ports:
+            - containerPort: {{ .Values.rabbitmq.service.port }}
+              name: amqp
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: /var/lib/rabbitmq
+          resources:
+            {{- toYaml .Values.rabbitmq.resources | nindent 12 }}
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+      spec:
+        accessModes:
+          {{- toYaml .Values.rabbitmq.persistence.accessModes | nindent 10 }}
+        resources:
+          requests:
+            storage: {{ .Values.rabbitmq.persistence.size }}
+{{- end }}

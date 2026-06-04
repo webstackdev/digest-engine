@@ -1,7 +1,7 @@
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any, cast
-from unittest.mock import ANY, Mock
+from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 from django.contrib import messages
@@ -145,10 +145,14 @@ def test_project_config_admin_recompute_action_queues_source_quality_and_authori
     source_admin_context, mocker
 ):
     config = ProjectConfig.objects.create(project=source_admin_context.project)
-    source_quality_delay_mock = mocker.patch(
-        "core.tasks.recompute_source_quality.delay"
+    source_quality_queue_mock = mocker.patch(
+        "core.tasks.recompute_source_quality.kiq",
+        new_callable=AsyncMock,
     )
-    authority_delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
+    authority_queue_mock = mocker.patch(
+        "core.tasks.recompute_authority_scores.kiq",
+        new_callable=AsyncMock,
+    )
     admin_instance = ProjectConfigAdmin(ProjectConfig, AdminSite())
     message_user_mock = _message_user_mock(admin_instance, mocker)
 
@@ -158,8 +162,8 @@ def test_project_config_admin_recompute_action_queues_source_quality_and_authori
     )
 
     project_id = _require_pk(source_admin_context.project)
-    source_quality_delay_mock.assert_called_once_with(project_id)
-    authority_delay_mock.assert_called_once_with(project_id)
+    source_quality_queue_mock.assert_awaited_once_with(project_id)
+    authority_queue_mock.assert_awaited_once_with(project_id)
     message_user_mock.assert_called_once_with(
         ANY,
         "Queued source-quality and authority recomputation for 1 project config(s).",

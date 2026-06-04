@@ -1,15 +1,19 @@
-"""Celery tasks and helpers for source ingestion."""
+"""Background tasks and helpers for source ingestion."""
 
 import logging
 from datetime import timedelta
 
-from celery import shared_task
-from django.conf import settings
 from django.db.models import Model, Q
 from django.utils import timezone
 
 from content.deduplication import canonicalize_url
 from content.models import Content
+from digest_engine.taskiq import (
+    broker,
+    enqueue_task,
+    run_task_inline,
+    task_always_eager,
+)
 from ingestion.models import IngestionRun, RunStatus
 from ingestion.plugins import get_plugin_for_source_config
 from notifications.emit import notify_project_admins
@@ -30,7 +34,7 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-@shared_task(name="core.tasks.run_ingestion")
+@broker.task(task_name="core.tasks.run_ingestion")
 def run_ingestion(source_config_id: int):
     """Fetch new content for one source config and record an ingestion run."""
 
@@ -75,7 +79,7 @@ def run_ingestion(source_config_id: int):
     return {"items_fetched": items_fetched, "items_ingested": items_ingested}
 
 
-@shared_task(name="core.tasks.run_all_ingestions")
+@broker.task(task_name="core.tasks.run_all_ingestions")
 def run_all_ingestions():
     """Queue ingestion for every active source configuration."""
 
@@ -83,10 +87,10 @@ def run_all_ingestions():
         SourceConfig.objects.filter(is_active=True).values_list("id", flat=True)
     )
     for source_config_id in source_config_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             run_ingestion(source_config_id)
         else:
-            run_ingestion.delay(source_config_id)
+            enqueue_task(run_ingestion, source_config_id)
     return len(source_config_ids)
 
 
@@ -173,13 +177,13 @@ def _schedule_content_processing(content: Content) -> None:
 
     upsert_content_embedding(content)
     assign_content_to_topic_cluster(content.id)
-    if settings.CELERY_TASK_ALWAYS_EAGER:
-        process_content(content.id)
+    if task_always_eager():
+        run_task_inline(process_content, content.id)
     else:
-        process_content.delay(content.id)
+        enqueue_task(process_content, content.id)
 
 
-@shared_task(name="core.tasks.refresh_linkedin_tokens")
+@broker.task(task_name="core.tasks.refresh_linkedin_tokens")
 def refresh_linkedin_tokens():
     """Refresh LinkedIn tokens that are missing expiry metadata or expiring soon."""
 

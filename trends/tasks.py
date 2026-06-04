@@ -1,12 +1,11 @@
-"""Celery tasks and helpers for trends-domain centroid and cluster recomputation."""
+"""Background tasks and helpers for trends-domain centroid and cluster recomputation."""
 
 import math
 from collections import Counter
 from datetime import datetime, timedelta
 from functools import lru_cache, wraps
-from typing import Any, Callable, Protocol, TypeVar, cast
+from typing import Any, Callable, TypeVar, cast
 
-from celery import shared_task
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -28,6 +27,7 @@ from core.llm import (
     get_skill_resource_path,
     openrouter_chat_json,
 )
+from digest_engine.taskiq import broker, enqueue_task, task_always_eager
 from digest_engine.telemetry import trace_span
 from entities.models import Entity, EntityMention, EntityMentionRole
 from pipeline.resilience import execute_with_resilience
@@ -77,22 +77,6 @@ ORIGINAL_CONTENT_IDEA_CENTROID_SIMILARITY_MAX = 0.8
 TrendHelperCallable = TypeVar("TrendHelperCallable", bound=Callable[..., object])
 
 
-class DelayedTask(Protocol):
-    """Protocol for Celery tasks that can run eagerly or via ``delay``."""
-
-    def __call__(self, *args: object, **kwargs: object) -> object:
-        pass
-
-    def delay(self, *args: object, **kwargs: object) -> object:
-        pass
-
-
-def _enqueue_task(task: object, *args: object) -> None:
-    """Dispatch a Celery task through a typed ``delay`` seam."""
-
-    cast(DelayedTask, task).delay(*args)
-
-
 def _require_pk(instance: Model) -> int:
     """Return a saved model primary key as an ``int``."""
 
@@ -140,20 +124,20 @@ def _trace_trend_step(
     return decorator
 
 
-@shared_task(name="core.tasks.run_all_topic_centroid_recomputations")
+@broker.task(task_name="core.tasks.run_all_topic_centroid_recomputations")
 def run_all_topic_centroid_recomputations() -> int:
     """Queue topic-centroid recomputation for every project."""
 
     project_ids = list(Project.objects.values_list("id", flat=True))
     for project_id in project_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             recompute_topic_centroid(project_id)
         else:
-            _enqueue_task(recompute_topic_centroid, project_id)
+            enqueue_task(recompute_topic_centroid, project_id)
     return len(project_ids)
 
 
-@shared_task(name="core.tasks.recompute_topic_centroid")
+@broker.task(task_name="core.tasks.recompute_topic_centroid")
 @observe_trend_task_run("recompute_topic_centroid")
 def recompute_topic_centroid(project_id: int):
     """Rebuild the project's feedback centroid from recent editorial signals."""
@@ -299,27 +283,27 @@ def queue_topic_centroid_recompute(project_id: int) -> bool:
     ):
         return False
 
-    if settings.CELERY_TASK_ALWAYS_EAGER:
+    if task_always_eager():
         recompute_topic_centroid(project_id)
     else:
-        _enqueue_task(recompute_topic_centroid, project_id)
+        enqueue_task(recompute_topic_centroid, project_id)
     return True
 
 
-@shared_task(name="core.tasks.run_all_topic_cluster_recomputations")
+@broker.task(task_name="core.tasks.run_all_topic_cluster_recomputations")
 def run_all_topic_cluster_recomputations() -> int:
     """Queue topic-cluster recomputation for every project."""
 
     project_ids = list(Project.objects.values_list("id", flat=True))
     for project_id in project_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             recompute_topic_clusters(project_id)
         else:
-            _enqueue_task(recompute_topic_clusters, project_id)
+            enqueue_task(recompute_topic_clusters, project_id)
     return len(project_ids)
 
 
-@shared_task(name="core.tasks.recompute_topic_clusters")
+@broker.task(task_name="core.tasks.recompute_topic_clusters")
 @observe_trend_task_run(
     "recompute_topic_clusters",
     skipped_if=lambda summary: summary["contents_considered"] == 0,
@@ -349,10 +333,10 @@ def recompute_topic_clusters(project_id: int) -> dict[str, int]:
     vector_cache: dict[int, list[float]] = {}
     cluster_groups = _build_cluster_groups(recent_contents, vector_cache)
     clusters_updated = _sync_topic_clusters(project_id, cluster_groups)
-    if settings.CELERY_TASK_ALWAYS_EAGER:
+    if task_always_eager():
         recompute_topic_velocity(project_id)
     else:
-        _enqueue_task(recompute_topic_velocity, project_id)
+        enqueue_task(recompute_topic_velocity, project_id)
     return {
         "project_id": project_id,
         "contents_considered": len(recent_contents),
@@ -360,7 +344,7 @@ def recompute_topic_clusters(project_id: int) -> dict[str, int]:
     }
 
 
-@shared_task(name="core.tasks.recompute_topic_velocity")
+@broker.task(task_name="core.tasks.recompute_topic_velocity")
 @observe_trend_task_run(
     "recompute_topic_velocity",
     skipped_if=lambda summary: summary["clusters_evaluated"] == 0,
@@ -428,12 +412,12 @@ def recompute_topic_velocity(project_id: int) -> dict[str, int]:
             velocity_score=velocity_score,
         )
         snapshot_count += 1
-    if settings.CELERY_TASK_ALWAYS_EAGER:
+    if task_always_eager():
         recompute_source_diversity(project_id)
         generate_theme_suggestions(project_id)
     else:
-        _enqueue_task(recompute_source_diversity, project_id)
-        _enqueue_task(generate_theme_suggestions, project_id)
+        enqueue_task(recompute_source_diversity, project_id)
+        enqueue_task(generate_theme_suggestions, project_id)
     return {
         "project_id": project_id,
         "clusters_evaluated": len(clusters),
@@ -441,7 +425,7 @@ def recompute_topic_velocity(project_id: int) -> dict[str, int]:
     }
 
 
-@shared_task(name="core.tasks.recompute_source_diversity")
+@broker.task(task_name="core.tasks.recompute_source_diversity")
 @observe_trend_task_run(
     "recompute_source_diversity",
     skipped_if=lambda summary: summary["content_count"] == 0,
@@ -582,7 +566,7 @@ def recompute_source_diversity(project_id: int) -> dict[str, object]:
     }
 
 
-@shared_task(name="core.tasks.generate_theme_suggestions")
+@broker.task(task_name="core.tasks.generate_theme_suggestions")
 @observe_trend_task_run(
     "generate_theme_suggestions",
     skipped_if=lambda summary: summary["created"] == 0 and summary["updated"] == 0,
@@ -667,20 +651,20 @@ def generate_theme_suggestions(project_id: int) -> dict[str, int]:
     }
 
 
-@shared_task(name="core.tasks.run_all_original_content_idea_generations")
+@broker.task(task_name="core.tasks.run_all_original_content_idea_generations")
 def run_all_original_content_idea_generations() -> int:
     """Queue original-content ideation generation for every project."""
 
     project_ids = list(Project.objects.values_list("id", flat=True))
     for project_id in project_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             generate_original_content_ideas(project_id)
         else:
-            _enqueue_task(generate_original_content_ideas, project_id)
+            enqueue_task(generate_original_content_ideas, project_id)
     return len(project_ids)
 
 
-@shared_task(name="core.tasks.generate_original_content_ideas")
+@broker.task(task_name="core.tasks.generate_original_content_ideas")
 @observe_trend_task_run(
     "generate_original_content_ideas",
     skipped_if=lambda summary: summary["created"] == 0,
@@ -835,7 +819,7 @@ def generate_original_content_ideas(project_id: int) -> dict[str, int]:
 
 
 @_trace_trend_step("assign_content_to_topic_cluster")
-@shared_task(name="core.tasks.assign_content_to_topic_cluster")
+@broker.task(task_name="core.tasks.assign_content_to_topic_cluster")
 def assign_content_to_topic_cluster(content_id: int) -> dict[str, object]:
     """Assign one content item to the nearest active cluster when it fits."""
 

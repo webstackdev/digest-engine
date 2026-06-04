@@ -6,6 +6,7 @@
     "abangser",
     "Aptos",
     "ASGI",
+    "asyncio",
     "botocore",
     "bsky",
     "buildx",
@@ -60,6 +61,7 @@
     "pyasn",
     "pylint",
     "pyopenssl",
+    "pyproject",
     "PYTHONDONTWRITEBYTECODE",
     "PYTHONUNBUFFERED",
     "pytokens",
@@ -78,6 +80,7 @@
     "solomonstre",
     "srgb",
     "svix",
+    "Taskiq",
     "topicv",
     "txaio",
     "ujson",
@@ -96,5 +99,6 @@
     "xrpc",
     "xxhash",
     "zope"
-  ]
+  ],
+  "git.ignoreLimitWarning": true
 }

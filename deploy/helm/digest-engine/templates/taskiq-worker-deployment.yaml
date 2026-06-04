@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "digest-engine.fullname" . }}-taskiq-worker
+  labels:
+    {{- include "digest-engine.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.taskiqWorker.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "taskiq-worker") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "taskiq-worker") | nindent 8 }}
+    spec:
+      containers:
+        - name: taskiq-worker
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            {{- toYaml .Values.taskiqWorker.command | nindent 12 }}
+          env:
+            - name: BOOTSTRAP_APP
+              value: "false"
+          envFrom:
+            - configMapRef:
+                name: {{ include "digest-engine.fullname" . }}-env
+            - secretRef:
+                name: {{ include "digest-engine.secretName" . }}
+          resources:
+            {{- toYaml .Values.taskiqWorker.resources | nindent 12 }}

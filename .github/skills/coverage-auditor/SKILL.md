@@ -1,6 +1,6 @@
 ---
 name: coverage-auditor
-description: "Use when adding or updating tests for Django, DRF, Celery, admin, serializer, plugin, or Next.js code, or when closing a coverage gap. Trigger phrases include add tests, improve coverage, pytest, vitest, missing branch, serializer test, admin test, and route handler test."
+description: "Use when adding or updating tests for Django, Ninja API, Taskiq, admin, plugin, or Next.js code, or when closing a coverage gap. Trigger phrases include add tests, improve coverage, pytest, vitest, missing branch, schema validation test, admin test, and route handler test."
 ---
 
 # Coverage Auditor Skill
@@ -24,6 +24,7 @@ Use this skill to add the smallest effective tests around the changed behavior.
 	- `core/tests/test_tasks.py`
 	- `core/tests/test_newsletters.py`
 	- `core/tests/test_pipeline.py`
+	- the owning app's `tests/` package for Ninja route coverage
 - For frontend work, add or extend the nearest colocated `*.test.ts` or `*.test.tsx` file beside the owning route, page, or component.
 - When adding new frontend tests, keep imports sorted to satisfy the repo's ESLint import-order rules. If you hit `Run autofix to sort these imports!`, fix the import block or run file-scoped ESLint before moving on.
 - After changing tests, run the narrowest relevant validation command first.

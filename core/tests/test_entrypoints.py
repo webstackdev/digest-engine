@@ -1,10 +1,12 @@
 import importlib
 import os
 import sys
+from urllib.parse import urlparse
 
 from channels.routing import ProtocolTypeRouter
 
-from digest_engine.celery import app
+from digest_engine.settings import RABBITMQ_URL, TASKIQ_RESULT_BACKEND_URL
+from digest_engine.taskiq import broker, result_backend, scheduler
 
 
 def _import_fresh(module_name: str):
@@ -45,22 +47,21 @@ def test_wsgi_module_sets_default_settings_and_builds_application(mocker):
     assert module.application == "wsgi-app"
 
 
-def test_celery_app_redirects_worker_stdout_at_info_level():
-    assert app.conf.worker_redirect_stdouts_level == "INFO"
+def test_taskiq_bootstrap_uses_rabbitmq_and_label_schedule_source():
+    parsed_result_backend_url = urlparse(TASKIQ_RESULT_BACKEND_URL)
 
-
-def test_celery_app_schedules_source_quality_before_authority_recompute():
-    beat_schedule = app.conf.beat_schedule
-
+    assert broker.url == RABBITMQ_URL
     assert (
-        beat_schedule["run-all-source-quality-recomputations-nightly"]["task"]
-        == "core.tasks.run_all_source_quality_recomputations"
+        result_backend.redis_pool.connection_kwargs["host"]
+        == parsed_result_backend_url.hostname
     )
     assert (
-        beat_schedule["run-all-scheduled-newsletter-drafts-every-minute"]["task"]
-        == "core.tasks.run_all_scheduled_newsletter_drafts"
+        result_backend.redis_pool.connection_kwargs["port"]
+        == parsed_result_backend_url.port
     )
-    assert (
-        beat_schedule["run-all-authority-recomputations-nightly"]["task"]
-        == "core.tasks.run_all_authority_recomputations"
+    assert result_backend.redis_pool.connection_kwargs["db"] == int(
+        parsed_result_backend_url.path.removeprefix("/") or "0"
     )
+    assert scheduler.broker is broker
+    assert len(scheduler.sources) == 1
+    assert scheduler.sources[0].__class__.__name__ == "LabelScheduleSource"

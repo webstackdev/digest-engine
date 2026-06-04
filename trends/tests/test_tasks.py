@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from django.db.models import Model
@@ -34,6 +35,7 @@ from trends.tasks import (
     recompute_topic_centroid,
     recompute_topic_clusters,
     recompute_topic_velocity,
+    run_all_original_content_idea_generations,
     run_all_topic_centroid_recomputations,
     run_all_topic_cluster_recomputations,
 )
@@ -240,7 +242,10 @@ def test_recompute_topic_centroid_disables_centroid_below_minimum_upvotes(
 def test_run_all_topic_centroid_recomputations_enqueues_all_projects(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
+    queue_mock = mocker.patch(
+        "trends.tasks.recompute_topic_centroid.kiq",
+        new_callable=AsyncMock,
+    )
     other_project = Project.objects.create(
         name="Other Centroid Project",
         topic_description="Security",
@@ -249,17 +254,20 @@ def test_run_all_topic_centroid_recomputations_enqueues_all_projects(
     enqueued_count = run_all_topic_centroid_recomputations()
 
     assert enqueued_count == 2
-    delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(_require_pk(other_project))
-    assert delay_mock.call_count == 2
+    queue_mock.assert_any_await(source_plugin_context.project.id)
+    queue_mock.assert_any_await(_require_pk(other_project))
+    assert queue_mock.await_count == 2
 
 
 def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.TASKIQ_ALWAYS_EAGER = True
     recompute_mock = mocker.patch("trends.tasks.recompute_topic_centroid")
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
+    queue_mock = mocker.patch(
+        "trends.tasks.recompute_topic_centroid.kiq",
+        new_callable=AsyncMock,
+    )
     other_project = Project.objects.create(
         name="Inline Centroid Project",
         topic_description="Platform",
@@ -271,13 +279,16 @@ def test_run_all_topic_centroid_recomputations_executes_inline_when_eager(
     recompute_mock.assert_any_call(source_plugin_context.project.id)
     recompute_mock.assert_any_call(_require_pk(other_project))
     assert recompute_mock.call_count == 2
-    delay_mock.assert_not_called()
+    queue_mock.assert_not_awaited()
 
 
 def test_run_all_topic_cluster_recomputations_enqueues_all_projects(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_clusters.delay")
+    queue_mock = mocker.patch(
+        "trends.tasks.recompute_topic_clusters.kiq",
+        new_callable=AsyncMock,
+    )
     other_project = Project.objects.create(
         name="Other Cluster Project",
         topic_description="Security",
@@ -286,9 +297,75 @@ def test_run_all_topic_cluster_recomputations_enqueues_all_projects(
     enqueued_count = run_all_topic_cluster_recomputations()
 
     assert enqueued_count == 2
-    delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(_require_pk(other_project))
-    assert delay_mock.call_count == 2
+    queue_mock.assert_any_await(source_plugin_context.project.id)
+    queue_mock.assert_any_await(_require_pk(other_project))
+    assert queue_mock.await_count == 2
+
+
+def test_run_all_topic_cluster_recomputations_executes_inline_when_eager(
+    source_plugin_context, settings, mocker
+):
+    settings.TASKIQ_ALWAYS_EAGER = True
+    recompute_mock = mocker.patch("trends.tasks.recompute_topic_clusters")
+    queue_mock = mocker.patch(
+        "trends.tasks.recompute_topic_clusters.kiq",
+        new_callable=AsyncMock,
+    )
+    other_project = Project.objects.create(
+        name="Inline Cluster Project",
+        topic_description="Platform",
+    )
+
+    enqueued_count = run_all_topic_cluster_recomputations()
+
+    assert enqueued_count == 2
+    recompute_mock.assert_any_call(source_plugin_context.project.id)
+    recompute_mock.assert_any_call(_require_pk(other_project))
+    assert recompute_mock.call_count == 2
+    queue_mock.assert_not_awaited()
+
+
+def test_run_all_original_content_idea_generations_enqueues_all_projects(
+    source_plugin_context, mocker
+):
+    queue_mock = mocker.patch(
+        "trends.tasks.generate_original_content_ideas.kiq",
+        new_callable=AsyncMock,
+    )
+    other_project = Project.objects.create(
+        name="Other Ideation Project",
+        topic_description="Security",
+    )
+
+    enqueued_count = run_all_original_content_idea_generations()
+
+    assert enqueued_count == 2
+    queue_mock.assert_any_await(source_plugin_context.project.id)
+    queue_mock.assert_any_await(_require_pk(other_project))
+    assert queue_mock.await_count == 2
+
+
+def test_run_all_original_content_idea_generations_executes_inline_when_eager(
+    source_plugin_context, settings, mocker
+):
+    settings.TASKIQ_ALWAYS_EAGER = True
+    generate_mock = mocker.patch("trends.tasks.generate_original_content_ideas")
+    queue_mock = mocker.patch(
+        "trends.tasks.generate_original_content_ideas.kiq",
+        new_callable=AsyncMock,
+    )
+    other_project = Project.objects.create(
+        name="Inline Ideation Project",
+        topic_description="Platform",
+    )
+
+    enqueued_count = run_all_original_content_idea_generations()
+
+    assert enqueued_count == 2
+    generate_mock.assert_any_call(source_plugin_context.project.id)
+    generate_mock.assert_any_call(_require_pk(other_project))
+    assert generate_mock.call_count == 2
+    queue_mock.assert_not_awaited()
 
 
 def test_recompute_source_diversity_persists_entropy_breakdown_and_alerts(
@@ -569,25 +646,31 @@ def test_queue_topic_centroid_recompute_enqueues_background_task(
     source_plugin_context, mocker
 ):
     cache_add_mock = mocker.patch("trends.tasks.cache.add", return_value=True)
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
+    queue_mock = mocker.patch(
+        "trends.tasks.recompute_topic_centroid.kiq",
+        new_callable=AsyncMock,
+    )
 
     queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
 
     assert queued is True
     cache_add_mock.assert_called_once()
-    delay_mock.assert_called_once_with(source_plugin_context.project.id)
+    queue_mock.assert_awaited_once_with(source_plugin_context.project.id)
 
 
 def test_queue_topic_centroid_recompute_skips_duplicate_queue_attempts(
     source_plugin_context, mocker
 ):
     mocker.patch("trends.tasks.cache.add", return_value=False)
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_centroid.delay")
+    queue_mock = mocker.patch(
+        "trends.tasks.recompute_topic_centroid.kiq",
+        new_callable=AsyncMock,
+    )
 
     queued = queue_topic_centroid_recompute(source_plugin_context.project.id)
 
     assert queued is False
-    delay_mock.assert_not_called()
+    queue_mock.assert_not_awaited()
 
 
 def test_recompute_topic_clusters_groups_recent_similar_content(
@@ -612,7 +695,10 @@ def test_recompute_topic_clusters_groups_recent_similar_content(
         "trends.tasks.embed_text",
         side_effect=lambda text: vector_lookup[text.split("\n\n", 1)[0]],
     )
-    delay_mock = mocker.patch("trends.tasks.recompute_topic_velocity.delay")
+    queue_mock = mocker.patch(
+        "trends.tasks.recompute_topic_velocity.kiq",
+        new_callable=AsyncMock,
+    )
 
     clustered_contents = []
     for index in range(4):
@@ -659,7 +745,7 @@ def test_recompute_topic_clusters_groups_recent_similar_content(
     assert cluster.dominant_entity == source_plugin_context.entity
     assert set(memberships) == {_require_pk(content) for content in clustered_contents}
     assert _require_pk(outlier) not in memberships
-    delay_mock.assert_called_once_with(project.id)
+    queue_mock.assert_awaited_once_with(project.id)
 
 
 def test_assign_content_to_topic_cluster_adds_similar_content_to_existing_cluster(
@@ -739,6 +825,14 @@ def test_recompute_topic_velocity_detects_synthetic_burst(
     project = source_plugin_context.project
     fixed_now = datetime(2026, 4, 30, 12, 0, tzinfo=timezone.utc)
     mocker.patch("trends.tasks.timezone.now", return_value=fixed_now)
+    source_diversity_queue_mock = mocker.patch(
+        "trends.tasks.recompute_source_diversity.kiq",
+        new_callable=AsyncMock,
+    )
+    theme_queue_mock = mocker.patch(
+        "trends.tasks.generate_theme_suggestions.kiq",
+        new_callable=AsyncMock,
+    )
     cluster = TopicCluster.objects.create(
         project=project,
         first_seen_at=fixed_now - timedelta(days=8),
@@ -799,6 +893,8 @@ def test_recompute_topic_velocity_detects_synthetic_burst(
     assert snapshot.trailing_stddev == pytest.approx(0.0)
     assert snapshot.z_score == pytest.approx(3.0)
     assert snapshot.velocity_score == pytest.approx(1.0)
+    source_diversity_queue_mock.assert_awaited_once_with(project.id)
+    theme_queue_mock.assert_awaited_once_with(project.id)
 
 
 def test_generate_theme_suggestions_creates_pending_suggestion(

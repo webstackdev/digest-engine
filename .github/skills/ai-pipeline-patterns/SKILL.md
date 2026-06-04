@@ -1,6 +1,6 @@
 ---
 name: ai-pipeline-patterns
-description: "Use when changing the AI workflow, embeddings, Qdrant integration, newsletter intake, relevance scoring, summarization, classification, Celery handoff, or Anymail inbound processing. Trigger phrases include pipeline, relevance scoring, embeddings, Qdrant, newsletter intake, summarization, classification, OpenRouter, and review queue."
+description: "Use when changing the AI workflow, embeddings, Qdrant integration, newsletter intake, relevance scoring, summarization, classification, Taskiq handoff, or Anymail inbound processing. Trigger phrases include pipeline, relevance scoring, embeddings, Qdrant, newsletter intake, summarization, classification, OpenRouter, and review queue."
 ---
 
 # AI Pipeline Patterns Skill

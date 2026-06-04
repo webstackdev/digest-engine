@@ -12,7 +12,6 @@ __pycache__/
 **/.turbo/
 *storybook.log
 
-celerybeat-schedule*
 coverage/
 db.sqlite3
 docs/_internal_only/

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from io import BytesIO
 
-from celery import shared_task
 from django.core.files.base import ContentFile
 from PIL import Image, ImageOps
 
+from digest_engine.taskiq import broker
 from users.models import AppUser, avatar_thumbnail_path
 
 
@@ -50,8 +51,8 @@ def build_avatar_thumbnail(user: AppUser) -> str | None:
     return thumbnail_name
 
 
-@shared_task(name="users.tasks.generate_avatar_thumbnail")
-def generate_avatar_thumbnail(user_id: int) -> str | None:
+@broker.task(task_name="users.tasks.generate_avatar_thumbnail")
+async def generate_avatar_thumbnail(user_id: int) -> str | None:
     """Generate a stored thumbnail for the given user's avatar.
 
     Args:
@@ -61,5 +62,5 @@ def generate_avatar_thumbnail(user_id: int) -> str | None:
         The stored thumbnail path, or ``None`` when no avatar exists.
     """
 
-    user = AppUser.objects.get(pk=user_id)
-    return build_avatar_thumbnail(user)
+    user = await AppUser.objects.aget(pk=user_id)
+    return await asyncio.to_thread(build_avatar_thumbnail, user)

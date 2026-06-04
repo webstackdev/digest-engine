@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 from typing import Any, cast
-from unittest.mock import ANY, Mock
+from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 from django.contrib import messages
@@ -247,7 +247,10 @@ def test_generate_newsletter_ideas_queues_selected_content(
         published_date=timezone.now(),
         content_text="Queue two.",
     )
-    delay_mock = mocker.patch("core.tasks.process_content.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.process_content.kiq",
+        new_callable=AsyncMock,
+    )
     admin_instance = ContentAdmin(Content, AdminSite())
     message_user_mock = _message_user_mock(admin_instance, mocker)
 
@@ -258,9 +261,9 @@ def test_generate_newsletter_ideas_queues_selected_content(
         ).order_by("id"),
     )
 
-    delay_mock.assert_any_call(_require_pk(first_content))
-    delay_mock.assert_any_call(_require_pk(second_content))
-    assert delay_mock.call_count == 2
+    queue_mock.assert_any_await(_require_pk(first_content))
+    queue_mock.assert_any_await(_require_pk(second_content))
+    assert queue_mock.await_count == 2
     message_user_mock.assert_called_once_with(
         ANY,
         "Successfully queued the pipeline for 2 items.",

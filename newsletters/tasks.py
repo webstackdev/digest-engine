@@ -1,16 +1,17 @@
-"""Celery tasks and helpers for newsletter intake processing."""
+"""Background tasks and helpers for newsletter intake processing."""
 
-from functools import lru_cache
-from typing import Protocol, cast
-
-from celery import shared_task
-from celery.schedules import crontab_parser
-from django.conf import settings
 from django.db.models import Model, Q
 from django.utils import timezone
 
 from content.deduplication import canonicalize_url
 from content.models import Content
+from core.cron import cron_matches_now
+from digest_engine.taskiq import (
+    broker,
+    enqueue_task,
+    run_task_inline,
+    task_always_eager,
+)
 from newsletters.composition import (
     generate_newsletter_draft as compose_newsletter_draft,
 )
@@ -31,19 +32,6 @@ from notifications.models import NotificationLevel
 from projects.models import Project, ProjectConfig
 
 
-class DelayedTask(Protocol):
-    """Protocol for Celery tasks dispatched through ``delay``."""
-
-    def delay(self, *args: object, **kwargs: object) -> object:
-        pass
-
-
-def _enqueue_task(task: object, *args: object, **kwargs: object) -> None:
-    """Dispatch a Celery task through a typed ``delay`` seam."""
-
-    cast(DelayedTask, task).delay(*args, **kwargs)
-
-
 def _require_pk(instance: Model) -> int:
     """Return a saved model primary key for newsletter intake processing."""
 
@@ -53,7 +41,7 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-@shared_task(name="core.tasks.process_newsletter_intake")
+@broker.task(task_name="core.tasks.process_newsletter_intake")
 def process_newsletter_intake(intake_id: int):
     """Convert a stored newsletter email into content rows."""
 
@@ -135,13 +123,13 @@ def _schedule_content_processing(content: Content) -> None:
     upsert_content_embedding(content)
     content_id = _require_pk(content)
     assign_content_to_topic_cluster(content_id)
-    if settings.CELERY_TASK_ALWAYS_EAGER:
-        process_content(content_id)
+    if task_always_eager():
+        run_task_inline(process_content, content_id)
     else:
-        _enqueue_task(process_content, content_id)
+        enqueue_task(process_content, content_id)
 
 
-@shared_task(name="core.tasks.generate_newsletter_draft")
+@broker.task(task_name="core.tasks.generate_newsletter_draft")
 def generate_newsletter_draft(
     project_id: int,
     trigger_source: str = "manual",
@@ -184,7 +172,7 @@ def generate_newsletter_draft(
     return result
 
 
-@shared_task(name="core.tasks.run_all_scheduled_newsletter_drafts")
+@broker.task(task_name="core.tasks.run_all_scheduled_newsletter_drafts")
 def run_all_scheduled_newsletter_drafts() -> dict[str, int]:
     """Queue scheduled newsletter drafts for projects whose cron matches now."""
 
@@ -200,16 +188,18 @@ def run_all_scheduled_newsletter_drafts() -> dict[str, int]:
     ):
         checked_count += 1
         project_id = int(config.project_id)
-        if not _cron_matches_now(config.draft_schedule_cron, now=now):
+        if not cron_matches_now(
+            config.draft_schedule_cron, now=timezone.localtime(now)
+        ):
             skipped_not_due_count += 1
             continue
         if _project_has_scheduled_draft_today(project_id, now=now):
             skipped_daily_cap_count += 1
             continue
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             generate_newsletter_draft(project_id, trigger_source="scheduled")
         else:
-            _enqueue_task(
+            enqueue_task(
                 generate_newsletter_draft,
                 project_id,
                 trigger_source="scheduled",
@@ -224,7 +214,7 @@ def run_all_scheduled_newsletter_drafts() -> dict[str, int]:
     }
 
 
-@shared_task(name="core.tasks.regenerate_newsletter_draft_section")
+@broker.task(task_name="core.tasks.regenerate_newsletter_draft_section")
 def regenerate_newsletter_draft_section(section_id: int) -> dict[str, object]:
     """Recompose one newsletter draft section in isolation."""
 
@@ -274,45 +264,3 @@ def _project_has_scheduled_draft_today(project_id: int, *, now) -> bool:
         generated_at__date=timezone.localdate(now),
         generation_metadata__trigger_source="scheduled",
     ).exists()
-
-
-def _cron_matches_now(cron_expression: str, *, now) -> bool:
-    """Return whether the current local minute satisfies the cron expression."""
-
-    try:
-        minute_set, hour_set, day_set, month_set, weekday_set = _parse_cron_fields(
-            cron_expression
-        )
-    except ValueError:
-        return False
-
-    current = timezone.localtime(now)
-    weekday = current.isoweekday() % 7
-    return (
-        current.minute in minute_set
-        and current.hour in hour_set
-        and current.day in day_set
-        and current.month in month_set
-        and weekday in weekday_set
-    )
-
-
-@lru_cache(maxsize=128)
-def _parse_cron_fields(cron_expression: str) -> tuple[
-    set[int],
-    set[int],
-    set[int],
-    set[int],
-    set[int],
-]:
-    """Parse a normalized 5-part cron expression into comparable field sets."""
-
-    normalized = " ".join(cron_expression.split())
-    minute, hour, day_of_month, month_of_year, day_of_week = normalized.split(" ")
-    return (
-        crontab_parser(60).parse(minute),
-        crontab_parser(24).parse(hour),
-        crontab_parser(31, 1).parse(day_of_month),
-        crontab_parser(12, 1).parse(month_of_year),
-        crontab_parser(7).parse(day_of_week),
-    )

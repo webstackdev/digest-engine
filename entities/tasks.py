@@ -1,4 +1,4 @@
-"""Celery tasks and helpers for automated entity discovery."""
+"""Background tasks and helpers for automated entity discovery."""
 
 from __future__ import annotations
 
@@ -11,13 +11,12 @@ from difflib import SequenceMatcher
 from hashlib import sha1
 from itertools import combinations
 from math import sqrt
-from typing import Any, Protocol, cast
+from typing import Any
 from urllib.parse import urlsplit
 from uuid import NAMESPACE_URL, uuid5
 
 import httpx
 from atproto import Client
-from celery import shared_task
 from django.conf import settings
 from django.db.models import Model
 from django.utils import timezone
@@ -27,6 +26,7 @@ from mastodon import Mastodon
 
 from core.embeddings import build_entity_embedding_text, embed_text
 from core.llm import openrouter_chat_json
+from digest_engine.taskiq import broker, enqueue_task, task_always_eager
 from entities.extraction import (
     _normalize_name,
     accept_entity_candidate,
@@ -79,22 +79,6 @@ class IdentityProbeResult:
     field_updates: dict[str, str]
 
 
-class DelayedTask(Protocol):
-    """Protocol for Celery tasks that can run eagerly or via ``delay``."""
-
-    def __call__(self, *args: object, **kwargs: object) -> object:
-        pass
-
-    def delay(self, *args: object, **kwargs: object) -> object:
-        pass
-
-
-def _enqueue_task(task: object, *args: object) -> None:
-    """Dispatch a Celery task through a typed ``delay`` seam."""
-
-    cast(DelayedTask, task).delay(*args)
-
-
 def _require_pk(instance: Model) -> int:
     """Return a saved model primary key as an ``int``."""
 
@@ -104,33 +88,33 @@ def _require_pk(instance: Model) -> int:
     return int(instance_pk)
 
 
-@shared_task(name="entities.tasks.run_all_entity_candidate_clustering")
+@broker.task(task_name="entities.tasks.run_all_entity_candidate_clustering")
 def run_all_entity_candidate_clustering() -> int:
     """Queue candidate clustering for every project."""
 
     project_ids = list(Project.objects.values_list("id", flat=True))
     for project_id in project_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             cluster_entity_candidates(project_id)
         else:
-            _enqueue_task(cluster_entity_candidates, project_id)
+            enqueue_task(cluster_entity_candidates, project_id)
     return len(project_ids)
 
 
-@shared_task(name="entities.tasks.run_all_entity_candidate_auto_promotions")
+@broker.task(task_name="entities.tasks.run_all_entity_candidate_auto_promotions")
 def run_all_entity_candidate_auto_promotions() -> int:
     """Queue automated candidate promotion checks for every project."""
 
     project_ids = list(Project.objects.values_list("id", flat=True))
     for project_id in project_ids:
-        if settings.CELERY_TASK_ALWAYS_EAGER:
+        if task_always_eager():
             auto_promote_entity_candidates(project_id)
         else:
-            _enqueue_task(auto_promote_entity_candidates, project_id)
+            enqueue_task(auto_promote_entity_candidates, project_id)
     return len(project_ids)
 
 
-@shared_task(name="entities.tasks.cluster_entity_candidates")
+@broker.task(task_name="entities.tasks.cluster_entity_candidates")
 def cluster_entity_candidates(project_id: int) -> dict[str, int]:
     """Assign stable cluster keys to pending candidates inside one project."""
 
@@ -183,7 +167,7 @@ def cluster_entity_candidates(project_id: int) -> dict[str, int]:
     }
 
 
-@shared_task(name="entities.tasks.auto_promote_entity_candidates")
+@broker.task(task_name="entities.tasks.auto_promote_entity_candidates")
 def auto_promote_entity_candidates(project_id: int) -> dict[str, int]:
     """Promote or merge pending candidates that meet the WP2 thresholds."""
 
@@ -245,7 +229,7 @@ def auto_promote_entity_candidates(project_id: int) -> dict[str, int]:
     }
 
 
-@shared_task(name="entities.tasks.enrich_entity_identity")
+@broker.task(task_name="entities.tasks.enrich_entity_identity")
 def enrich_entity_identity(entity_id: int) -> dict[str, Any]:
     """Project verified identity claims back onto the tracked entity fields."""
 
