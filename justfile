@@ -11,7 +11,8 @@ backend_python_targets := "conftest.py manage.py content core digest_engine enti
 frontend_env := "if [ ! -f frontend/.env.local ]; then cp frontend/.env.example frontend/.env.local; fi"
 pnpm_setup := "corepack enable && corepack prepare pnpm@11.1.0 --activate"
 pnpm_exec := "pnpm"
-turbo_exec := "pnpm turbo"
+turbo_setup := "./scripts/ensure_turbo_link.sh"
+turbo_exec := "./scripts/ensure_turbo_link.sh && node node_modules/turbo/bin/turbo"
 frontend_filter := "--filter=@digestengine/frontend"
 django_manage := "docker compose exec django python manage.py"
 host_backend_test_env := "uv sync --frozen && set -a && . ./.env.test && set +a &&"
@@ -35,7 +36,8 @@ bootstrap:
 frontend-install:
     @{{frontend_env}}
     @{{pnpm_setup}}
-    @{{pnpm_exec}} install {{frontend_filter}}
+    @{{pnpm_exec}} install --frozen-lockfile
+    @{{turbo_setup}}
 
 # Install pre-commit hooks when running inside a git checkout
 install-hooks:
@@ -60,7 +62,7 @@ clean:
 # Start the backend development stack with Django, workers, and dependencies
 backend-dev:
     @{{backend_env}}
-    @{{compose}} up django celery-worker celery-beat postgres redis qdrant nginx
+    @{{compose}} up django taskiq-worker taskiq-scheduler postgres redis rabbitmq qdrant nginx
 
 # Start only the app frontend development server
 frontend-dev:

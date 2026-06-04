@@ -59,7 +59,7 @@ describe("api helpers", () => {
     vi.unstubAllGlobals()
   })
 
-  it("prefers the backend token key for authenticated API requests", async () => {
+  it("falls back to basic auth when only a legacy token key is present", async () => {
     getServerSessionMock.mockResolvedValue({ backendAuth: { key: "abc123" } })
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }))
     vi.stubGlobal("fetch", fetchMock)
@@ -70,7 +70,27 @@ describe("api helpers", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.example.com/api/v1/projects/",
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Token abc123" }),
+        headers: expect.objectContaining({
+          Authorization: getExpectedBasicAuthHeader(),
+        }),
+      }),
+    )
+  })
+
+  it("prefers a bearer token when the session exposes both access and a legacy key", async () => {
+    getServerSessionMock.mockResolvedValue({
+      backendAuth: { access: "jwt-token", key: "abc123" },
+    })
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    const { apiFetch } = await import("@/lib/api")
+    await apiFetch("/api/v1/projects/")
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.example.com/api/v1/projects/",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer jwt-token" }),
       }),
     )
   })
@@ -109,8 +129,8 @@ describe("api helpers", () => {
     )
   })
 
-  it("retries once with basic auth when a session token has gone stale", async () => {
-    getServerSessionMock.mockResolvedValue({ backendAuth: { key: "stale-token" } })
+  it("retries once with basic auth when a bearer token has gone stale", async () => {
+    getServerSessionMock.mockResolvedValue({ backendAuth: { access: "stale-jwt" } })
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
@@ -139,7 +159,7 @@ describe("api helpers", () => {
       1,
       "https://api.example.com/api/v1/projects/",
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Token stale-token" }),
+        headers: expect.objectContaining({ Authorization: "Bearer stale-jwt" }),
       }),
     )
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -154,7 +174,7 @@ describe("api helpers", () => {
   })
 
   it("does not retry with basic auth for non-authentication 403 responses", async () => {
-    getServerSessionMock.mockResolvedValue({ backendAuth: { key: "active-token" } })
+    getServerSessionMock.mockResolvedValue({ backendAuth: { access: "active-jwt" } })
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse(
         {

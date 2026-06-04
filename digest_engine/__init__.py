@@ -1,3 +1,1 @@
-from digest_engine.celery import app as celery_app
-
-__all__ = ("celery_app",)
+"""Digest Engine Django project package."""

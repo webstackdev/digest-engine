@@ -9,6 +9,7 @@ from unfold.admin import ModelAdmin
 
 from content.models import Content, UserFeedback
 from core.settings_types import CoreSettings
+from digest_engine.taskiq import enqueue_task, run_task_inline, task_always_eager
 
 
 def _score_to_percent(value):
@@ -312,7 +313,10 @@ class ContentAdmin(admin.ModelAdmin):
 
         content_ids = list(queryset.values_list("id", flat=True))
         for content_id in content_ids:
-            process_content.delay(content_id)
+            if task_always_eager():
+                run_task_inline(process_content, content_id)
+            else:
+                enqueue_task(process_content, content_id)
         self.message_user(
             request,
             f"Successfully queued the pipeline for {len(content_ids)} items.",

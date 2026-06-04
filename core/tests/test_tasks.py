@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from datetime import timezone as dt_timezone
 from types import SimpleNamespace
+from typing import cast
+from unittest.mock import AsyncMock
 
 import pytest
 from django.db.models import Model
@@ -66,7 +68,10 @@ def source_plugin_context(django_user_model):
 def test_run_all_authority_recomputations_enqueues_all_projects(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.recompute_authority_scores.kiq",
+        new_callable=AsyncMock,
+    )
     other_project = Project.objects.create(
         name="Other Project",
         topic_description="Security",
@@ -75,17 +80,20 @@ def test_run_all_authority_recomputations_enqueues_all_projects(
     enqueued_count = run_all_authority_recomputations()
 
     assert enqueued_count == 2
-    delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(_require_pk(other_project))
-    assert delay_mock.call_count == 2
+    queue_mock.assert_any_await(source_plugin_context.project.id)
+    queue_mock.assert_any_await(_require_pk(other_project))
+    assert queue_mock.await_count == 2
 
 
 def test_run_all_authority_recomputations_executes_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.TASKIQ_ALWAYS_EAGER = True
     recompute_mock = mocker.patch("core.tasks.recompute_authority_scores")
-    delay_mock = mocker.patch("core.tasks.recompute_authority_scores.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.recompute_authority_scores.kiq",
+        new_callable=AsyncMock,
+    )
     other_project = Project.objects.create(
         name="Inline Project",
         topic_description="Platform",
@@ -97,13 +105,16 @@ def test_run_all_authority_recomputations_executes_inline_when_eager(
     recompute_mock.assert_any_call(source_plugin_context.project.id)
     recompute_mock.assert_any_call(_require_pk(other_project))
     assert recompute_mock.call_count == 2
-    delay_mock.assert_not_called()
+    queue_mock.assert_not_awaited()
 
 
 def test_run_all_source_quality_recomputations_enqueues_all_projects(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("core.tasks.recompute_source_quality.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.recompute_source_quality.kiq",
+        new_callable=AsyncMock,
+    )
     other_project = Project.objects.create(
         name="Source Quality Project",
         topic_description="Signals",
@@ -112,17 +123,20 @@ def test_run_all_source_quality_recomputations_enqueues_all_projects(
     enqueued_count = run_all_source_quality_recomputations()
 
     assert enqueued_count == 2
-    delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(_require_pk(other_project))
-    assert delay_mock.call_count == 2
+    queue_mock.assert_any_await(source_plugin_context.project.id)
+    queue_mock.assert_any_await(_require_pk(other_project))
+    assert queue_mock.await_count == 2
 
 
 def test_run_all_source_quality_recomputations_executes_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.TASKIQ_ALWAYS_EAGER = True
     recompute_mock = mocker.patch("core.tasks.recompute_source_quality")
-    delay_mock = mocker.patch("core.tasks.recompute_source_quality.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.recompute_source_quality.kiq",
+        new_callable=AsyncMock,
+    )
     other_project = Project.objects.create(
         name="Inline Source Quality Project",
         topic_description="Signals",
@@ -134,13 +148,16 @@ def test_run_all_source_quality_recomputations_executes_inline_when_eager(
     recompute_mock.assert_any_call(source_plugin_context.project.id)
     recompute_mock.assert_any_call(_require_pk(other_project))
     assert recompute_mock.call_count == 2
-    delay_mock.assert_not_called()
+    queue_mock.assert_not_awaited()
 
 
 def test_run_all_retention_policies_enqueues_all_projects(
     source_plugin_context, mocker
 ):
-    delay_mock = mocker.patch("core.tasks.apply_retention_policies.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.apply_retention_policies.kiq",
+        new_callable=AsyncMock,
+    )
     other_project = Project.objects.create(
         name="Retention Project",
         topic_description="Ops",
@@ -149,9 +166,9 @@ def test_run_all_retention_policies_enqueues_all_projects(
     enqueued_count = run_all_retention_policies()
 
     assert enqueued_count == 2
-    delay_mock.assert_any_call(source_plugin_context.project.id)
-    delay_mock.assert_any_call(_require_pk(other_project))
-    assert delay_mock.call_count == 2
+    queue_mock.assert_any_await(source_plugin_context.project.id)
+    queue_mock.assert_any_await(_require_pk(other_project))
+    assert queue_mock.await_count == 2
 
 
 def test_apply_retention_policies_deletes_old_observability_records(
@@ -317,13 +334,14 @@ def test_apply_retention_policies_deletes_old_observability_records(
     ReviewQueue.objects.filter(pk=old_review_item.pk).update(resolved_at=old_timestamp)
 
     result = apply_retention_policies(_require_pk(project))
+    deleted_counts = cast(dict[str, int], result["deleted"])
 
-    assert result["deleted"]["topic_centroid_snapshots"] == 1
-    assert result["deleted"]["topic_velocity_snapshots"] == 1
-    assert result["deleted"]["source_diversity_snapshots"] == 1
-    assert result["deleted"]["entity_authority_snapshots"] == 1
-    assert result["deleted"]["trend_task_runs"] == 1
-    assert result["deleted"]["resolved_review_items"] == 1
+    assert deleted_counts["topic_centroid_snapshots"] == 1
+    assert deleted_counts["topic_velocity_snapshots"] == 1
+    assert deleted_counts["source_diversity_snapshots"] == 1
+    assert deleted_counts["entity_authority_snapshots"] == 1
+    assert deleted_counts["trend_task_runs"] == 1
+    assert deleted_counts["resolved_review_items"] == 1
     assert TopicCentroidSnapshot.objects.filter(pk=kept_centroid.pk).exists()
     assert TopicVelocitySnapshot.objects.filter(pk=kept_velocity.pk).exists()
     assert SourceDiversitySnapshot.objects.filter(pk=kept_diversity.pk).exists()
@@ -515,18 +533,21 @@ def test_queue_content_skill_enqueues_relevance_task(source_plugin_context, mock
         published_date="2026-04-20T12:00:00Z",
         content_text="Manual content body",
     )
-    delay_mock = mocker.patch("core.tasks.run_relevance_scoring_skill.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.run_relevance_scoring_skill.kiq",
+        new_callable=AsyncMock,
+    )
 
     skill_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
 
     assert skill_result.status == SkillStatus.PENDING
-    delay_mock.assert_called_once_with(_require_pk(skill_result))
+    queue_mock.assert_awaited_once_with(_require_pk(skill_result))
 
 
 def test_queue_content_skill_executes_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.TASKIQ_ALWAYS_EAGER = True
     content = Content.objects.create(
         project=source_plugin_context.project,
         entity=source_plugin_context.entity,
@@ -538,19 +559,22 @@ def test_queue_content_skill_executes_inline_when_eager(
         content_text="Manual content body",
     )
     task_mock = mocker.patch("core.tasks.run_relevance_scoring_skill")
-    delay_mock = mocker.patch("core.tasks.run_relevance_scoring_skill.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.run_relevance_scoring_skill.kiq",
+        new_callable=AsyncMock,
+    )
 
     skill_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
 
     assert skill_result.status == SkillStatus.PENDING
     task_mock.assert_called_once_with(_require_pk(skill_result))
-    delay_mock.assert_not_called()
+    queue_mock.assert_not_awaited()
 
 
 def test_queue_content_skill_executes_summary_inline_when_eager(
     source_plugin_context, settings, mocker
 ):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
+    settings.TASKIQ_ALWAYS_EAGER = True
     content = Content.objects.create(
         project=source_plugin_context.project,
         entity=source_plugin_context.entity,
@@ -563,13 +587,16 @@ def test_queue_content_skill_executes_summary_inline_when_eager(
         relevance_score=0.9,
     )
     task_mock = mocker.patch("core.tasks.run_summarization_skill")
-    delay_mock = mocker.patch("core.tasks.run_summarization_skill.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.run_summarization_skill.kiq",
+        new_callable=AsyncMock,
+    )
 
     skill_result = queue_content_skill(content, SUMMARIZATION_SKILL_NAME)
 
     assert skill_result.status == SkillStatus.PENDING
     task_mock.assert_called_once_with(_require_pk(skill_result))
-    delay_mock.assert_not_called()
+    queue_mock.assert_not_awaited()
 
 
 def test_run_relevance_scoring_skill_updates_pending_result(
@@ -595,10 +622,13 @@ def test_run_relevance_scoring_skill_updates_pending_result(
             "latency_ms": 0,
         },
     )
-    delay_mock = mocker.patch("core.tasks.run_relevance_scoring_skill.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.run_relevance_scoring_skill.kiq",
+        new_callable=AsyncMock,
+    )
 
     pending_result = queue_content_skill(content, RELEVANCE_SKILL_NAME)
-    delay_mock.assert_called_once_with(_require_pk(pending_result))
+    queue_mock.assert_awaited_once_with(_require_pk(pending_result))
 
     result = run_relevance_scoring_skill(_require_pk(pending_result))
 
@@ -624,10 +654,13 @@ def test_run_summarization_skill_marks_result_failed_when_relevance_is_too_low(
         content_text="Manual content body",
         relevance_score=0.25,
     )
-    delay_mock = mocker.patch("core.tasks.run_summarization_skill.delay")
+    queue_mock = mocker.patch(
+        "core.tasks.run_summarization_skill.kiq",
+        new_callable=AsyncMock,
+    )
 
     pending_result = queue_content_skill(content, SUMMARIZATION_SKILL_NAME)
-    delay_mock.assert_called_once_with(_require_pk(pending_result))
+    queue_mock.assert_awaited_once_with(_require_pk(pending_result))
 
     result = run_summarization_skill(_require_pk(pending_result))
 

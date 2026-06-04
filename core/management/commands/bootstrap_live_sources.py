@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
+from digest_engine.taskiq import enqueue_task, task_always_eager
 from ingestion.tasks import run_ingestion
 from projects.model_support import SourcePluginName
 from projects.models import Project, SourceConfig
@@ -104,10 +104,10 @@ class Command(BaseCommand):
         queued_count = 0
         if options["run_now"]:
             for source_config_id in touched_source_ids:
-                if settings.CELERY_TASK_ALWAYS_EAGER:
+                if task_always_eager():
                     run_ingestion(source_config_id)
                 else:
-                    run_ingestion.delay(source_config_id)
+                    enqueue_task(run_ingestion, source_config_id)
                 queued_count += 1
 
         self.stdout.write(

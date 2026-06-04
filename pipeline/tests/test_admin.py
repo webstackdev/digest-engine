@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 from typing import Any, cast
-from unittest.mock import ANY, Mock
+from unittest.mock import ANY, AsyncMock, Mock
 
 import pytest
 from django.contrib import messages
@@ -244,6 +244,42 @@ def test_review_queue_actions_update_resolution_and_emit_message(
     assert reject_item.resolution == ReviewResolution.HUMAN_REJECTED
     assert reject_item.resolved_at is not None
     assert message_user_mock.call_count == 2
+
+
+def test_review_queue_retry_action_queues_taskiq_retry(source_admin_context, mocker):
+    content = Content.objects.create(
+        project=source_admin_context.project,
+        url="https://example.com/review-retry-action",
+        title="Review Retry Action",
+        author="Reviewer",
+        source_plugin=SourcePluginName.RSS,
+        published_date=timezone.now(),
+        content_text="Review retry action content.",
+    )
+    review_item = ReviewQueue.objects.create(
+        project=source_admin_context.project,
+        content=content,
+        reason=ReviewReason.RETRY_EXHAUSTED,
+        confidence=0.25,
+        resolved=False,
+    )
+    admin_instance = ReviewQueueAdmin(ReviewQueue, AdminSite())
+    message_user_mock = _message_user_mock(admin_instance, mocker)
+    queue_mock = mocker.patch(
+        "pipeline.admin.retry_pipeline_review_item.kiq",
+        new_callable=AsyncMock,
+    )
+
+    admin_instance.retry_selected_items(
+        _request(), ReviewQueue.objects.filter(pk=review_item.pk)
+    )
+
+    queue_mock.assert_awaited_once_with(_require_pk(review_item))
+    message_user_mock.assert_called_once_with(
+        ANY,
+        "Selected items queued for retry.",
+        messages.SUCCESS,
+    )
 
 
 def test_skill_result_admin_handles_unknown_status_and_empty_performance(

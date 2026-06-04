@@ -21,7 +21,8 @@ require_command pg_dump
 
 require_env STAGING_NAMESPACE
 require_env STAGING_DJANGO_DEPLOYMENT
-require_env STAGING_CELERY_DEPLOYMENT
+require_env STAGING_TASKIQ_WORKER_DEPLOYMENT
+require_env STAGING_TASKIQ_SCHEDULER_DEPLOYMENT
 require_env STAGING_POSTGRES_URL
 require_env QDRANT_SNAPSHOT_URL
 
@@ -52,10 +53,16 @@ kubectl rollout status \
   | tee "$run_dir/django-rollout.txt"
 
 kubectl rollout status \
-  "deployment/${STAGING_CELERY_DEPLOYMENT}" \
+  "deployment/${STAGING_TASKIQ_WORKER_DEPLOYMENT}" \
   -n "$STAGING_NAMESPACE" \
   --timeout=180s \
-  | tee "$run_dir/celery-rollout.txt"
+  | tee "$run_dir/taskiq-worker-rollout.txt"
+
+kubectl rollout status \
+  "deployment/${STAGING_TASKIQ_SCHEDULER_DEPLOYMENT}" \
+  -n "$STAGING_NAMESPACE" \
+  --timeout=180s \
+  | tee "$run_dir/taskiq-scheduler-rollout.txt"
 
 kubectl get pods -n "$STAGING_NAMESPACE" -o wide > "$run_dir/pods.txt"
 kubectl get jobs -n "$STAGING_NAMESPACE" > "$run_dir/jobs.txt"
@@ -66,7 +73,8 @@ Artifacts:
 - PostgreSQL backup: $run_dir/staging-postgres.pgdump
 - Qdrant snapshot response: $run_dir/qdrant-snapshot.json
 - Django rollout status: $run_dir/django-rollout.txt
-- Celery rollout status: $run_dir/celery-rollout.txt
+- Taskiq worker rollout status: $run_dir/taskiq-worker-rollout.txt
+- Taskiq scheduler rollout status: $run_dir/taskiq-scheduler-rollout.txt
 - Pod inventory: $run_dir/pods.txt
 - Job inventory: $run_dir/jobs.txt
 EOF

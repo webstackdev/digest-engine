@@ -20,9 +20,9 @@ Use this skill when working on the ingestion plugin system.
 
 - Update `core/plugins/base.py` only when the shared plugin contract must change.
 - Add or update concrete plugins in `core/plugins/`.
-- Update `core/plugins/registry.py` and any related enum or serializer validation paths.
-- Confirm `SourceConfig` validation still works through both the serializer and admin paths.
-- Add or update focused tests in `core/tests/test_tasks.py`, `core/tests/test_admin.py`, `core/tests/test_serializers.py`, or a new nearby plugin test module.
+- Update `core/plugins/registry.py` and any related enum or request-schema validation paths.
+- Confirm `SourceConfig` validation still works through both the API validation layer and admin paths.
+- Add or update focused tests in `core/tests/test_tasks.py`, `core/tests/test_admin.py`, or a new nearby plugin test module.
 
 ## References
 

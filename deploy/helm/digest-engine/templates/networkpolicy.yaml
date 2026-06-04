@@ -85,6 +85,13 @@ spec:
     - to:
         - podSelector:
             matchLabels:
+              {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "rabbitmq") | nindent 14 }}
+      ports:
+        - port: {{ .Values.rabbitmq.service.port }}
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
               {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "qdrant") | nindent 14 }}
       ports:
         - port: {{ .Values.qdrant.service.port }}
@@ -100,7 +107,7 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "digest-engine.fullname" . }}-allow-worker-and-beat
+  name: {{ include "digest-engine.fullname" . }}-allow-taskiq
   labels:
     {{- include "digest-engine.labels" . | nindent 4 }}
 spec:
@@ -109,8 +116,8 @@ spec:
       - key: app.kubernetes.io/component
         operator: In
         values:
-          - celery-worker
-          - celery-beat
+          - taskiq-worker
+          - taskiq-scheduler
       - key: app.kubernetes.io/name
         operator: In
         values:
@@ -135,6 +142,13 @@ spec:
               {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "redis") | nindent 14 }}
       ports:
         - port: {{ .Values.redis.service.port }}
+          protocol: TCP
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "rabbitmq") | nindent 14 }}
+      ports:
+        - port: {{ .Values.rabbitmq.service.port }}
           protocol: TCP
     - to:
         - podSelector:
@@ -171,8 +185,8 @@ spec:
                 operator: In
                 values:
                   - django
-                  - celery-worker
-                  - celery-beat
+                  - taskiq-worker
+                  - taskiq-scheduler
               - key: app.kubernetes.io/name
                 operator: In
                 values:
@@ -205,8 +219,8 @@ spec:
                 operator: In
                 values:
                   - django
-                  - celery-worker
-                  - celery-beat
+                  - taskiq-worker
+                  - taskiq-scheduler
               - key: app.kubernetes.io/name
                 operator: In
                 values:
@@ -217,6 +231,40 @@ spec:
                   - {{ .Release.Name }}
       ports:
         - port: {{ .Values.redis.service.port }}
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "digest-engine.fullname" . }}-allow-rabbitmq
+  labels:
+    {{- include "digest-engine.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "digest-engine.componentLabels" (dict "Release" .Release "Values" .Values "Chart" .Chart "component" "rabbitmq") | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - django
+                  - taskiq-worker
+                  - taskiq-scheduler
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - {{ include "digest-engine.name" . }}
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                  - {{ .Release.Name }}
+      ports:
+        - port: {{ .Values.rabbitmq.service.port }}
           protocol: TCP
 ---
 apiVersion: networking.k8s.io/v1
@@ -239,8 +287,8 @@ spec:
                 operator: In
                 values:
                   - django
-                  - celery-worker
-                  - celery-beat
+                  - taskiq-worker
+                  - taskiq-scheduler
               - key: app.kubernetes.io/name
                 operator: In
                 values:

@@ -85,7 +85,7 @@ describe("authOptions", () => {
 
   it("authorizes credentials against the backend auth endpoint", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ key: "abc123", access: "jwt" }),
+      jsonResponse({ access: "jwt", refresh: "refresh-jwt" }),
     )
     vi.stubGlobal("fetch", fetchMock)
 
@@ -113,7 +113,7 @@ describe("authOptions", () => {
     expect(user).toEqual({
       id: "alice@example.com",
       name: "alice@example.com",
-      backendAuth: { key: "abc123", access: "jwt" },
+      backendAuth: { access: "jwt", refresh: "refresh-jwt" },
     })
   })
 
@@ -179,7 +179,9 @@ describe("authOptions", () => {
   })
 
   it("prefers the server-side backend base URL for credential auth", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ key: "abc123" }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ access: "jwt", refresh: "refresh-jwt" }))
     vi.stubGlobal("fetch", fetchMock)
 
     const { authOptions } = await loadAuthModule()
@@ -195,7 +197,9 @@ describe("authOptions", () => {
 
   it("falls back to the local backend default when the server-side backend URL is absent", async () => {
     vi.unstubAllEnvs()
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ key: "abc123" }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ access: "jwt", refresh: "refresh-jwt" }))
     vi.stubGlobal("fetch", fetchMock)
 
     const { authOptions } = await loadAuthModule()
@@ -221,7 +225,9 @@ describe("authOptions", () => {
   })
 
   it("enriches social sign-in users with backend auth when access tokens are present", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ key: "social-key" }))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ access: "social-access", refresh: "social-refresh" }))
     vi.stubGlobal("fetch", fetchMock)
 
     const { authOptions } = await loadAuthModule()
@@ -236,7 +242,7 @@ describe("authOptions", () => {
     })
 
     expect(result).toBe(true)
-    expect(user.backendAuth).toEqual({ key: "social-key" })
+    expect(user.backendAuth).toEqual({ access: "social-access", refresh: "social-refresh" })
   })
 
   it("returns false when social sign-in has no account", async () => {
@@ -319,7 +325,7 @@ describe("authOptions", () => {
 
     const token = await authOptions.callbacks?.jwt?.({
       token: {},
-      user: { backendAuth: { key: "persisted-key" } } as never,
+      user: { backendAuth: { access: "persisted-jwt", refresh: "persisted-refresh" } } as never,
       account: null,
       profile: undefined,
       trigger: "signIn",
@@ -335,8 +341,8 @@ describe("authOptions", () => {
       trigger: "update",
     })
 
-    expect(token).toEqual({ backendAuth: { key: "persisted-key" } })
-    expect(session).toMatchObject({ backendAuth: { key: "persisted-key" } })
+    expect(token).toEqual({ backendAuth: { access: "persisted-jwt", refresh: "persisted-refresh" } })
+    expect(session).toMatchObject({ backendAuth: { access: "persisted-jwt", refresh: "persisted-refresh" } })
   })
 
   it("leaves jwt and session unchanged when no backend auth is present", async () => {

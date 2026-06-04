@@ -1,10 +1,11 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from django.utils import timezone
 
 from content.models import Content
-from entities.extraction import run_entity_extraction
+from entities.extraction import queue_entity_identity_enrichment, run_entity_extraction
 from entities.models import EntityCandidate, EntityCandidateEvidence
 from projects.model_support import SourcePluginName
 from projects.models import Project
@@ -60,3 +61,37 @@ def test_run_entity_extraction_persists_linkedin_candidate_identity_evidence(
     assert evidence.identity_surface == "linkedin"
     assert evidence.claim_url == "https://www.linkedin.com/company/river-labs"
     assert "River Labs" in evidence.context_excerpt
+
+
+def test_queue_entity_identity_enrichment_enqueues_task_when_not_eager(
+    extraction_context,
+    mocker,
+    settings,
+):
+    settings.TASKIQ_ALWAYS_EAGER = False
+    queue_mock = mocker.patch(
+        "entities.tasks.enrich_entity_identity.kiq",
+        new_callable=AsyncMock,
+    )
+
+    queue_entity_identity_enrichment(123)
+
+    queue_mock.assert_awaited_once_with(123)
+
+
+def test_queue_entity_identity_enrichment_executes_inline_when_eager(
+    extraction_context,
+    mocker,
+    settings,
+):
+    settings.TASKIQ_ALWAYS_EAGER = True
+    enrich_mock = mocker.patch("entities.tasks.enrich_entity_identity")
+    queue_mock = mocker.patch(
+        "entities.tasks.enrich_entity_identity.kiq",
+        new_callable=AsyncMock,
+    )
+
+    queue_entity_identity_enrichment(123)
+
+    enrich_mock.assert_called_once_with(123)
+    queue_mock.assert_not_awaited()

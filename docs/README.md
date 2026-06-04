@@ -7,7 +7,7 @@ These documents are organized by audience.
 * **I am an Editor or Curator using the product day-to-day**: Head to the [User Guide](user-guide/getting-started-saas.md) to learn how to ingest content, manage authority, and synthesize drafts.
 * **I am an Administrator installing or managing the platform**: Head to the [Admin Guide](admin-guide/overview.md) to understand Docker deployments, API keys, and queue troubleshooting.
 * **I am a Developer contributing code to this repository**: Head to the [Developer Guide](developer-guide/overview.md) to understand local workflows, architecture, and coding conventions.
-* **I need to understand the underlying Math and Logic**: Head to the [Reference Section](reference/data-model.md) to see how LangGraph, LangChain, Celery, Qdrant, and the Cosine similarity algorithms are wired together.
+* **I need to understand the underlying Math and Logic**: Head to the [Reference Section](reference/data-model.md) to see how LangGraph, LangChain, Taskiq, Qdrant, and the Cosine similarity algorithms are wired together.
 
 ## Terminology Note
 In this repository, a distinct newsletter workspace is called a **Project** (not a Tenant, not a Workspace). An article or extracted text is called **Content**.
