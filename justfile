@@ -32,6 +32,13 @@ backend-install:
 bootstrap:
     @bash scripts/bootstrap_dev.sh
 
+# Refresh Python and frontend lockfiles after dependency manifest updates
+refresh-lockfiles:
+    @{{pnpm_setup}}
+    @uv lock
+    @{{backend_pants}} generate-lockfiles --resolve=python-default
+    @{{pnpm_exec}} install --lockfile-only
+
 # Ensure pnpm is enabled, then install frontend dependencies
 frontend-install:
     @{{frontend_env}}

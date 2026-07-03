@@ -4,9 +4,8 @@ import nextCoreWebVitals from "eslint-config-next/core-web-vitals"
 import eslintConfigPrettier from "eslint-config-prettier/flat"
 import simpleImportSortPlugin from "eslint-plugin-simple-import-sort"
 import storybook from "eslint-plugin-storybook"
-import tseslint from "typescript-eslint"
 
-export default tseslint.config(
+const config = [
   {
     ignores: [
       ".next/**",
@@ -18,7 +17,6 @@ export default tseslint.config(
     ],
   },
   js.configs.recommended,
-  ...tseslint.configs.recommended,
   ...nextCoreWebVitals,
   {
     files: ["**/*.{js,mjs,cjs,jsx,ts,tsx}"],
@@ -37,12 +35,22 @@ export default tseslint.config(
       "simple-import-sort/exports": "error",
     },
   },
+  {
+    files: ["**/*.{ts,tsx}"],
+    rules: {
+      // TypeScript handles undefined names and unused symbols more accurately.
+      "no-undef": "off",
+      "no-unused-vars": "off",
+    },
+  },
   eslintConfigPrettier,
-  storybook.configs["flat/recommended"],
+  ...storybook.configs["flat/recommended"],
   {
     files: [".storybook/main.ts"],
     rules: {
       "storybook/no-uninstalled-addons": "off",
     },
   },
-)
+]
+
+export default config
