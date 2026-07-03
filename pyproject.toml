@@ -47,7 +47,7 @@ dependencies = [
 	"langchain-protocol==0.0.15",
 	"langgraph-checkpoint==4.1.1",
 	"langgraph-prebuilt==1.1.0",
-	"langgraph-sdk==0.3.14",
+	"langgraph-sdk==0.3.15",
 	"langgraph==1.2.0",
 	"langsmith==0.8.18",
 	"libipld==3.3.2",
