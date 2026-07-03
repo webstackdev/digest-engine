@@ -1,0 +1,4 @@
+# Temporary exception:
+# cryptography is constrained to <47 by atproto (current latest 0.0.69).
+# Remove this ignore once atproto supports cryptography >=48 and upgrade cryptography.
+GHSA-537c-gmf6-5ccf

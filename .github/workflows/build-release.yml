@@ -94,11 +94,21 @@ jobs:
         run: docker build -t digest-engine-ci:${{ github.sha }} -f
           docker/web/Dockerfile .
 
+      - name: Prepare Trivy directories
+        run: |
+          mkdir -p "${{ github.workspace }}/.trivy-tmp"
+          mkdir -p "${{ github.workspace }}/.trivy-cache"
+
       - name: Scan backend image with Trivy
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TMPDIR: ${{ github.workspace }}/.trivy-tmp
+          TRIVY_TEMP_DIR: ${{ github.workspace }}/.trivy-tmp
         with:
           image-ref: digest-engine-ci:${{ github.sha }}
           scan-type: image
+          cache-dir: ${{ github.workspace }}/.trivy-cache
+          trivyignores: .trivyignore
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
