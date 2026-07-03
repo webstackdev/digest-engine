@@ -68,9 +68,19 @@ jobs:
           pnpm install --lockfile-only
 
       - name: Commit lockfile updates
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Reject unexpected ref values before using them in git commands.
+          if [[ ! "$PR_HEAD_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$PR_HEAD_REF" == -* ]] || [[ "$PR_HEAD_REF" == *..* ]]; then
+            echo "Invalid pull request head ref: $PR_HEAD_REF"
+            exit 1
+          fi
 
           if git diff --quiet -- uv.lock 3rdparty/python/default.lock pnpm-lock.yaml; then
             echo "No lockfile updates needed"
@@ -79,4 +89,4 @@ jobs:
 
           git add uv.lock 3rdparty/python/default.lock pnpm-lock.yaml
           git commit -m "chore: refresh lockfiles for dependabot"
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          git push origin "HEAD:$PR_HEAD_REF"
