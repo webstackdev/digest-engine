@@ -108,6 +108,7 @@ jobs:
           image-ref: digest-engine-ci:${{ github.sha }}
           scan-type: image
           cache-dir: ${{ github.workspace }}/.trivy-cache
+          trivyignores: .trivyignore
           scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
