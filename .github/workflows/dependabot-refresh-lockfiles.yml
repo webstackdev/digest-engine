@@ -1,0 +1,92 @@
+name: Dependabot Lockfile Refresh
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  refresh-lockfiles:
+    name: Refresh lockfiles for Dependabot PRs
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ github.token }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.8.17"
+          enable-cache: true
+
+      - name: Install Python 3.13
+        run: uv python install 3.13
+
+      - name: Initialize Pants
+        uses: pantsbuild/actions/init-pants@0aaef864bd133c4055feb6adad0bfdce0de1c2e4 # v11
+        with:
+          gha-cache-key: cache0-py313
+          named-caches-hash: ${{ hashFiles('3rdparty/python/default.lock', 'pants.toml') }}
+          pants-ci-config: ""
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          version: 11.1.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Refresh lockfiles
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.1.2 --activate
+          uv lock
+          pants generate-lockfiles --resolve=python-default
+          pnpm install --lockfile-only
+
+      - name: Commit lockfile updates
+        env:
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Reject unexpected ref values before using them in git commands.
+          if [[ ! "$PR_HEAD_REF" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "$PR_HEAD_REF" == -* ]] || [[ "$PR_HEAD_REF" == *..* ]]; then
+            echo "Invalid pull request head ref: $PR_HEAD_REF"
+            exit 1
+          fi
+
+          if git diff --quiet -- uv.lock 3rdparty/python/default.lock pnpm-lock.yaml; then
+            echo "No lockfile updates needed"
+            exit 0
+          fi
+
+          git add uv.lock 3rdparty/python/default.lock pnpm-lock.yaml
+          git commit -m "chore: refresh lockfiles for dependabot"
+          git push origin "HEAD:$PR_HEAD_REF"
