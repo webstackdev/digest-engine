@@ -469,7 +469,9 @@ def test_recompute_authority_scores_updates_entities_and_creates_snapshots(
 def test_recompute_authority_scores_uses_bluesky_and_reddit_engagement_metadata(
     source_plugin_context, mocker
 ):
+    fixed_now = datetime(2026, 4, 29, 12, 0, tzinfo=dt_timezone.utc)
     mocker.patch("content.signals.queue_topic_centroid_recompute")
+    mocker.patch("core.tasks.timezone.now", return_value=fixed_now)
     project = source_plugin_context.project
     ProjectConfig.objects.create(project=project)
     entity = source_plugin_context.entity

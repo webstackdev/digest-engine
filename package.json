@@ -1,10 +1,10 @@
 {
   "name": "digestengine-monorepo",
   "private": true,
-  "packageManager": "pnpm@11.1.2",
+  "packageManager": "pnpm@11.21.0",
   "engines": {
     "node": ">=24.8.0",
-    "pnpm": ">=11.1.0"
+    "pnpm": ">=11.21.0"
   },
   "scripts": {
     "build": "turbo run build",
@@ -38,8 +38,8 @@
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.20",
-    "stylelint": "^17.14.0",
+    "stylelint": "^17.14.1",
     "stylelint-config-standard": "^40.0.0",
-    "turbo": "^2.10.3"
+    "turbo": "^2.10.9"
   }
 }
